@@ -3,15 +3,15 @@
   "version": "2026.1",
   "ministries": [
     {
-      "code": "SECURITE",
+      "code": "SECURITY",
       "name": "Ministère de la Sécurité"
     },
     {
-      "code": "PROGRES",
+      "code": "PROGRESS",
       "name": "Ministère du Progrès"
     },
     {
-      "code": "FRANGE",
+      "code": "FRINGE",
       "name": "La Frange"
     }
   ],
@@ -21,41 +21,41 @@
       "name": "Jakub Myasnik",
       "title": "Boucher de cauchemar",
       "ministries": [
-        "FRANGE"
+        "FRINGE"
       ],
       "rank": 1,
       "baseSize": 30,
       "stats": {
-        "technique": 1,
+        "tech": 1,
         "melee": 4,
         "ranged": 0,
         "dodge": 2
       },
-      "health": [
-        "N",
-        "N",
+      "lifeLine": [
+        "S",
+        "S",
         "T",
-        "N",
-        "N",
+        "S",
+        "S",
         "T",
-        "N",
-        "N",
-        "N",
-        "N",
+        "S",
+        "S",
+        "S",
+        "S",
         "T",
-        "N"
+        "S"
       ],
       "abilities": [
         {
           "name": "Coupe sélective",
-          "description": "Jakub Myasnik peut réaliser la tactique de combat suivante pour 2 réussites : cochez 1 PV teinté dans la ligne de vie du rouage ciblé par cette attaque.",
-          "temporality": "Active",
+          "gameEffect": "Jakub Myasnik peut réaliser la tactique de combat suivante pour 2 réussites : cochez 1 PV teinté dans la ligne de vie du rouage ciblé par cette attaque.",
+          "timing": "Active",
           "actionCost": 1,
           "darknessCost": 0
         }
       ],
       "art": {
-        "recto": "1R01_recto.jpg"
+        "front": "1R01_recto.jpg"
       }
     },
     {
@@ -63,41 +63,41 @@
       "name": "Hynek Novotny",
       "title": "Agent de liaison",
       "ministries": [
-        "SECURITE"
+        "SECURITY"
       ],
       "rank": 2,
       "baseSize": 30,
       "stats": {
-        "technique": 1,
+        "tech": 1,
         "melee": 4,
         "ranged": 5,
         "dodge": 3
       },
-      "health": [
-        "A",
-        "A",
-        "N",
-        "N",
-        "N",
-        "N",
+      "lifeLine": [
+        "R",
+        "R",
+        "S",
+        "S",
+        "S",
+        "S",
         "T",
-        "N",
-        "N",
-        "N",
-        "N",
-        "N"
+        "S",
+        "S",
+        "S",
+        "S",
+        "S"
       ],
       "abilities": [
         {
           "name": "Discret",
-          "description": "Hynek Novotny peut être activé s'il est révélé lors d'une phase de planification où votre adversaire a révélé un ministère.",
-          "temporality": "Passive",
+          "gameEffect": "Hynek Novotny peut être activé s'il est révélé lors d'une phase de planification où votre adversaire a révélé un ministère.",
+          "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
         }
       ],
       "art": {
-        "recto": "2R04_recto.jpg"
+        "front": "2R04_recto.jpg"
       }
     },
     {
@@ -105,55 +105,55 @@
       "name": "Pétra Kantor",
       "title": "Sergent de la Garde Noire",
       "ministries": [
-        "SECURITE"
+        "SECURITY"
       ],
       "rank": 3,
       "baseSize": 30,
       "stats": {
-        "technique": 2,
+        "tech": 2,
         "melee": 4,
         "ranged": 7,
         "dodge": 3
       },
-      "health": [
-        "A",
-        "A",
-        "A",
-        "A",
-        "N",
+      "lifeLine": [
+        "R",
+        "R",
+        "R",
+        "R",
+        "S",
         "T",
-        "N",
-        "N",
-        "N",
-        "N",
-        "N",
-        "N"
+        "S",
+        "S",
+        "S",
+        "S",
+        "S",
+        "S"
       ],
       "abilities": [
         {
           "name": "Vétéran brisée",
-          "description": "Jusqu'à la fin du cycle, Pétra Kantor est considérée comme ayant une valeur de rang 0 pour la réalisation des coordinations.",
-          "temporality": "Active",
+          "gameEffect": "Jusqu'à la fin du cycle, Pétra Kantor est considérée comme ayant une valeur de rang 0 pour la réalisation des coordinations.",
+          "timing": "Active",
           "actionCost": 1,
           "darknessCost": 1
         }
       ],
       "art": {
-        "recto": "3R17_recto.jpg"
+        "front": "3R17_recto.jpg"
       }
     }
   ],
-  "gears": [
+  "equipment": [
     {
       "id": "E012",
       "name": "Disrupteur quantique",
       "kind": "EQUIPMENT",
-      "ministry": "PROGRES",
+      "ministry": "PROGRESS",
       "abilities": [
         {
           "name": "Disruption",
-          "description": "Exemple d'effet de jeu.",
-          "temporality": "Active",
+          "gameEffect": "Exemple d'effet de jeu.",
+          "timing": "Active",
           "actionCost": 1,
           "darknessCost": 0,
           "frequencies": [
@@ -168,13 +168,13 @@
     {
       "id": "D003",
       "name": "Œil du Veneur",
-      "kind": "GIFT",
-      "faction": "GARDE_NOIRE",
+      "kind": "BOON",
+      "faction": "BLACK_GUARD",
       "abilities": [
         {
           "name": "Vision trouble",
-          "description": "Exemple d'effet de jeu.",
-          "temporality": "Passive",
+          "gameEffect": "Exemple d'effet de jeu.",
+          "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 1
         }
@@ -188,8 +188,8 @@
       "abilities": [
         {
           "name": "Visée longue",
-          "description": "Exemple d'effet de jeu.",
-          "temporality": "Active",
+          "gameEffect": "Exemple d'effet de jeu.",
+          "timing": "Active",
           "actionCost": 1,
           "darknessCost": 0,
           "frequencies": [

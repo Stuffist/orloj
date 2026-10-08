@@ -5,7 +5,7 @@ using OlomocListBuilder.Models;
 
 namespace OlomocListBuilder.Services;
 
-public enum StatKind { Technique, Combat, Tir, Esquive }
+public enum StatKind { Tech, Melee, Ranged, Dodge }
 
 /// <summary>Condition sur une caractéristique, telle que saisie dans la recherche (« tir>4 »).</summary>
 /// <param name="Start">Position du fragment dans la saisie, pour pouvoir le retirer.</param>
@@ -13,10 +13,10 @@ public sealed record StatCondition(StatKind Stat, string Op, int Value, int Star
 {
     public string Abbr => Stat switch
     {
-        StatKind.Technique => "TEC",
-        StatKind.Combat    => "CBT",
-        StatKind.Tir       => "TIR",
-        _                  => "ESQ",
+        StatKind.Tech   => "TEC",
+        StatKind.Melee  => "CBT",
+        StatKind.Ranged => "TIR",
+        _               => "ESQ",
     };
 
     /// <summary>Classe CSS de l'icône (voir StatLine).</summary>
@@ -28,10 +28,10 @@ public sealed record StatCondition(StatKind Stat, string Op, int Value, int Star
     {
         var v = Stat switch
         {
-            StatKind.Technique => s.Technique,
-            StatKind.Combat    => s.Melee,
-            StatKind.Tir       => s.Ranged,
-            _                  => s.Dodge,
+            StatKind.Tech   => s.Tech,
+            StatKind.Melee  => s.Melee,
+            StatKind.Ranged => s.Ranged,
+            _               => s.Dodge,
         };
         return Op switch
         {
@@ -102,10 +102,10 @@ public sealed partial class CogQuery
 
     private static StatKind StatOf(string name) => name.ToLowerInvariant() switch
     {
-        "tec" or "technique" => StatKind.Technique,
-        "cbt" or "combat"    => StatKind.Combat,
-        "tir"                => StatKind.Tir,
-        _                    => StatKind.Esquive,
+        "tec" or "technique" => StatKind.Tech,
+        "cbt" or "combat"    => StatKind.Melee,
+        "tir"                => StatKind.Ranged,
+        _                    => StatKind.Dodge,
     };
 
     // Minuscules sans diacritiques, espaces normalisés : « Pétra » -> « petra ».

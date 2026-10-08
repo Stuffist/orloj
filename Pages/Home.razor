@@ -103,26 +103,26 @@ else
                             <div class="cog-title">@cog.Title</div>
                         </div>
                         <StatLine Stats="cog.Stats" />
-                        <div class="health">
-                            @foreach (var pip in cog.Health)
+                        <div class="life-line">
+                            @foreach (var hp in cog.LifeLine)
                             {
-                                <span class="pip @pip.ToString().ToLower()" title="@PipTitle(pip)"></span>
+                                <span class="pip @hp.ToString().ToLower()" title="@HealthPointLabel(hp)"></span>
                             }
                         </div>
 
-                        <div class="gear-zone">
-                            <label>Équipement / Don</label>
-                            @{ var gears = Catalog.AvailableGears(idx, _cogs, _gears, NullIfEmpty(_faction)); }
-                            <select value="@_gears[idx]?.Id" @onchange="e => SelectGear(idx, e)">
+                        <div class="equipment-zone">
+                            <label>Équipement/don</label>
+                            @{ var available = Catalog.AvailableEquipment(idx, _cogs, _equipment, NullIfEmpty(_faction)); }
+                            <select value="@_equipment[idx]?.Id" @onchange="e => SelectEquipment(idx, e)">
                                 <option value="">— Choisir —</option>
-                                @foreach (var g in gears)
+                                @foreach (var eq in available)
                                 {
-                                    <option value="@g.Id">@g.Name @GearBadge(g)</option>
+                                    <option value="@eq.Id">@eq.Name · @AffiliationLabel(eq)</option>
                                 }
                             </select>
-                            @if (gears.Count == 0)
+                            @if (available.Count == 0)
                             {
-                                <p class="empty">Aucun équipement disponible pour ce rouage.</p>
+                                <p class="empty">Aucun équipement/don disponible pour ce rouage.</p>
                             }
                         </div>
                     </div>
@@ -154,7 +154,7 @@ else
 
     // index 0 => rang 1, index 1 => rang 2, index 2 => rang 3
     private readonly Cog?[] _cogs = new Cog?[3];
-    private readonly Gear?[] _gears = new Gear?[3];
+    private readonly Equipment?[] _equipment = new Equipment?[3];
     private LegalityResult _legality = new(false, new[] { "Composez votre cabale." });
 
     protected override async Task OnInitializedAsync()
@@ -168,8 +168,8 @@ else
     private void OnFactionChanged(ChangeEventArgs e)
     {
         _faction = e.Value?.ToString() ?? "";
-        // Un rouage/équipement peut devenir invalide hors de la nouvelle faction : on purge.
-        for (int i = 0; i < 3; i++) { _cogs[i] = null; _gears[i] = null; }
+        // Un rouage ou un équipement/don peut devenir invalide hors de la nouvelle faction : on purge.
+        for (int i = 0; i < 3; i++) { _cogs[i] = null; _equipment[i] = null; }
         Recompute();
     }
 
@@ -194,30 +194,30 @@ else
     private void SelectCog(int idx, Cog c)
     {
         _cogs[idx] = c;
-        _gears[idx] = null;                 // l'union des ministères change : on réévalue les équipements
-        PruneGears();
+        _equipment[idx] = null;             // les Ministères présents changent : on réévalue les équipements/dons
+        PruneEquipment();
         Recompute();
     }
 
     private void ClearCog(int idx)
     {
         _cogs[idx] = null;
-        _gears[idx] = null;
-        PruneGears();
+        _equipment[idx] = null;
+        PruneEquipment();
         Recompute();
     }
 
-    private void SelectGear(int idx, ChangeEventArgs e)
+    private void SelectEquipment(int idx, ChangeEventArgs e)
     {
         var id = e.Value?.ToString();
-        _gears[idx] = string.IsNullOrEmpty(id) ? null : Catalog.Catalog.Gears.FirstOrDefault(g => g.Id == id);
-        PruneGears();                       // retirer un Passe-droit peut invalider les autres équipements
+        _equipment[idx] = string.IsNullOrEmpty(id) ? null : Catalog.Catalog.Equipment.FirstOrDefault(x => x.Id == id);
+        PruneEquipment();                   // retirer un Passe-droit peut invalider les autres équipements/dons
         Recompute();
     }
 
-    // Retire les équipements devenus indisponibles après un changement de rouages ou
-    // d'équipement ; répété jusqu'à stabilité, un retrait pouvant en entraîner un autre.
-    private void PruneGears()
+    // Retire les équipements/dons devenus indisponibles après un changement de rouage ou
+    // d'équipement/don ; répété jusqu'à stabilité, un retrait pouvant en entraîner un autre.
+    private void PruneEquipment()
     {
         bool changed;
         do
@@ -225,25 +225,27 @@ else
             changed = false;
             for (int i = 0; i < 3; i++)
             {
-                if (_cogs[i] is null || _gears[i] is null) continue;
-                var ok = Catalog.AvailableGears(i, _cogs, _gears, NullIfEmpty(_faction)).Any(g => g.Id == _gears[i]!.Id);
-                if (!ok) { _gears[i] = null; changed = true; }
+                if (_cogs[i] is null || _equipment[i] is null) continue;
+                var ok = Catalog.AvailableEquipment(i, _cogs, _equipment, NullIfEmpty(_faction)).Any(x => x.Id == _equipment[i]!.Id);
+                if (!ok) { _equipment[i] = null; changed = true; }
             }
         } while (changed);
     }
 
-    private void Recompute() => _legality = Catalog.CheckLegality(NullIfEmpty(_faction), _cogs, _gears);
+    private void Recompute() => _legality = Catalog.CheckLegality(NullIfEmpty(_faction), _cogs, _equipment);
 
     private static string? NullIfEmpty(string s) => string.IsNullOrWhiteSpace(s) ? null : s;
     private static string Stars(int rank) => new string('★', rank);
-    private static string PipTitle(HealthPip p) => p switch
+    private static string HealthPointLabel(HealthPointType hp) => hp switch
     {
-        HealthPip.A => "Armuré (Protection)",
-        HealthPip.T => "Teinté",
-        _ => "Normal"
+        HealthPointType.R => "PV renforcé (Protection)",
+        HealthPointType.T => "PV teinté",
+        _ => "PV standard"
     };
-    private string GearBadge(Gear g) =>
-        g.IsFactionGear ? "· faction" :
-        g.IsNamedGear ? "· nominatif" :
-        g.IsMinistryGear ? $"· {Catalog.MinistryName(g.Ministry!)}" : "";
+    // « Don · L'Axe », « Équipement · Ligue Maisel », « Équipement · affilié au rouage »
+    private string AffiliationLabel(Equipment e) =>
+        (e.Kind == EquipmentKind.BOON ? "Don" : "Équipement") + " · " +
+        (e.IsFactionAffiliated ? Catalog.FactionName(e.Faction!) :
+         e.IsCogAffiliated ? "affilié au rouage" :
+         Catalog.MinistryName(e.Ministry!));
 }

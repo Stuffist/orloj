@@ -34,12 +34,12 @@
   "$defs": {
     "factionCode": {
       "type": "string",
-      "description": "Code de faction. Convention interne : pas de code imprimé sur les cartes.",
+      "description": "Code de faction : identifiant interne en anglais (le nom affiché est dans name). Aucun code n'est imprimé sur les cartes.",
       "pattern": "^[A-Z0-9_]{2,32}$"
     },
     "cardId": {
       "type": "string",
-      "description": "Identifiant d'un rouage du référentiel de cartes, imprimé à son dos.",
+      "description": "Identifiant d'un rouage du référentiel de cartes (code imprimé au verso de la carte).",
       "minLength": 1,
       "maxLength": 64,
       "$comment": "Doit rester aligné sur $defs/id de olomoc.schema.json."

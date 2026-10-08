@@ -20,6 +20,34 @@ dotnet publish -c Release
 # le site se trouve dans bin/Release/net8.0/publish/wwwroot
 ```
 
+## Vocabulaire
+
+- **Tout ce qui est affiché** (interface, messages, noms et effets de jeu) suit le
+  [livre de règles V1.1](https://www.occicat.com/wp-content/uploads/2026/01/LDR_V1.1.pdf).
+- **Tout ce qui est caché** (code, clés et codes des JSON, classes CSS, fichiers)
+  suit le [livre de règles anglais](https://www.occicat.com/wp-content/uploads/2026/08/LDR_EN_olomoc.pdf).
+
+| Livre V1.1 (affichage)            | Livre EN (identifiants)                 |
+|-----------------------------------|-----------------------------------------|
+| rouage, cabale                    | `Cog`, cabal                            |
+| équipement / don                  | `Equipment`, `EquipmentKind.EQUIPMENT` / `BOON` |
+| Technique, Combat, Tir, Esquive   | `tech`, `melee`, `ranged`, `dodge`      |
+| ligne de vie                      | `lifeLine`                              |
+| PV standard / renforcé (Protection) / teinté | `S` / `R` / `T` (*standard / reinforced / tainted*) |
+| temporalité : Active / Permanente | `timing` : `Active` / `Permanent`       |
+| effet de jeu                      | `gameEffect`                            |
+| pion d'action, pion de Noirceur   | `actionCost`, `darknessCost`            |
+| fréquence d'utilisation           | `frequencies` (`PLANNING_PHASE`, `CYCLE`, `GAME`) |
+| taille de socle                   | `baseSize`                              |
+| recto / verso                     | `front` / `back`                        |
+| Référentiel de faction            | `FactionReference`                      |
+| Ministère de la Coordination, de l'Intégrité, de l'Effort, du Progrès, de l'Harmonie, de l'Édification, de la Sécurité ; la Frange, l'Axe (Ministères dévoyés) | `COORDINATION`, `INTEGRITY`, `EFFORT`, `PROGRESS`, `HARMONY`, `EDIFICATION`, `SECURITY`, `FRINGE`, `AXIS` |
+
+Les factions ne sont nommées dans aucun des deux livres : leurs codes gardent les
+noms propres (`BLAUKAUST`, `MAISEL`, `URKARAS`, `RUBIN`) et traduisent le reste
+(`OTHERS` = Les Autres, `DYKOVIAN` = Cabale Dykovienne, `UNDERWORLD` = La Pègre),
+en attendant un référentiel de faction anglais officiel.
+
 ## Données
 
 Deux ressources, servies telles quelles :
@@ -44,45 +72,56 @@ Remplacer ces deux fichiers suffit à mettre l'app à jour ; aucun code à touch
 Contenu actuel (relevé du 2026-10-08) : 28 rouages, 53 équipements/dons, 7 factions.
 Les rattachements (factions, ministères, rangs) viennent des filtres du builder
 [bwaaaanegamesdb.fr](https://bwaaaanegamesdb.fr/builder_olomoc/index_builder_olomoc.php) ;
-les stats, lignes de vie et capacités ont été transcrites depuis les images des
-cartes. Conventions de transcription :
+les caractéristiques, lignes de vie et capacités ont été transcrites depuis les
+images des cartes. Conventions de transcription :
 
 - Le rang est celui du site, **pas** le préfixe du code (`1R01` est un rang 3).
-- PV gris (uni « renforcé » ou hachuré) → `A`.
+- PV gris (uni ou hachuré selon l'édition) → `R` (renforcé).
 - Couronne N → `frequencies: [{count: N, per: PLANNING_PHASE}]` ;
   cercle plein N → `{count: N, per: GAME}`.
 - Cube blanc plein dans la colonne de coût → +1 `actionCost`.
-- Pictogrammes dans le texte : `[Corps-à-corps]`, `[Tir]`, `[Technique]`,
-  `[pion d'action]`, `[Noirceur]`, `[1/partie]`.
-- `baseSize` n'est pas imprimée sur les cartes et reste vide.
+- Pictogrammes dans l'effet de jeu : `[Technique]`, `[Combat]`, `[Tir]`,
+  `[Active]`, `[pion d'action]`, `[pion de Noirceur]`, `[1 fois par partie]`.
+- `baseSize` est imprimée au verso des cartes, absent du relevé : elle reste vide.
 
-## Règles appliquées
+## Règles appliquées (LDR p.32)
 
-- Une cabale = un rouage de rang 1, un de rang 2, un de rang 3, **même faction**.
-- Chaque rouage porte **un** équipement/don.
-- Un équipement est proposé pour un rouage s'il est affilié à la faction de la
-  cabale, à un ministère présent parmi les trois rouages, ou nommément à ce rouage.
-- **Chaque rouage ne débloque qu'un seul équipement de son ministère** : les
-  équipements « ministère » sont affectés à des rouages distincts (couplage
-  biparti). Le panneau de légalité signale la sur-souscription.
-- **Règles de constitution portées par les cartes** (`buildRules` dans le
+- Une cabale doit être constituée de 3 rouages : un rang 1, un rang 2 et un
+  rang 3, appartenant tous à la **même faction**.
+- Chaque rouage doit être équipé d'**un** équipement/don, affilié à un Ministère
+  d'un des rouages de la cabale, ou à la faction, ou au rouage équipé.
+- **Chaque rouage ne rend disponible qu'un seul équipement/don de son Ministère
+  d'affiliation** : les équipements de Ministère sont affectés à des rouages
+  distincts (couplage biparti). Le panneau de légalité signale le dépassement.
+- Pas de doublon : deux rouages ou deux équipements/dons de même nom.
+- **Règles de composition portées par les cartes** (`buildRules` dans le
   référentiel, interprétées par `CheckLegality`) :
   - `RECRUIT_MINISTRY` — *Harmonium* : la cabale peut recruter **un** rouage hors
-    faction de l'Axe, de rang 1 ou 2.
-  - `RECRUIT_WEARER` — *Asservisseur mental* : le porteur, de rang 1 ou 2, peut
-    être recruté hors faction (chez les Autres).
-  - `ALL_MINISTRIES` — *Passe-droit du Census* : le porteur compte comme affilié
-    à tous les ministères (disponibilité des équipements, déblocage, recrutement).
-    Il ne débloque pas son propre Passe-droit : un rouage de la Coordination reste
-    nécessaire.
+    faction affilié à l'Axe, de rang 1 ou 2.
+  - `RECRUIT_WEARER` — *Asservisseur mental* : le rouage équipé, de rang 1 ou 2,
+    peut être recruté hors faction (chez les Autres).
+  - `ALL_MINISTRIES` — *Passe-droit du Census* : le rouage équipé compte comme
+    affilié à tous les Ministères (équipements/dons disponibles, recrutement).
+    Il ne rend pas disponible son propre Passe-droit : un rouage de la
+    Coordination reste nécessaire.
 
   Les rouages hors faction ainsi recrutables apparaissent dans la liste avec la
   mention « via … ». Non géré : l'équipement supplémentaire de Medic Ruzicka.
 
+## Recherche
+
+Le champ de recherche combine des mots libres (nom ou titre, sans tenir compte
+des accents ni de la casse) et des conditions cumulables sur les caractéristiques :
+`tec`, `cbt`, `tir`, `esq` suivis de `>`, `<`, `>=`, `<=` ou `=` et d'un nombre,
+par exemple `kantor tir>4 esq<=3`.
+
 ## Architecture
 
-- `Models/CatalogModels.cs` — records du référentiel, désérialisés en
-  insensible à la casse ; enums `HealthPip` (N/A/T), `Temporality`, `GearKind`.
-- `Services/CatalogService.cs` — chargement + `AvailableCogs`, `AvailableGears`,
-  `CheckLegality` (dont le matching biparti).
+- `Models/CatalogModels.cs` — modèle du référentiel (`Cog`, `Equipment`,
+  `Ministry`, `Faction`…), désérialisé en insensible à la casse ; enums
+  `HealthPointType` (S/R/T), `Timing`, `EquipmentKind`, `BuildRuleType`.
+- `Services/CatalogService.cs` — chargement + `AvailableCogs`,
+  `AvailableEquipment`, `RecruitVia`, `CheckLegality` (dont le couplage biparti).
+- `Services/CogQuery.cs` — analyse de la recherche (mots + conditions sur les stats).
+- `Shared/StatLine.razor` — caractéristiques avec les icônes du livre (`wwwroot/img/stats/`).
 - `Pages/Home.razor` — état de la cabale et UI réactive.

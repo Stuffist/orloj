@@ -2,14 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://occicat.com/schemas/olomoc-catalog.schema.json",
   "title": "Olomòc — référentiel de cartes",
-  "description": "Référentiel statique des cartes : rouages, équipements/dons et ministères. Les appartenances aux factions vivent dans un document distinct (olomoc-factions.schema.json). Conforme au Livre de règles V1.1 (Occicat Games, 2026).",
+  "description": "Référentiel statique des cartes : rouages, équipements/dons et ministères. Les appartenances aux factions vivent dans un document distinct (olomoc-factions.schema.json, « Référentiel de faction »). Identifiants alignés sur le livre de règles anglais, textes sur le livre de règles V1.1.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "version",
     "ministries",
     "cogs",
-    "gears"
+    "equipment"
   ],
   "properties": {
     "$schema": {
@@ -37,10 +37,10 @@
       },
       "uniqueItems": true
     },
-    "gears": {
+    "equipment": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/gear"
+        "$ref": "#/$defs/equipment"
       },
       "uniqueItems": true
     },
@@ -62,17 +62,17 @@
     },
     "ministryCode": {
       "type": "string",
-      "description": "Ministère d'affiliation. La Frange et l'Axe sont les ministères dits « dévoyés » (LDR p.25).",
+      "description": "Ministère d'affiliation. La Frange (FRINGE) et l'Axe (AXIS) sont les Ministères dévoyés (LDR p.25).",
       "enum": [
         "COORDINATION",
-        "INTEGRITE",
+        "INTEGRITY",
         "EFFORT",
-        "PROGRES",
-        "HARMONIE",
+        "PROGRESS",
+        "HARMONY",
         "EDIFICATION",
-        "SECURITE",
-        "FRANGE",
-        "AXE"
+        "SECURITY",
+        "FRINGE",
+        "AXIS"
       ]
     },
     "factionCode": {
@@ -103,27 +103,9 @@
         }
       }
     },
-    "healthType": {
-      "type": "string",
-      "description": "Type de point de vie (LDR p.16). N (normal) : aucune règle. A (armored / « renforcé », « Protection ») : -1 blessure tant qu'il reste au moins un PV armuré à cocher ; imprimé en gris, uni ou hachuré selon l'édition. T (tainted / teinté) : attribue un pion de Noirceur et stoppe l'attaque en cours.",
-      "enum": [
-        "N",
-        "A",
-        "T"
-      ]
-    },
-    "health": {
-      "type": "array",
-      "description": "Ligne de vie ordonnée. L'ordre est significatif : on coche de gauche à droite.",
-      "items": {
-        "$ref": "#/$defs/healthType"
-      },
-      "minItems": 1,
-      "maxItems": 30
-    },
     "frequency": {
       "type": "object",
-      "description": "Fréquence d'utilisation (LDR p.20). Pictogrammes : couronne N = N par phase de planification, cercle plein N = N par partie (cases d'usage imprimées sur la carte).",
+      "description": "Fréquence d'utilisation (LDR p.20) : N fois par phase de planification (pictogramme couronne), par cycle, ou par partie (pictogramme cercle plein, cases d'usage imprimées sur la carte).",
       "additionalProperties": false,
       "required": [
         "count",
@@ -146,12 +128,12 @@
     },
     "ability": {
       "type": "object",
-      "description": "Capacité spécifique (LDR p.20). Décodage des pictogrammes : flèche = Active, flèche circulaire = Passive, pentagone N = N pions d'action, cube blanc plein = 1 pion d'action, cube contour = pions de Noirceur générés, couronne / cercle = fréquences.",
+      "description": "Capacité spécifique (LDR p.20), définie par un nom, une fréquence d'utilisation, un coût, une temporalité et un effet de jeu. Pictogrammes : flèche = Active, flèche circulaire = Permanente, pentagone N = N pions d'action, cube blanc plein = 1 pion d'action, cube contour = pions de Noirceur générés, couronne / cercle = fréquences.",
       "additionalProperties": false,
       "required": [
         "name",
-        "description",
-        "temporality",
+        "gameEffect",
+        "timing",
         "actionCost",
         "darknessCost"
       ],
@@ -160,28 +142,30 @@
           "type": "string",
           "minLength": 1
         },
-        "description": {
+        "gameEffect": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Effet de jeu, tel qu'imprimé sur la carte. Pictogrammes notés entre crochets : [Technique], [Combat], [Tir], [Esquive], [Active], [pion d'action], [pion de Noirceur], [1 fois par partie]."
         },
-        "temporality": {
+        "timing": {
           "type": "string",
           "enum": [
             "Active",
-            "Passive"
-          ]
+            "Permanent"
+          ],
+          "description": "Temporalité : Active (utilisable seulement lorsque le rouage est actif) ou Permanente (selon les conditions de l'effet de jeu, à tout moment)."
         },
         "actionCost": {
           "type": "integer",
           "minimum": 0,
           "maximum": 4,
-          "description": "Pions d'action à dépenser. 0 = gratuite. Réserve de début de cycle : 4."
+          "description": "Coût en pions d'action, pris dans la réserve d'action du rouage. 0 = aucun."
         },
         "darknessCost": {
           "type": "integer",
           "minimum": 0,
           "maximum": 3,
-          "description": "Pions de Noirceur générés au rouage qui réalise la capacité."
+          "description": "Coût en pions de Noirceur : pions générés au rouage qui utilise la capacité."
         },
         "frequencies": {
           "type": "array",
@@ -195,16 +179,16 @@
     },
     "stats": {
       "type": "object",
-      "description": "Caractéristiques (LDR p.15). Une valeur de 0 interdit tout jet avec cette caractéristique.",
+      "description": "Caractéristiques (LDR p.15) : Technique, Combat, Tir, Esquive. Une valeur de 0 interdit toute capacité impliquant un jet avec cette caractéristique.",
       "additionalProperties": false,
       "required": [
-        "technique",
+        "tech",
         "melee",
         "ranged",
         "dodge"
       ],
       "properties": {
-        "technique": {
+        "tech": {
           "type": "integer",
           "minimum": 0,
           "maximum": 10
@@ -230,14 +214,14 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "recto"
+        "front"
       ],
       "properties": {
-        "recto": {
+        "front": {
           "type": "string",
           "minLength": 1
         },
-        "verso": {
+        "back": {
           "type": "string",
           "minLength": 1
         }
@@ -254,7 +238,7 @@
         "ministries",
         "rank",
         "stats",
-        "health",
+        "lifeLine",
         "abilities"
       ],
       "properties": {
@@ -290,13 +274,13 @@
             40,
             50
           ],
-          "description": "Taille de socle en mm. Non imprimée sur la carte : optionnelle."
+          "description": "Taille de socle en mm, imprimée au verso de la carte. Optionnelle."
         },
         "stats": {
           "$ref": "#/$defs/stats"
         },
-        "health": {
-          "$ref": "#/$defs/health"
+        "lifeLine": {
+          "$ref": "#/$defs/lifeLine"
         },
         "abilities": {
           "type": "array",
@@ -306,7 +290,7 @@
         },
         "instinct": {
           "type": "string",
-          "description": "Comment activer le rouage selon la situation quand il n'est pas contrôlé par un joueur (LDR p.28)."
+          "description": "Instinct : comment activer le rouage lorsqu'il est hostile (LDR p.28)."
         },
         "art": {
           "$ref": "#/$defs/art"
@@ -317,10 +301,137 @@
         }
       }
     },
-    "gear": {
+    "buildRule": {
+      "type": "object",
+      "title": "Règle de constitution",
+      "description": "ALL_MINISTRIES : le porteur compte comme affilié à tous les ministères pendant la constitution (il ne peut pas débloquer la carte qui lui confère cet effet). RECRUIT_WEARER : le porteur, si son rang figure dans ranks, peut être recruté hors de la faction de la cabale. RECRUIT_MINISTRY : la cabale peut recruter un rouage hors faction affilié à ministry, si son rang figure dans ranks.",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ALL_MINISTRIES",
+            "RECRUIT_WEARER",
+            "RECRUIT_MINISTRY"
+          ]
+        },
+        "ranks": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "ministry": {
+          "$ref": "#/$defs/ministryCode"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "RECRUIT_WEARER"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "ranks"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "RECRUIT_MINISTRY"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "ranks",
+              "ministry"
+            ]
+          }
+        }
+      ]
+    },
+    "cabal": {
+      "type": "object",
+      "title": "Cabale",
+      "description": "Cabale : 3 rouages (un rang 1, un rang 2 et un rang 3) appartenant à la même faction, chacun équipé d'un équipement/don (LDR p.32).",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "faction",
+        "slots"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "faction": {
+          "$ref": "#/$defs/factionCode"
+        },
+        "slots": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "cogId",
+              "equipmentId"
+            ],
+            "properties": {
+              "cogId": {
+                "$ref": "#/$defs/id"
+              },
+              "equipmentId": {
+                "$ref": "#/$defs/id"
+              }
+            }
+          }
+        }
+      }
+    },
+    "healthPointType": {
+      "type": "string",
+      "description": "Type de point de vie (LDR p.16). S (standard) : pas de règle particulière. R (renforcé, dit Protection) : lorsqu'un rouage subit des blessures suite à une attaque et qu'il reste au moins un PV renforcé à cocher, diminuez de 1 le nombre de blessures subies ; imprimé en gris (uni ou hachuré selon l'édition). T (teinté) : le rouage reçoit un pion de Noirceur et aucun PV au-delà ne peut être coché jusqu'à la fin de l'attaque.",
+      "enum": [
+        "S",
+        "R",
+        "T"
+      ]
+    },
+    "lifeLine": {
+      "type": "array",
+      "description": "Ligne de vie : PV ordonnés, cochés de gauche à droite.",
+      "items": {
+        "$ref": "#/$defs/healthPointType"
+      },
+      "minItems": 1,
+      "maxItems": 30
+    },
+    "equipment": {
       "type": "object",
       "title": "Équipement / Don",
-      "description": "Carte équipement ou don (LDR p.32). Chaque rouage d'une cabale en porte exactement une. Affiliation exclusive : un ministère, ou une faction, ou un rouage nommé.",
+      "description": "Carte équipement ou don (LDR p.32). Chaque rouage d'une cabale doit être équipé d'un équipement/don. Affiliation exclusive : un Ministère, ou une faction, ou le rouage équipé.",
       "additionalProperties": false,
       "required": [
         "id",
@@ -341,20 +452,21 @@
           "type": "string",
           "enum": [
             "EQUIPMENT",
-            "GIFT"
-          ]
+            "BOON"
+          ],
+          "description": "EQUIPMENT = carte équipement, BOON = carte don."
         },
         "ministry": {
           "$ref": "#/$defs/ministryCode",
-          "description": "Affiliation ministère : consomme le slot d'un rouage de la cabale affilié à ce ministère. Exclusif."
+          "description": "Affilié à un Ministère : disponible si un rouage de la cabale est affilié à ce Ministère, qui ne rend disponible qu'un seul équipement/don. Exclusif."
         },
         "faction": {
           "$ref": "#/$defs/factionCode",
-          "description": "Affiliation faction : disponible sans consommer de slot si la cabale est de cette faction. Exclusif."
+          "description": "Affilié à une faction : disponible si la cabale est de cette faction. Exclusif."
         },
         "cogId": {
           "$ref": "#/$defs/id",
-          "description": "Affiliation à un rouage nommé : la carte ne porte ni ministère ni faction, et n'est disponible que pour ce rouage. Exclusif."
+          "description": "Affilié au rouage équipé : disponible seulement pour ce rouage. Exclusif."
         },
         "abilities": {
           "type": "array",
@@ -395,102 +507,6 @@
         }
       ],
       "$comment": "Les trois cas de disponibilité du LDR p.32 sont mutuellement exclusifs : la carte porte une affiliation et une seule. La sémantique « exactement une branche » de oneOf suffit."
-    },
-    "buildRule": {
-      "type": "object",
-      "title": "Règle de constitution",
-      "description": "ALL_MINISTRIES : le porteur compte comme affilié à tous les ministères pendant la constitution (il ne peut pas débloquer la carte qui lui confère cet effet). RECRUIT_WEARER : le porteur, si son rang figure dans ranks, peut être recruté hors de la faction de la cabale. RECRUIT_MINISTRY : la cabale peut recruter un rouage hors faction affilié à ministry, si son rang figure dans ranks.",
-      "additionalProperties": false,
-      "required": [
-        "type"
-      ],
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "ALL_MINISTRIES",
-            "RECRUIT_WEARER",
-            "RECRUIT_MINISTRY"
-          ]
-        },
-        "ranks": {
-          "type": "array",
-          "items": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9
-          },
-          "minItems": 1,
-          "uniqueItems": true
-        },
-        "ministry": {
-          "$ref": "#/$defs/ministryCode"
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "properties": { "type": { "const": "RECRUIT_WEARER" } }
-          },
-          "then": {
-            "required": [ "ranks" ]
-          }
-        },
-        {
-          "if": {
-            "properties": { "type": { "const": "RECRUIT_MINISTRY" } }
-          },
-          "then": {
-            "required": [ "ranks", "ministry" ]
-          }
-        }
-      ]
-    },
-    "cabal": {
-      "type": "object",
-      "title": "Cabale",
-      "description": "Bande de 3 rouages : un rang 1, un rang 2, un rang 3, tous de la même faction, chacun équipé (LDR p.32).",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "name",
-        "faction",
-        "slots"
-      ],
-      "properties": {
-        "id": {
-          "$ref": "#/$defs/id"
-        },
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "faction": {
-          "$ref": "#/$defs/factionCode"
-        },
-        "slots": {
-          "type": "array",
-          "minItems": 3,
-          "maxItems": 3,
-          "uniqueItems": true,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "cogId",
-              "gearId"
-            ],
-            "properties": {
-              "cogId": {
-                "$ref": "#/$defs/id"
-              },
-              "gearId": {
-                "$ref": "#/$defs/id"
-              }
-            }
-          }
-        }
-      }
     }
   }
 }

@@ -4,7 +4,7 @@
   "source": "https://bwaaaanegamesdb.fr/builder_olomoc/index_builder_olomoc.php (relevé du 2026-10-08)",
   "factions": [
     {
-      "code": "AUTRES",
+      "code": "OTHERS",
       "name": "Les Autres",
       "cogIds": [
         "1R09",
@@ -28,7 +28,7 @@
       ]
     },
     {
-      "code": "DYKOVIENNE",
+      "code": "DYKOVIAN",
       "name": "Cabale Dykovienne",
       "cogIds": [
         "1R01",
@@ -69,7 +69,7 @@
       ]
     },
     {
-      "code": "PEGRE",
+      "code": "UNDERWORLD",
       "name": "La Pègre",
       "cogIds": [
         "1R22",

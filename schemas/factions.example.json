@@ -4,7 +4,7 @@
   "source": "Référentiel de faction Occicat Games — à retranscrire",
   "factions": [
     {
-      "code": "GARDE_NOIRE",
+      "code": "BLACK_GUARD",
       "name": "La Garde Noire",
       "description": "Exemple : à remplacer par les factions réelles du référentiel Occicat.",
       "cogIds": [

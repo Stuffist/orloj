@@ -19,13 +19,13 @@ public sealed class CatalogService
     };
 
     public Catalog Catalog { get; private set; } = new();
-    public FactionCatalog Factions { get; private set; } = new();
+    public FactionReference FactionReference { get; private set; } = new();
     public bool Loaded { get; private set; }
 
     private readonly HttpClient _http;
     private Dictionary<string, Ministry> _ministryByCode = new();
     private Dictionary<string, Cog> _cogById = new();
-    private Dictionary<string, FactionEntry> _factionByCode = new();
+    private Dictionary<string, Faction> _factionByCode = new();
     private Dictionary<string, HashSet<string>> _membersByFaction = new();
     private List<string> _allMinistries = new();
 
@@ -35,37 +35,40 @@ public sealed class CatalogService
     {
         if (Loaded) return;
         Catalog = await _http.GetFromJsonAsync<Catalog>("data/olomoc-catalog.json", JsonOpts) ?? new();
-        Factions = await _http.GetFromJsonAsync<FactionCatalog>("data/olomoc-factions.json", JsonOpts) ?? new();
+        FactionReference = await _http.GetFromJsonAsync<FactionReference>("data/olomoc-factions.json", JsonOpts) ?? new();
 
         _ministryByCode = Catalog.Ministries.ToDictionary(m => m.Code);
         _cogById = Catalog.Cogs.ToDictionary(c => c.Id);
-        _factionByCode = Factions.Factions.ToDictionary(f => f.Code);
-        _membersByFaction = Factions.Factions.ToDictionary(f => f.Code, f => f.CogIds.ToHashSet());
+        _factionByCode = FactionReference.Factions.ToDictionary(f => f.Code);
+        _membersByFaction = FactionReference.Factions.ToDictionary(f => f.Code, f => f.CogIds.ToHashSet());
         _allMinistries = Catalog.Ministries.Select(m => m.Code).ToList();
         Loaded = true;
     }
+
+    public string FactionName(string code) =>
+        _factionByCode.TryGetValue(code, out var f) ? f.Name : code;
 
     public string MinistryName(string code) =>
         _ministryByCode.TryGetValue(code, out var m) ? m.Name : code;
 
     public Cog? CogById(string id) => _cogById.GetValueOrDefault(id);
 
-    public IReadOnlyList<FactionEntry> AllFactions => Factions.Factions;
+    public IReadOnlyList<Faction> AllFactions => FactionReference.Factions;
 
     public bool IsMember(Cog cog, string faction) =>
         _membersByFaction.TryGetValue(faction, out var ids) && ids.Contains(cog.Id);
 
     /// <summary>
-    /// Ministères d'un rouage pendant la constitution : ceux de sa carte, ou tous
+    /// Ministères d'un rouage pendant la composition : ceux de sa carte, ou tous
     /// s'il porte une carte ALL_MINISTRIES (Passe-droit du Census).
     /// </summary>
-    private IReadOnlyCollection<string> EffectiveMinistries(Cog cog, Gear? gear) =>
-        gear?.GrantsAllMinistries == true ? _allMinistries : cog.Ministries;
+    private IReadOnlyCollection<string> EffectiveMinistries(Cog cog, Equipment? equipment) =>
+        equipment?.GrantsAllMinistries == true ? _allMinistries : cog.Ministries;
 
     /// <summary>
     /// Rouages recrutables pour un rang, filtrés par faction (si choisie), ministère et
     /// recherche (texte + conditions sur les caractéristiques, voir <see cref="CogQuery"/>).
-    /// Avec une faction, inclut les rouages hors faction qu'une règle de constitution
+    /// Avec une faction, inclut les rouages hors faction qu'une règle de composition
     /// permettrait d'intégrer (voir <see cref="RecruitVia"/>).
     /// </summary>
     public List<Cog> AvailableCogs(int rank, string? faction, string? ministryFilter, CogQuery query)
@@ -85,43 +88,43 @@ public sealed class CatalogService
     /// Carte dont une règle de recrutement permettrait d'intégrer ce rouage à une cabale
     /// de la faction ; null s'il en est membre ou si aucune carte ne le permet.
     /// </summary>
-    public Gear? RecruitVia(Cog cog, string faction) =>
+    public Equipment? RecruitVia(Cog cog, string faction) =>
         IsMember(cog, faction) ? null :
-        Catalog.Gears.FirstOrDefault(g =>
-            (g.Faction == faction || g.IsMinistryGear || g.CogId == cog.Id) &&
-            g.BuildRules.Any(r => r.CanRecruit(cog, cog.Ministries)));
+        Catalog.Equipment.FirstOrDefault(e =>
+            (e.Faction == faction || e.IsMinistryAffiliated || e.CogId == cog.Id) &&
+            e.BuildRules.Any(r => r.CanRecruit(cog, cog.Ministries)));
 
     /// <summary>
     /// Équipements/dons proposables pour le rouage de l'emplacement <paramref name="slot"/>,
     /// selon la règle du LDR p.32 : affilié à la faction de la cabale, OU à un ministère
-    /// présent parmi les rouages sélectionnés, OU nommément à ce rouage. Les ministères
+    /// présent parmi les rouages sélectionnés, OU au rouage équipé. Les ministères
     /// conférés par un Passe-droit porté ailleurs comptent ; ceux du rouage lui-même non,
     /// puisque l'équipement qu'on lui choisit remplacerait le Passe-droit.
     /// </summary>
-    public List<Gear> AvailableGears(int slot, IReadOnlyList<Cog?> cogs, IReadOnlyList<Gear?> gears, string? faction)
+    public List<Equipment> AvailableEquipment(int slot, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment, string? faction)
     {
         var cog = cogs[slot]!;
         var union = Enumerable.Range(0, cogs.Count)
             .Where(i => cogs[i] is not null)
-            .SelectMany(i => i == slot ? cogs[i]!.Ministries : EffectiveMinistries(cogs[i]!, gears[i]))
+            .SelectMany(i => i == slot ? cogs[i]!.Ministries : EffectiveMinistries(cogs[i]!, equipment[i]))
             .ToHashSet();
 
-        return Catalog.Gears.Where(g =>
-                (g.IsNamedGear    && g.CogId == cog.Id) ||
-                (g.IsFactionGear  && faction is not null && g.Faction == faction) ||
-                (g.IsMinistryGear && union.Contains(g.Ministry!)))
-            .OrderBy(g => g.Name)
+        return Catalog.Equipment.Where(e =>
+                (e.IsCogAffiliated      && e.CogId == cog.Id) ||
+                (e.IsFactionAffiliated  && faction is not null && e.Faction == faction) ||
+                (e.IsMinistryAffiliated && union.Contains(e.Ministry!)))
+            .OrderBy(e => e.Name)
             .ToList();
     }
 
-    /// <summary>Contrôle complet de légalité d'une cabale (cogs[i] porte gears[i]).</summary>
-    public LegalityResult CheckLegality(string? faction, IReadOnlyList<Cog?> cogs, IReadOnlyList<Gear?> gears)
+    /// <summary>Contrôle complet de légalité d'une cabale (cogs[i] porte equipment[i]).</summary>
+    public LegalityResult CheckLegality(string? faction, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
     {
         var issues = new List<string>();
         var slots = Enumerable.Range(0, cogs.Count).Where(i => cogs[i] is not null).ToList();
         var picked = slots.Select(i => cogs[i]!).ToList();
-        var pickedGears = gears.Where(g => g is not null).Cast<Gear>().ToList();
-        var ministries = slots.ToDictionary(i => i, i => EffectiveMinistries(cogs[i]!, gears[i]));
+        var pickedEquipment = equipment.Where(e => e is not null).Cast<Equipment>().ToList();
+        var ministries = slots.ToDictionary(i => i, i => EffectiveMinistries(cogs[i]!, equipment[i]));
 
         // Faction
         if (faction is null)
@@ -130,72 +133,72 @@ public sealed class CatalogService
         // Composition : un rouage de rang 1, un de rang 2, un de rang 3
         var ranks = picked.Select(c => c.Rank).OrderBy(r => r).ToList();
         if (picked.Count != 3 || !ranks.SequenceEqual(new[] { 1, 2, 3 }))
-            issues.Add("Une cabale se compose d'un rouage de rang 1, d'un de rang 2 et d'un de rang 3.");
+            issues.Add("Une cabale doit être constituée de 3 rouages : un rang 1, un rang 2 et un rang 3.");
 
         // Recrutement : chaque rouage hors faction doit être couvert par une règle de
-        // constitution distincte (Harmonium, Asservisseur mental…).
+        // composition distincte (Harmonium, Asservisseur mental…).
         if (faction is not null && _factionByCode.TryGetValue(faction, out var fe))
         {
             var outsiders = slots.Where(i => !IsMember(cogs[i]!, faction)).ToList();
-            var grants = slots.Where(j => gears[j] is not null)
-                .SelectMany(j => gears[j]!.BuildRules.Select(r => (Slot: j, Rule: r)))
+            var grants = slots.Where(j => equipment[j] is not null)
+                .SelectMany(j => equipment[j]!.BuildRules.Select(r => (Slot: j, Rule: r)))
                 .ToList();
             var uncovered = Unmatched(outsiders, grants, (i, grant) =>
                 (grant.Rule.Type != BuildRuleType.RECRUIT_WEARER || grant.Slot == i) &&
                 grant.Rule.CanRecruit(cogs[i]!, ministries[i]));
             if (uncovered.Count > 0)
-                issues.Add($"Hors faction {fe.Name} : {string.Join(", ", uncovered.Select(i => cogs[i]!.Name))}.");
+                issues.Add($"Hors faction {fe.Name} : {string.Join(", ", uncovered.Select(i => cogs[i]!.Name))}. Tous les rouages doivent appartenir à la même faction.");
         }
 
         // Doublons de nom (rouages et équipements)
         AddDuplicates(issues, "rouage", picked.Select(c => c.Name));
-        AddDuplicates(issues, "équipement/don", pickedGears.Select(g => g.Name));
+        AddDuplicates(issues, "équipement/don", pickedEquipment.Select(e => e.Name));
 
         // Chaque rouage doit être équipé
-        if (picked.Count == 3 && pickedGears.Count < 3)
-            issues.Add("Chaque rouage doit porter un équipement ou un don.");
+        if (picked.Count == 3 && pickedEquipment.Count < 3)
+            issues.Add("Chaque rouage doit être équipé d'un équipement/don.");
 
-        // Le rouage j peut-il débloquer l'équipement ministère porté en i ? Par sa carte,
+        // Le rouage j peut-il rendre disponible l'équipement/don de Ministère porté en i ? Par sa carte,
         // ou par un Passe-droit — mais pas le Passe-droit qu'il porte lui-même.
         bool CanUnlock(int j, int i) =>
-            cogs[j]!.Ministries.Contains(gears[i]!.Ministry!) ||
-            (j != i && ministries[j].Contains(gears[i]!.Ministry!));
+            cogs[j]!.Ministries.Contains(equipment[i]!.Ministry!) ||
+            (j != i && ministries[j].Contains(equipment[i]!.Ministry!));
 
         // Affiliation de chaque équipement + collecte des équipements ministère
         var ministrySlots = new List<int>();
         foreach (var i in slots)
         {
-            var g = gears[i];
+            var e = equipment[i];
             var c = cogs[i]!;
-            if (g is null) continue;
+            if (e is null) continue;
 
-            if (g.IsNamedGear)
+            if (e.IsCogAffiliated)
             {
-                if (g.CogId != c.Id)
-                    issues.Add($"« {g.Name} » n'est affilié qu'au rouage {CogById(g.CogId!)?.Name ?? g.CogId} et ne peut pas être porté par {c.Name}.");
+                if (e.CogId != c.Id)
+                    issues.Add($"« {e.Name} » est affilié à {CogById(e.CogId!)?.Name ?? e.CogId} et ne peut pas équiper {c.Name}.");
             }
-            else if (g.IsFactionGear)
+            else if (e.IsFactionAffiliated)
             {
-                if (g.Faction != faction)
-                    issues.Add($"« {g.Name} » appartient à la faction {g.Faction}, pas à la faction de la cabale.");
+                if (e.Faction != faction)
+                    issues.Add($"« {e.Name} » est affilié à la faction {FactionName(e.Faction!)}, pas à celle de la cabale.");
             }
-            else if (g.IsMinistryGear)
+            else if (e.IsMinistryAffiliated)
             {
                 // Ministère absent : signalé ici, et exclu du couplage pour ne pas
                 // le faire passer à tort pour une sur-souscription.
                 if (slots.Any(j => CanUnlock(j, i)))
                     ministrySlots.Add(i);
                 else
-                    issues.Add($"« {g.Name} » ({MinistryName(g.Ministry!)}) : aucun rouage de la cabale ne représente ce ministère.");
+                    issues.Add($"« {e.Name} » ({MinistryName(e.Ministry!)}) : aucun rouage de la cabale n'est affilié à ce Ministère.");
             }
         }
 
-        // Chaque rouage ne débloque qu'un seul équipement de son ministère :
-        // les équipements ministère doivent s'affecter à des rouages distincts.
+        // Chaque rouage ne rend disponible qu'un seul équipement/don de son Ministère
+        // d'affiliation : les équipements de Ministère s'affectent à des rouages distincts.
         if (Unmatched(ministrySlots, slots, (i, j) => CanUnlock(j, i)).Count > 0)
-            issues.Add("Trop d'équipements réclament le même ministère : chaque rouage n'en débloque qu'un seul.");
+            issues.Add("Trop d'équipements/dons d'un même Ministère : chaque rouage ne rend disponible qu'un seul équipement/don de son Ministère d'affiliation.");
 
-        return new LegalityResult(issues.Count == 0 && picked.Count == 3 && pickedGears.Count == 3, issues);
+        return new LegalityResult(issues.Count == 0 && picked.Count == 3 && pickedEquipment.Count == 3, issues);
     }
 
     private static void AddDuplicates(List<string> issues, string label, IEnumerable<string> names)
