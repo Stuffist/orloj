@@ -1,0 +1,35 @@
+# Sorties de build .NET
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+publish/
+*.nupkg
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.user
+*.suo
+*.rsuser
+*.userprefs
+*.DotSettings.user
+
+# Tests et couverture
+TestResults/
+coverage*/
+*.coverage
+
+# Outillage JS éventuel (validation des schémas, etc.)
+node_modules/
+
+# Réglages locaux Claude Code
+.claude/settings.local.json
+
+# Système
+.DS_Store
+Thumbs.db
