@@ -1,0 +1,434 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://occicat.com/schemas/olomoc-catalog.schema.json",
+  "title": "Olomòc — référentiel de cartes",
+  "description": "Référentiel statique des cartes : rouages, équipements/dons et ministères. Les appartenances aux factions vivent dans un document distinct (olomoc-factions.schema.json). Conforme au Livre de règles V1.1 (Occicat Games, 2026).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "ministries",
+    "cogs",
+    "gears"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Chemin vers ce schéma, pour l'autocomplétion dans l'éditeur."
+    },
+    "version": {
+      "type": "string",
+      "description": "Version du référentiel (semver ou date d'édition).",
+      "examples": [
+        "2026.1"
+      ]
+    },
+    "ministries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ministry"
+      },
+      "uniqueItems": true
+    },
+    "cogs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/cog"
+      },
+      "uniqueItems": true
+    },
+    "gears": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/gear"
+      },
+      "uniqueItems": true
+    },
+    "cabals": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/cabal"
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "description": "Identifiant stable, imprimé au dos de la carte.",
+      "minLength": 1,
+      "maxLength": 64,
+      "$comment": "Format non arrêté : contrainte volontairement large. Resserrer avec un \"pattern\" une fois la convention d'Occicat connue."
+    },
+    "ministryCode": {
+      "type": "string",
+      "description": "Ministère d'affiliation. La Frange et l'Axe sont les ministères dits « dévoyés » (LDR p.25).",
+      "enum": [
+        "COORDINATION",
+        "INTEGRITE",
+        "EFFORT",
+        "PROGRES",
+        "HARMONIE",
+        "EDIFICATION",
+        "SECURITE",
+        "FRANGE",
+        "AXE"
+      ]
+    },
+    "factionCode": {
+      "type": "string",
+      "description": "Code de faction, défini par le référentiel de faction publié par Occicat (LDR p.32).",
+      "pattern": "^[A-Z0-9_]{2,32}$"
+    },
+    "ministry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "name"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ministryCode"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "emblem": {
+          "type": "string"
+        }
+      }
+    },
+    "healthType": {
+      "type": "string",
+      "description": "Type de point de vie (LDR p.16). N (normal) : aucune règle. A (armored / « Protection ») : -1 blessure tant qu'il reste au moins un PV armuré à cocher. T (tainted / teinté) : attribue un pion de Noirceur et stoppe l'attaque en cours.",
+      "enum": [
+        "N",
+        "A",
+        "T"
+      ]
+    },
+    "health": {
+      "type": "array",
+      "description": "Ligne de vie ordonnée. L'ordre est significatif : on coche de gauche à droite.",
+      "items": {
+        "$ref": "#/$defs/healthType"
+      },
+      "minItems": 1,
+      "maxItems": 30
+    },
+    "frequency": {
+      "type": "object",
+      "description": "Fréquence d'utilisation (LDR p.20). Absente = illimitée.",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "per"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "per": {
+          "type": "string",
+          "enum": [
+            "PLANNING_PHASE",
+            "CYCLE",
+            "GAME"
+          ]
+        }
+      }
+    },
+    "ability": {
+      "type": "object",
+      "description": "Capacité spécifique (LDR p.20). Décodage des pictogrammes : flèche = Active, flèche circulaire = Passive, pentagone = coût en pions d'action, cube = pions de Noirceur générés.",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "description",
+        "temporality",
+        "actionCost",
+        "darknessCost"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "temporality": {
+          "type": "string",
+          "enum": [
+            "Active",
+            "Passive"
+          ]
+        },
+        "actionCost": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4,
+          "description": "Pions d'action à dépenser. 0 = gratuite. Réserve de début de cycle : 4."
+        },
+        "darknessCost": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "description": "Pions de Noirceur générés au rouage qui réalise la capacité."
+        },
+        "frequency": {
+          "$ref": "#/$defs/frequency"
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "description": "Caractéristiques (LDR p.15). Une valeur de 0 interdit tout jet avec cette caractéristique.",
+      "additionalProperties": false,
+      "required": [
+        "technique",
+        "melee",
+        "ranged",
+        "dodge"
+      ],
+      "properties": {
+        "technique": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "melee": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "ranged": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "dodge": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        }
+      }
+    },
+    "art": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recto"
+      ],
+      "properties": {
+        "recto": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verso": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "cog": {
+      "type": "object",
+      "title": "Rouage",
+      "description": "Carte profil d'un rouage (LDR p.15).",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "ministries",
+        "rank",
+        "baseSize",
+        "stats",
+        "health",
+        "abilities"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Nom du personnage. Clé d'unicité en cabale : pas deux rouages du même nom."
+        },
+        "title": {
+          "type": "string"
+        },
+        "ministries": {
+          "type": "array",
+          "description": "Le ou les ministères d'affiliation imprimés sur la carte.",
+          "items": {
+            "$ref": "#/$defs/ministryCode"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "rank": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "baseSize": {
+          "type": "integer",
+          "enum": [
+            30,
+            40,
+            50
+          ],
+          "description": "Taille de socle en mm."
+        },
+        "stats": {
+          "$ref": "#/$defs/stats"
+        },
+        "health": {
+          "$ref": "#/$defs/health"
+        },
+        "abilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ability"
+          }
+        },
+        "instinct": {
+          "type": "string",
+          "description": "Comment activer le rouage selon la situation quand il n'est pas contrôlé par un joueur (LDR p.28)."
+        },
+        "art": {
+          "$ref": "#/$defs/art"
+        },
+        "set": {
+          "type": "string",
+          "description": "Boîte / extension d'origine."
+        }
+      }
+    },
+    "gear": {
+      "type": "object",
+      "title": "Équipement / Don",
+      "description": "Carte équipement ou don (LDR p.32). Chaque rouage d'une cabale en porte exactement une. Affiliation exclusive : un ministère, ou une faction, ou un rouage nommé.",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "abilities"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Clé d'unicité en cabale : pas deux équipements/dons du même nom."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "EQUIPMENT",
+            "GIFT"
+          ]
+        },
+        "ministry": {
+          "$ref": "#/$defs/ministryCode",
+          "description": "Affiliation ministère : consomme le slot d'un rouage de la cabale affilié à ce ministère. Exclusif."
+        },
+        "faction": {
+          "$ref": "#/$defs/factionCode",
+          "description": "Affiliation faction : disponible sans consommer de slot si la cabale est de cette faction. Exclusif."
+        },
+        "cogId": {
+          "$ref": "#/$defs/id",
+          "description": "Affiliation à un rouage nommé : la carte ne porte ni ministère ni faction, et n'est disponible que pour ce rouage. Exclusif."
+        },
+        "abilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ability"
+          }
+        },
+        "art": {
+          "$ref": "#/$defs/art"
+        },
+        "set": {
+          "type": "string"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "ministry"
+          ]
+        },
+        {
+          "required": [
+            "faction"
+          ]
+        },
+        {
+          "required": [
+            "cogId"
+          ]
+        }
+      ],
+      "$comment": "Les trois cas de disponibilité du LDR p.32 sont mutuellement exclusifs : la carte porte une affiliation et une seule. La sémantique « exactement une branche » de oneOf suffit."
+    },
+    "cabal": {
+      "type": "object",
+      "title": "Cabale",
+      "description": "Bande de 3 rouages : un rang 1, un rang 2, un rang 3, tous de la même faction, chacun équipé (LDR p.32).",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "faction",
+        "slots"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "faction": {
+          "$ref": "#/$defs/factionCode"
+        },
+        "slots": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "cogId",
+              "gearId"
+            ],
+            "properties": {
+              "cogId": {
+                "$ref": "#/$defs/id"
+              },
+              "gearId": {
+                "$ref": "#/$defs/id"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

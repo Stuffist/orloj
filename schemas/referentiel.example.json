@@ -1,0 +1,201 @@
+{
+  "$schema": "./olomoc.schema.json",
+  "version": "2026.1",
+  "ministries": [
+    {
+      "code": "SECURITE",
+      "name": "Ministère de la Sécurité"
+    },
+    {
+      "code": "PROGRES",
+      "name": "Ministère du Progrès"
+    },
+    {
+      "code": "FRANGE",
+      "name": "La Frange"
+    }
+  ],
+  "cogs": [
+    {
+      "id": "1R01",
+      "name": "Jakub Myasnik",
+      "title": "Boucher de cauchemar",
+      "ministries": [
+        "FRANGE"
+      ],
+      "rank": 1,
+      "baseSize": 30,
+      "stats": {
+        "technique": 1,
+        "melee": 4,
+        "ranged": 0,
+        "dodge": 2
+      },
+      "health": [
+        "N",
+        "N",
+        "T",
+        "N",
+        "N",
+        "T",
+        "N",
+        "N",
+        "N",
+        "N",
+        "T",
+        "N"
+      ],
+      "abilities": [
+        {
+          "name": "Coupe sélective",
+          "description": "Jakub Myasnik peut réaliser la tactique de combat suivante pour 2 réussites : cochez 1 PV teinté dans la ligne de vie du rouage ciblé par cette attaque.",
+          "temporality": "Active",
+          "actionCost": 1,
+          "darknessCost": 0
+        }
+      ],
+      "art": {
+        "recto": "1R01_recto.jpg"
+      }
+    },
+    {
+      "id": "2R04",
+      "name": "Hynek Novotny",
+      "title": "Agent de liaison",
+      "ministries": [
+        "SECURITE"
+      ],
+      "rank": 2,
+      "baseSize": 30,
+      "stats": {
+        "technique": 1,
+        "melee": 4,
+        "ranged": 5,
+        "dodge": 3
+      },
+      "health": [
+        "A",
+        "A",
+        "N",
+        "N",
+        "N",
+        "N",
+        "T",
+        "N",
+        "N",
+        "N",
+        "N",
+        "N"
+      ],
+      "abilities": [
+        {
+          "name": "Discret",
+          "description": "Hynek Novotny peut être activé s'il est révélé lors d'une phase de planification où votre adversaire a révélé un ministère.",
+          "temporality": "Passive",
+          "actionCost": 0,
+          "darknessCost": 0
+        }
+      ],
+      "art": {
+        "recto": "2R04_recto.jpg"
+      }
+    },
+    {
+      "id": "3R17",
+      "name": "Pétra Kantor",
+      "title": "Sergent de la Garde Noire",
+      "ministries": [
+        "SECURITE"
+      ],
+      "rank": 3,
+      "baseSize": 30,
+      "stats": {
+        "technique": 2,
+        "melee": 4,
+        "ranged": 7,
+        "dodge": 3
+      },
+      "health": [
+        "A",
+        "A",
+        "A",
+        "A",
+        "N",
+        "T",
+        "N",
+        "N",
+        "N",
+        "N",
+        "N",
+        "N"
+      ],
+      "abilities": [
+        {
+          "name": "Vétéran brisée",
+          "description": "Jusqu'à la fin du cycle, Pétra Kantor est considérée comme ayant une valeur de rang 0 pour la réalisation des coordinations.",
+          "temporality": "Active",
+          "actionCost": 1,
+          "darknessCost": 1
+        }
+      ],
+      "art": {
+        "recto": "3R17_recto.jpg"
+      }
+    }
+  ],
+  "gears": [
+    {
+      "id": "E012",
+      "name": "Disrupteur quantique",
+      "kind": "EQUIPMENT",
+      "ministry": "PROGRES",
+      "abilities": [
+        {
+          "name": "Disruption",
+          "description": "Exemple d'effet de jeu.",
+          "temporality": "Active",
+          "actionCost": 1,
+          "darknessCost": 0,
+          "frequency": {
+            "count": 1,
+            "per": "CYCLE"
+          }
+        }
+      ]
+    },
+    {
+      "id": "D003",
+      "name": "Œil du Veneur",
+      "kind": "GIFT",
+      "faction": "GARDE_NOIRE",
+      "abilities": [
+        {
+          "name": "Vision trouble",
+          "description": "Exemple d'effet de jeu.",
+          "temporality": "Passive",
+          "actionCost": 0,
+          "darknessCost": 1
+        }
+      ]
+    },
+    {
+      "id": "E044",
+      "name": "Fusil de précision Vz-91",
+      "kind": "EQUIPMENT",
+      "cogId": "3R17",
+      "abilities": [
+        {
+          "name": "Visée longue",
+          "description": "Exemple d'effet de jeu.",
+          "temporality": "Active",
+          "actionCost": 1,
+          "darknessCost": 0,
+          "frequency": {
+            "count": 1,
+            "per": "PLANNING_PHASE"
+          }
+        }
+      ]
+    }
+  ]
+}

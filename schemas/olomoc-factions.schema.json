@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://occicat.com/schemas/olomoc-factions.schema.json",
+  "title": "Olomòc — référentiel de faction",
+  "description": "Appartenances aux factions. Document distinct du référentiel de cartes : l'information n'est pas imprimée sur les cartes et est publiée à part par Occicat (LDR p.32). C'est la faction qui déclare ses membres, donc un rouage peut appartenir à plusieurs factions sans redondance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "factions"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Chemin vers ce schéma, pour l'autocomplétion dans l'éditeur."
+    },
+    "version": {
+      "type": "string",
+      "description": "Version du référentiel de faction. Évolue indépendamment du référentiel de cartes."
+    },
+    "source": {
+      "type": "string",
+      "description": "Provenance du document Occicat retranscrit ici (URL, date d'édition)."
+    },
+    "factions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/faction"
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "factionCode": {
+      "type": "string",
+      "description": "Code de faction. Convention interne : pas de code imprimé sur les cartes.",
+      "pattern": "^[A-Z0-9_]{2,32}$"
+    },
+    "cardId": {
+      "type": "string",
+      "description": "Identifiant d'un rouage du référentiel de cartes, imprimé à son dos.",
+      "minLength": 1,
+      "maxLength": 64,
+      "$comment": "Doit rester aligné sur $defs/id de olomoc.schema.json."
+    },
+    "faction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "name",
+        "cogIds"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/factionCode"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "cogIds": {
+          "type": "array",
+          "description": "Rouages recrutables dans cette faction. Une cabale se compose entièrement au sein d'une même faction.",
+          "items": {
+            "$ref": "#/$defs/cardId"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

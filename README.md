@@ -25,9 +25,19 @@ dotnet publish -c Release
 Deux ressources, servies telles quelles :
 
 - `wwwroot/data/olomoc-catalog.json` — rouages, équipements/dons, ministères
-  (schéma `olomoc.schema.json`).
+  (schéma `schemas/olomoc.schema.json`).
 - `wwwroot/data/olomoc-factions.json` — appartenances aux factions
-  (schéma `olomoc-factions.schema.json`).
+  (schéma `schemas/olomoc-factions.schema.json`).
+
+Chaque fichier référence son schéma via `$schema` (validation et autocomplétion
+dans l'éditeur). Le dossier `schemas/` contient aussi un exemple minimal par
+schéma (`referentiel.example.json`, `factions.example.json`) ; il n'est ni copié
+dans le build ni publié. Validation en ligne de commande, par exemple :
+
+```bash
+npx ajv-cli@5 validate --spec=draft2020 --strict=false \
+  -s schemas/olomoc.schema.json -d wwwroot/data/olomoc-catalog.json
+```
 
 Remplacer ces deux fichiers par les vraies données suffit à mettre l'app à jour ;
 aucun code à toucher. Les cartes fournies ici sont des exemples (dont plusieurs

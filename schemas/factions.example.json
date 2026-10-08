@@ -1,0 +1,17 @@
+{
+  "$schema": "./olomoc-factions.schema.json",
+  "version": "2026.1",
+  "source": "Référentiel de faction Occicat Games — à retranscrire",
+  "factions": [
+    {
+      "code": "GARDE_NOIRE",
+      "name": "La Garde Noire",
+      "description": "Exemple : à remplacer par les factions réelles du référentiel Occicat.",
+      "cogIds": [
+        "1R01",
+        "2R04",
+        "3R17"
+      ]
+    }
+  ]
+}

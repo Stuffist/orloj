@@ -1,4 +1,5 @@
 {
+  "$schema": "../../schemas/olomoc.schema.json",
   "version": "2026.1",
   "ministries": [
     {

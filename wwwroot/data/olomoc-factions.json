@@ -1,4 +1,5 @@
 {
+  "$schema": "../../schemas/olomoc-factions.schema.json",
   "version": "2026.1",
   "source": "Référentiel de faction Occicat Games — à retranscrire",
   "factions": [

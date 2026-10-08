@@ -11,4 +11,10 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.8" PrivateAssets="all" />
   </ItemGroup>
 
+  <!-- Schémas JSON et exemples : outillage d'édition, ni copiés ni publiés. -->
+  <ItemGroup>
+    <Content Remove="schemas\**" />
+    <None Include="schemas\**" />
+  </ItemGroup>
+
 </Project>
