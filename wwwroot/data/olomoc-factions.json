@@ -1,0 +1,29 @@
+{
+  "version": "2026.1",
+  "source": "Référentiel de faction Occicat Games — à retranscrire",
+  "factions": [
+    {
+      "code": "GARDE_NOIRE",
+      "name": "La Garde Noire",
+      "description": "Exemple : à remplacer par les factions réelles du référentiel Occicat.",
+      "cogIds": [
+        "1R01",
+        "1R02",
+        "2R04",
+        "2R09",
+        "3R17",
+        "3R21"
+      ]
+    },
+    {
+      "code": "CONSORTIUM",
+      "name": "Le Consortium",
+      "description": "Exemple de 2e faction.",
+      "cogIds": [
+        "1R02",
+        "2R09",
+        "3R21"
+      ]
+    }
+  ]
+}
