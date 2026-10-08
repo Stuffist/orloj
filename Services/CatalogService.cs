@@ -120,6 +120,7 @@ public sealed class CatalogService
             issues.Add("Chaque rouage doit porter un équipement ou un don.");
 
         // Affiliation de chaque équipement + collecte des équipements ministère
+        var union = picked.SelectMany(c => c.Ministries).ToHashSet();
         var ministryGears = new List<Gear>();
         for (int i = 0; i < gears.Count; i++)
         {
@@ -139,7 +140,12 @@ public sealed class CatalogService
             }
             else if (g.IsMinistryGear)
             {
-                ministryGears.Add(g);
+                // Ministère absent : signalé ici, et exclu du couplage pour ne pas
+                // le faire passer à tort pour une sur-souscription.
+                if (union.Contains(g.Ministry!))
+                    ministryGears.Add(g);
+                else
+                    issues.Add($"« {g.Name} » est affilié au ministère {MinistryName(g.Ministry!)}, qu'aucun rouage de la cabale ne représente.");
             }
         }
 
