@@ -1,0 +1,27 @@
+@* Les quatre caractéristiques d'un rouage (LDR p.15), avec les icônes du livre de règles.
+   Compact : icône + valeur (listes) ; sinon icône, valeur et trigramme. Le trigramme reste
+   dans le DOM en mode compact pour les lecteurs d'écran. *@
+
+<div class="stat-line@(Compact ? " compact" : "")">
+    @foreach (var (icon, abbr, label, value) in Items)
+    {
+        <span class="stat@(value == 0 ? " zero" : "")" title="@label : @value">
+            <span class="stat-icon @icon" aria-hidden="true"></span>
+            <span class="stat-value">@value</span>
+            <span class="stat-abbr@(Compact ? " sr-only" : "")">@abbr</span>
+        </span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Stats Stats { get; set; } = default!;
+    [Parameter] public bool Compact { get; set; }
+
+    private IEnumerable<(string Icon, string Abbr, string Label, int Value)> Items => new[]
+    {
+        ("technique", "TEC", "Technique", Stats.Technique),
+        ("combat",    "CBT", "Combat",    Stats.Melee),
+        ("tir",       "TIR", "Tir",       Stats.Ranged),
+        ("esquive",   "ESQ", "Esquive",   Stats.Dodge),
+    };
+}

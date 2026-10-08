@@ -63,11 +63,12 @@ public sealed class CatalogService
         gear?.GrantsAllMinistries == true ? _allMinistries : cog.Ministries;
 
     /// <summary>
-    /// Rouages recrutables pour un rang, filtrés par faction (si choisie), ministère et texte.
+    /// Rouages recrutables pour un rang, filtrés par faction (si choisie), ministère et
+    /// recherche (texte + conditions sur les caractéristiques, voir <see cref="CogQuery"/>).
     /// Avec une faction, inclut les rouages hors faction qu'une règle de constitution
     /// permettrait d'intégrer (voir <see cref="RecruitVia"/>).
     /// </summary>
-    public List<Cog> AvailableCogs(int rank, string? faction, string? ministryFilter, string? search)
+    public List<Cog> AvailableCogs(int rank, string? faction, string? ministryFilter, CogQuery query)
     {
         IEnumerable<Cog> q = Catalog.Cogs.Where(c => c.Rank == rank);
 
@@ -77,11 +78,7 @@ public sealed class CatalogService
         if (!string.IsNullOrWhiteSpace(ministryFilter))
             q = q.Where(c => c.Ministries.Contains(ministryFilter));
 
-        if (!string.IsNullOrWhiteSpace(search))
-            q = q.Where(c => c.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
-                          || (c.Title?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
-
-        return q.OrderBy(c => c.Name).ToList();
+        return q.Where(query.Matches).OrderBy(c => c.Name).ToList();
     }
 
     /// <summary>

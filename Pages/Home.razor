@@ -33,8 +33,23 @@ else
 
         <div class="field grow">
             <label>Recherche</label>
-            <input type="text" placeholder="nom ou titre…" value="@_search"
-                   @oninput="e => Set(ref _search, e)" />
+            <input type="text" placeholder="@SearchPlaceholder" value="@_search"
+                   @oninput="OnSearch" />
+            <div class="query-help">
+                @foreach (var c in _query.Conditions)
+                {
+                    <span class="query-chip" title="Condition sur la caractéristique">
+                        <span class="stat-icon @c.Icon" aria-hidden="true"></span>
+                        @c.Abbr @c.OpLabel @c.Value
+                        <button class="chip-remove" @onclick="() => RemoveCondition(c)" title="Retirer">✕</button>
+                    </span>
+                }
+                @if (_query.Conditions.Count == 0)
+                {
+                    <span class="hint">Stats : <code>tec</code> <code>cbt</code> <code>tir</code> <code>esq</code>
+                        suivis de <code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code> <code>=</code> et d'un nombre, cumulables.</span>
+                }
+            </div>
         </div>
     </section>
 
@@ -56,7 +71,7 @@ else
                 @if (cog is null)
                 {
                     <div class="picker">
-                        @{ var options = Catalog.AvailableCogs(rank, NullIfEmpty(_faction), NullIfEmpty(_ministryFilter), NullIfEmpty(_search)); }
+                        @{ var options = Catalog.AvailableCogs(rank, NullIfEmpty(_faction), NullIfEmpty(_ministryFilter), _query); }
                         @if (options.Count == 0)
                         {
                             <p class="empty">Aucun rouage ne correspond.</p>
@@ -70,6 +85,7 @@ else
                                     <span class="cog-name">@c.Name</span>
                                     <span class="cog-title">@c.Title</span>
                                     <span class="cog-min">@string.Join(", ", c.Ministries.Select(Catalog.MinistryName))</span>
+                                    <StatLine Stats="c.Stats" Compact="true" />
                                     @if (via is not null)
                                     {
                                         <span class="cog-via">Hors faction · via « @via.Name »</span>
@@ -82,18 +98,11 @@ else
                 else
                 {
                     <div class="cog-card">
-                        <div class="cog-card-top">
-                            <div>
-                                <div class="cog-name">@cog.Name</div>
-                                <div class="cog-title">@cog.Title</div>
-                            </div>
-                            <div class="stats">
-                                <span title="Technique">@cog.Stats.Technique</span>
-                                <span title="Corps-à-corps">@cog.Stats.Melee</span>
-                                <span title="Tir">@cog.Stats.Ranged</span>
-                                <span title="Esquive">@cog.Stats.Dodge</span>
-                            </div>
+                        <div>
+                            <div class="cog-name">@cog.Name</div>
+                            <div class="cog-title">@cog.Title</div>
                         </div>
+                        <StatLine Stats="cog.Stats" />
                         <div class="health">
                             @foreach (var pip in cog.Health)
                             {
@@ -140,6 +149,8 @@ else
     private string _faction = "";
     private string _ministryFilter = "";
     private string _search = "";
+    private CogQuery _query = CogQuery.Empty;
+    private const string SearchPlaceholder = "nom, titre, ou tir>4 esq<=3…";
 
     // index 0 => rang 1, index 1 => rang 2, index 2 => rang 3
     private readonly Cog?[] _cogs = new Cog?[3];
@@ -160,6 +171,18 @@ else
         // Un rouage/équipement peut devenir invalide hors de la nouvelle faction : on purge.
         for (int i = 0; i < 3; i++) { _cogs[i] = null; _gears[i] = null; }
         Recompute();
+    }
+
+    private void OnSearch(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+        _query = CogQuery.Parse(_search);
+    }
+
+    private void RemoveCondition(StatCondition c)
+    {
+        _search = CogQuery.Without(_search, c);
+        _query = CogQuery.Parse(_search);
     }
 
     private void Set(ref string field, ChangeEventArgs e)
