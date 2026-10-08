@@ -1,29 +1,94 @@
 {
   "$schema": "../../schemas/olomoc-factions.schema.json",
-  "version": "2026.1",
-  "source": "Référentiel de faction Occicat Games — à retranscrire",
+  "version": "2026.10",
+  "source": "https://bwaaaanegamesdb.fr/builder_olomoc/index_builder_olomoc.php (relevé du 2026-10-08)",
   "factions": [
     {
-      "code": "GARDE_NOIRE",
-      "name": "La Garde Noire",
-      "description": "Exemple : à remplacer par les factions réelles du référentiel Occicat.",
+      "code": "AUTRES",
+      "name": "Les Autres",
       "cogIds": [
-        "1R01",
-        "1R02",
-        "2R04",
-        "2R09",
-        "3R17",
-        "3R21"
+        "1R09",
+        "1R12",
+        "1R19",
+        "2R08",
+        "2R18",
+        "3R07",
+        "3R17"
       ]
     },
     {
-      "code": "CONSORTIUM",
-      "name": "Le Consortium",
-      "description": "Exemple de 2e faction.",
+      "code": "BLAUKAUST",
+      "name": "Blaukaust Devet",
       "cogIds": [
-        "1R02",
-        "2R09",
-        "3R21"
+        "1R01",
+        "1R29",
+        "2R28",
+        "3R05",
+        "3R27"
+      ]
+    },
+    {
+      "code": "DYKOVIENNE",
+      "name": "Cabale Dykovienne",
+      "cogIds": [
+        "1R01",
+        "1R03",
+        "1R22",
+        "2R02",
+        "2R04",
+        "2R15",
+        "3R05",
+        "3R06",
+        "3R10"
+      ]
+    },
+    {
+      "code": "MAISEL",
+      "name": "Ligue Maisel",
+      "cogIds": [
+        "1R01",
+        "1R03",
+        "1R12",
+        "2R02",
+        "2R04",
+        "2R11",
+        "3R05",
+        "3R06",
+        "3R10"
+      ]
+    },
+    {
+      "code": "URKARAS",
+      "name": "Famille Urkaras",
+      "cogIds": [
+        "1R16",
+        "2R04",
+        "2R15",
+        "2R21",
+        "3R14"
+      ]
+    },
+    {
+      "code": "PEGRE",
+      "name": "La Pègre",
+      "cogIds": [
+        "1R22",
+        "1R23",
+        "2R11",
+        "2R21",
+        "2R28",
+        "3R20",
+        "3R24"
+      ]
+    },
+    {
+      "code": "RUBIN",
+      "name": "Réseau Rubin",
+      "cogIds": [
+        "1R26",
+        "2R25",
+        "3R06",
+        "3R24"
       ]
     }
   ]

@@ -73,6 +73,7 @@ body {
 .cog-name { font-weight: 600; }
 .cog-title { font-size: .82rem; color: var(--muted); }
 .cog-min { font-size: .72rem; color: var(--rust-soft); }
+.cog-via { font-size: .72rem; color: var(--muted); font-style: italic; }
 .empty { color: var(--muted); font-size: .85rem; font-style: italic; }
 
 .cog-card { display: flex; flex-direction: column; gap: .7rem; }

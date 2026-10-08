@@ -65,10 +65,15 @@ else
                         {
                             @foreach (var c in options)
                             {
+                                var via = NullIfEmpty(_faction) is { } f ? Catalog.RecruitVia(c, f) : null;
                                 <button class="cog-option" @onclick="() => SelectCog(idx, c)">
                                     <span class="cog-name">@c.Name</span>
                                     <span class="cog-title">@c.Title</span>
                                     <span class="cog-min">@string.Join(", ", c.Ministries.Select(Catalog.MinistryName))</span>
+                                    @if (via is not null)
+                                    {
+                                        <span class="cog-via">Hors faction · via « @via.Name »</span>
+                                    }
                                 </button>
                             }
                         }
@@ -98,7 +103,7 @@ else
 
                         <div class="gear-zone">
                             <label>Équipement / Don</label>
-                            @{ var gears = Catalog.AvailableGears(cog, SelectedCogs(), NullIfEmpty(_faction)); }
+                            @{ var gears = Catalog.AvailableGears(idx, _cogs, _gears, NullIfEmpty(_faction)); }
                             <select value="@_gears[idx]?.Id" @onchange="e => SelectGear(idx, e)">
                                 <option value="">— Choisir —</option>
                                 @foreach (var g in gears)
@@ -148,7 +153,6 @@ else
     }
 
     private static int RankIndex(int rank) => rank - 1;
-    private IEnumerable<Cog> SelectedCogs() => _cogs.Where(c => c is not null).Cast<Cog>();
 
     private void OnFactionChanged(ChangeEventArgs e)
     {
@@ -184,19 +188,25 @@ else
     {
         var id = e.Value?.ToString();
         _gears[idx] = string.IsNullOrEmpty(id) ? null : Catalog.Catalog.Gears.FirstOrDefault(g => g.Id == id);
+        PruneGears();                       // retirer un Passe-droit peut invalider les autres équipements
         Recompute();
     }
 
-    // Retire les équipements devenus indisponibles après un changement de rouages.
+    // Retire les équipements devenus indisponibles après un changement de rouages ou
+    // d'équipement ; répété jusqu'à stabilité, un retrait pouvant en entraîner un autre.
     private void PruneGears()
     {
-        for (int i = 0; i < 3; i++)
+        bool changed;
+        do
         {
-            var cog = _cogs[i];
-            if (cog is null || _gears[i] is null) continue;
-            var ok = Catalog.AvailableGears(cog, SelectedCogs(), NullIfEmpty(_faction)).Any(g => g.Id == _gears[i]!.Id);
-            if (!ok) _gears[i] = null;
-        }
+            changed = false;
+            for (int i = 0; i < 3; i++)
+            {
+                if (_cogs[i] is null || _gears[i] is null) continue;
+                var ok = Catalog.AvailableGears(i, _cogs, _gears, NullIfEmpty(_faction)).Any(g => g.Id == _gears[i]!.Id);
+                if (!ok) { _gears[i] = null; changed = true; }
+            }
+        } while (changed);
     }
 
     private void Recompute() => _legality = Catalog.CheckLegality(NullIfEmpty(_faction), _cogs, _gears);

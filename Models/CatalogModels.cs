@@ -7,6 +7,7 @@ namespace OlomocListBuilder.Models;
 public enum HealthPip { N, A, T }          // Normal, Armored, Tainted
 public enum Temporality { Active, Passive }
 public enum GearKind { EQUIPMENT, GIFT }
+public enum BuildRuleType { ALL_MINISTRIES, RECRUIT_WEARER, RECRUIT_MINISTRY }
 
 public sealed class Ministry
 {
@@ -37,7 +38,7 @@ public sealed class Ability
     public Temporality Temporality { get; init; }
     public int ActionCost { get; init; }
     public int DarknessCost { get; init; }
-    public Frequency? Frequency { get; init; }
+    public List<Frequency> Frequencies { get; init; } = new();   // limites cumulatives ; vide = illimitée
 }
 
 public sealed class Art
@@ -53,7 +54,7 @@ public sealed class Cog
     public string? Title { get; init; }
     public List<string> Ministries { get; init; } = new();
     public int Rank { get; init; }
-    public int BaseSize { get; init; }
+    public int? BaseSize { get; init; }       // non imprimée sur la carte
     public Stats Stats { get; init; } = new();
     public List<HealthPip> Health { get; init; } = new();
     public List<Ability> Abilities { get; init; } = new();
@@ -73,10 +74,28 @@ public sealed class Gear
     public List<Ability> Abilities { get; init; } = new();
     public Art? Art { get; init; }
     public string? Set { get; init; }
+    public List<BuildRule> BuildRules { get; init; } = new();
 
     [JsonIgnore] public bool IsFactionGear  => Faction  is not null;
     [JsonIgnore] public bool IsMinistryGear => Ministry is not null;
     [JsonIgnore] public bool IsNamedGear    => CogId    is not null;
+    [JsonIgnore] public bool GrantsAllMinistries => BuildRules.Any(r => r.Type == BuildRuleType.ALL_MINISTRIES);
+}
+
+/// <summary>Effet d'une carte sur la constitution de la cabale (voir $defs/buildRule du schéma).</summary>
+public sealed class BuildRule
+{
+    public BuildRuleType Type { get; init; }
+    public List<int> Ranks { get; init; } = new();
+    public string? Ministry { get; init; }
+
+    /// <summary>Le rouage satisfait-il les conditions de recrutement hors faction de cette règle ?</summary>
+    public bool CanRecruit(Cog cog, IReadOnlyCollection<string> ministries) => Type switch
+    {
+        BuildRuleType.RECRUIT_WEARER   => Ranks.Contains(cog.Rank),
+        BuildRuleType.RECRUIT_MINISTRY => Ranks.Contains(cog.Rank) && ministries.Contains(Ministry!),
+        _ => false
+    };
 }
 
 public sealed class Catalog

@@ -156,10 +156,12 @@
           "temporality": "Active",
           "actionCost": 1,
           "darknessCost": 0,
-          "frequency": {
-            "count": 1,
-            "per": "CYCLE"
-          }
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ]
     },
@@ -190,10 +192,16 @@
           "temporality": "Active",
           "actionCost": 1,
           "darknessCost": 0,
-          "frequency": {
-            "count": 1,
-            "per": "PLANNING_PHASE"
-          }
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "PLANNING_PHASE"
+            },
+            {
+              "count": 3,
+              "per": "GAME"
+            }
+          ]
         }
       ]
     }

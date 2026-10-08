@@ -39,9 +39,22 @@ npx ajv-cli@5 validate --spec=draft2020 --strict=false \
   -s schemas/olomoc.schema.json -d wwwroot/data/olomoc-catalog.json
 ```
 
-Remplacer ces deux fichiers par les vraies données suffit à mettre l'app à jour ;
-aucun code à toucher. Les cartes fournies ici sont des exemples (dont plusieurs
-inventés) pour rendre le constructeur démontrable.
+Remplacer ces deux fichiers suffit à mettre l'app à jour ; aucun code à toucher.
+
+Contenu actuel (relevé du 2026-10-08) : 28 rouages, 53 équipements/dons, 7 factions.
+Les rattachements (factions, ministères, rangs) viennent des filtres du builder
+[bwaaaanegamesdb.fr](https://bwaaaanegamesdb.fr/builder_olomoc/index_builder_olomoc.php) ;
+les stats, lignes de vie et capacités ont été transcrites depuis les images des
+cartes. Conventions de transcription :
+
+- Le rang est celui du site, **pas** le préfixe du code (`1R01` est un rang 3).
+- PV gris (uni « renforcé » ou hachuré) → `A`.
+- Couronne N → `frequencies: [{count: N, per: PLANNING_PHASE}]` ;
+  cercle plein N → `{count: N, per: GAME}`.
+- Cube blanc plein dans la colonne de coût → +1 `actionCost`.
+- Pictogrammes dans le texte : `[Corps-à-corps]`, `[Tir]`, `[Technique]`,
+  `[pion d'action]`, `[Noirceur]`, `[1/partie]`.
+- `baseSize` n'est pas imprimée sur les cartes et reste vide.
 
 ## Règles appliquées
 
@@ -52,6 +65,19 @@ inventés) pour rendre le constructeur démontrable.
 - **Chaque rouage ne débloque qu'un seul équipement de son ministère** : les
   équipements « ministère » sont affectés à des rouages distincts (couplage
   biparti). Le panneau de légalité signale la sur-souscription.
+- **Règles de constitution portées par les cartes** (`buildRules` dans le
+  référentiel, interprétées par `CheckLegality`) :
+  - `RECRUIT_MINISTRY` — *Harmonium* : la cabale peut recruter **un** rouage hors
+    faction de l'Axe, de rang 1 ou 2.
+  - `RECRUIT_WEARER` — *Asservisseur mental* : le porteur, de rang 1 ou 2, peut
+    être recruté hors faction (chez les Autres).
+  - `ALL_MINISTRIES` — *Passe-droit du Census* : le porteur compte comme affilié
+    à tous les ministères (disponibilité des équipements, déblocage, recrutement).
+    Il ne débloque pas son propre Passe-droit : un rouage de la Coordination reste
+    nécessaire.
+
+  Les rouages hors faction ainsi recrutables apparaissent dans la liste avec la
+  mention « via … ». Non géré : l'équipement supplémentaire de Medic Ruzicka.
 
 ## Architecture
 

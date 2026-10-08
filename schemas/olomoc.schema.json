@@ -105,7 +105,7 @@
     },
     "healthType": {
       "type": "string",
-      "description": "Type de point de vie (LDR p.16). N (normal) : aucune règle. A (armored / « Protection ») : -1 blessure tant qu'il reste au moins un PV armuré à cocher. T (tainted / teinté) : attribue un pion de Noirceur et stoppe l'attaque en cours.",
+      "description": "Type de point de vie (LDR p.16). N (normal) : aucune règle. A (armored / « renforcé », « Protection ») : -1 blessure tant qu'il reste au moins un PV armuré à cocher ; imprimé en gris, uni ou hachuré selon l'édition. T (tainted / teinté) : attribue un pion de Noirceur et stoppe l'attaque en cours.",
       "enum": [
         "N",
         "A",
@@ -123,7 +123,7 @@
     },
     "frequency": {
       "type": "object",
-      "description": "Fréquence d'utilisation (LDR p.20). Absente = illimitée.",
+      "description": "Fréquence d'utilisation (LDR p.20). Pictogrammes : couronne N = N par phase de planification, cercle plein N = N par partie (cases d'usage imprimées sur la carte).",
       "additionalProperties": false,
       "required": [
         "count",
@@ -146,7 +146,7 @@
     },
     "ability": {
       "type": "object",
-      "description": "Capacité spécifique (LDR p.20). Décodage des pictogrammes : flèche = Active, flèche circulaire = Passive, pentagone = coût en pions d'action, cube = pions de Noirceur générés.",
+      "description": "Capacité spécifique (LDR p.20). Décodage des pictogrammes : flèche = Active, flèche circulaire = Passive, pentagone N = N pions d'action, cube blanc plein = 1 pion d'action, cube contour = pions de Noirceur générés, couronne / cercle = fréquences.",
       "additionalProperties": false,
       "required": [
         "name",
@@ -183,8 +183,13 @@
           "maximum": 3,
           "description": "Pions de Noirceur générés au rouage qui réalise la capacité."
         },
-        "frequency": {
-          "$ref": "#/$defs/frequency"
+        "frequencies": {
+          "type": "array",
+          "description": "Limites d'utilisation cumulatives (ex. 1 par planification ET 3 par partie). Absente = illimitée.",
+          "items": {
+            "$ref": "#/$defs/frequency"
+          },
+          "minItems": 1
         }
       }
     },
@@ -248,7 +253,6 @@
         "name",
         "ministries",
         "rank",
-        "baseSize",
         "stats",
         "health",
         "abilities"
@@ -286,7 +290,7 @@
             40,
             50
           ],
-          "description": "Taille de socle en mm."
+          "description": "Taille de socle en mm. Non imprimée sur la carte : optionnelle."
         },
         "stats": {
           "$ref": "#/$defs/stats"
@@ -363,6 +367,14 @@
         },
         "set": {
           "type": "string"
+        },
+        "buildRules": {
+          "type": "array",
+          "description": "Effets de la carte sur la constitution de la cabale, appliqués par le constructeur. Absent = aucun.",
+          "items": {
+            "$ref": "#/$defs/buildRule"
+          },
+          "minItems": 1
         }
       },
       "oneOf": [
@@ -383,6 +395,56 @@
         }
       ],
       "$comment": "Les trois cas de disponibilité du LDR p.32 sont mutuellement exclusifs : la carte porte une affiliation et une seule. La sémantique « exactement une branche » de oneOf suffit."
+    },
+    "buildRule": {
+      "type": "object",
+      "title": "Règle de constitution",
+      "description": "ALL_MINISTRIES : le porteur compte comme affilié à tous les ministères pendant la constitution (il ne peut pas débloquer la carte qui lui confère cet effet). RECRUIT_WEARER : le porteur, si son rang figure dans ranks, peut être recruté hors de la faction de la cabale. RECRUIT_MINISTRY : la cabale peut recruter un rouage hors faction affilié à ministry, si son rang figure dans ranks.",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ALL_MINISTRIES",
+            "RECRUIT_WEARER",
+            "RECRUIT_MINISTRY"
+          ]
+        },
+        "ranks": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "ministry": {
+          "$ref": "#/$defs/ministryCode"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "RECRUIT_WEARER" } }
+          },
+          "then": {
+            "required": [ "ranks" ]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "RECRUIT_MINISTRY" } }
+          },
+          "then": {
+            "required": [ "ranks", "ministry" ]
+          }
+        }
+      ]
     },
     "cabal": {
       "type": "object",
