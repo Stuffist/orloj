@@ -6,9 +6,10 @@ using OlomocListBuilder.Models;
 namespace OlomocListBuilder.Services;
 
 /// <summary>
-/// Charge les deux JSON (référentiel de cartes + référentiel de faction) servis
+/// Charge les deux JSON neutres (référentiel de cartes + référentiel de faction) servis
 /// comme ressources statiques dans wwwroot/data, et expose les requêtes de
-/// disponibilité et de légalité de cabale.
+/// disponibilité et de légalité de cabale. Aucun texte n'est produit ici : les noms
+/// viennent de <see cref="LocalizationService"/>, les messages sont des <see cref="LegalityIssue"/>.
 /// </summary>
 public sealed class CatalogService
 {
@@ -23,13 +24,17 @@ public sealed class CatalogService
     public bool Loaded { get; private set; }
 
     private readonly HttpClient _http;
-    private Dictionary<string, Ministry> _ministryByCode = new();
+    private readonly LocalizationService _l;
     private Dictionary<string, Cog> _cogById = new();
     private Dictionary<string, Faction> _factionByCode = new();
     private Dictionary<string, HashSet<string>> _membersByFaction = new();
     private List<string> _allMinistries = new();
 
-    public CatalogService(HttpClient http) => _http = http;
+    public CatalogService(HttpClient http, LocalizationService l)
+    {
+        _http = http;
+        _l = l;
+    }
 
     public async Task EnsureLoadedAsync()
     {
@@ -37,19 +42,12 @@ public sealed class CatalogService
         Catalog = await _http.GetFromJsonAsync<Catalog>("data/olomoc-catalog.json", JsonOpts) ?? new();
         FactionReference = await _http.GetFromJsonAsync<FactionReference>("data/olomoc-factions.json", JsonOpts) ?? new();
 
-        _ministryByCode = Catalog.Ministries.ToDictionary(m => m.Code);
         _cogById = Catalog.Cogs.ToDictionary(c => c.Id);
         _factionByCode = FactionReference.Factions.ToDictionary(f => f.Code);
         _membersByFaction = FactionReference.Factions.ToDictionary(f => f.Code, f => f.CogIds.ToHashSet());
         _allMinistries = Catalog.Ministries.Select(m => m.Code).ToList();
         Loaded = true;
     }
-
-    public string FactionName(string code) =>
-        _factionByCode.TryGetValue(code, out var f) ? f.Name : code;
-
-    public string MinistryName(string code) =>
-        _ministryByCode.TryGetValue(code, out var m) ? m.Name : code;
 
     public Cog? CogById(string id) => _cogById.GetValueOrDefault(id);
 
@@ -81,7 +79,9 @@ public sealed class CatalogService
         if (!string.IsNullOrWhiteSpace(ministryFilter))
             q = q.Where(c => c.Ministries.Contains(ministryFilter));
 
-        return q.Where(query.Matches).OrderBy(c => c.Name).ToList();
+        return q.Where(c => query.Matches(c, _l.SearchText(c)))
+                .OrderBy(c => _l.CogName(c).Text, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
     }
 
     /// <summary>
@@ -113,14 +113,14 @@ public sealed class CatalogService
                 (e.IsCogAffiliated      && e.CogId == cog.Id) ||
                 (e.IsFactionAffiliated  && faction is not null && e.Faction == faction) ||
                 (e.IsMinistryAffiliated && union.Contains(e.Ministry!)))
-            .OrderBy(e => e.Name)
+            .OrderBy(e => _l.EquipmentName(e).Text, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
     }
 
     /// <summary>Contrôle complet de légalité d'une cabale (cogs[i] porte equipment[i]).</summary>
     public LegalityResult CheckLegality(string? faction, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
     {
-        var issues = new List<string>();
+        var issues = new List<LegalityIssue>();
         var slots = Enumerable.Range(0, cogs.Count).Where(i => cogs[i] is not null).ToList();
         var picked = slots.Select(i => cogs[i]!).ToList();
         var pickedEquipment = equipment.Where(e => e is not null).Cast<Equipment>().ToList();
@@ -128,16 +128,16 @@ public sealed class CatalogService
 
         // Faction
         if (faction is null)
-            issues.Add("Aucune faction sélectionnée.");
+            issues.Add(new("noFaction"));
 
         // Composition : un rouage de rang 1, un de rang 2, un de rang 3
         var ranks = picked.Select(c => c.Rank).OrderBy(r => r).ToList();
         if (picked.Count != 3 || !ranks.SequenceEqual(new[] { 1, 2, 3 }))
-            issues.Add("Une cabale doit être constituée de 3 rouages : un rang 1, un rang 2 et un rang 3.");
+            issues.Add(new("composition"));
 
         // Recrutement : chaque rouage hors faction doit être couvert par une règle de
         // composition distincte (Harmonium, Asservisseur mental…).
-        if (faction is not null && _factionByCode.TryGetValue(faction, out var fe))
+        if (faction is not null && _factionByCode.ContainsKey(faction))
         {
             var outsiders = slots.Where(i => !IsMember(cogs[i]!, faction)).ToList();
             var grants = slots.Where(j => equipment[j] is not null)
@@ -147,16 +147,19 @@ public sealed class CatalogService
                 (grant.Rule.Type != BuildRuleType.RECRUIT_WEARER || grant.Slot == i) &&
                 grant.Rule.CanRecruit(cogs[i]!, ministries[i]));
             if (uncovered.Count > 0)
-                issues.Add($"Hors faction {fe.Name} : {string.Join(", ", uncovered.Select(i => cogs[i]!.Name))}. Tous les rouages doivent appartenir à la même faction.");
+                issues.Add(new("outsideFaction", IssueArg.Faction(faction), IssueArg.Cogs(uncovered.Select(i => cogs[i]!.Id))));
         }
 
-        // Doublons de nom (rouages et équipements)
-        AddDuplicates(issues, "rouage", picked.Select(c => c.Name));
-        AddDuplicates(issues, "équipement/don", pickedEquipment.Select(e => e.Name));
+        // Doublons de nom (rouages et équipements/dons), comparés dans la langue de référence
+        // pour que la règle ne dépende pas de la langue affichée.
+        var dupCogs = Duplicates(picked, _l.ReferenceName, c => c.Id);
+        if (dupCogs.Count > 0) issues.Add(new("duplicateCog", IssueArg.Cogs(dupCogs)));
+        var dupEquipment = Duplicates(pickedEquipment, _l.ReferenceName, e => e.Id);
+        if (dupEquipment.Count > 0) issues.Add(new("duplicateEquipment", new IssueArg(IssueArgKind.Equipment, dupEquipment)));
 
         // Chaque rouage doit être équipé
         if (picked.Count == 3 && pickedEquipment.Count < 3)
-            issues.Add("Chaque rouage doit être équipé d'un équipement/don.");
+            issues.Add(new("unequipped"));
 
         // Le rouage j peut-il rendre disponible l'équipement/don de Ministère porté en i ? Par sa carte,
         // ou par un Passe-droit — mais pas le Passe-droit qu'il porte lui-même.
@@ -175,12 +178,12 @@ public sealed class CatalogService
             if (e.IsCogAffiliated)
             {
                 if (e.CogId != c.Id)
-                    issues.Add($"« {e.Name} » est affilié à {CogById(e.CogId!)?.Name ?? e.CogId} et ne peut pas équiper {c.Name}.");
+                    issues.Add(new("wrongCog", IssueArg.Equipment(e.Id), IssueArg.Cog(e.CogId!), IssueArg.Cog(c.Id)));
             }
             else if (e.IsFactionAffiliated)
             {
                 if (e.Faction != faction)
-                    issues.Add($"« {e.Name} » est affilié à la faction {FactionName(e.Faction!)}, pas à celle de la cabale.");
+                    issues.Add(new("wrongFaction", IssueArg.Equipment(e.Id), IssueArg.Faction(e.Faction!)));
             }
             else if (e.IsMinistryAffiliated)
             {
@@ -189,24 +192,21 @@ public sealed class CatalogService
                 if (slots.Any(j => CanUnlock(j, i)))
                     ministrySlots.Add(i);
                 else
-                    issues.Add($"« {e.Name} » ({MinistryName(e.Ministry!)}) : aucun rouage de la cabale n'est affilié à ce Ministère.");
+                    issues.Add(new("ministryAbsent", IssueArg.Equipment(e.Id), IssueArg.Ministry(e.Ministry!)));
             }
         }
 
         // Chaque rouage ne rend disponible qu'un seul équipement/don de son Ministère
         // d'affiliation : les équipements de Ministère s'affectent à des rouages distincts.
         if (Unmatched(ministrySlots, slots, (i, j) => CanUnlock(j, i)).Count > 0)
-            issues.Add("Trop d'équipements/dons d'un même Ministère : chaque rouage ne rend disponible qu'un seul équipement/don de son Ministère d'affiliation.");
+            issues.Add(new("ministryOverflow"));
 
         return new LegalityResult(issues.Count == 0 && picked.Count == 3 && pickedEquipment.Count == 3, issues);
     }
 
-    private static void AddDuplicates(List<string> issues, string label, IEnumerable<string> names)
-    {
-        var dup = names.GroupBy(n => n).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
-        if (dup.Count > 0)
-            issues.Add($"Doublon de {label} : {string.Join(", ", dup)}.");
-    }
+    /// <summary>Un id par groupe d'éléments portant le même nom.</summary>
+    private static List<string> Duplicates<T>(IEnumerable<T> items, Func<T, string> name, Func<T, string> id) =>
+        items.GroupBy(name).Where(g => g.Count() > 1).Select(g => id(g.First())).ToList();
 
     /// <summary>
     /// Couplage biparti maximum entre <paramref name="left"/> et <paramref name="right"/>
@@ -241,4 +241,4 @@ public sealed class CatalogService
     }
 }
 
-public sealed record LegalityResult(bool IsLegal, IReadOnlyList<string> Issues);
+public sealed record LegalityResult(bool IsLegal, IReadOnlyList<LegalityIssue> Issues);

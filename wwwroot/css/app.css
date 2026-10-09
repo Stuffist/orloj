@@ -24,6 +24,11 @@ body {
 .app-shell { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
 
 .app-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+.app-titles { flex: 1; min-width: 0; }
+.lang-switch select {
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: .35rem .5rem; font-size: .85rem;
+}
 .app-header .mark {
     width: 44px; height: 44px; flex: none; border-radius: 50%;
     border: 3px solid var(--rust);
@@ -56,7 +61,7 @@ body {
     background: var(--panel-2); border: 1px solid var(--rust-soft); border-radius: 999px;
     padding: .1rem .2rem .1rem .55rem; font-size: .78rem; font-weight: 600;
 }
-.query-chip .stat-icon { width: .85rem; height: .85rem; background-color: var(--ink); }
+.query-chip .icon { width: .85rem; height: .85rem; background-color: var(--ink); }
 .chip-remove {
     background: none; border: none; color: var(--muted); cursor: pointer;
     font-size: .75rem; padding: 0 .3rem; line-height: 1;
@@ -97,16 +102,23 @@ body {
 
 .cog-card { display: flex; flex-direction: column; gap: .7rem; }
 
-/* Caractéristiques (composant StatLine) — icônes du LDR p.15, teintées via mask-image */
+/* Icônes du livre de règles teintées via mask-image (stats LDR p.15, pictogrammes LDR p.20) */
+.icon {
+    display: inline-block; flex: none; width: 1.15rem; height: 1.15rem; background-color: var(--muted);
+    -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat;
+}
+.icon.active        { -webkit-mask-image: url("../img/icons/active.png");        mask-image: url("../img/icons/active.png"); }
+.icon.permanent     { -webkit-mask-image: url("../img/icons/permanent.png");     mask-image: url("../img/icons/permanent.png"); }
+.icon.freq-planning { -webkit-mask-image: url("../img/icons/freq-planning.png"); mask-image: url("../img/icons/freq-planning.png"); }
+.icon.freq-cycle    { -webkit-mask-image: url("../img/icons/freq-cycle.png");    mask-image: url("../img/icons/freq-cycle.png"); }
+.icon.freq-game     { -webkit-mask-image: url("../img/icons/freq-game.png");     mask-image: url("../img/icons/freq-game.png"); }
+
+/* Caractéristiques (composant StatLine) */
 .stat-line { display: grid; grid-template-columns: repeat(4, 1fr); gap: .35rem; }
 .stat {
     display: grid; grid-template-columns: auto auto; justify-content: center; align-items: center;
     column-gap: .35rem; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
     padding: .3rem .2rem .2rem;
-}
-.stat-icon {
-    width: 1.15rem; height: 1.15rem; background-color: var(--muted);
-    -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat;
 }
 .stat-icon.tech   { -webkit-mask-image: url("../img/stats/tech.png");   mask-image: url("../img/stats/tech.png"); }
 .stat-icon.melee  { -webkit-mask-image: url("../img/stats/melee.png");  mask-image: url("../img/stats/melee.png"); }
@@ -117,11 +129,11 @@ body {
     grid-column: 1 / -1; text-align: center; font-size: .62rem; letter-spacing: .8px;
     color: var(--muted); margin-top: .15rem;
 }
-.stat.zero .stat-value, .stat.zero .stat-icon { opacity: .4; }
+.stat.zero .stat-value, .stat.zero .icon { opacity: .4; }
 
 .stat-line.compact { display: flex; gap: .8rem; margin-top: .2rem; }
 .stat-line.compact .stat { background: none; border: none; padding: 0; column-gap: .25rem; }
-.stat-line.compact .stat-icon { width: .9rem; height: .9rem; }
+.stat-line.compact .icon { width: .9rem; height: .9rem; }
 .stat-line.compact .stat-value { font-size: .85rem; font-weight: 600; }
 
 .sr-only {
@@ -158,3 +170,34 @@ body {
     background: #7a2a10; color: #fff; padding: .6rem 1rem; z-index: 1000;
 }
 #blazor-error-ui a { color: #fff; margin-left: 1rem; }
+
+/* Capacités (AbilityList) : colonne de pictogrammes puis nom et effet de jeu */
+.abilities { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+.ability { display: flex; gap: .55rem; align-items: flex-start; font-size: .82rem; line-height: 1.4; }
+.ability-picts {
+    display: flex; flex-direction: column; align-items: center; gap: .25rem; flex: none;
+    width: 1.3rem; padding-top: .1rem;
+}
+.ability-picts .icon { background-color: var(--ink); }
+.ability-body { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+.ability-name { font-weight: 600; text-transform: uppercase; letter-spacing: .3px; font-size: .78rem; }
+.game-effect { color: var(--muted); }
+.game-effect .icon { width: .95em; height: .95em; vertical-align: -.12em; background-color: var(--ink); margin: 0 .1em; }
+.pict-img { width: 1.05rem; height: 1.05rem; vertical-align: -.15em; }
+.game-effect .pict-img { width: .95em; height: .95em; margin: 0 .1em; }
+
+/* Fréquences : silhouette du livre, chiffre superposé (au-dessus de la couronne) */
+.freq { position: relative; display: inline-flex; justify-content: center; align-items: center; }
+.freq .freq-n {
+    position: absolute; inset: 0; display: flex; justify-content: center; align-items: center;
+    font-size: .68rem; font-weight: 800; color: var(--bg); line-height: 1;
+}
+.freq.freq-planning .freq-n { color: var(--ink); align-items: flex-start; top: -.45rem; }
+.freq.freq-planning { margin-top: .35rem; }
+.game-effect .freq .freq-n { font-size: .58em; }
+.game-effect .freq.freq-planning .freq-n { top: -.4em; }
+
+.pict-unknown { font-family: Consolas, monospace; font-size: .75rem; color: var(--rust-soft); }
+
+/* Texte d'une carte non traduit : affiché dans la langue de référence */
+.untranslated { font-style: italic; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }

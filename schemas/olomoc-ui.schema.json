@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://occicat.com/schemas/olomoc-ui.schema.json",
+  "title": "Olomòc — textes d'interface d'une langue",
+  "description": "Libellés de l'interface (wwwroot/i18n/<langue>/ui.json) : clé pointée -> texte. Les paramètres s'écrivent {0}, {1}… La langue de référence (fr) définit toutes les clés ; une clé absente d'une autre langue se replie sur fr.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    }
+  },
+  "propertyNames": {
+    "pattern": "^(\\$schema|[a-z][a-zA-Z0-9]*(\\.[a-zA-Z0-9]+)*)$"
+  },
+  "additionalProperties": {
+    "type": "string"
+  }
+}

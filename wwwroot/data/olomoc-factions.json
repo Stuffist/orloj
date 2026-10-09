@@ -5,7 +5,6 @@
   "factions": [
     {
       "code": "OTHERS",
-      "name": "Les Autres",
       "cogIds": [
         "1R09",
         "1R12",
@@ -18,7 +17,6 @@
     },
     {
       "code": "BLAUKAUST",
-      "name": "Blaukaust Devet",
       "cogIds": [
         "1R01",
         "1R29",
@@ -29,7 +27,6 @@
     },
     {
       "code": "DYKOVIAN",
-      "name": "Cabale Dykovienne",
       "cogIds": [
         "1R01",
         "1R03",
@@ -44,7 +41,6 @@
     },
     {
       "code": "MAISEL",
-      "name": "Ligue Maisel",
       "cogIds": [
         "1R01",
         "1R03",
@@ -59,7 +55,6 @@
     },
     {
       "code": "URKARAS",
-      "name": "Famille Urkaras",
       "cogIds": [
         "1R16",
         "2R04",
@@ -70,7 +65,6 @@
     },
     {
       "code": "UNDERWORLD",
-      "name": "La Pègre",
       "cogIds": [
         "1R22",
         "1R23",
@@ -83,7 +77,6 @@
     },
     {
       "code": "RUBIN",
-      "name": "Réseau Rubin",
       "cogIds": [
         "1R26",
         "2R25",

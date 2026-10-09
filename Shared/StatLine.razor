@@ -1,14 +1,15 @@
 @* Les quatre caractéristiques d'un rouage (LDR p.15), avec les icônes du livre de règles.
    Compact : icône + valeur (listes) ; sinon icône, valeur et trigramme. Le trigramme reste
    dans le DOM en mode compact pour les lecteurs d'écran. *@
+@inject LocalizationService L
 
 <div class="stat-line@(Compact ? " compact" : "")">
-    @foreach (var (icon, abbr, label, value) in Items)
+    @foreach (var (stat, value) in Items)
     {
-        <span class="stat@(value == 0 ? " zero" : "")" title="@label : @value">
-            <span class="stat-icon @icon" aria-hidden="true"></span>
+        <span class="stat@(value == 0 ? " zero" : "")" title="@L.StatName(stat) : @value">
+            <span class="icon stat-icon @LocalizationService.StatKey(stat)" aria-hidden="true"></span>
             <span class="stat-value">@value</span>
-            <span class="stat-abbr@(Compact ? " sr-only" : "")">@abbr</span>
+            <span class="stat-abbr@(Compact ? " sr-only" : "")">@L.StatAbbr(stat)</span>
         </span>
     }
 </div>
@@ -17,11 +18,11 @@
     [Parameter, EditorRequired] public Stats Stats { get; set; } = default!;
     [Parameter] public bool Compact { get; set; }
 
-    private IEnumerable<(string Icon, string Abbr, string Label, int Value)> Items => new[]
+    private IEnumerable<(StatKind Stat, int Value)> Items => new[]
     {
-        ("tech",   "TEC", "Technique", Stats.Tech),
-        ("melee",  "CBT", "Combat",    Stats.Melee),
-        ("ranged", "TIR", "Tir",       Stats.Ranged),
-        ("dodge",  "ESQ", "Esquive",   Stats.Dodge),
+        (StatKind.Tech,   Stats.Tech),
+        (StatKind.Melee,  Stats.Melee),
+        (StatKind.Ranged, Stats.Ranged),
+        (StatKind.Dodge,  Stats.Dodge),
     };
 }

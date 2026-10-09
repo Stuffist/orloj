@@ -1,0 +1,82 @@
+{
+  "$schema": "./olomoc-texts.schema.json",
+  "language": "fr",
+  "ministries": {
+    "SECURITY": {
+      "name": "Ministère de la Sécurité"
+    },
+    "PROGRESS": {
+      "name": "Ministère du Progrès"
+    },
+    "FRINGE": {
+      "name": "La Frange"
+    }
+  },
+  "factions": {
+    "BLACK_GUARD": {
+      "name": "La Garde Noire",
+      "description": "Exemple : à remplacer par les factions réelles du référentiel Occicat."
+    }
+  },
+  "cogs": {
+    "1R01": {
+      "name": "Jakub Myasnik",
+      "title": "Boucher de cauchemar",
+      "abilities": [
+        {
+          "name": "Coupe sélective",
+          "gameEffect": "Jakub Myasnik peut réaliser la tactique de combat suivante pour 2 réussites : cochez 1 PV teinté dans la ligne de vie du rouage ciblé par cette attaque."
+        }
+      ]
+    },
+    "2R04": {
+      "name": "Hynek Novotny",
+      "title": "Agent de liaison",
+      "abilities": [
+        {
+          "name": "Discret",
+          "gameEffect": "Hynek Novotny peut être activé s'il est révélé lors d'une phase de planification où votre adversaire a révélé un ministère."
+        }
+      ]
+    },
+    "3R17": {
+      "name": "Pétra Kantor",
+      "title": "Sergent de la Garde Noire",
+      "abilities": [
+        {
+          "name": "Vétéran brisée",
+          "gameEffect": "Jusqu'à la fin du cycle, Pétra Kantor est considérée comme ayant une valeur de rang 0 pour la réalisation des coordinations."
+        }
+      ]
+    }
+  },
+  "equipment": {
+    "E012": {
+      "name": "Disrupteur quantique",
+      "abilities": [
+        {
+          "name": "Disruption",
+          "gameEffect": "Exemple d'effet de jeu."
+        }
+      ]
+    },
+    "D003": {
+      "name": "Œil du Veneur",
+      "abilities": [
+        {
+          "name": "Vision trouble",
+          "gameEffect": "Exemple d'effet de jeu."
+        }
+      ]
+    },
+    "E044": {
+      "name": "Fusil de précision Vz-91",
+      "abilities": [
+        {
+          "name": "Visée longue",
+          "gameEffect": "Exemple d'effet de jeu."
+        }
+      ]
+    }
+  }
+}

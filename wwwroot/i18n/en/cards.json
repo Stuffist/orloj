@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schemas/olomoc-texts.schema.json",
+  "language": "en",
+  "ministries": {
+    "COORDINATION": {
+      "name": "Ministry of Coordination"
+    },
+    "INTEGRITY": {
+      "name": "Ministry of Integrity"
+    },
+    "EFFORT": {
+      "name": "Ministry of Effort"
+    },
+    "PROGRESS": {
+      "name": "Ministry of Progress"
+    },
+    "HARMONY": {
+      "name": "Ministry of Harmony"
+    },
+    "EDIFICATION": {
+      "name": "Ministry of Edification"
+    },
+    "SECURITY": {
+      "name": "Ministry of Security"
+    },
+    "FRINGE": {
+      "name": "The Fringe"
+    },
+    "AXIS": {
+      "name": "The Axis"
+    }
+  },
+  "factions": {},
+  "cogs": {},
+  "equipment": {}
+}

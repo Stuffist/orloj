@@ -11,14 +11,6 @@ public enum StatKind { Tech, Melee, Ranged, Dodge }
 /// <param name="Start">Position du fragment dans la saisie, pour pouvoir le retirer.</param>
 public sealed record StatCondition(StatKind Stat, string Op, int Value, int Start, int Length)
 {
-    public string Abbr => Stat switch
-    {
-        StatKind.Tech   => "TEC",
-        StatKind.Melee  => "CBT",
-        StatKind.Ranged => "TIR",
-        _               => "ESQ",
-    };
-
     /// <summary>Classe CSS de l'icône (voir StatLine).</summary>
     public string Icon => Stat.ToString().ToLowerInvariant();
 
@@ -45,25 +37,19 @@ public sealed record StatCondition(StatKind Stat, string Op, int Value, int Star
 }
 
 /// <summary>
-/// Recherche de rouages : mots libres (nom ou titre, sans tenir compte des accents ni de la
-/// casse) et conditions cumulables sur les caractéristiques, ex. « kantor tir>4 esq&lt;=3 ».
+/// Recherche de rouages : mots libres (comparés sans accents ni casse au texte cherchable du
+/// rouage) et conditions cumulables sur les caractéristiques, ex. « kantor tir>4 esq&lt;=3 ».
+/// Les mots-clés de stats (trigrammes, noms) sont fournis par les paquets de langue : la
+/// syntaxe accepte ceux de toutes les langues, quelle que soit la langue affichée.
 /// </summary>
-public sealed partial class CogQuery
+public sealed class CogQuery
 {
-    private const string StatNames = "tec|technique|cbt|combat|tir|esq|esquive";
     private const string Ops = ">=|<=|≥|≤|>|<|=";
-
-    [GeneratedRegex($@"\b({StatNames})\s*({Ops})\s*(\d+)", RegexOptions.IgnoreCase)]
-    private static partial Regex ConditionRx();
-
-    // Condition en cours de frappe (opérateur sans nombre) : ignorée plutôt que traitée comme texte.
-    [GeneratedRegex($@"\b({StatNames})\s*({Ops})(?=\s|$)", RegexOptions.IgnoreCase)]
-    private static partial Regex PendingRx();
 
     public IReadOnlyList<StatCondition> Conditions { get; }
     public IReadOnlyList<string> Words { get; }
 
-    public static readonly CogQuery Empty = Parse(null);
+    public static readonly CogQuery Empty = new(Array.Empty<StatCondition>(), Array.Empty<string>());
 
     private CogQuery(IReadOnlyList<StatCondition> conditions, IReadOnlyList<string> words)
     {
@@ -71,27 +57,36 @@ public sealed partial class CogQuery
         Words = words;
     }
 
-    public static CogQuery Parse(string? input)
+    /// <param name="keywords">Mot-clé en minuscules → caractéristique (voir LocalizationService.StatKeywords).</param>
+    public static CogQuery Parse(string? input, IReadOnlyDictionary<string, StatKind> keywords)
     {
         input ??= "";
-        var conditions = ConditionRx().Matches(input)
+        if (keywords.Count == 0) return new(Array.Empty<StatCondition>(), Fold(input).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+        // Les mots-clés les plus longs d'abord : « technique » avant « tec ».
+        var names = string.Join('|', keywords.Keys.OrderByDescending(k => k.Length).Select(Regex.Escape));
+        var condition = new Regex($@"\b({names})\s*({Ops})\s*(\d+)", RegexOptions.IgnoreCase);
+        // Condition en cours de frappe (opérateur sans nombre) : ignorée plutôt que traitée comme texte.
+        var pending = new Regex($@"\b({names})\s*({Ops})(?=\s|$)", RegexOptions.IgnoreCase);
+
+        var conditions = condition.Matches(input)
             .Select(m => new StatCondition(
-                StatOf(m.Groups[1].Value),
+                keywords[m.Groups[1].Value.ToLowerInvariant()],
                 m.Groups[2].Value switch { "≥" => ">=", "≤" => "<=", var op => op },
                 int.TryParse(m.Groups[3].Value, out var v) ? v : int.MaxValue,
                 m.Index, m.Length))
             .ToList();
 
-        var rest = PendingRx().Replace(ConditionRx().Replace(input, " "), " ");
-        var words = Fold(rest).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return new CogQuery(conditions, words);
+        var rest = pending.Replace(condition.Replace(input, " "), " ");
+        return new(conditions, Fold(rest).Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
-    public bool Matches(Cog cog)
+    /// <param name="searchText">Texte cherchable du rouage (noms, titres), voir LocalizationService.SearchText.</param>
+    public bool Matches(Cog cog, string searchText)
     {
         if (!Conditions.All(c => c.Matches(cog.Stats))) return false;
         if (Words.Count == 0) return true;
-        var haystack = Fold(cog.Name + " " + cog.Title);
+        var haystack = Fold(searchText);
         return Words.All(haystack.Contains);
     }
 
@@ -99,14 +94,6 @@ public sealed partial class CogQuery
     public static string Without(string input, StatCondition condition) =>
         string.Join(' ', input.Remove(condition.Start, condition.Length)
             .Split(' ', StringSplitOptions.RemoveEmptyEntries));
-
-    private static StatKind StatOf(string name) => name.ToLowerInvariant() switch
-    {
-        "tec" or "technique" => StatKind.Tech,
-        "cbt" or "combat"    => StatKind.Melee,
-        "tir"                => StatKind.Ranged,
-        _                    => StatKind.Dodge,
-    };
 
     // Minuscules sans diacritiques, espaces normalisés : « Pétra » -> « petra ».
     private static string Fold(string s)

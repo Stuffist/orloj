@@ -50,39 +50,64 @@ en attendant un référentiel de faction anglais officiel.
 
 ## Données
 
-Deux ressources, servies telles quelles :
+Le référentiel est **neutre en langue** ; les textes vivent dans des paquets par langue.
 
-- `wwwroot/data/olomoc-catalog.json` — rouages, équipements/dons, ministères
+- `wwwroot/data/olomoc-catalog.json` — rouages, équipements/dons, ministères : ids,
+  codes, caractéristiques, lignes de vie, coûts, fréquences, règles de composition
   (schéma `schemas/olomoc.schema.json`).
 - `wwwroot/data/olomoc-factions.json` — appartenances aux factions
   (schéma `schemas/olomoc-factions.schema.json`).
+- `wwwroot/i18n/<langue>/cards.json` — textes des cartes : noms, titres, noms et
+  effets de jeu des capacités, noms des Ministères et des factions
+  (schéma `schemas/olomoc-texts.schema.json`).
+- `wwwroot/i18n/<langue>/ui.json` — libellés de l'interface
+  (schéma `schemas/olomoc-ui.schema.json`).
 
 Chaque fichier référence son schéma via `$schema` (validation et autocomplétion
-dans l'éditeur). Le dossier `schemas/` contient aussi un exemple minimal par
-schéma (`referentiel.example.json`, `factions.example.json`) ; il n'est ni copié
-dans le build ni publié. Validation en ligne de commande, par exemple :
+dans l'éditeur). Le dossier `schemas/` contient aussi des exemples minimaux
+(`referentiel.example.json`, `factions.example.json`, `textes.example.json`) ;
+il n'est ni copié dans le build ni publié. Validation en ligne de commande :
 
 ```bash
-npx ajv-cli@5 validate --spec=draft2020 --strict=false \
-  -s schemas/olomoc.schema.json -d wwwroot/data/olomoc-catalog.json
+npx ajv-cli@5 validate --spec=draft2020 --strict=false   -s schemas/olomoc.schema.json -d wwwroot/data/olomoc-catalog.json
+npx ajv-cli@5 validate --spec=draft2020 --strict=false   -s schemas/olomoc-texts.schema.json -d "wwwroot/i18n/*/cards.json"
 ```
 
-Remplacer ces deux fichiers suffit à mettre l'app à jour ; aucun code à toucher.
+Remplacer ces fichiers suffit à mettre l'app à jour ; aucun code à toucher. Les
+tests (`dotnet test`) vérifient aussi la cohérence entre référentiel et paquets.
 
 Contenu actuel (relevé du 2026-10-08) : 28 rouages, 53 équipements/dons, 7 factions.
 Les rattachements (factions, ministères, rangs) viennent des filtres du builder
 [bwaaaanegamesdb.fr](https://bwaaaanegamesdb.fr/builder_olomoc/index_builder_olomoc.php) ;
 les caractéristiques, lignes de vie et capacités ont été transcrites depuis les
-images des cartes. Conventions de transcription :
+images des cartes. Conventions de transcription (pictogrammes : LDR p.20) :
 
 - Le rang est celui du site, **pas** le préfixe du code (`1R01` est un rang 3).
 - PV gris (uni ou hachuré selon l'édition) → `R` (renforcé).
-- Couronne N → `frequencies: [{count: N, per: PLANNING_PHASE}]` ;
-  cercle plein N → `{count: N, per: GAME}`.
-- Cube blanc plein dans la colonne de coût → +1 `actionCost`.
-- Pictogrammes dans l'effet de jeu : `[Technique]`, `[Combat]`, `[Tir]`,
-  `[Active]`, `[pion d'action]`, `[pion de Noirceur]`, `[1 fois par partie]`.
+- Cube blanc ×N → `actionCost: N` ; cube noir ×N → `darknessCost: N`.
+- Fréquences : couronne N → `{count: N, per: PLANNING_PHASE}`, pentagone N →
+  `{count: N, per: CYCLE}`, cercle N → `{count: N, per: GAME}` (cumulables).
 - `baseSize` est imprimée au verso des cartes, absent du relevé : elle reste vide.
+
+## Multilingue
+
+- `wwwroot/i18n/languages.json` liste les langues proposées (sélecteur dans
+  l'en-tête). La langue est détectée depuis le navigateur, puis mémorisée.
+- `fr` est la **langue de référence**, complète. Les autres paquets peuvent être
+  partiels : tout texte manquant se replie sur `fr` (affiché en italique souligné).
+  Les règles indépendantes de la langue (doublons de nom) comparent les noms `fr`.
+- **Ajouter une langue** : créer `wwwroot/i18n/<code>/ui.json` et `cards.json`, puis
+  l'ajouter à `languages.json`. Les clés de `ui.json` sont celles de `fr` ; les
+  trigrammes et noms de stats (`stat.*.abbr`, `stat.*.name`) deviennent aussi des
+  mots-clés de recherche, valables quelle que soit la langue affichée.
+- **Pictogrammes** : identiques dans toutes les langues, jamais traduits. Dans les
+  effets de jeu, ce sont des jetons neutres rendus par les icônes du livre de règles
+  (`wwwroot/img/icons/`, `wwwroot/img/stats/`) :
+  `{tech}` `{melee}` `{ranged}` `{dodge}` `{active}` `{action}` `{darkness}`
+  `{freq:planning|cycle|game:N}`, et `{blue-cube}` (pictogramme non encore identifié).
+- Les tests vérifient que chaque carte a ses textes `fr`, qu'aucune langue ne
+  contient d'id ou de clé inconnus, et que les pictogrammes d'un effet de jeu sont
+  les mêmes dans toutes les langues.
 
 ## Règles appliquées (LDR p.32)
 
@@ -112,16 +137,24 @@ images des cartes. Conventions de transcription :
 
 Le champ de recherche combine des mots libres (nom ou titre, sans tenir compte
 des accents ni de la casse) et des conditions cumulables sur les caractéristiques :
-`tec`, `cbt`, `tir`, `esq` suivis de `>`, `<`, `>=`, `<=` ou `=` et d'un nombre,
-par exemple `kantor tir>4 esq<=3`.
+trigramme ou nom d'une stat, dans n'importe quelle langue (`tec`, `cbt`, `tir`,
+`esq`, `mel`, `rng`, `dod`, `combat`, `ranged`…), suivi de `>`, `<`, `>=`, `<=` ou
+`=` et d'un nombre, par exemple `kantor tir>4 esq<=3` ou `rng>4 dod<=3`.
 
 ## Architecture
 
-- `Models/CatalogModels.cs` — modèle du référentiel (`Cog`, `Equipment`,
-  `Ministry`, `Faction`…), désérialisé en insensible à la casse ; enums
-  `HealthPointType` (S/R/T), `Timing`, `EquipmentKind`, `BuildRuleType`.
+- `Models/CatalogModels.cs` — référentiel neutre (`Cog`, `Equipment`, `Ministry`,
+  `Faction`…), désérialisé en insensible à la casse ; enums `HealthPointType`
+  (S/R/T), `Timing`, `EquipmentKind`, `BuildRuleType`.
+- `Models/TextModels.cs` — paquets de langue, `Localized` (texte + repli), et
+  `LegalityIssue` (messages de légalité neutres : clé + ids).
+- `Services/LocalizationService.cs` — langue courante, libellés (`Ui`), textes des
+  cartes avec repli sur `fr`, mots-clés de stats de toutes les langues.
 - `Services/CatalogService.cs` — chargement + `AvailableCogs`,
   `AvailableEquipment`, `RecruitVia`, `CheckLegality` (dont le couplage biparti).
 - `Services/CogQuery.cs` — analyse de la recherche (mots + conditions sur les stats).
-- `Shared/StatLine.razor` — caractéristiques avec les icônes du livre (`wwwroot/img/stats/`).
+- `Shared/StatLine.razor`, `AbilityList.razor`, `GameEffect.razor`,
+  `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre.
 - `Pages/Home.razor` — état de la cabale et UI réactive.
+- `tests/OlomocListBuilder.Tests` — xUnit : légalité, recherche, cohérence des langues
+  (compile les modèles et services de l'app, lit les données de `wwwroot`).

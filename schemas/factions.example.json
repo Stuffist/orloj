@@ -5,8 +5,6 @@
   "factions": [
     {
       "code": "BLACK_GUARD",
-      "name": "La Garde Noire",
-      "description": "Exemple : à remplacer par les factions réelles du référentiel Occicat.",
       "cogIds": [
         "1R01",
         "2R04",

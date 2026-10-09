@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://occicat.com/schemas/olomoc-factions.schema.json",
   "title": "Olomòc — référentiel de faction",
-  "description": "Appartenances aux factions. Document distinct du référentiel de cartes : l'information n'est pas imprimée sur les cartes et est publiée à part par Occicat (LDR p.32). C'est la faction qui déclare ses membres, donc un rouage peut appartenir à plusieurs factions sans redondance.",
+  "description": "Appartenances aux factions (Référentiel de faction, LDR p.32), neutres en langue : les noms des factions sont dans les paquets de langue. C'est la faction qui déclare ses membres, donc un rouage peut appartenir à plusieurs factions sans redondance.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -49,19 +49,11 @@
       "additionalProperties": false,
       "required": [
         "code",
-        "name",
         "cogIds"
       ],
       "properties": {
         "code": {
           "$ref": "#/$defs/factionCode"
-        },
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "description": {
-          "type": "string"
         },
         "cogIds": {
           "type": "array",

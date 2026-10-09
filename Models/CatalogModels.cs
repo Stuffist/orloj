@@ -2,8 +2,8 @@ using System.Text.Json.Serialization;
 
 namespace OlomocListBuilder.Models;
 
-// Identifiants alignés sur le livre de règles anglais ; les valeurs affichées (noms, titres,
-// effets de jeu) restent en français, alignées sur le livre de règles V1.1.
+// Référentiel neutre en langue, identifiants alignés sur le livre de règles anglais.
+// Les textes (noms, titres, effets de jeu) sont dans les paquets de langue (TextModels.cs).
 
 public enum HealthPointType { S, R, T }     // Standard, Reinforced (Protection), Tainted
 public enum Timing { Active, Permanent }
@@ -13,8 +13,6 @@ public enum BuildRuleType { ALL_MINISTRIES, RECRUIT_WEARER, RECRUIT_MINISTRY }
 public sealed class Ministry
 {
     public string Code { get; init; } = "";
-    public string Name { get; init; } = "";
-    public string? Description { get; init; }
     public string? Emblem { get; init; }
 }
 
@@ -32,10 +30,9 @@ public sealed class Frequency
     public string Per { get; init; } = "";   // PLANNING_PHASE | CYCLE | GAME
 }
 
+/// <summary>Capacité ; son nom et son effet de jeu sont au même rang dans les paquets de langue.</summary>
 public sealed class Ability
 {
-    public string Name { get; init; } = "";
-    public string GameEffect { get; init; } = "";
     public Timing Timing { get; init; }
     public int ActionCost { get; init; }
     public int DarknessCost { get; init; }
@@ -51,15 +48,12 @@ public sealed class Art
 public sealed class Cog
 {
     public string Id { get; init; } = "";
-    public string Name { get; init; } = "";
-    public string? Title { get; init; }
     public List<string> Ministries { get; init; } = new();
     public int Rank { get; init; }
     public int? BaseSize { get; init; }       // imprimée au verso, absente du relevé
     public Stats Stats { get; init; } = new();
     public List<HealthPointType> LifeLine { get; init; } = new();
     public List<Ability> Abilities { get; init; } = new();
-    public string? Instinct { get; init; }
     public Art? Art { get; init; }
     public string? Set { get; init; }
 }
@@ -68,7 +62,6 @@ public sealed class Cog
 public sealed class Equipment
 {
     public string Id { get; init; } = "";
-    public string Name { get; init; } = "";
     public EquipmentKind Kind { get; init; }
     public string? Ministry { get; init; }   // affiliation exclusive :
     public string? Faction { get; init; }     //   Ministère, faction,
@@ -113,8 +106,6 @@ public sealed class Catalog
 public sealed class Faction
 {
     public string Code { get; init; } = "";
-    public string Name { get; init; } = "";
-    public string? Description { get; init; }
     public List<string> CogIds { get; init; } = new();
 }
 

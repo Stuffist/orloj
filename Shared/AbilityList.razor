@@ -1,0 +1,45 @@
+@* Capacités d'un rouage ou d'un équipement/don : colonne de pictogrammes (temporalité, coûts,
+   fréquences) comme sur la carte, puis nom et effet de jeu dans la langue courante. *@
+@inject LocalizationService L
+
+@if (Abilities.Count > 0)
+{
+    <ul class="abilities">
+        @for (var i = 0; i < Abilities.Count; i++)
+        {
+            var a = Abilities[i];
+            var name = NameAt(i);
+            <li class="ability">
+                <span class="ability-picts">
+                    <Pictogram Token="@(a.Timing == Timing.Active ? "active" : "permanent")" />
+                    @if (a.ActionCost > 0) { <Pictogram Token="action" Count="a.ActionCost" /> }
+                    @if (a.DarknessCost > 0) { <Pictogram Token="darkness" Count="a.DarknessCost" /> }
+                    @foreach (var f in a.Frequencies)
+                    {
+                        <Pictogram Token="@FrequencyToken(f.Per)" Count="f.Count" />
+                    }
+                </span>
+                <span class="ability-body">
+                    <span class="ability-name@(name.IsFallback ? " untranslated" : "")">@name</span>
+                    <GameEffect Text="EffectAt(i)" UntranslatedTitle="@L.Ui("common.untranslated")" />
+                </span>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter] public Cog? Cog { get; set; }
+    [Parameter] public Equipment? Equipment { get; set; }
+
+    private List<Ability> Abilities => Cog?.Abilities ?? Equipment?.Abilities ?? new();
+    private Localized NameAt(int i) => Cog is not null ? L.AbilityName(Cog, i) : L.AbilityName(Equipment!, i);
+    private Localized EffectAt(int i) => Cog is not null ? L.GameEffect(Cog, i) : L.GameEffect(Equipment!, i);
+
+    private static string FrequencyToken(string per) => per switch
+    {
+        "PLANNING_PHASE" => "freq-planning",
+        "CYCLE"          => "freq-cycle",
+        _                => "freq-game",
+    };
+}

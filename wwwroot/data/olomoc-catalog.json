@@ -3,47 +3,36 @@
   "version": "2026.10",
   "ministries": [
     {
-      "code": "COORDINATION",
-      "name": "Ministère de la Coordination"
+      "code": "COORDINATION"
     },
     {
-      "code": "INTEGRITY",
-      "name": "Ministère de l'Intégrité"
+      "code": "INTEGRITY"
     },
     {
-      "code": "EFFORT",
-      "name": "Ministère de l'Effort"
+      "code": "EFFORT"
     },
     {
-      "code": "PROGRESS",
-      "name": "Ministère du Progrès"
+      "code": "PROGRESS"
     },
     {
-      "code": "HARMONY",
-      "name": "Ministère de l'Harmonie"
+      "code": "HARMONY"
     },
     {
-      "code": "EDIFICATION",
-      "name": "Ministère de l'Édification"
+      "code": "EDIFICATION"
     },
     {
-      "code": "SECURITY",
-      "name": "Ministère de la Sécurité"
+      "code": "SECURITY"
     },
     {
-      "code": "FRINGE",
-      "name": "La Frange"
+      "code": "FRINGE"
     },
     {
-      "code": "AXIS",
-      "name": "L'Axe"
+      "code": "AXIS"
     }
   ],
   "cogs": [
     {
       "id": "1R01",
-      "name": "Petra Kantor",
-      "title": "Sergent de la Garde Noire",
       "ministries": [
         "SECURITY"
       ],
@@ -70,11 +59,15 @@
       ],
       "abilities": [
         {
-          "name": "Vétéran brisée",
-          "gameEffect": "Jusqu'à la fin du cycle Petra Kantor peut être coordonnée sans tenir compte de son rang.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 1
+          "actionCost": 0,
+          "darknessCost": 1,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -83,8 +76,6 @@
     },
     {
       "id": "1R03",
-      "name": "Jana Alena Novak",
-      "title": "Logisticienne de l'Économat",
       "ministries": [
         "EFFORT"
       ],
@@ -111,11 +102,15 @@
       ],
       "abilities": [
         {
-          "name": "Le sens de l'effort",
-          "gameEffect": "Ciblez un rouage allié à 4\" de Jana Alena Novak, il réalise immédiatement une marche ou attaque frontale gratuite.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -124,8 +119,6 @@
     },
     {
       "id": "1R09",
-      "name": "La Reine",
-      "title": "Aberrant de classe 4",
       "ministries": [
         "AXIS"
       ],
@@ -152,8 +145,6 @@
       ],
       "abilities": [
         {
-          "name": "Le choix du roi",
-          "gameEffect": "Ciblez un rouage adverse à 4\" de la Reine. Ce dernier choisit l'un des deux effets suivants :\n• Attribuez-lui une valeur de 0 à toutes ses caractéristiques jusqu'à la fin de cette phase de planification.\n• Ou attribuez-lui un pion de Noirceur.",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 0
@@ -165,8 +156,6 @@
     },
     {
       "id": "1R12",
-      "name": "Ivo Andrazy",
-      "title": "Architecte non complaisant",
       "ministries": [
         "EDIFICATION"
       ],
@@ -193,8 +182,6 @@
       ],
       "abilities": [
         {
-          "name": "Dynaste de l'ombre",
-          "gameEffect": "Votre adversaire ne peut pas jouer de carte de rouage lors d'une phase de planification où vous révélez Ivo Andrazy.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -206,8 +193,6 @@
     },
     {
       "id": "1R16",
-      "name": "Indra",
-      "title": "Piéta – Liseuse de lames",
       "ministries": [
         "INTEGRITY"
       ],
@@ -234,8 +219,6 @@
       ],
       "abilities": [
         {
-          "name": "Tarot des configurations",
-          "gameEffect": "Lors de la phase de mise en place, piochez secrètement les 3 dernières cartes de l'Artefact. Pendant toute la partie, lors de la réalisation d'un mécanisme, vous pouvez défausser la carte artefact piochée, ne pas en appliquer les effets, et la remplacer par l'une des 3 cartes piochées lors de la phase de mise en place.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -247,8 +230,6 @@
     },
     {
       "id": "1R19",
-      "name": "Madame Fugger",
-      "title": "Cheffe de culte mondaine",
       "ministries": [
         "COORDINATION"
       ],
@@ -275,8 +256,6 @@
       ],
       "abilities": [
         {
-          "name": "Philanthrope occulte",
-          "gameEffect": "À la fin de chaque cycle, les rouages adverses à 2\" de Madame Fugger qui possèdent 2 pions de Noirceur sont considérés comme corrompus.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -288,8 +267,6 @@
     },
     {
       "id": "1R22",
-      "name": "Victor Goran",
-      "title": "Baron charismatique",
       "ministries": [
         "HARMONY"
       ],
@@ -316,8 +293,6 @@
       ],
       "abilities": [
         {
-          "name": "Intimidation",
-          "gameEffect": "Lors d'une phase de planification où vous révélez Victor Goran, aucun rouage adverse ne peut cibler Victor Goran avec une attaque.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -329,8 +304,6 @@
     },
     {
       "id": "1R23",
-      "name": "Robert Kadlec",
-      "title": "Cartographe aux mains sales",
       "ministries": [
         "EDIFICATION"
       ],
@@ -357,8 +330,6 @@
       ],
       "abilities": [
         {
-          "name": "Superstitieux",
-          "gameEffect": "Lors de l'activation d'un rouage allié, vous pouvez aussi activer Robert Kadlec si la phase de planification a bénéficié d'un mécanisme.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -370,8 +341,6 @@
     },
     {
       "id": "1R26",
-      "name": "Adel Varadi",
-      "title": "« Timéa »",
       "ministries": [
         "PROGRESS"
       ],
@@ -398,11 +367,15 @@
       ],
       "abilities": [
         {
-          "name": "Leader d'exception",
-          "gameEffect": "Adel Varadi peut coordonner un rouage dont la carte d'activation n'est pas révélée.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -411,8 +384,6 @@
     },
     {
       "id": "1R29",
-      "name": "Caporal Vlach",
-      "title": "Survivant du Quart 44",
       "ministries": [
         "SECURITY"
       ],
@@ -439,11 +410,15 @@
       ],
       "abilities": [
         {
-          "name": "Écho de l'escouade Jizni",
-          "gameEffect": "Attribuez un pion de Fiel à votre réserve.\nPuis attribuez 1 pion d'action au Caporal Vlach et tous les rouages alliés.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -452,8 +427,6 @@
     },
     {
       "id": "2R02",
-      "name": "Kubik Oktobar",
-      "title": "Scientifique",
       "ministries": [
         "PROGRESS"
       ],
@@ -480,8 +453,6 @@
       ],
       "abilities": [
         {
-          "name": "Détecteur de flux quantique",
-          "gameEffect": "Retirez un pion de Noirceur de Kubik Oktobar ou d'un rouage allié à 1\" de lui.",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 0,
@@ -499,8 +470,6 @@
     },
     {
       "id": "2R04",
-      "name": "Hynek Novotny",
-      "title": "Agent de liaison",
       "ministries": [
         "COORDINATION"
       ],
@@ -527,8 +496,6 @@
       ],
       "abilities": [
         {
-          "name": "Discret",
-          "gameEffect": "Hynek Novotny peut être activé s'il est révélé lors d'une phase de planification où votre adversaire a révélé un Ministère.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -540,8 +507,6 @@
     },
     {
       "id": "2R08",
-      "name": "Le Chasseur",
-      "title": "Sang mêlé de Fiel",
       "ministries": [
         "AXIS"
       ],
@@ -568,8 +533,6 @@
       ],
       "abilities": [
         {
-          "name": "Sombre appétence",
-          "gameEffect": "Lorsque le Chasseur réalise une attaque, il le fait avec un bonus de +X [Combat]. Où X est le nombre de pions de Noirceur que possède le rouage ciblé par cette attaque.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -581,8 +544,6 @@
     },
     {
       "id": "2R11",
-      "name": "Lukas",
-      "title": "Horloger cultiste",
       "ministries": [
         "EFFORT"
       ],
@@ -609,8 +570,6 @@
       ],
       "abilities": [
         {
-          "name": "Viciation",
-          "gameEffect": "Lorsque Lukas réalise une capacité spécifique d'un agenda qui génère au moins un pion de Noirceur, il peut l'attribuer à un rouage à 2\" de lui.",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 0,
@@ -628,8 +587,6 @@
     },
     {
       "id": "2R15",
-      "name": "Yago",
-      "title": "Guitariste virtuose",
       "ministries": [
         "EFFORT"
       ],
@@ -656,8 +613,6 @@
       ],
       "abilities": [
         {
-          "name": "Cadence synchrone",
-          "gameEffect": "Si Yago ne subit pas l'état sonné et que sa carte d'activation est révélée, les rouages adverses tant qu'ils sont à 2\" de lui doivent dépenser un pion [pion d'action] de plus pour réaliser un repos.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -669,8 +624,6 @@
     },
     {
       "id": "2R18",
-      "name": "Le Vagabond",
-      "title": "Quadrupède prédateur",
       "ministries": [
         "AXIS"
       ],
@@ -697,8 +650,6 @@
       ],
       "abilities": [
         {
-          "name": "Sans hygiène ni raison",
-          "gameEffect": "Le Vagabond subit un malus de -X [Combat] lorsqu'il réalise une attaque frontale. Où X est le nombre de pions de Noirceur que possède le rouage ciblé par cette attaque.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -710,8 +661,6 @@
     },
     {
       "id": "2R21",
-      "name": "Oskar Borgo",
-      "title": "Tueur à gage",
       "ministries": [
         "FRINGE"
       ],
@@ -738,11 +687,15 @@
       ],
       "abilities": [
         {
-          "name": "Un tir, un mort",
-          "gameEffect": "Lorsqu'Oskar Borgo réalise une attaque à distance, il peut le faire avec un bonus de +X [Tir]. X étant le numéro d'emplacement de sa carte d'activation dans votre planification, si elle a déjà été révélée.",
           "timing": "Permanent",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -751,8 +704,6 @@
     },
     {
       "id": "2R25",
-      "name": "Rehor Marton",
-      "title": "« Sonar »",
       "ministries": [
         "COORDINATION"
       ],
@@ -779,8 +730,6 @@
       ],
       "abilities": [
         {
-          "name": "Séducteur",
-          "gameEffect": "Ciblez un rouage adverse engagé par Rehor Marton.\nPoussez-le.",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 0,
@@ -798,8 +747,6 @@
     },
     {
       "id": "2R28",
-      "name": "Opérateur Sikora",
-      "title": "Tête brûlée",
       "ministries": [
         "SECURITY"
       ],
@@ -826,11 +773,15 @@
       ],
       "abilities": [
         {
-          "name": "Tir de suppression",
-          "gameEffect": "Lors de la prochaine attaque à distance de l'Opérateur Sikora, sa cible ne pourra pas réaliser d'esquive.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -839,8 +790,6 @@
     },
     {
       "id": "3R05",
-      "name": "Dominik Kralov",
-      "title": "Syndicaliste",
       "ministries": [
         "EFFORT"
       ],
@@ -867,8 +816,6 @@
       ],
       "abilities": [
         {
-          "name": "Pince outil",
-          "gameEffect": "Dominik Kralov gagne un bonus de +2 [Combat] lorsqu'il cible avec une attaque frontale un rouage sonné.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0,
@@ -886,8 +833,6 @@
     },
     {
       "id": "3R06",
-      "name": "Bohdan Gross",
-      "title": "Portraitiste officiel",
       "ministries": [
         "HARMONY"
       ],
@@ -914,8 +859,6 @@
       ],
       "abilities": [
         {
-          "name": "Visions prophétiques",
-          "gameEffect": "Au début de la planification de chaque cycle, avant que vous ne réalisiez la vôtre, votre adversaire doit placer face visible la première carte de sa planification.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -927,8 +870,6 @@
     },
     {
       "id": "3R07",
-      "name": "La Vermine",
-      "title": "Sujet 107 DT",
       "ministries": [
         "AXIS"
       ],
@@ -955,8 +896,6 @@
       ],
       "abilities": [
         {
-          "name": "Influence putride",
-          "gameEffect": "Ciblez un rouage à 4\" possédant 1 pion de Noirceur. Poussez-le vers la Vermine.",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 0,
@@ -974,8 +913,6 @@
     },
     {
       "id": "3R10",
-      "name": "Herman Zofie",
-      "title": "Décontaminateur",
       "ministries": [
         "INTEGRITY"
       ],
@@ -1002,8 +939,6 @@
       ],
       "abilities": [
         {
-          "name": "Détergent de l'Intégrité",
-          "gameEffect": "Placez la réglette de déplacement au contact d'Herman Zofie. Tous les autres rouages à son contact subissent X blessures où X est le nombre de pions de Noirceur qu'ils possèdent. Puis retirez l'ensemble des pions de Noirceur de ces rouages.",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 0,
@@ -1021,8 +956,6 @@
     },
     {
       "id": "3R14",
-      "name": "Maja",
-      "title": "Séductrice endurcie",
       "ministries": [
         "HARMONY"
       ],
@@ -1049,8 +982,6 @@
       ],
       "abilities": [
         {
-          "name": "Danse kalbélia",
-          "gameEffect": "Attribuez un pion [cube bleu] à un rouage adverse engagé par Maja puis poussez-la.",
           "timing": "Active",
           "actionCost": 1,
           "darknessCost": 0,
@@ -1068,8 +999,6 @@
     },
     {
       "id": "3R17",
-      "name": "Jakub Myasnik",
-      "title": "Boucher de cauchemar",
       "ministries": [
         "FRINGE"
       ],
@@ -1096,11 +1025,15 @@
       ],
       "abilities": [
         {
-          "name": "Coupe sélective",
-          "gameEffect": "Jakub Myasnik peut réaliser la tactique de combat suivante pour 2 réussites : cochez 1 PV teinté dans la ligne de vie du rouage ciblé par cette attaque.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1109,8 +1042,6 @@
     },
     {
       "id": "3R20",
-      "name": "Sergo Dracomir",
-      "title": "Addict à la Mélisse",
       "ministries": [
         "FRINGE"
       ],
@@ -1137,8 +1068,6 @@
       ],
       "abilities": [
         {
-          "name": "Provocation",
-          "gameEffect": "Sergo Dracomir gagne un bonus de +2 [Combat] lorsqu'il cible avec une attaque frontale un rouage adverse dont la carte d'activation n'est pas révélée.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1150,8 +1079,6 @@
     },
     {
       "id": "3R24",
-      "name": "Jiri Peska",
-      "title": "« Vent d'Ouest »",
       "ministries": [
         "EDIFICATION"
       ],
@@ -1178,8 +1105,6 @@
       ],
       "abilities": [
         {
-          "name": "Opportuniste",
-          "gameEffect": "Juste après l'attribution d'un pion de traque à la Polisec, Jiri Peska peut immédiatement réaliser une capacité générique gratuite.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1191,8 +1116,6 @@
     },
     {
       "id": "3R27",
-      "name": "Medic Ruzicka",
-      "title": "Urgentiste de terrain",
       "ministries": [
         "INTEGRITY"
       ],
@@ -1219,8 +1142,6 @@
       ],
       "abilities": [
         {
-          "name": "Kit de secours",
-          "gameEffect": "Au début du premier cycle, Médic Ruzicka peut être équipée d'un équipement supplémentaire affilié au Ministère de l'Intégrité.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1234,13 +1155,10 @@
   "equipment": [
     {
       "id": "D01",
-      "name": "Carapace",
       "kind": "BOON",
       "ministry": "AXIS",
       "abilities": [
         {
-          "name": "Carapace",
-          "gameEffect": "Le rouage équipé gagne deux PV renforcés supplémentaires au début de sa ligne de vie.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1253,16 +1171,19 @@
     },
     {
       "id": "D02",
-      "name": "Flatteries vénales",
       "kind": "BOON",
       "ministry": "AXIS",
       "abilities": [
         {
-          "name": "Flatteries vénales",
-          "gameEffect": "Ciblez un rouage à 1\" du rouage équipé.\nIl sera considéré comme ayant un rang 4 par tous les rouages hostiles jusqu'à la fin du cycle.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 1
+          "actionCost": 0,
+          "darknessCost": 1,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1272,16 +1193,19 @@
     },
     {
       "id": "D03",
-      "name": "Stigmates",
       "kind": "BOON",
       "ministry": "AXIS",
       "abilities": [
         {
-          "name": "Stigmates",
-          "gameEffect": "Désignez un élément de décor à 1\" du rouage équipé. Il devient teinté jusqu'à la fin du cycle.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 1
+          "actionCost": 0,
+          "darknessCost": 1,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1291,16 +1215,19 @@
     },
     {
       "id": "D04",
-      "name": "Messes basses",
       "kind": "BOON",
       "ministry": "AXIS",
       "abilities": [
         {
-          "name": "Messes basses",
-          "gameEffect": "Désignez un rouage hostile de rang 1 ou 2 à 1\" du rouage équipé. Déplacez-le.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 1
+          "actionCost": 0,
+          "darknessCost": 1,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1310,13 +1237,10 @@
     },
     {
       "id": "D05",
-      "name": "Aumône",
       "kind": "BOON",
       "ministry": "AXIS",
       "abilities": [
         {
-          "name": "Aumône",
-          "gameEffect": "Après la réalisation d'un mécanisme, retirez un pion de Noirceur du rouage équipé.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0,
@@ -1335,13 +1259,10 @@
     },
     {
       "id": "D06",
-      "name": "Caresse synchrone",
       "kind": "BOON",
       "ministry": "AXIS",
       "abilities": [
         {
-          "name": "Caresse synchrone",
-          "gameEffect": "Lors d'une phase de planification qui a bénéficié d'un mécanisme, le rouage équipé peut réaliser une attaque frontale gratuite.",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 0,
@@ -1360,13 +1281,10 @@
     },
     {
       "id": "D07",
-      "name": "Esprit de meute",
       "kind": "BOON",
       "ministry": "AXIS",
       "abilities": [
         {
-          "name": "Esprit de meute",
-          "gameEffect": "Le rouage équipé bénéficie du soutien des rouages hostiles lorsqu'il cible ou est ciblé par un rouage adverse avec une attaque frontale.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1379,16 +1297,19 @@
     },
     {
       "id": "D08",
-      "name": "Appel nocturne",
       "kind": "BOON",
       "ministry": "AXIS",
       "abilities": [
         {
-          "name": "Appel nocturne",
-          "gameEffect": "Réalisez un mécanisme.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1398,13 +1319,10 @@
     },
     {
       "id": "E01",
-      "name": "Manuel du Progrès",
       "kind": "EQUIPMENT",
       "ministry": "PROGRESS",
       "abilities": [
         {
-          "name": "Manuel du Progrès",
-          "gameEffect": "Le rouage équipé ou un rouage allié à 1\" de lui bénéficiera du soutien pour son prochain jet de caractéristique de [Technique].",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 1,
@@ -1423,13 +1341,10 @@
     },
     {
       "id": "E02",
-      "name": "Manifeste de l'Objet Dieu",
       "kind": "EQUIPMENT",
       "ministry": "HARMONY",
       "abilities": [
         {
-          "name": "Manifeste de l'Objet Dieu",
-          "gameEffect": "Juste après la réalisation d'un Mécanisme, le rouage équipé peut réaliser une marche gratuite.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0,
@@ -1448,13 +1363,10 @@
     },
     {
       "id": "E03",
-      "name": "Phéromones",
       "kind": "EQUIPMENT",
       "ministry": "HARMONY",
       "abilities": [
         {
-          "name": "Phéromones",
-          "gameEffect": "Le rouage équipé est considéré comme ayant un rang 1 par les rouages hostiles.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1467,16 +1379,19 @@
     },
     {
       "id": "E04",
-      "name": "Capsule KO",
       "kind": "EQUIPMENT",
       "ministry": "COORDINATION",
       "abilities": [
         {
-          "name": "Capsule KO",
-          "gameEffect": "Ciblez un rouage à 1\" du rouage équipé. Augmentez de 1 le seuil de difficulté de tous ses jets de caractéristique jusqu'à la fin de cette phase de planification.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 1
+          "actionCost": 0,
+          "darknessCost": 1,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1486,13 +1401,10 @@
     },
     {
       "id": "E05",
-      "name": "Capsule confidentielle",
       "kind": "EQUIPMENT",
       "ministry": "COORDINATION",
       "abilities": [
         {
-          "name": "Capsule confidentielle",
-          "gameEffect": "Le rouage équipé rapporte 1 point de victoire de moins lorsqu'il est mis hors de combat.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1505,13 +1417,10 @@
     },
     {
       "id": "E06",
-      "name": "Carte du syndicat Tetra",
       "kind": "EQUIPMENT",
       "ministry": "EFFORT",
       "abilities": [
         {
-          "name": "Carte du syndicat Tetra",
-          "gameEffect": "Lors d'une phase de planification pendant laquelle le rouage équipé est activé du fait d'une propagande, ce dernier peut réaliser une attaque frontale gratuite.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1524,13 +1433,10 @@
     },
     {
       "id": "E07",
-      "name": "Ration",
       "kind": "EQUIPMENT",
       "ministry": "EFFORT",
       "abilities": [
         {
-          "name": "Ration",
-          "gameEffect": "Le rouage équipé réalise une capacité générique gratuite.",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 0,
@@ -1549,13 +1455,10 @@
     },
     {
       "id": "E08",
-      "name": "Lumen",
       "kind": "EQUIPMENT",
       "ministry": "SECURITY",
       "abilities": [
         {
-          "name": "Lumen",
-          "gameEffect": "Lorsqu'un rouage allié cible avec une attaque à distance un rouage à 4\" du rouage équipé, il ne subit pas de malus de distance.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1568,16 +1471,19 @@
     },
     {
       "id": "E09",
-      "name": "Munitions à haute vélocité",
       "kind": "EQUIPMENT",
       "ministry": "SECURITY",
       "abilities": [
         {
-          "name": "Munitions à haute vélocité",
-          "gameEffect": "Lors de la réalisation d'une attaque à distance, le rouage équipé peut réaliser une tactique de combat pour pousser à l'opposé de lui le rouage ciblé.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1587,16 +1493,19 @@
     },
     {
       "id": "E10",
-      "name": "Catalyseur quantique",
       "kind": "EQUIPMENT",
       "ministry": "PROGRESS",
       "abilities": [
         {
-          "name": "Catalyseur quantique",
-          "gameEffect": "Ciblez un rouage teinté et engagé par le rouage équipé. Retirez-lui un pion d'action.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 1
+          "actionCost": 0,
+          "darknessCost": 1,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1606,13 +1515,10 @@
     },
     {
       "id": "E11",
-      "name": "Harmonium",
       "kind": "EQUIPMENT",
       "faction": "MAISEL",
       "abilities": [
         {
-          "name": "Harmonium",
-          "gameEffect": "Vous pouvez recruter un rouage affilié à l'Axe de rang 1 ou 2 dans votre cabale.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1635,13 +1541,10 @@
     },
     {
       "id": "E12",
-      "name": "Chronographe",
       "kind": "EQUIPMENT",
       "faction": "DYKOVIAN",
       "abilities": [
         {
-          "name": "Chronographe",
-          "gameEffect": "Lors de la réalisation d'un mécanisme, vous pouvez défausser la carte artefact piochée, ne pas en appliquer les effets, et en piocher une nouvelle.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 1,
@@ -1660,13 +1563,10 @@
     },
     {
       "id": "E13",
-      "name": "Asservisseur mental",
       "kind": "EQUIPMENT",
       "faction": "OTHERS",
       "abilities": [
         {
-          "name": "Asservisseur mental",
-          "gameEffect": "Le rouage équipé, de rang 1 ou 2, peut être recruté dans la faction des Autres.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1688,16 +1588,19 @@
     },
     {
       "id": "E14",
-      "name": "Manuel de l'Effort",
       "kind": "EQUIPMENT",
       "ministry": "EFFORT",
       "abilities": [
         {
-          "name": "Manuel de l'Effort",
-          "gameEffect": "Lors d'une phase de planification pendant laquelle le rouage équipé est activé du fait d'une coordination, ce dernier peut réaliser une marche gratuite.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1707,13 +1610,10 @@
     },
     {
       "id": "E15",
-      "name": "Pilules stabilisantes",
       "kind": "EQUIPMENT",
       "ministry": "EFFORT",
       "abilities": [
         {
-          "name": "Pilules stabilisantes",
-          "gameEffect": "Le rouage équipé peut remplacer un échec par une réussite à son prochain jet de caractéristique de [Combat].",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 0,
@@ -1736,16 +1636,19 @@
     },
     {
       "id": "E16",
-      "name": "Kit d'Intégrité",
       "kind": "EQUIPMENT",
       "ministry": "INTEGRITY",
       "abilities": [
         {
-          "name": "Kit d'Intégrité",
-          "gameEffect": "Soignez jusqu'à 2 points de vie du rouage équipé ou d'un rouage allié à 1\" de lui.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1755,13 +1658,10 @@
     },
     {
       "id": "E17",
-      "name": "Combinaison Hazmat",
       "kind": "EQUIPMENT",
       "ministry": "INTEGRITY",
       "abilities": [
         {
-          "name": "Combinaison Hazmat",
-          "gameEffect": "Le rouage équipé subit un malus de -1 [Combat]. En contrepartie, il ne recevra pas de pion de Noirceur lorsqu'il réalisera les capacités spécifiques d'agenda qui en génèrent.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1774,13 +1674,10 @@
     },
     {
       "id": "E18",
-      "name": "Avis de démolition",
       "kind": "EQUIPMENT",
       "ministry": "EDIFICATION",
       "abilities": [
         {
-          "name": "Avis de démolition",
-          "gameEffect": "Ciblez un décor, qui n'est pas un décor objectif, au contact du rouage équipé. À partir du prochain cycle et jusqu'à la fin de la partie, le rouage équipé gagne la capacité suivante :\n[Active] [pion de Noirceur] [1 fois par partie] Démolir : Tous les rouages à 2\" du décor ciblé subissent 1D3 blessures qui ignorent la protection ainsi que l'état sonné. Puis retirez ce décor du Bloc.",
           "timing": "Active",
           "actionCost": 1,
           "darknessCost": 0,
@@ -1799,13 +1696,10 @@
     },
     {
       "id": "E19",
-      "name": "Plans d'accès dérobés",
       "kind": "EQUIPMENT",
       "ministry": "EDIFICATION",
       "abilities": [
         {
-          "name": "Plans d'accès dérobés",
-          "gameEffect": "Désignez un décor au contact du rouage équipé. Placez ce dernier à 4\" au contact de ce décor.",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 1,
@@ -1824,13 +1718,10 @@
     },
     {
       "id": "E20",
-      "name": "Carte du syndicat Prime",
       "kind": "EQUIPMENT",
       "ministry": "EFFORT",
       "abilities": [
         {
-          "name": "Carte du syndicat Prime",
-          "gameEffect": "Le rouage équipé peut coordonner lorsqu'il est activé avec une propagande.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1843,16 +1734,19 @@
     },
     {
       "id": "E21",
-      "name": "Collier de dévotion",
       "kind": "EQUIPMENT",
       "ministry": "HARMONY",
       "abilities": [
         {
-          "name": "Collier de dévotion",
-          "gameEffect": "Le rouage équipé peut tenter le destin sans recevoir de pion de Noirceur.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1862,13 +1756,10 @@
     },
     {
       "id": "E22",
-      "name": "Complément alimentaire",
       "kind": "EQUIPMENT",
       "ministry": "INTEGRITY",
       "abilities": [
         {
-          "name": "Complément alimentaire",
-          "gameEffect": "Réattribuez un pion [pion d'action] au rouage équipé.",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 1,
@@ -1887,16 +1778,19 @@
     },
     {
       "id": "E23",
-      "name": "Leurre ténébreux",
       "kind": "EQUIPMENT",
       "faction": "URKARAS",
       "abilities": [
         {
-          "name": "Leurre ténébreux",
-          "gameEffect": "Poussez vers le rouage équipé tous les rouages hostiles de rang 1 ou 2 situés à 6\" de lui.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1906,13 +1800,10 @@
     },
     {
       "id": "E24",
-      "name": "Manuel de la Marave",
       "kind": "EQUIPMENT",
       "faction": "URKARAS",
       "abilities": [
         {
-          "name": "Manuel de la Marave",
-          "gameEffect": "Le rouage équipé peut réaliser la tactique de combat suivante pour 1 réussite : infligez une blessure qui ignore la protection à la cible de l'attaque.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -1925,16 +1816,19 @@
     },
     {
       "id": "E25",
-      "name": "Explosif à dissonance",
       "kind": "EQUIPMENT",
       "faction": "URKARAS",
       "abilities": [
         {
-          "name": "Explosif à dissonance",
-          "gameEffect": "Après la réalisation d'un mécanisme, les rouages à 1\" du rouage équipé subissent X blessures qui ignorent la protection.\nOù X est le premier chiffre du numéro de la carte artefact révélée.",
           "timing": "Permanent",
-          "actionCost": 1,
-          "darknessCost": 1
+          "actionCost": 0,
+          "darknessCost": 1,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1944,13 +1838,10 @@
     },
     {
       "id": "E26",
-      "name": "Dose de Mélisse",
       "kind": "EQUIPMENT",
       "ministry": "FRINGE",
       "abilities": [
         {
-          "name": "Dose de Mélisse",
-          "gameEffect": "Le rouage équipé subit 1D3 blessures qui ignorent la protection puis peut remplacer X échecs par X réussites à son prochain jet de caractéristiques de [Combat]. Où X est le résultat du D3.",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 0,
@@ -1973,13 +1864,10 @@
     },
     {
       "id": "E27",
-      "name": "Dose de Chrono",
       "kind": "EQUIPMENT",
       "ministry": "FRINGE",
       "abilities": [
         {
-          "name": "Dose de Chrono",
-          "gameEffect": "Le rouage équipé subit 1D3 blessures qui ignorent la protection puis réattribuez-lui un pion [pion d'action].",
           "timing": "Active",
           "actionCost": 0,
           "darknessCost": 0,
@@ -2002,13 +1890,10 @@
     },
     {
       "id": "E28",
-      "name": "Manuel du Diktat",
       "kind": "EQUIPMENT",
       "ministry": "COORDINATION",
       "abilities": [
         {
-          "name": "Manuel du Diktat",
-          "gameEffect": "Vous pouvez placer votre carte de ministère sans respecter sa contrainte de planification.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0,
@@ -2027,13 +1912,10 @@
     },
     {
       "id": "E29",
-      "name": "Passe-droit du Census",
       "kind": "EQUIPMENT",
       "ministry": "COORDINATION",
       "abilities": [
         {
-          "name": "Passe-droit du Census",
-          "gameEffect": "Le rouage équipé est considéré comme étant affilié à tous les ministères lors de la constitution de votre cabale.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -2051,13 +1933,10 @@
     },
     {
       "id": "E30",
-      "name": "Manuel de la Dogma",
       "kind": "EQUIPMENT",
       "faction": "UNDERWORLD",
       "abilities": [
         {
-          "name": "Manuel de la Dogma",
-          "gameEffect": "Lorsque vous devez résoudre l'effet d'une de vos cartes ministère, vous pouvez résoudre à la place l'effet du ministère déchu.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0,
@@ -2076,16 +1955,19 @@
     },
     {
       "id": "E31",
-      "name": "Mouchard",
       "kind": "EQUIPMENT",
       "faction": "UNDERWORLD",
       "abilities": [
         {
-          "name": "Mouchard",
-          "gameEffect": "Au début de la planification de chaque cycle, avant que vous ne réalisiez la vôtre, vous pouvez forcer votre adversaire à placer face visible l'une de ses cartes de propagande dans sa planification.",
           "timing": "Permanent",
-          "actionCost": 1,
-          "darknessCost": 1
+          "actionCost": 0,
+          "darknessCost": 1,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -2095,13 +1977,10 @@
     },
     {
       "id": "E32",
-      "name": "Haut-parleur liturgique",
       "kind": "EQUIPMENT",
       "ministry": "HARMONY",
       "abilities": [
         {
-          "name": "Haut-parleur liturgique",
-          "gameEffect": "Lorsque le rouage équipé réalise un repos, il peut cibler un rouage allié à 4\".",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -2114,13 +1993,10 @@
     },
     {
       "id": "E33",
-      "name": "Manuel de l'Harmonie",
       "kind": "EQUIPMENT",
       "ministry": "HARMONY",
       "abilities": [
         {
-          "name": "Manuel de l'Harmonie",
-          "gameEffect": "Le rouage équipé lorsqu'il tente le destin pour un jet de caractéristique de [Technique] ne relance que les échecs.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0,
@@ -2139,13 +2015,10 @@
     },
     {
       "id": "E34",
-      "name": "Camouflage",
       "kind": "EQUIPMENT",
       "ministry": "FRINGE",
       "abilities": [
         {
-          "name": "Camouflage",
-          "gameEffect": "Lorsque le rouage équipé est ciblé par une attaque à distance, réduisez de 1 la valeur de caractéristique de [Tir] du rouage attaquant.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -2158,13 +2031,10 @@
     },
     {
       "id": "E35",
-      "name": "Fusil de contrebande",
       "kind": "EQUIPMENT",
       "faction": "RUBIN",
       "abilities": [
         {
-          "name": "Fusil de contrebande",
-          "gameEffect": "Le rouage équipé gagne une valeur de [Technique] de 0 et une valeur de [Tir] de 5.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -2177,13 +2047,10 @@
     },
     {
       "id": "E36",
-      "name": "Bombe",
       "kind": "EQUIPMENT",
       "faction": "RUBIN",
       "abilities": [
         {
-          "name": "Bombe",
-          "gameEffect": "Ciblez un marqueur d'agenda au contact du rouage équipé.\nÀ partir du prochain cycle et jusqu'à la fin de la partie, le rouage équipé gagne la capacité suivante :\n[Active] [pion de Noirceur] [1 fois par partie] Déclencher : tous les rouages à 2\" du marqueur ciblé subissent 1D3 blessures qui ignorent la protection, ainsi que l'état sonné.",
           "timing": "Active",
           "actionCost": 1,
           "darknessCost": 0,
@@ -2202,13 +2069,10 @@
     },
     {
       "id": "E37",
-      "name": "« Sur nos vies »",
       "kind": "EQUIPMENT",
       "faction": "RUBIN",
       "abilities": [
         {
-          "name": "« Sur nos vies »",
-          "gameEffect": "Lors de la composition de votre cabale, remplacez votre carte de propagande par celle « Sur nos vies ». Jusqu'à la fin de la partie, cette carte propagande n'est pas bloquée par les ministères adverses.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -2221,13 +2085,10 @@
     },
     {
       "id": "E38",
-      "name": "Grenade des Borovices",
       "kind": "EQUIPMENT",
       "ministry": "PROGRESS",
       "abilities": [
         {
-          "name": "Grenade des Borovices",
-          "gameEffect": "Lorsqu'il est ciblé par une attaque frontale, le rouage équipé peut décider à la place d'esquiver ou riposter d'utiliser la grenade des Borovices. Dans ce cas, annulez toutes les réussites du jet de caractéristique de l'attaquant puis poussez-le.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 1,
@@ -2246,16 +2107,19 @@
     },
     {
       "id": "E39",
-      "name": "Barrière de chantier",
       "kind": "EQUIPMENT",
       "ministry": "EDIFICATION",
       "abilities": [
         {
-          "name": "Barrière de chantier",
-          "gameEffect": "S'il n'y a pas de marqueur barrière allié (socle 30 mm) sur le Bloc, placez-en un à 1\" du rouage équipé. Ce marqueur est considéré comme un décor non obstruant. Tous les rouages (y compris le rouage équipé) gagnent la capacité suivante jusqu'à la fin de la partie :\n[Active] [pion d'action] Détruire : ciblez un marqueur barrière à 1\", retirez-le du Bloc.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -2265,13 +2129,10 @@
     },
     {
       "id": "E40",
-      "name": "Sirène d'intervention",
       "kind": "EQUIPMENT",
       "faction": "BLAUKAUST",
       "abilities": [
         {
-          "name": "Sirène d'intervention",
-          "gameEffect": "Un rouage engagé par le rouage équipé ne peut pas coordonner ou être coordonné.",
           "timing": "Permanent",
           "actionCost": 0,
           "darknessCost": 0
@@ -2284,16 +2145,19 @@
     },
     {
       "id": "E41",
-      "name": "Munitions percutantes",
       "kind": "EQUIPMENT",
       "faction": "BLAUKAUST",
       "abilities": [
         {
-          "name": "Munitions percutantes",
-          "gameEffect": "Lors de la réalisation d'une attaque à distance, le rouage équipé peut réaliser une tactique de combat pour sonner le rouage ciblé.",
           "timing": "Permanent",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -2303,16 +2167,19 @@
     },
     {
       "id": "E42",
-      "name": "Jumelles télescopiques",
       "kind": "EQUIPMENT",
       "ministry": "SECURITY",
       "abilities": [
         {
-          "name": "Jumelles télescopiques",
-          "gameEffect": "Consultez la prochaine carte Artefact secrètement.",
           "timing": "Active",
-          "actionCost": 1,
-          "darknessCost": 0
+          "actionCost": 0,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {
@@ -2322,13 +2189,10 @@
     },
     {
       "id": "E43",
-      "name": "Fumigènes",
       "kind": "EQUIPMENT",
       "ministry": "SECURITY",
       "abilities": [
         {
-          "name": "Fumigènes",
-          "gameEffect": "Jusqu'à la fin de cette phase de planification, le rouage équipé et les rouages à 2\" de celui-ci ne peuvent pas être ciblés par des attaques à distance ni par des charges.",
           "timing": "Active",
           "actionCost": 1,
           "darknessCost": 0,
@@ -2347,13 +2211,10 @@
     },
     {
       "id": "E44",
-      "name": "Anabolisant",
       "kind": "EQUIPMENT",
       "ministry": "INTEGRITY",
       "abilities": [
         {
-          "name": "Anabolisant",
-          "gameEffect": "Jusqu'à la fin du cycle, tous les points de vie standards du rouage équipé ou d'un rouage allié à 1\" de lui deviennent renforcés.",
           "timing": "Active",
           "actionCost": 1,
           "darknessCost": 0,
@@ -2372,16 +2233,19 @@
     },
     {
       "id": "E45",
-      "name": "Thymorégulateur",
       "kind": "EQUIPMENT",
       "ministry": "INTEGRITY",
       "abilities": [
         {
-          "name": "Thymorégulateur",
-          "gameEffect": "Retirez 2 pions de Noirceur au rouage équipé ou à un rouage allié à 1\" de lui.",
           "timing": "Active",
-          "actionCost": 2,
-          "darknessCost": 0
+          "actionCost": 1,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "CYCLE"
+            }
+          ]
         }
       ],
       "art": {

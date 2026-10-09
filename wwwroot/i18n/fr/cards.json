@@ -1,0 +1,817 @@
+{
+  "$schema": "../../../schemas/olomoc-texts.schema.json",
+  "language": "fr",
+  "ministries": {
+    "COORDINATION": {
+      "name": "Ministère de la Coordination"
+    },
+    "INTEGRITY": {
+      "name": "Ministère de l'Intégrité"
+    },
+    "EFFORT": {
+      "name": "Ministère de l'Effort"
+    },
+    "PROGRESS": {
+      "name": "Ministère du Progrès"
+    },
+    "HARMONY": {
+      "name": "Ministère de l'Harmonie"
+    },
+    "EDIFICATION": {
+      "name": "Ministère de l'Édification"
+    },
+    "SECURITY": {
+      "name": "Ministère de la Sécurité"
+    },
+    "FRINGE": {
+      "name": "La Frange"
+    },
+    "AXIS": {
+      "name": "L'Axe"
+    }
+  },
+  "factions": {
+    "OTHERS": {
+      "name": "Les Autres"
+    },
+    "BLAUKAUST": {
+      "name": "Blaukaust Devet"
+    },
+    "DYKOVIAN": {
+      "name": "Cabale Dykovienne"
+    },
+    "MAISEL": {
+      "name": "Ligue Maisel"
+    },
+    "URKARAS": {
+      "name": "Famille Urkaras"
+    },
+    "UNDERWORLD": {
+      "name": "La Pègre"
+    },
+    "RUBIN": {
+      "name": "Réseau Rubin"
+    }
+  },
+  "cogs": {
+    "1R01": {
+      "name": "Petra Kantor",
+      "title": "Sergent de la Garde Noire",
+      "abilities": [
+        {
+          "name": "Vétéran brisée",
+          "gameEffect": "Jusqu'à la fin du cycle Petra Kantor peut être coordonnée sans tenir compte de son rang."
+        }
+      ]
+    },
+    "1R03": {
+      "name": "Jana Alena Novak",
+      "title": "Logisticienne de l'Économat",
+      "abilities": [
+        {
+          "name": "Le sens de l'effort",
+          "gameEffect": "Ciblez un rouage allié à 4\" de Jana Alena Novak, il réalise immédiatement une marche ou attaque frontale gratuite."
+        }
+      ]
+    },
+    "1R09": {
+      "name": "La Reine",
+      "title": "Aberrant de classe 4",
+      "abilities": [
+        {
+          "name": "Le choix du roi",
+          "gameEffect": "Ciblez un rouage adverse à 4\" de la Reine. Ce dernier choisit l'un des deux effets suivants :\n• Attribuez-lui une valeur de 0 à toutes ses caractéristiques jusqu'à la fin de cette phase de planification.\n• Ou attribuez-lui un pion de Noirceur."
+        }
+      ]
+    },
+    "1R12": {
+      "name": "Ivo Andrazy",
+      "title": "Architecte non complaisant",
+      "abilities": [
+        {
+          "name": "Dynaste de l'ombre",
+          "gameEffect": "Votre adversaire ne peut pas jouer de carte de rouage lors d'une phase de planification où vous révélez Ivo Andrazy."
+        }
+      ]
+    },
+    "1R16": {
+      "name": "Indra",
+      "title": "Piéta – Liseuse de lames",
+      "abilities": [
+        {
+          "name": "Tarot des configurations",
+          "gameEffect": "Lors de la phase de mise en place, piochez secrètement les 3 dernières cartes de l'Artefact. Pendant toute la partie, lors de la réalisation d'un mécanisme, vous pouvez défausser la carte artefact piochée, ne pas en appliquer les effets, et la remplacer par l'une des 3 cartes piochées lors de la phase de mise en place."
+        }
+      ]
+    },
+    "1R19": {
+      "name": "Madame Fugger",
+      "title": "Cheffe de culte mondaine",
+      "abilities": [
+        {
+          "name": "Philanthrope occulte",
+          "gameEffect": "À la fin de chaque cycle, les rouages adverses à 2\" de Madame Fugger qui possèdent 2 pions de Noirceur sont considérés comme corrompus."
+        }
+      ]
+    },
+    "1R22": {
+      "name": "Victor Goran",
+      "title": "Baron charismatique",
+      "abilities": [
+        {
+          "name": "Intimidation",
+          "gameEffect": "Lors d'une phase de planification où vous révélez Victor Goran, aucun rouage adverse ne peut cibler Victor Goran avec une attaque."
+        }
+      ]
+    },
+    "1R23": {
+      "name": "Robert Kadlec",
+      "title": "Cartographe aux mains sales",
+      "abilities": [
+        {
+          "name": "Superstitieux",
+          "gameEffect": "Lors de l'activation d'un rouage allié, vous pouvez aussi activer Robert Kadlec si la phase de planification a bénéficié d'un mécanisme."
+        }
+      ]
+    },
+    "1R26": {
+      "name": "Adel Varadi",
+      "title": "« Timéa »",
+      "abilities": [
+        {
+          "name": "Leader d'exception",
+          "gameEffect": "Adel Varadi peut coordonner un rouage dont la carte d'activation n'est pas révélée."
+        }
+      ]
+    },
+    "1R29": {
+      "name": "Caporal Vlach",
+      "title": "Survivant du Quart 44",
+      "abilities": [
+        {
+          "name": "Écho de l'escouade Jizni",
+          "gameEffect": "Attribuez un pion de Fiel à votre réserve.\nPuis attribuez 1 pion d'action au Caporal Vlach et tous les rouages alliés."
+        }
+      ]
+    },
+    "2R02": {
+      "name": "Kubik Oktobar",
+      "title": "Scientifique",
+      "abilities": [
+        {
+          "name": "Détecteur de flux quantique",
+          "gameEffect": "Retirez un pion de Noirceur de Kubik Oktobar ou d'un rouage allié à 1\" de lui."
+        }
+      ]
+    },
+    "2R04": {
+      "name": "Hynek Novotny",
+      "title": "Agent de liaison",
+      "abilities": [
+        {
+          "name": "Discret",
+          "gameEffect": "Hynek Novotny peut être activé s'il est révélé lors d'une phase de planification où votre adversaire a révélé un Ministère."
+        }
+      ]
+    },
+    "2R08": {
+      "name": "Le Chasseur",
+      "title": "Sang mêlé de Fiel",
+      "abilities": [
+        {
+          "name": "Sombre appétence",
+          "gameEffect": "Lorsque le Chasseur réalise une attaque, il le fait avec un bonus de +X {melee}. Où X est le nombre de pions de Noirceur que possède le rouage ciblé par cette attaque."
+        }
+      ]
+    },
+    "2R11": {
+      "name": "Lukas",
+      "title": "Horloger cultiste",
+      "abilities": [
+        {
+          "name": "Viciation",
+          "gameEffect": "Lorsque Lukas réalise une capacité spécifique d'un agenda qui génère au moins un pion de Noirceur, il peut l'attribuer à un rouage à 2\" de lui."
+        }
+      ]
+    },
+    "2R15": {
+      "name": "Yago",
+      "title": "Guitariste virtuose",
+      "abilities": [
+        {
+          "name": "Cadence synchrone",
+          "gameEffect": "Si Yago ne subit pas l'état sonné et que sa carte d'activation est révélée, les rouages adverses tant qu'ils sont à 2\" de lui doivent dépenser un pion {action} de plus pour réaliser un repos."
+        }
+      ]
+    },
+    "2R18": {
+      "name": "Le Vagabond",
+      "title": "Quadrupède prédateur",
+      "abilities": [
+        {
+          "name": "Sans hygiène ni raison",
+          "gameEffect": "Le Vagabond subit un malus de -X {melee} lorsqu'il réalise une attaque frontale. Où X est le nombre de pions de Noirceur que possède le rouage ciblé par cette attaque."
+        }
+      ]
+    },
+    "2R21": {
+      "name": "Oskar Borgo",
+      "title": "Tueur à gage",
+      "abilities": [
+        {
+          "name": "Un tir, un mort",
+          "gameEffect": "Lorsqu'Oskar Borgo réalise une attaque à distance, il peut le faire avec un bonus de +X {ranged}. X étant le numéro d'emplacement de sa carte d'activation dans votre planification, si elle a déjà été révélée."
+        }
+      ]
+    },
+    "2R25": {
+      "name": "Rehor Marton",
+      "title": "« Sonar »",
+      "abilities": [
+        {
+          "name": "Séducteur",
+          "gameEffect": "Ciblez un rouage adverse engagé par Rehor Marton.\nPoussez-le."
+        }
+      ]
+    },
+    "2R28": {
+      "name": "Opérateur Sikora",
+      "title": "Tête brûlée",
+      "abilities": [
+        {
+          "name": "Tir de suppression",
+          "gameEffect": "Lors de la prochaine attaque à distance de l'Opérateur Sikora, sa cible ne pourra pas réaliser d'esquive."
+        }
+      ]
+    },
+    "3R05": {
+      "name": "Dominik Kralov",
+      "title": "Syndicaliste",
+      "abilities": [
+        {
+          "name": "Pince outil",
+          "gameEffect": "Dominik Kralov gagne un bonus de +2 {melee} lorsqu'il cible avec une attaque frontale un rouage sonné."
+        }
+      ]
+    },
+    "3R06": {
+      "name": "Bohdan Gross",
+      "title": "Portraitiste officiel",
+      "abilities": [
+        {
+          "name": "Visions prophétiques",
+          "gameEffect": "Au début de la planification de chaque cycle, avant que vous ne réalisiez la vôtre, votre adversaire doit placer face visible la première carte de sa planification."
+        }
+      ]
+    },
+    "3R07": {
+      "name": "La Vermine",
+      "title": "Sujet 107 DT",
+      "abilities": [
+        {
+          "name": "Influence putride",
+          "gameEffect": "Ciblez un rouage à 4\" possédant 1 pion de Noirceur. Poussez-le vers la Vermine."
+        }
+      ]
+    },
+    "3R10": {
+      "name": "Herman Zofie",
+      "title": "Décontaminateur",
+      "abilities": [
+        {
+          "name": "Détergent de l'Intégrité",
+          "gameEffect": "Placez la réglette de déplacement au contact d'Herman Zofie. Tous les autres rouages à son contact subissent X blessures où X est le nombre de pions de Noirceur qu'ils possèdent. Puis retirez l'ensemble des pions de Noirceur de ces rouages."
+        }
+      ]
+    },
+    "3R14": {
+      "name": "Maja",
+      "title": "Séductrice endurcie",
+      "abilities": [
+        {
+          "name": "Danse kalbélia",
+          "gameEffect": "Attribuez un pion {blue-cube} à un rouage adverse engagé par Maja puis poussez-la."
+        }
+      ]
+    },
+    "3R17": {
+      "name": "Jakub Myasnik",
+      "title": "Boucher de cauchemar",
+      "abilities": [
+        {
+          "name": "Coupe sélective",
+          "gameEffect": "Jakub Myasnik peut réaliser la tactique de combat suivante pour 2 réussites : cochez 1 PV teinté dans la ligne de vie du rouage ciblé par cette attaque."
+        }
+      ]
+    },
+    "3R20": {
+      "name": "Sergo Dracomir",
+      "title": "Addict à la Mélisse",
+      "abilities": [
+        {
+          "name": "Provocation",
+          "gameEffect": "Sergo Dracomir gagne un bonus de +2 {melee} lorsqu'il cible avec une attaque frontale un rouage adverse dont la carte d'activation n'est pas révélée."
+        }
+      ]
+    },
+    "3R24": {
+      "name": "Jiri Peska",
+      "title": "« Vent d'Ouest »",
+      "abilities": [
+        {
+          "name": "Opportuniste",
+          "gameEffect": "Juste après l'attribution d'un pion de traque à la Polisec, Jiri Peska peut immédiatement réaliser une capacité générique gratuite."
+        }
+      ]
+    },
+    "3R27": {
+      "name": "Medic Ruzicka",
+      "title": "Urgentiste de terrain",
+      "abilities": [
+        {
+          "name": "Kit de secours",
+          "gameEffect": "Au début du premier cycle, Médic Ruzicka peut être équipée d'un équipement supplémentaire affilié au Ministère de l'Intégrité."
+        }
+      ]
+    }
+  },
+  "equipment": {
+    "D01": {
+      "name": "Carapace",
+      "abilities": [
+        {
+          "name": "Carapace",
+          "gameEffect": "Le rouage équipé gagne deux PV renforcés supplémentaires au début de sa ligne de vie."
+        }
+      ]
+    },
+    "D02": {
+      "name": "Flatteries vénales",
+      "abilities": [
+        {
+          "name": "Flatteries vénales",
+          "gameEffect": "Ciblez un rouage à 1\" du rouage équipé.\nIl sera considéré comme ayant un rang 4 par tous les rouages hostiles jusqu'à la fin du cycle."
+        }
+      ]
+    },
+    "D03": {
+      "name": "Stigmates",
+      "abilities": [
+        {
+          "name": "Stigmates",
+          "gameEffect": "Désignez un élément de décor à 1\" du rouage équipé. Il devient teinté jusqu'à la fin du cycle."
+        }
+      ]
+    },
+    "D04": {
+      "name": "Messes basses",
+      "abilities": [
+        {
+          "name": "Messes basses",
+          "gameEffect": "Désignez un rouage hostile de rang 1 ou 2 à 1\" du rouage équipé. Déplacez-le."
+        }
+      ]
+    },
+    "D05": {
+      "name": "Aumône",
+      "abilities": [
+        {
+          "name": "Aumône",
+          "gameEffect": "Après la réalisation d'un mécanisme, retirez un pion de Noirceur du rouage équipé."
+        }
+      ]
+    },
+    "D06": {
+      "name": "Caresse synchrone",
+      "abilities": [
+        {
+          "name": "Caresse synchrone",
+          "gameEffect": "Lors d'une phase de planification qui a bénéficié d'un mécanisme, le rouage équipé peut réaliser une attaque frontale gratuite."
+        }
+      ]
+    },
+    "D07": {
+      "name": "Esprit de meute",
+      "abilities": [
+        {
+          "name": "Esprit de meute",
+          "gameEffect": "Le rouage équipé bénéficie du soutien des rouages hostiles lorsqu'il cible ou est ciblé par un rouage adverse avec une attaque frontale."
+        }
+      ]
+    },
+    "D08": {
+      "name": "Appel nocturne",
+      "abilities": [
+        {
+          "name": "Appel nocturne",
+          "gameEffect": "Réalisez un mécanisme."
+        }
+      ]
+    },
+    "E01": {
+      "name": "Manuel du Progrès",
+      "abilities": [
+        {
+          "name": "Manuel du Progrès",
+          "gameEffect": "Le rouage équipé ou un rouage allié à 1\" de lui bénéficiera du soutien pour son prochain jet de caractéristique de {tech}."
+        }
+      ]
+    },
+    "E02": {
+      "name": "Manifeste de l'Objet Dieu",
+      "abilities": [
+        {
+          "name": "Manifeste de l'Objet Dieu",
+          "gameEffect": "Juste après la réalisation d'un Mécanisme, le rouage équipé peut réaliser une marche gratuite."
+        }
+      ]
+    },
+    "E03": {
+      "name": "Phéromones",
+      "abilities": [
+        {
+          "name": "Phéromones",
+          "gameEffect": "Le rouage équipé est considéré comme ayant un rang 1 par les rouages hostiles."
+        }
+      ]
+    },
+    "E04": {
+      "name": "Capsule KO",
+      "abilities": [
+        {
+          "name": "Capsule KO",
+          "gameEffect": "Ciblez un rouage à 1\" du rouage équipé. Augmentez de 1 le seuil de difficulté de tous ses jets de caractéristique jusqu'à la fin de cette phase de planification."
+        }
+      ]
+    },
+    "E05": {
+      "name": "Capsule confidentielle",
+      "abilities": [
+        {
+          "name": "Capsule confidentielle",
+          "gameEffect": "Le rouage équipé rapporte 1 point de victoire de moins lorsqu'il est mis hors de combat."
+        }
+      ]
+    },
+    "E06": {
+      "name": "Carte du syndicat Tetra",
+      "abilities": [
+        {
+          "name": "Carte du syndicat Tetra",
+          "gameEffect": "Lors d'une phase de planification pendant laquelle le rouage équipé est activé du fait d'une propagande, ce dernier peut réaliser une attaque frontale gratuite."
+        }
+      ]
+    },
+    "E07": {
+      "name": "Ration",
+      "abilities": [
+        {
+          "name": "Ration",
+          "gameEffect": "Le rouage équipé réalise une capacité générique gratuite."
+        }
+      ]
+    },
+    "E08": {
+      "name": "Lumen",
+      "abilities": [
+        {
+          "name": "Lumen",
+          "gameEffect": "Lorsqu'un rouage allié cible avec une attaque à distance un rouage à 4\" du rouage équipé, il ne subit pas de malus de distance."
+        }
+      ]
+    },
+    "E09": {
+      "name": "Munitions à haute vélocité",
+      "abilities": [
+        {
+          "name": "Munitions à haute vélocité",
+          "gameEffect": "Lors de la réalisation d'une attaque à distance, le rouage équipé peut réaliser une tactique de combat pour pousser à l'opposé de lui le rouage ciblé."
+        }
+      ]
+    },
+    "E10": {
+      "name": "Catalyseur quantique",
+      "abilities": [
+        {
+          "name": "Catalyseur quantique",
+          "gameEffect": "Ciblez un rouage teinté et engagé par le rouage équipé. Retirez-lui un pion d'action."
+        }
+      ]
+    },
+    "E11": {
+      "name": "Harmonium",
+      "abilities": [
+        {
+          "name": "Harmonium",
+          "gameEffect": "Vous pouvez recruter un rouage affilié à l'Axe de rang 1 ou 2 dans votre cabale."
+        }
+      ]
+    },
+    "E12": {
+      "name": "Chronographe",
+      "abilities": [
+        {
+          "name": "Chronographe",
+          "gameEffect": "Lors de la réalisation d'un mécanisme, vous pouvez défausser la carte artefact piochée, ne pas en appliquer les effets, et en piocher une nouvelle."
+        }
+      ]
+    },
+    "E13": {
+      "name": "Asservisseur mental",
+      "abilities": [
+        {
+          "name": "Asservisseur mental",
+          "gameEffect": "Le rouage équipé, de rang 1 ou 2, peut être recruté dans la faction des Autres."
+        }
+      ]
+    },
+    "E14": {
+      "name": "Manuel de l'Effort",
+      "abilities": [
+        {
+          "name": "Manuel de l'Effort",
+          "gameEffect": "Lors d'une phase de planification pendant laquelle le rouage équipé est activé du fait d'une coordination, ce dernier peut réaliser une marche gratuite."
+        }
+      ]
+    },
+    "E15": {
+      "name": "Pilules stabilisantes",
+      "abilities": [
+        {
+          "name": "Pilules stabilisantes",
+          "gameEffect": "Le rouage équipé peut remplacer un échec par une réussite à son prochain jet de caractéristique de {melee}."
+        }
+      ]
+    },
+    "E16": {
+      "name": "Kit d'Intégrité",
+      "abilities": [
+        {
+          "name": "Kit d'Intégrité",
+          "gameEffect": "Soignez jusqu'à 2 points de vie du rouage équipé ou d'un rouage allié à 1\" de lui."
+        }
+      ]
+    },
+    "E17": {
+      "name": "Combinaison Hazmat",
+      "abilities": [
+        {
+          "name": "Combinaison Hazmat",
+          "gameEffect": "Le rouage équipé subit un malus de -1 {melee}. En contrepartie, il ne recevra pas de pion de Noirceur lorsqu'il réalisera les capacités spécifiques d'agenda qui en génèrent."
+        }
+      ]
+    },
+    "E18": {
+      "name": "Avis de démolition",
+      "abilities": [
+        {
+          "name": "Avis de démolition",
+          "gameEffect": "Ciblez un décor, qui n'est pas un décor objectif, au contact du rouage équipé. À partir du prochain cycle et jusqu'à la fin de la partie, le rouage équipé gagne la capacité suivante :\n{active} {darkness} {freq:game:1} Démolir : Tous les rouages à 2\" du décor ciblé subissent 1D3 blessures qui ignorent la protection ainsi que l'état sonné. Puis retirez ce décor du Bloc."
+        }
+      ]
+    },
+    "E19": {
+      "name": "Plans d'accès dérobés",
+      "abilities": [
+        {
+          "name": "Plans d'accès dérobés",
+          "gameEffect": "Désignez un décor au contact du rouage équipé. Placez ce dernier à 4\" au contact de ce décor."
+        }
+      ]
+    },
+    "E20": {
+      "name": "Carte du syndicat Prime",
+      "abilities": [
+        {
+          "name": "Carte du syndicat Prime",
+          "gameEffect": "Le rouage équipé peut coordonner lorsqu'il est activé avec une propagande."
+        }
+      ]
+    },
+    "E21": {
+      "name": "Collier de dévotion",
+      "abilities": [
+        {
+          "name": "Collier de dévotion",
+          "gameEffect": "Le rouage équipé peut tenter le destin sans recevoir de pion de Noirceur."
+        }
+      ]
+    },
+    "E22": {
+      "name": "Complément alimentaire",
+      "abilities": [
+        {
+          "name": "Complément alimentaire",
+          "gameEffect": "Réattribuez un pion {action} au rouage équipé."
+        }
+      ]
+    },
+    "E23": {
+      "name": "Leurre ténébreux",
+      "abilities": [
+        {
+          "name": "Leurre ténébreux",
+          "gameEffect": "Poussez vers le rouage équipé tous les rouages hostiles de rang 1 ou 2 situés à 6\" de lui."
+        }
+      ]
+    },
+    "E24": {
+      "name": "Manuel de la Marave",
+      "abilities": [
+        {
+          "name": "Manuel de la Marave",
+          "gameEffect": "Le rouage équipé peut réaliser la tactique de combat suivante pour 1 réussite : infligez une blessure qui ignore la protection à la cible de l'attaque."
+        }
+      ]
+    },
+    "E25": {
+      "name": "Explosif à dissonance",
+      "abilities": [
+        {
+          "name": "Explosif à dissonance",
+          "gameEffect": "Après la réalisation d'un mécanisme, les rouages à 1\" du rouage équipé subissent X blessures qui ignorent la protection.\nOù X est le premier chiffre du numéro de la carte artefact révélée."
+        }
+      ]
+    },
+    "E26": {
+      "name": "Dose de Mélisse",
+      "abilities": [
+        {
+          "name": "Dose de Mélisse",
+          "gameEffect": "Le rouage équipé subit 1D3 blessures qui ignorent la protection puis peut remplacer X échecs par X réussites à son prochain jet de caractéristiques de {melee}. Où X est le résultat du D3."
+        }
+      ]
+    },
+    "E27": {
+      "name": "Dose de Chrono",
+      "abilities": [
+        {
+          "name": "Dose de Chrono",
+          "gameEffect": "Le rouage équipé subit 1D3 blessures qui ignorent la protection puis réattribuez-lui un pion {action}."
+        }
+      ]
+    },
+    "E28": {
+      "name": "Manuel du Diktat",
+      "abilities": [
+        {
+          "name": "Manuel du Diktat",
+          "gameEffect": "Vous pouvez placer votre carte de ministère sans respecter sa contrainte de planification."
+        }
+      ]
+    },
+    "E29": {
+      "name": "Passe-droit du Census",
+      "abilities": [
+        {
+          "name": "Passe-droit du Census",
+          "gameEffect": "Le rouage équipé est considéré comme étant affilié à tous les ministères lors de la constitution de votre cabale."
+        }
+      ]
+    },
+    "E30": {
+      "name": "Manuel de la Dogma",
+      "abilities": [
+        {
+          "name": "Manuel de la Dogma",
+          "gameEffect": "Lorsque vous devez résoudre l'effet d'une de vos cartes ministère, vous pouvez résoudre à la place l'effet du ministère déchu."
+        }
+      ]
+    },
+    "E31": {
+      "name": "Mouchard",
+      "abilities": [
+        {
+          "name": "Mouchard",
+          "gameEffect": "Au début de la planification de chaque cycle, avant que vous ne réalisiez la vôtre, vous pouvez forcer votre adversaire à placer face visible l'une de ses cartes de propagande dans sa planification."
+        }
+      ]
+    },
+    "E32": {
+      "name": "Haut-parleur liturgique",
+      "abilities": [
+        {
+          "name": "Haut-parleur liturgique",
+          "gameEffect": "Lorsque le rouage équipé réalise un repos, il peut cibler un rouage allié à 4\"."
+        }
+      ]
+    },
+    "E33": {
+      "name": "Manuel de l'Harmonie",
+      "abilities": [
+        {
+          "name": "Manuel de l'Harmonie",
+          "gameEffect": "Le rouage équipé lorsqu'il tente le destin pour un jet de caractéristique de {tech} ne relance que les échecs."
+        }
+      ]
+    },
+    "E34": {
+      "name": "Camouflage",
+      "abilities": [
+        {
+          "name": "Camouflage",
+          "gameEffect": "Lorsque le rouage équipé est ciblé par une attaque à distance, réduisez de 1 la valeur de caractéristique de {ranged} du rouage attaquant."
+        }
+      ]
+    },
+    "E35": {
+      "name": "Fusil de contrebande",
+      "abilities": [
+        {
+          "name": "Fusil de contrebande",
+          "gameEffect": "Le rouage équipé gagne une valeur de {tech} de 0 et une valeur de {ranged} de 5."
+        }
+      ]
+    },
+    "E36": {
+      "name": "Bombe",
+      "abilities": [
+        {
+          "name": "Bombe",
+          "gameEffect": "Ciblez un marqueur d'agenda au contact du rouage équipé.\nÀ partir du prochain cycle et jusqu'à la fin de la partie, le rouage équipé gagne la capacité suivante :\n{active} {darkness} {freq:game:1} Déclencher : tous les rouages à 2\" du marqueur ciblé subissent 1D3 blessures qui ignorent la protection, ainsi que l'état sonné."
+        }
+      ]
+    },
+    "E37": {
+      "name": "« Sur nos vies »",
+      "abilities": [
+        {
+          "name": "« Sur nos vies »",
+          "gameEffect": "Lors de la composition de votre cabale, remplacez votre carte de propagande par celle « Sur nos vies ». Jusqu'à la fin de la partie, cette carte propagande n'est pas bloquée par les ministères adverses."
+        }
+      ]
+    },
+    "E38": {
+      "name": "Grenade des Borovices",
+      "abilities": [
+        {
+          "name": "Grenade des Borovices",
+          "gameEffect": "Lorsqu'il est ciblé par une attaque frontale, le rouage équipé peut décider à la place d'esquiver ou riposter d'utiliser la grenade des Borovices. Dans ce cas, annulez toutes les réussites du jet de caractéristique de l'attaquant puis poussez-le."
+        }
+      ]
+    },
+    "E39": {
+      "name": "Barrière de chantier",
+      "abilities": [
+        {
+          "name": "Barrière de chantier",
+          "gameEffect": "S'il n'y a pas de marqueur barrière allié (socle 30 mm) sur le Bloc, placez-en un à 1\" du rouage équipé. Ce marqueur est considéré comme un décor non obstruant. Tous les rouages (y compris le rouage équipé) gagnent la capacité suivante jusqu'à la fin de la partie :\n{active} {action} Détruire : ciblez un marqueur barrière à 1\", retirez-le du Bloc."
+        }
+      ]
+    },
+    "E40": {
+      "name": "Sirène d'intervention",
+      "abilities": [
+        {
+          "name": "Sirène d'intervention",
+          "gameEffect": "Un rouage engagé par le rouage équipé ne peut pas coordonner ou être coordonné."
+        }
+      ]
+    },
+    "E41": {
+      "name": "Munitions percutantes",
+      "abilities": [
+        {
+          "name": "Munitions percutantes",
+          "gameEffect": "Lors de la réalisation d'une attaque à distance, le rouage équipé peut réaliser une tactique de combat pour sonner le rouage ciblé."
+        }
+      ]
+    },
+    "E42": {
+      "name": "Jumelles télescopiques",
+      "abilities": [
+        {
+          "name": "Jumelles télescopiques",
+          "gameEffect": "Consultez la prochaine carte Artefact secrètement."
+        }
+      ]
+    },
+    "E43": {
+      "name": "Fumigènes",
+      "abilities": [
+        {
+          "name": "Fumigènes",
+          "gameEffect": "Jusqu'à la fin de cette phase de planification, le rouage équipé et les rouages à 2\" de celui-ci ne peuvent pas être ciblés par des attaques à distance ni par des charges."
+        }
+      ]
+    },
+    "E44": {
+      "name": "Anabolisant",
+      "abilities": [
+        {
+          "name": "Anabolisant",
+          "gameEffect": "Jusqu'à la fin du cycle, tous les points de vie standards du rouage équipé ou d'un rouage allié à 1\" de lui deviennent renforcés."
+        }
+      ]
+    },
+    "E45": {
+      "name": "Thymorégulateur",
+      "abilities": [
+        {
+          "name": "Thymorégulateur",
+          "gameEffect": "Retirez 2 pions de Noirceur au rouage équipé ou à un rouage allié à 1\" de lui."
+        }
+      ]
+    }
+  }
+}

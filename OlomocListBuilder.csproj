@@ -17,4 +17,11 @@
     <None Include="schemas\**" />
   </ItemGroup>
 
+  <!-- Projet de tests : à part (tests/OlomocListBuilder.Tests), hors de la compilation de l'app. -->
+  <ItemGroup>
+    <Compile Remove="tests\**" />
+    <Content Remove="tests\**" />
+    <None Remove="tests\**" />
+  </ItemGroup>
+
 </Project>

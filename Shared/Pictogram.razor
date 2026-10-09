@@ -1,0 +1,29 @@
+@* Pictogramme du livre de règles (LDR p.15 et p.20), identique dans toutes les langues :
+   pas de libellé. Count : chiffre d'une fréquence, ou nombre de cubes d'un coût. *@
+
+@switch (Token)
+{
+    case "tech" or "melee" or "ranged" or "dodge":
+        <span class="icon stat-icon @Token"></span>
+        break;
+    case "active" or "permanent":
+        <span class="icon pict @Token"></span>
+        break;
+    case "action" or "darkness":
+        @for (var i = 0; i < Math.Max(Count, 1); i++)
+        {
+            <img class="pict-img" src="img/icons/@(Token).png" alt="" />
+        }
+        break;
+    case "freq-planning" or "freq-cycle" or "freq-game":
+        <span class="freq @Token"><span class="icon pict @Token"></span><span class="freq-n">@Count</span></span>
+        break;
+    default:
+        <span class="pict-unknown">{@Token}</span>
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public string Token { get; set; } = "";
+    [Parameter] public int Count { get; set; }
+}

@@ -1,0 +1,41 @@
+@* Effet de jeu : texte avec des jetons neutres ({melee}, {darkness}, {freq:game:1}…) rendus
+   par les icônes du livre de règles, identiques dans toutes les langues. *@
+@using System.Text.RegularExpressions
+
+<span class="game-effect@(Text.IsFallback ? " untranslated" : "")" title="@(Text.IsFallback ? UntranslatedTitle : null)">
+    @foreach (var part in Parts(Text.Text))
+    {
+        @if (part.Token is null)
+        {
+            @part.Text
+        }
+        else
+        {
+            <Pictogram Token="@part.Token" Count="@part.Count" />
+        }
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public Localized Text { get; set; } = default!;
+    [Parameter] public string? UntranslatedTitle { get; set; }
+
+    private static readonly Regex TokenRx = new(@"\{([a-z-]+)(?::([a-z]+):(\d+))?\}");
+
+    private sealed record Part(string Text, string? Token = null, int Count = 0);
+
+    // « freq:game:1 » devient le jeton « freq-game » de compte 1.
+    private static IEnumerable<Part> Parts(string text)
+    {
+        var last = 0;
+        foreach (Match m in TokenRx.Matches(text))
+        {
+            if (m.Index > last) yield return new(text[last..m.Index]);
+            yield return m.Groups[2].Success
+                ? new(m.Value, $"freq-{m.Groups[2].Value}", int.Parse(m.Groups[3].Value))
+                : new(m.Value, m.Groups[1].Value);
+            last = m.Index + m.Length;
+        }
+        if (last < text.Length) yield return new(text[last..]);
+    }
+}

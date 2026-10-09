@@ -7,6 +7,7 @@ builder.RootComponents.Add<OlomocListBuilder.App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+builder.Services.AddScoped<LocalizationService>();
 builder.Services.AddScoped<CatalogService>();
 
 await builder.Build().RunAsync();

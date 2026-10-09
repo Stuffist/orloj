@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://occicat.com/schemas/olomoc-texts.schema.json",
+  "title": "Olomòc — paquet de textes d'une langue",
+  "description": "Textes des cartes dans une langue (wwwroot/i18n/<langue>/cards.json), indexés par les ids et codes du référentiel neutre. Le paquet de la langue de référence (fr) est complet ; les autres peuvent être partiels : un texte manquant se replie sur fr. Les pictogrammes des effets de jeu sont des jetons neutres, rendus par les icônes du livre de règles.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "language"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2}$",
+      "description": "Code ISO 639-1 de la langue, identique au nom du dossier."
+    },
+    "ministries": {
+      "type": "object",
+      "description": "Par code de Ministère.",
+      "additionalProperties": {
+        "$ref": "#/$defs/named"
+      }
+    },
+    "factions": {
+      "type": "object",
+      "description": "Par code de faction.",
+      "additionalProperties": {
+        "$ref": "#/$defs/named"
+      }
+    },
+    "cogs": {
+      "type": "object",
+      "description": "Par id de rouage.",
+      "additionalProperties": {
+        "$ref": "#/$defs/cog"
+      }
+    },
+    "equipment": {
+      "type": "object",
+      "description": "Par id d'équipement/don.",
+      "additionalProperties": {
+        "$ref": "#/$defs/equipment"
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "gameEffect": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Effet de jeu. Pictogrammes en jetons neutres : {tech} {melee} {ranged} {dodge} {active} {action} {darkness} {freq:game:N}, et {blue-cube} (non résolu). Toute autre accolade est refusée.",
+      "pattern": "^([^{}]|\\{(tech|melee|ranged|dodge|active|action|darkness|blue-cube|freq:(planning|cycle|game):[1-9][0-9]?)\\})*$"
+    },
+    "named": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/text"
+        },
+        "description": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "ability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/text"
+        },
+        "gameEffect": {
+          "$ref": "#/$defs/gameEffect"
+        }
+      }
+    },
+    "cog": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/text"
+        },
+        "title": {
+          "$ref": "#/$defs/text"
+        },
+        "instinct": {
+          "$ref": "#/$defs/text"
+        },
+        "abilities": {
+          "type": "array",
+          "description": "Dans l'ordre des capacités du référentiel neutre.",
+          "items": {
+            "$ref": "#/$defs/ability"
+          }
+        }
+      }
+    },
+    "equipment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/text"
+        },
+        "abilities": {
+          "type": "array",
+          "description": "Dans l'ordre des capacités du référentiel neutre.",
+          "items": {
+            "$ref": "#/$defs/ability"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,53 +1,63 @@
 @page "/"
 @namespace OlomocListBuilder.Pages
+@implements IDisposable
 @inject CatalogService Catalog
+@inject LocalizationService L
 
-@if (!Catalog.Loaded)
+@if (!Catalog.Loaded || !L.Loaded)
 {
-    <p class="loading">Chargement du référentiel…</p>
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
 }
 else
 {
     <section class="filters">
         <div class="field">
-            <label>Faction</label>
+            <label>@L.Ui("filter.faction")</label>
             <select value="@_faction" @onchange="OnFactionChanged">
-                <option value="">— Toutes —</option>
+                <option value="">@L.Ui("filter.allFactions")</option>
                 @foreach (var f in Catalog.AllFactions)
                 {
-                    <option value="@f.Code">@f.Name</option>
+                    <option value="@f.Code">@L.FactionName(f.Code)</option>
                 }
             </select>
         </div>
 
         <div class="field">
-            <label>Ministère</label>
+            <label>@L.Ui("filter.ministry")</label>
             <select value="@_ministryFilter" @onchange="e => Set(ref _ministryFilter, e)">
-                <option value="">— Tous —</option>
+                <option value="">@L.Ui("filter.allMinistries")</option>
                 @foreach (var m in Catalog.Catalog.Ministries)
                 {
-                    <option value="@m.Code">@m.Name</option>
+                    <option value="@m.Code">@L.MinistryName(m.Code)</option>
                 }
             </select>
         </div>
 
         <div class="field grow">
-            <label>Recherche</label>
-            <input type="text" placeholder="@SearchPlaceholder" value="@_search"
+            <label>@L.Ui("filter.search")</label>
+            <input type="text" placeholder="@L.Ui("search.placeholder")" value="@_search"
                    @oninput="OnSearch" />
             <div class="query-help">
                 @foreach (var c in _query.Conditions)
                 {
-                    <span class="query-chip" title="Condition sur la caractéristique">
-                        <span class="stat-icon @c.Icon" aria-hidden="true"></span>
-                        @c.Abbr @c.OpLabel @c.Value
-                        <button class="chip-remove" @onclick="() => RemoveCondition(c)" title="Retirer">✕</button>
+                    <span class="query-chip" title="@L.Ui("search.chipTitle")">
+                        <span class="icon stat-icon @c.Icon" aria-hidden="true"></span>
+                        @L.StatAbbr(c.Stat) @c.OpLabel @c.Value
+                        <button class="chip-remove" @onclick="() => RemoveCondition(c)" title="@L.Ui("common.remove")">✕</button>
                     </span>
                 }
                 @if (_query.Conditions.Count == 0)
                 {
-                    <span class="hint">Stats : <code>tec</code> <code>cbt</code> <code>tir</code> <code>esq</code>
-                        suivis de <code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code> <code>=</code> et d'un nombre, cumulables.</span>
+                    <span class="hint">
+                        @L.Ui("search.hintStats")
+                        @foreach (var stat in Enum.GetValues<StatKind>())
+                        {
+                            <code>@L.StatAbbr(stat).ToLowerInvariant()</code>
+                        }
+                        @L.Ui("search.hintFollowedBy")
+                        <code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code> <code>=</code>
+                        @L.Ui("search.hintTail")
+                    </span>
                 }
             </div>
         </div>
@@ -61,10 +71,10 @@ else
             <div class="slot">
                 <div class="slot-head">
                     <span class="rank-badge">@Stars(rank)</span>
-                    <span class="rank-label">Rang @rank</span>
+                    <span class="rank-label">@L.Ui("slot.rank", rank)</span>
                     @if (cog is not null)
                     {
-                        <button class="clear" @onclick="() => ClearCog(idx)" title="Retirer">✕</button>
+                        <button class="clear" @onclick="() => ClearCog(idx)" title="@L.Ui("common.remove")">✕</button>
                     }
                 </div>
 
@@ -74,7 +84,7 @@ else
                         @{ var options = Catalog.AvailableCogs(rank, NullIfEmpty(_faction), NullIfEmpty(_ministryFilter), _query); }
                         @if (options.Count == 0)
                         {
-                            <p class="empty">Aucun rouage ne correspond.</p>
+                            <p class="empty">@L.Ui("picker.empty")</p>
                         }
                         else
                         {
@@ -82,13 +92,13 @@ else
                             {
                                 var via = NullIfEmpty(_faction) is { } f ? Catalog.RecruitVia(c, f) : null;
                                 <button class="cog-option" @onclick="() => SelectCog(idx, c)">
-                                    <span class="cog-name">@c.Name</span>
-                                    <span class="cog-title">@c.Title</span>
-                                    <span class="cog-min">@string.Join(", ", c.Ministries.Select(Catalog.MinistryName))</span>
+                                    <span class="cog-name">@Text(L.CogName(c))</span>
+                                    <span class="cog-title">@Text(L.CogTitle(c))</span>
+                                    <span class="cog-min">@string.Join(", ", c.Ministries.Select(m => L.MinistryName(m).Text))</span>
                                     <StatLine Stats="c.Stats" Compact="true" />
                                     @if (via is not null)
                                     {
-                                        <span class="cog-via">Hors faction · via « @via.Name »</span>
+                                        <span class="cog-via">@L.Ui("picker.recruitVia", L.EquipmentName(via))</span>
                                     }
                                 </button>
                             }
@@ -97,32 +107,38 @@ else
                 }
                 else
                 {
+                    var current = _equipment[idx];
                     <div class="cog-card">
                         <div>
-                            <div class="cog-name">@cog.Name</div>
-                            <div class="cog-title">@cog.Title</div>
+                            <div class="cog-name">@Text(L.CogName(cog))</div>
+                            <div class="cog-title">@Text(L.CogTitle(cog))</div>
                         </div>
                         <StatLine Stats="cog.Stats" />
                         <div class="life-line">
                             @foreach (var hp in cog.LifeLine)
                             {
-                                <span class="pip @hp.ToString().ToLower()" title="@HealthPointLabel(hp)"></span>
+                                <span class="pip @hp.ToString().ToLower()" title="@L.Ui($"hp.{hp}")"></span>
                             }
                         </div>
+                        <AbilityList Cog="cog" />
 
                         <div class="equipment-zone">
-                            <label>Équipement/don</label>
+                            <label>@L.Ui("cog.equipment")</label>
                             @{ var available = Catalog.AvailableEquipment(idx, _cogs, _equipment, NullIfEmpty(_faction)); }
-                            <select value="@_equipment[idx]?.Id" @onchange="e => SelectEquipment(idx, e)">
-                                <option value="">— Choisir —</option>
+                            <select value="@current?.Id" @onchange="e => SelectEquipment(idx, e)">
+                                <option value="">@L.Ui("common.choose")</option>
                                 @foreach (var eq in available)
                                 {
-                                    <option value="@eq.Id">@eq.Name · @AffiliationLabel(eq)</option>
+                                    <option value="@eq.Id">@L.EquipmentName(eq) · @AffiliationLabel(eq)</option>
                                 }
                             </select>
                             @if (available.Count == 0)
                             {
-                                <p class="empty">Aucun équipement/don disponible pour ce rouage.</p>
+                                <p class="empty">@L.Ui("cog.noEquipment")</p>
+                            }
+                            @if (current is not null)
+                            {
+                                <AbilityList Equipment="current" />
                             }
                         </div>
                     </div>
@@ -132,13 +148,13 @@ else
     </section>
 
     <section class="legality @(_legality.IsLegal ? "ok" : "ko")">
-        <h2>@(_legality.IsLegal ? "Cabale légale ✓" : "Cabale incomplète ou illégale")</h2>
+        <h2>@L.Ui(_legality.IsLegal ? "legality.legal" : "legality.illegal")</h2>
         @if (_legality.Issues.Count > 0)
         {
             <ul>
                 @foreach (var issue in _legality.Issues)
                 {
-                    <li>@issue</li>
+                    <li>@L.Describe(issue)</li>
                 }
             </ul>
         }
@@ -150,18 +166,26 @@ else
     private string _ministryFilter = "";
     private string _search = "";
     private CogQuery _query = CogQuery.Empty;
-    private const string SearchPlaceholder = "nom, titre, ou tir>4 esq<=3…";
+    private IReadOnlyDictionary<string, StatKind> _keywords = new Dictionary<string, StatKind>();
 
     // index 0 => rang 1, index 1 => rang 2, index 2 => rang 3
     private readonly Cog?[] _cogs = new Cog?[3];
     private readonly Equipment?[] _equipment = new Equipment?[3];
-    private LegalityResult _legality = new(false, new[] { "Composez votre cabale." });
+    private LegalityResult _legality = new(false, new[] { new LegalityIssue("start") });
 
     protected override async Task OnInitializedAsync()
     {
+        L.Changed += OnLanguageChanged;
+        await L.EnsureLoadedAsync();
         await Catalog.EnsureLoadedAsync();
+        _keywords = L.StatKeywords();
         Recompute();
     }
+
+    // Les textes se résolvent au rendu : un changement de langue ne demande qu'un re-rendu.
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnLanguageChanged;
 
     private static int RankIndex(int rank) => rank - 1;
 
@@ -176,13 +200,13 @@ else
     private void OnSearch(ChangeEventArgs e)
     {
         _search = e.Value?.ToString() ?? "";
-        _query = CogQuery.Parse(_search);
+        _query = CogQuery.Parse(_search, _keywords);
     }
 
     private void RemoveCondition(StatCondition c)
     {
         _search = CogQuery.Without(_search, c);
-        _query = CogQuery.Parse(_search);
+        _query = CogQuery.Parse(_search, _keywords);
     }
 
     private void Set(ref string field, ChangeEventArgs e)
@@ -236,16 +260,15 @@ else
 
     private static string? NullIfEmpty(string s) => string.IsNullOrWhiteSpace(s) ? null : s;
     private static string Stars(int rank) => new string('★', rank);
-    private static string HealthPointLabel(HealthPointType hp) => hp switch
-    {
-        HealthPointType.R => "PV renforcé (Protection)",
-        HealthPointType.T => "PV teinté",
-        _ => "PV standard"
-    };
+
+    // Texte de carte, stylé s'il se replie sur la langue de référence faute de traduction.
+    private RenderFragment Text(Localized text) => @<span class="@(text.IsFallback ? "untranslated" : null)"
+                                                          title="@(text.IsFallback ? L.Ui("common.untranslated") : null)">@text.Text</span>;
+
     // « Don · L'Axe », « Équipement · Ligue Maisel », « Équipement · affilié au rouage »
     private string AffiliationLabel(Equipment e) =>
-        (e.Kind == EquipmentKind.BOON ? "Don" : "Équipement") + " · " +
-        (e.IsFactionAffiliated ? Catalog.FactionName(e.Faction!) :
-         e.IsCogAffiliated ? "affilié au rouage" :
-         Catalog.MinistryName(e.Ministry!));
+        L.Ui($"equipment.kind.{e.Kind}") + " · " +
+        (e.IsFactionAffiliated ? L.FactionName(e.Faction!).Text :
+         e.IsCogAffiliated ? L.Ui("equipment.cogAffiliated") :
+         L.MinistryName(e.Ministry!).Text);
 }
