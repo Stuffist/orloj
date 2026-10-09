@@ -15,7 +15,7 @@ public class I18nConsistencyTests
     private static readonly Regex Token = new(@"\{[^{}]*\}");
     private static readonly HashSet<string> KnownTokens = new()
     {
-        "{tech}", "{melee}", "{ranged}", "{dodge}", "{active}", "{action}", "{darkness}", "{blue-cube}",
+        "{tech}", "{melee}", "{ranged}", "{dodge}", "{active}", "{action}", "{darkness}", "{stunned}",
     };
 
     private static JsonElement Json(params string[] path) =>

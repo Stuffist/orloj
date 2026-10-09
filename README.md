@@ -104,7 +104,9 @@ images des cartes. Conventions de transcription (pictogrammes : LDR p.20) :
   effets de jeu, ce sont des jetons neutres rendus par les icônes du livre de règles
   (`wwwroot/img/icons/`, `wwwroot/img/stats/`) :
   `{tech}` `{melee}` `{ranged}` `{dodge}` `{active}` `{action}` `{darkness}`
-  `{freq:planning|cycle|game:N}`, et `{blue-cube}` (pictogramme non encore identifié).
+  `{stunned}` (pion sonné) et `{freq:planning|cycle|game:N}`.
+- **Factions** : sans nom anglais officiel, `en/cards.json` reprend les noms
+  français (noms propres assumés, donc pas signalés comme non traduits).
 - Les tests vérifient que chaque carte a ses textes `fr`, qu'aucune langue ne
   contient d'id ou de clé inconnus, et que les pictogrammes d'un effet de jeu sont
   les mêmes dans toutes les langues.

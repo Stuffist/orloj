@@ -290,7 +290,7 @@
       "abilities": [
         {
           "name": "Danse kalbélia",
-          "gameEffect": "Attribuez un pion {blue-cube} à un rouage adverse engagé par Maja puis poussez-la."
+          "gameEffect": "Attribuez un pion {stunned} à un rouage adverse engagé par Maja puis poussez-la."
         }
       ]
     },

@@ -30,7 +30,29 @@
       "name": "The Axis"
     }
   },
-  "factions": {},
+  "factions": {
+    "OTHERS": {
+      "name": "Les Autres"
+    },
+    "BLAUKAUST": {
+      "name": "Blaukaust Devet"
+    },
+    "DYKOVIAN": {
+      "name": "Cabale Dykovienne"
+    },
+    "MAISEL": {
+      "name": "Ligue Maisel"
+    },
+    "URKARAS": {
+      "name": "Famille Urkaras"
+    },
+    "UNDERWORLD": {
+      "name": "La Pègre"
+    },
+    "RUBIN": {
+      "name": "Réseau Rubin"
+    }
+  },
   "cogs": {},
   "equipment": {}
 }

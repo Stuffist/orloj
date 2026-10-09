@@ -125,6 +125,8 @@ public class LegalityTests
         var issue = Assert.Single(r.Issues);
         Assert.Contains("Hors faction Ligue Maisel : Le Chasseur", d.L.Describe(issue));
         await d.L.SetLanguageAsync("en");
-        Assert.StartsWith("Outside the Ligue Maisel faction: Le Chasseur", d.L.Describe(issue));   // noms non traduits : repli fr
+        Assert.StartsWith("Outside the Ligue Maisel faction: Le Chasseur", d.L.Describe(issue));   // faction : nom fr assumé ; rouage : repli fr
+        Assert.False(d.L.FactionName("MAISEL").IsFallback);
+        Assert.True(d.L.CogName(d.Cog("2R08")).IsFallback);
     }
 }
