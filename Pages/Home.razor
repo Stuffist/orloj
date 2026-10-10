@@ -117,6 +117,7 @@ else
                         <div>
                             <div class="cog-name">@Text(L.CogName(cog))</div>
                             <div class="cog-title">@Text(L.CogTitle(cog))</div>
+                            <div class="cog-min">@string.Join(", ", cog.Ministries.Select(m => L.MinistryName(m).Text))</div>
                         </div>
                         <StatLine Stats="cog.Stats" />
                         <div class="life-line">
