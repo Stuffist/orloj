@@ -186,6 +186,36 @@ trigramme ou nom d'une stat, dans n'importe quelle langue (`tec`, `cbt`, `tir`,
 `esq`, `mel`, `rng`, `dod`, `combat`, `ranged`…), suivi de `>`, `<`, `>=`, `<=` ou
 `=` et d'un nombre, par exemple `kantor tir>4 esq<=3` ou `rng>4 dod<=3`.
 
+## Export
+
+Sous le panneau de légalité, avec un nom de cabale facultatif ; copie dans le
+presse-papiers ou téléchargement (`<nom-de-la-cabale>.txt` / `.json`). L'export
+reflète la composition en cours, même incomplète (un avertissement le signale).
+
+- **Texte** — format du builder [bwaaaanegamesdb.fr](https://bwaaaanegamesdb.fr/builder_olomoc/index_builder_olomoc.php),
+  vérifié à l'identique : nom de la cabale (ligne omise s'il est vide), puis une
+  ligne par rouage du rang 1 au rang 3, `NOM ROUAGE - NOM ÉQUIPEMENT/DON` (nom seul
+  s'il n'est pas équipé), en majuscules sans accents, lignes séparées par CRLF.
+
+  ```text
+  Ma Cabale Test
+  DOMINIK KRALOV - HARMONIUM
+  HYNEK NOVOTNY - CHRONOGRAPHE
+  PETRA KANTOR - ASSERVISSEUR MENTAL
+  ```
+
+- **JSON** — schéma `schemas/olomoc-cabal.schema.json` : ids et codes du
+  référentiel (réimportables), noms dans la langue courante (lisibles), champs
+  facultatifs omis.
+
+  ```json
+  { "format": "olomoc-cabal", "version": 1, "language": "fr",
+    "name": "Ma Cabale Test",
+    "faction": { "code": "MAISEL", "name": "Ligue Maisel" },
+    "cogs": [ { "rank": 1, "cog": { "id": "3R05", "name": "Dominik Kralov" },
+                "equipment": { "id": "E11", "name": "Harmonium" } }, … ] }
+  ```
+
 ## Architecture
 
 - `Models/CatalogModels.cs` — référentiel neutre (`Cog`, `Equipment`, `Ministry`,
@@ -198,6 +228,7 @@ trigramme ou nom d'une stat, dans n'importe quelle langue (`tec`, `cbt`, `tir`,
 - `Services/CatalogService.cs` — chargement + `AvailableCogs`,
   `AvailableEquipment`, `RecruitVia`, `CheckLegality` (dont le couplage biparti).
 - `Services/CogQuery.cs` — analyse de la recherche (mots + conditions sur les stats).
+- `Services/CabalExporter.cs` — exports texte (format bwaaaanegamesdb.fr) et JSON.
 - `Shared/StatLine.razor`, `AbilityList.razor`, `GameEffect.razor`,
   `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre.
 - `Pages/Home.razor` — état de la cabale et UI réactive.

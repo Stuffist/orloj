@@ -7,7 +7,6 @@
   "common.remove": "Retirer",
   "common.choose": "— Choisir —",
   "common.untranslated": "Texte non traduit (version française)",
-
   "filter.faction": "Faction",
   "filter.allFactions": "— Toutes —",
   "filter.ministry": "Ministère",
@@ -18,7 +17,6 @@
   "search.hintStats": "Stats :",
   "search.hintFollowedBy": "suivis de",
   "search.hintTail": "et d'un nombre, cumulables.",
-
   "stat.tech.name": "Technique",
   "stat.tech.abbr": "TEC",
   "stat.melee.name": "Combat",
@@ -27,11 +25,9 @@
   "stat.ranged.abbr": "TIR",
   "stat.dodge.name": "Esquive",
   "stat.dodge.abbr": "ESQ",
-
   "hp.S": "PV standard",
   "hp.R": "PV renforcé (Protection)",
   "hp.T": "PV teinté",
-
   "slot.rank": "Rang {0}",
   "picker.empty": "Aucun rouage ne correspond.",
   "picker.recruitVia": "Hors faction · via « {0} »",
@@ -40,7 +36,6 @@
   "equipment.kind.EQUIPMENT": "Équipement",
   "equipment.kind.BOON": "Don",
   "equipment.cogAffiliated": "affilié au rouage",
-
   "legality.legal": "Cabale légale ✓",
   "legality.illegal": "Cabale incomplète ou illégale",
   "legality.start": "Composez votre cabale.",
@@ -53,5 +48,14 @@
   "legality.wrongCog": "« {0} » est affilié à {1} et ne peut pas équiper {2}.",
   "legality.wrongFaction": "« {0} » est affilié à la faction {1}, pas à celle de la cabale.",
   "legality.ministryAbsent": "« {0} » ({1}) : aucun rouage de la cabale n'est affilié à ce Ministère.",
-  "legality.ministryOverflow": "Trop d'équipements/dons d'un même Ministère : chaque rouage ne rend disponible qu'un seul équipement/don de son Ministère d'affiliation."
+  "legality.ministryOverflow": "Trop d'équipements/dons d'un même Ministère : chaque rouage ne rend disponible qu'un seul équipement/don de son Ministère d'affiliation.",
+  "export.title": "Export",
+  "export.name": "Nom de la cabale (facultatif)",
+  "export.format": "Format d'export",
+  "export.text": "Texte",
+  "export.empty": "Recrutez au moins un rouage pour exporter la cabale.",
+  "export.notLegal": "La cabale est incomplète ou illégale : l'export reflète la composition actuelle.",
+  "export.copy": "Copier",
+  "export.copied": "Copié ✓",
+  "export.download": "Télécharger"
 }

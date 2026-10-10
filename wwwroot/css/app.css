@@ -201,3 +201,27 @@ body {
 
 /* Texte d'une carte non traduit : affiché dans la langue de référence */
 .untranslated { font-style: italic; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
+
+/* Export (texte au format bwaaaanegamesdb.fr, ou JSON) */
+.export { margin-top: 1.5rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; }
+.export h2 { margin: 0 0 .7rem; font-size: 1.05rem; }
+.export-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: .8rem; }
+.export-modes { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.export-modes button {
+    background: var(--panel-2); color: var(--muted); border: none; padding: .5rem .9rem;
+    font-size: .9rem; cursor: pointer;
+}
+.export-modes button + button { border-left: 1px solid var(--line); }
+.export-modes button.active { background: var(--rust); color: #fff; }
+.export-warning { color: var(--rust-soft); font-size: .85rem; margin: 0 0 .5rem; }
+.export-output {
+    width: 100%; resize: vertical; background: var(--bg); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: .6rem .7rem;
+    font-family: Consolas, "Cascadia Mono", monospace; font-size: .85rem; line-height: 1.45;
+}
+.export-actions { display: flex; gap: .6rem; margin-top: .6rem; }
+.btn {
+    display: inline-block; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: .45rem .9rem; font-size: .9rem; cursor: pointer; text-decoration: none;
+}
+.btn:hover { border-color: var(--rust-soft); }

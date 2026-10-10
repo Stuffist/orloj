@@ -7,7 +7,6 @@
   "common.remove": "Remove",
   "common.choose": "— Choose —",
   "common.untranslated": "Untranslated text (French version)",
-
   "filter.faction": "Faction",
   "filter.allFactions": "— All —",
   "filter.ministry": "Ministry",
@@ -18,7 +17,6 @@
   "search.hintStats": "Stats:",
   "search.hintFollowedBy": "followed by",
   "search.hintTail": "and a number; conditions can be combined.",
-
   "stat.tech.name": "Tech",
   "stat.tech.abbr": "TEC",
   "stat.melee.name": "Melee",
@@ -27,11 +25,9 @@
   "stat.ranged.abbr": "RNG",
   "stat.dodge.name": "Dodge",
   "stat.dodge.abbr": "DOD",
-
   "hp.S": "Standard HP",
   "hp.R": "Reinforced HP (Protection)",
   "hp.T": "Tainted HP",
-
   "slot.rank": "Rank {0}",
   "picker.empty": "No cog matches.",
   "picker.recruitVia": "Outside faction · via “{0}”",
@@ -40,7 +36,6 @@
   "equipment.kind.EQUIPMENT": "Equipment",
   "equipment.kind.BOON": "Boon",
   "equipment.cogAffiliated": "affiliated with the cog",
-
   "legality.legal": "Legal cabal ✓",
   "legality.illegal": "Incomplete or illegal cabal",
   "legality.start": "Build your cabal.",
@@ -53,5 +48,14 @@
   "legality.wrongCog": "“{0}” is affiliated with {1} and cannot equip {2}.",
   "legality.wrongFaction": "“{0}” is affiliated with the {1} faction, not with the cabal's.",
   "legality.ministryAbsent": "“{0}” ({1}): no cog in the cabal is affiliated with this Ministry.",
-  "legality.ministryOverflow": "Too many pieces of equipment/boons from the same Ministry: each cog makes only one equipment/boon from its affiliated Ministry available."
+  "legality.ministryOverflow": "Too many pieces of equipment/boons from the same Ministry: each cog makes only one equipment/boon from its affiliated Ministry available.",
+  "export.title": "Export",
+  "export.name": "Cabal name (optional)",
+  "export.format": "Export format",
+  "export.text": "Text",
+  "export.empty": "Recruit at least one cog to export the cabal.",
+  "export.notLegal": "The cabal is incomplete or illegal: the export reflects its current composition.",
+  "export.copy": "Copy",
+  "export.copied": "Copied ✓",
+  "export.download": "Download"
 }

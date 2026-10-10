@@ -3,6 +3,8 @@
 @implements IDisposable
 @inject CatalogService Catalog
 @inject LocalizationService L
+@inject CabalExporter Exporter
+@inject IJSRuntime JS
 
 @if (!Catalog.Loaded || !L.Loaded)
 {
@@ -159,6 +161,44 @@ else
             </ul>
         }
     </section>
+
+    <section class="export">
+        <h2>@L.Ui("export.title")</h2>
+        <div class="export-controls">
+            <div class="field grow">
+                <label for="cabal-name">@L.Ui("export.name")</label>
+                <input id="cabal-name" type="text" maxlength="80" value="@_cabalName"
+                       @oninput="e => _cabalName = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="export-modes" role="group" aria-label="@L.Ui("export.format")">
+                <button class="@(_exportJson ? null : "active")" aria-pressed="@(!_exportJson)" @onclick="() => _exportJson = false">@L.Ui("export.text")</button>
+                <button class="@(_exportJson ? "active" : null)" aria-pressed="@_exportJson" @onclick="() => _exportJson = true">JSON</button>
+            </div>
+        </div>
+
+        @if (_cogs.All(c => c is null))
+        {
+            <p class="empty">@L.Ui("export.empty")</p>
+        }
+        else
+        {
+            var content = ExportContent();
+            @if (!_legality.IsLegal)
+            {
+                <p class="export-warning">@L.Ui("export.notLegal")</p>
+            }
+            <textarea class="export-output" readonly rows="@Math.Min(content.Split('\n').Length, 18)"
+                      value="@content" aria-label="@L.Ui("export.title")"></textarea>
+            <div class="export-actions">
+                <button class="btn" @onclick="() => CopyAsync(content)">
+                    @L.Ui(_copied == content ? "export.copied" : "export.copy")
+                </button>
+                <a class="btn" href="@DataUri(content)" download="@CabalExporter.FileName(_cabalName, _exportJson ? "json" : "txt")">
+                    @L.Ui("export.download")
+                </a>
+            </div>
+        }
+    </section>
 }
 
 @code {
@@ -257,6 +297,33 @@ else
     }
 
     private void Recompute() => _legality = Catalog.CheckLegality(NullIfEmpty(_faction), _cogs, _equipment);
+
+    // ---- Export ----
+
+    private string _cabalName = "";
+    private bool _exportJson;
+    private string? _copied;            // dernier contenu copié : le bouton l'indique tant qu'il est à jour
+
+    private string ExportContent() => _exportJson
+        ? Exporter.ToJson(_cabalName, NullIfEmpty(_faction), _cogs, _equipment)
+        : Exporter.ToText(_cabalName, _cogs, _equipment);
+
+    private string DataUri(string content) =>
+        (_exportJson ? "data:application/json;charset=utf-8," : "data:text/plain;charset=utf-8,") + Uri.EscapeDataString(content);
+
+    private async Task CopyAsync(string content)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", content);
+            _copied = content;
+        }
+        catch (JSException)
+        {
+            // Presse-papiers indisponible (contexte non sécurisé, refus) : le texte reste sélectionnable.
+            _copied = null;
+        }
+    }
 
     private static string? NullIfEmpty(string s) => string.IsNullOrWhiteSpace(s) ? null : s;
     private static string Stars(int rank) => new string('★', rank);
