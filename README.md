@@ -24,31 +24,44 @@ dotnet publish -c Release
 
 L'app est un Blazor WebAssembly : l'image (`Dockerfile`, multi-étapes) publie avec
 le SDK .NET puis sert les fichiers statiques avec nginx (≈ 65 Mo, pas de runtime
-.NET). Elle est servie sous **`/olomoc/`** (`ARG BASE_PATH`, qui fixe le
-`<base href>` et les routes de `docker/nginx.conf`).
+.NET). Le déploiement est **autonome** : Olomoc a son propre port HTTPS et ne
+dépend d'aucun autre projet du VPS (B5T garde les ports 80/443). Il réutilise le
+certificat Let's Encrypt de l'hôte (`/etc/letsencrypt`, monté en lecture seule) :
+un certificat vaut pour le nom d'hôte, quel que soit le port.
 
-Sur le VPS, le HTTPS et les ports 80/443 sont tenus par le **nginx frontal du
-projet B5T** (`B5TPairings/nginx.conf`, certificat Let's Encrypt de l'hôte). Il
-relaie `/olomoc/` vers le conteneur `olomoc` via le réseau Docker partagé **`web`**,
-créé par le compose de B5T et rejoint ici en `external`.
+→ `https://vps-24cf4978.vps.ovh.net:8443/`
 
-→ `https://vps-24cf4978.vps.ovh.net/olomoc/`
+```bash
+docker compose up -d --build
+```
 
-**Première mise en place** (une fois) :
+Réglages facultatifs (fichier `.env` à côté du `docker-compose.yml`) :
 
-1. B5T : déployer la version de `docker-compose.yml` / `nginx.conf` qui déclare le
-   réseau `web` et le bloc `location /olomoc/`, puis `docker compose up -d`
-   (crée le réseau et y rattache nginx).
-2. Olomoc : `docker compose up -d --build` dans ce dossier.
+| Variable            | Défaut                       | Rôle                                         |
+|---------------------|------------------------------|----------------------------------------------|
+| `DOMAIN`            | `vps-24cf4978.vps.ovh.net`   | nom d'hôte, et dossier du certificat (`live/<DOMAIN>/`) |
+| `OLOMOC_HTTPS_PORT` | `8443`                       | port public HTTPS                            |
+| `OLOMOC_HTTP_PORT`  | `8090`                       | port HTTP de diagnostic, sur 127.0.0.1 seulement |
+| `CERT_ROOT`         | `/etc/letsencrypt`           | dossier Let's Encrypt de l'hôte              |
+
+À prévoir sur le VPS :
+
+- **Pare-feu** : ouvrir le port HTTPS (`8443/tcp`) s'il y en a un (`ufw allow 8443/tcp`,
+  pare-feu réseau OVH).
+- **Renouvellement du certificat** : nginx lit le certificat au démarrage. Après un
+  renouvellement par certbot, recharger le conteneur, par exemple avec un hook
+  `/etc/letsencrypt/renewal-hooks/deploy/olomoc.sh` (exécutable) :
+  `docker exec olomoc nginx -s reload`.
+- Un `http://…:8443` est renvoyé vers `https://…:8443`. Diagnostic local :
+  `curl -I http://127.0.0.1:8090/` ; état : `docker ps` (healthcheck `/healthz`).
 
 **Mises à jour** : `git pull && docker compose up -d --build`. Variante sans les
 sources sur le VPS, comme pour B5T : `docker compose build && docker compose push`
 sur le poste (image `stuffist/olomoc` sur Docker Hub), puis sur le VPS, avec le seul
 `docker-compose.yml` : `docker compose pull && docker compose up -d`.
 
-Le nginx de B5T résout `olomoc` à chaque requête : il démarre et sert B5T même si
-Olomoc est arrêté (`/olomoc/` répond alors 502). Diagnostic sur le VPS :
-`curl -I http://127.0.0.1:8090/olomoc/` (port local, `OLOMOC_PORT` pour le changer).
+L'image accepte aussi un chemin de base (`build.args.BASE_PATH`, ex. `/olomoc/`) si
+l'app doit un jour être servie sous un sous-chemin derrière un reverse proxy.
 
 ## Vocabulaire
 

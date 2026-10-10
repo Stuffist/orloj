@@ -1,27 +1,22 @@
-# Olomòc sur le VPS : servi en https://<hôte>/olomoc/ par le nginx frontal du projet B5T,
-# qui gère le TLS et relaie /olomoc/ vers ce conteneur via le réseau Docker partagé « web ».
+# Olomòc sur le VPS, de façon autonome : https://<DOMAIN>:<OLOMOC_HTTPS_PORT>/
+# Indépendant des autres projets (B5T garde 80/443) ; réutilise le certificat Let's Encrypt
+# de l'hôte, monté en lecture seule. Réglages facultatifs dans un fichier .env à côté.
 #
-#   docker compose up -d --build     (depuis les sources)
-#   docker compose pull && docker compose up -d     (image publiée sur Docker Hub)
+#   docker compose up -d --build                     (depuis les sources)
+#   docker compose pull && docker compose up -d      (image publiée sur Docker Hub)
 
 services:
   olomoc:
     image: stuffist/olomoc
-    build:
-      context: .
-      args:
-        BASE_PATH: /olomoc/
+    build: .
+    container_name: olomoc
     restart: always
-    networks:
-      web:
-        aliases:
-          - olomoc
-    # Accès direct, local au VPS uniquement (diagnostic) : curl http://127.0.0.1:8090/olomoc/
+    environment:
+      DOMAIN: ${DOMAIN:-vps-24cf4978.vps.ovh.net}
     ports:
-      - "127.0.0.1:${OLOMOC_PORT:-8090}:80"
-
-networks:
-  # Réseau du reverse proxy, créé par le compose de B5T (service nginx).
-  web:
-    name: web
-    external: true
+      - "${OLOMOC_HTTPS_PORT:-8443}:443"
+      # HTTP local au VPS uniquement (diagnostic) : curl http://127.0.0.1:8090/
+      - "127.0.0.1:${OLOMOC_HTTP_PORT:-8090}:80"
+    volumes:
+      # Tout /etc/letsencrypt : live/ contient des liens vers archive/.
+      - ${CERT_ROOT:-/etc/letsencrypt}:/etc/letsencrypt:ro
