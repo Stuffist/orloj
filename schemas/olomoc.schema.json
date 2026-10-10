@@ -260,6 +260,27 @@
             "$ref": "#/$defs/ability"
           }
         },
+        "extraEquipment": {
+          "type": "object",
+          "description": "Le rouage peut être équipé d'une carte supplémentaire au début du premier cycle (ex. Medic Ruzicka : un équipement affilié au Ministère de l'Intégrité). Choisie en mode partie, hors constitution de la cabale ; pas de doublon avec les cartes de la cabale.",
+          "additionalProperties": false,
+          "required": [
+            "ministry",
+            "kind"
+          ],
+          "properties": {
+            "ministry": {
+              "$ref": "#/$defs/ministryCode"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "EQUIPMENT",
+                "BOON"
+              ]
+            }
+          }
+        },
         "art": {
           "$ref": "#/$defs/art"
         },

@@ -265,12 +265,6 @@ body {
 .play-commands { display: flex; gap: .5rem; flex-wrap: wrap; }
 .play-commands .btn { min-height: 2.4rem; }
 
-.play-banner {
-    margin: 0 0 .8rem; padding: .55rem .8rem; border-radius: 8px;
-    border: 1px solid var(--ok); background: rgba(63, 166, 106, .1); font-size: .9rem;
-}
-.play-banner.ko { border-color: var(--ko); background: rgba(193, 68, 14, .12); color: var(--rust-soft); font-weight: 600; }
-.play-banner.info { border-color: var(--line); background: var(--panel-2); color: var(--ink); }
 
 .play-cogs { display: grid; grid-template-columns: minmax(0, 1fr); gap: .8rem; }
 @media (min-width: 1000px) { .play-cogs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -299,15 +293,11 @@ body {
     content: "✕"; position: absolute; inset: 0; display: grid; place-items: center;
     color: var(--ink); font-size: 14px; font-weight: 700; line-height: 1;
 }
-.hp-count { font-size: 1.25rem; font-weight: 700; white-space: nowrap; }
+.hp-count { font-size: 1.25rem; font-weight: 700; white-space: nowrap; min-width: 3.6rem; text-align: right; font-variant-numeric: tabular-nums; }
 .hp-count small { font-size: .8rem; color: var(--muted); }
 
 .play-row { display: flex; flex-wrap: wrap; gap: .5rem; }
 .play-row .btn { min-height: 2.3rem; }
-.play-panel {
-    display: flex; flex-direction: column; gap: .5rem;
-    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: .65rem;
-}
 .amount { display: flex; align-items: center; gap: .5rem; }
 .amount-value { font-size: 1.4rem; font-weight: 700; min-width: 2ch; text-align: center; }
 .amount-label { color: var(--muted); font-size: .85rem; }
@@ -315,7 +305,6 @@ body {
 .check input { width: 1.1rem; height: 1.1rem; accent-color: var(--rust); }
 .check.disabled { opacity: .45; }
 .play-preview { margin: 0; font-size: .85rem; color: var(--muted); }
-.play-msg { margin: 0; font-size: .85rem; border-left: 3px solid var(--rust-soft); padding-left: .5rem; }
 
 .step {
     width: 2.3rem; height: 2.3rem; flex: none; border-radius: 8px; cursor: pointer;
@@ -355,6 +344,52 @@ body {
 .play-card-text .abilities { margin-top: .4rem; }
 
 .play-footer { margin-top: 1.5rem; text-align: center; }
+
+/* Fin de partie, à la place du bouton de fin de cycle */
+.play-over {
+    display: inline-flex; align-items: center; min-height: 2.4rem; padding: .3rem .8rem; border-radius: 8px;
+    border: 1px solid var(--ok); background: rgba(63, 166, 106, .12); font-size: .85rem; font-weight: 600;
+}
+.play-over.lost { border-color: var(--ko); background: rgba(193, 68, 14, .15); color: var(--rust-soft); }
+
+/* Carte supplémentaire (Medic Ruzicka) */
+.play-extra { display: flex; flex-direction: column; gap: .3rem; }
+.play-extra label { font-size: .72rem; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.play-extra select {
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: .45rem .5rem; font-size: .9rem; width: 100%; min-width: 0;
+}
+
+/* Fenêtre superposée (Sheet) : panneau en bas sur téléphone, centré sur grand écran */
+.sheet-backdrop {
+    position: fixed; inset: 0; z-index: 100; background: rgba(5, 8, 10, .6);
+    display: flex; align-items: flex-end; justify-content: center;
+}
+.sheet {
+    width: 100%; max-width: 28rem; max-height: 90vh; overflow-y: auto; outline: none;
+    display: flex; flex-direction: column; gap: .7rem;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px 14px 0 0;
+    padding: .9rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, .45);
+}
+@media (min-width: 600px) {
+    .sheet-backdrop { align-items: center; }
+    .sheet { border-radius: 14px; }
+}
+.sheet-head { display: flex; align-items: center; gap: .5rem; }
+.sheet-head h3 { margin: 0; font-size: 1rem; flex: 1; }
+.sheet-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+.sheet-actions .btn { min-height: 2.6rem; min-width: 6.5rem; }
+
+/* Notification : compte rendu de la dernière action, par-dessus la page */
+.toast {
+    position: fixed; z-index: 90; left: 50%; bottom: calc(1rem + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    width: max-content; max-width: min(32rem, calc(100vw - 1.5rem));
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--rust-soft); border-radius: 10px;
+    padding: .65rem .9rem; font-size: .88rem; box-shadow: 0 8px 24px rgba(0, 0, 0, .45); cursor: pointer;
+    animation: toast-in .18s ease-out;
+}
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, .6rem); } }
 
 /* Téléphone : en-tête compact, pour laisser la place aux rouages */
 @media (max-width: 600px) {

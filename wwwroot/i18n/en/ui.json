@@ -77,8 +77,8 @@
   "play.endGame": "End of cycle {0} and of the game",
   "play.endCycle.title": "+1 Bile per Corrupted cog, cycle effects end, 4 action tokens per cog",
   "play.cycleEnded": "Cycle {0} over: +{1} Bile (Corrupted cogs), action tokens replenished.",
-  "play.finished": "Game over after 4 cycles: count the victory points.",
-  "play.lost": "Bile at 3: the game is lost.",
+  "play.finished": "Game over: count the victory points.",
+  "play.lost": "Game lost: Bile at 3.",
   "play.abandon": "Abandon the game",
   "play.abandon.confirm": "Abandon the current game? Its state will be erased.",
   "play.status.sane": "Sane",
@@ -113,5 +113,9 @@
   "play.block.Exhausted": "No uses left this game",
   "play.block.Stunned": "Stunned: no active abilities",
   "play.block.NoActions": "Not enough action tokens",
-  "play.cardText": "Card text"
+  "play.cardText": "Card text",
+  "play.wounds.title": "Wounds",
+  "play.heal.title": "Healing",
+  "play.extra": "{0}: extra equipment (first cycle)",
+  "play.extra.none": "— None —"
 }

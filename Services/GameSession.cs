@@ -53,7 +53,7 @@ public sealed class GameSession
                 Rank = cogs[i]!.Rank,
                 CogId = cogs[i]!.Id,
                 EquipmentId = equipment[i]?.Id,
-                LifeLine = (equipment[i]?.LifeLinePrefix ?? new()).Concat(cogs[i]!.LifeLine).ToList(),
+                LifeLine = LifeLineOf(cogs[i]!, equipment[i]),
                 Actions = ActionsPerCycle,
             })
             .OrderByDescending(c => c.Rank)
@@ -150,6 +150,29 @@ public sealed class GameSession
         Record();
         cog.Marked = index < cog.Marked ? index : index + 1;
     }
+
+    // ---- Carte supplémentaire (Medic Ruzicka : « au début du premier cycle ») ----
+
+    public bool CanChooseExtraEquipment(Cog cog) => cog.ExtraEquipment is not null && State.Cycle == 1;
+
+    /// <summary>
+    /// Choisit (ou retire) la carte supplémentaire du rouage, pendant le premier cycle :
+    /// la ligne de vie est recalculée avec les PV qu'ajoutent ses cartes.
+    /// </summary>
+    public bool SetExtraEquipment(int slot, Cog cog, Equipment? main, Equipment? extra)
+    {
+        var state = Cog(slot);
+        if (!CanChooseExtraEquipment(cog) || state.ExtraEquipmentId == extra?.Id) return false;
+        if (extra is not null && !cog.ExtraEquipment!.Allows(extra)) return false;
+        Record();
+        state.ExtraEquipmentId = extra?.Id;
+        state.LifeLine = LifeLineOf(cog, main, extra);
+        state.Marked = Math.Min(state.Marked, state.LifeLine.Count);
+        return true;
+    }
+
+    private static List<HealthPointType> LifeLineOf(Cog cog, params Equipment?[] equipment) =>
+        equipment.SelectMany(e => e?.LifeLinePrefix ?? new()).Concat(cog.LifeLine).ToList();
 
     public void SetFortified(int slot, bool on)
     {

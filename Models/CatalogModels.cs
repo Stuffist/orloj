@@ -54,8 +54,18 @@ public sealed class Cog
     public Stats Stats { get; init; } = new();
     public List<HealthPointType> LifeLine { get; init; } = new();
     public List<Ability> Abilities { get; init; } = new();
+    public ExtraEquipmentRule? ExtraEquipment { get; init; }    // carte supplémentaire au début de la partie
     public Art? Art { get; init; }
     public string? Set { get; init; }
+}
+
+/// <summary>Carte supplémentaire qu'un rouage peut porter dès le début du premier cycle (Medic Ruzicka).</summary>
+public sealed class ExtraEquipmentRule
+{
+    public string Ministry { get; init; } = "";
+    public EquipmentKind Kind { get; init; }
+
+    public bool Allows(Equipment e) => e.Ministry == Ministry && e.Kind == Kind;
 }
 
 /// <summary>Carte équipement ou don.</summary>

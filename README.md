@@ -187,7 +187,10 @@ images des cartes. Conventions de transcription (pictogrammes : LDR p.20) :
     Coordination reste nécessaire.
 
   Les rouages hors faction ainsi recrutables apparaissent dans la liste avec la
-  mention « via … ». Non géré : l'équipement supplémentaire de Medic Ruzicka.
+  mention « via … ».
+- **Medic Ruzicka** (« au début du premier cycle », `extraEquipment` dans le
+  référentiel) : l'équipement supplémentaire de l'Intégrité se choisit en mode
+  partie, pas dans la composition.
 
 ## Recherche
 
@@ -242,6 +245,9 @@ Règles appliquées (`Services/GameSession.cs`) :
   blessures qui ignorent la protection), et arrêt au premier PV teinté coché. Tout
   PV teinté coché donne un pion de Noirceur (p.17), attaque ou non. Soin = décocher
   les derniers PV cochés ; toucher un PV corrige la ligne à la main.
+- **Carte supplémentaire** (Medic Ruzicka, `extraEquipment`) : choisie sur la carte
+  du rouage pendant le premier cycle, parmi les équipements de l'Intégrité que la
+  cabale ne porte pas déjà ; ses capacités sont suivies comme les autres.
 - **Équipements qui modifient la ligne de vie** : `lifeLinePrefix` dans le
   référentiel (Carapace : deux PV renforcés en tête). Interrupteur « PV renforcés »
   (PV standards renforcés jusqu'à la fin du cycle, p. ex. Anabolisant).
@@ -256,7 +262,9 @@ Règles appliquées (`Services/GameSession.cs`) :
   renforcés temporaires, 4 pions d'action ; partie terminée après le cycle 4.
 
 Le reste (effets des cartes, traque, points de victoire, adversaire) se fait à la
-main avec les actions génériques.
+main avec les actions génériques. Blessures et soins s'ouvrent dans une fenêtre
+superposée et leur compte rendu s'affiche en notification : les boutons des cartes
+ne bougent jamais.
 
 ## Architecture
 
@@ -277,6 +285,6 @@ main avec les actions génériques.
 - `Shared/StatLine.razor`, `AbilityList.razor`, `GameEffect.razor`,
   `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre.
 - `Pages/Home.razor` — constructeur : composition, légalité, export, lancement d'une partie.
-- `Pages/Play.razor`, `Shared/PlayCogCard.razor`, `TokenTrack.razor` — mode partie.
+- `Pages/Play.razor`, `Shared/PlayCogCard.razor`, `TokenTrack.razor`, `Sheet.razor` — mode partie.
 - `tests/OlomocListBuilder.Tests` — xUnit : légalité, recherche, export, mode partie, cohérence des langues
   (compile les modèles et services de l'app, lit les données de `wwwroot`).

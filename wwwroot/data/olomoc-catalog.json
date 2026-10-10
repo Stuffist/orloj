@@ -1147,6 +1147,10 @@
           "darknessCost": 0
         }
       ],
+      "extraEquipment": {
+        "ministry": "INTEGRITY",
+        "kind": "EQUIPMENT"
+      },
       "art": {
         "front": "3R27_recto.jpg"
       }

@@ -25,8 +25,9 @@ public sealed class CogState
     public int Rank { get; set; }
     public string CogId { get; set; } = "";
     public string? EquipmentId { get; set; }
+    public string? ExtraEquipmentId { get; set; }     // carte supplémentaire (Medic Ruzicka)
 
-    /// <summary>Ligne de vie de la partie : celle de la carte, précédée des PV ajoutés par l'équipement/don.</summary>
+    /// <summary>Ligne de vie de la partie : celle de la carte, précédée des PV ajoutés par ses équipements/dons.</summary>
     public List<HealthPointType> LifeLine { get; set; } = new();
 
     /// <summary>Nombre de PV cochés, de gauche à droite.</summary>

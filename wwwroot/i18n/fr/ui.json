@@ -77,8 +77,8 @@
   "play.endGame": "Fin du cycle {0} et de la partie",
   "play.endCycle.title": "+1 Fiel par rouage corrompu, fin des effets du cycle, 4 pions d’action par rouage",
   "play.cycleEnded": "Cycle {0} terminé : +{1} Fiel (rouages corrompus), pions d’action rechargés.",
-  "play.finished": "Partie terminée après 4 cycles : comptez les points de victoire.",
-  "play.lost": "Fiel à 3 : la partie est perdue.",
+  "play.finished": "Partie terminée : comptez les points de victoire.",
+  "play.lost": "Partie perdue : Fiel à 3.",
   "play.abandon": "Abandonner la partie",
   "play.abandon.confirm": "Abandonner la partie en cours ? Son état sera effacé.",
   "play.status.sane": "Sain",
@@ -113,5 +113,9 @@
   "play.block.Exhausted": "Plus d’utilisation disponible dans la partie",
   "play.block.Stunned": "Sonné : pas de capacité active",
   "play.block.NoActions": "Pas assez de pions d’action",
-  "play.cardText": "Texte des cartes"
+  "play.cardText": "Texte des cartes",
+  "play.wounds.title": "Blessures",
+  "play.heal.title": "Soins",
+  "play.extra": "{0} : équipement supplémentaire (premier cycle)",
+  "play.extra.none": "— Aucun —"
 }

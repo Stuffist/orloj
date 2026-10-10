@@ -1,17 +1,17 @@
 @* Mode partie : un rouage de la cabale. Ligne de vie (blessures, soins, correction au toucher),
    Noirceur, pions d'action, état sonné, capacités à coût ou limitées par partie. Toute
-   modification passe par la GameSession (règles + annulation), puis OnChanged (sauvegarde). *@
+   modification passe par la GameSession (règles + annulation), puis OnChanged (sauvegarde,
+   compte rendu en notification). Les fenêtres et notifications se superposent à la page :
+   les boutons de la carte ne bougent pas. *@
 @inject LocalizationService L
+@inject CatalogService Catalog
 
 <article class="play-cog @(S.OutOfAction ? "ooa" : null)">
     <header class="play-cog-head">
         <span class="rank-badge">@(new string('★', S.Rank))</span>
         <div class="play-cog-names">
             <span class="cog-name">@L.CogName(Cog)</span>
-            @if (Equipment is not null)
-            {
-                <span class="cog-title">@L.EquipmentName(Equipment)</span>
-            }
+            <span class="cog-title">@string.Join(" + ", Carried.Select(e => L.EquipmentName(e).Text))</span>
         </div>
         <span class="status-badge @StatusClass">@L.Ui($"play.status.{StatusClass}")</span>
     </header>
@@ -35,35 +35,6 @@
         <button class="btn" @onclick="() => Open(Panel.Wound)" disabled="@S.OutOfAction">@L.Ui("play.wounds")</button>
         <button class="btn" @onclick="() => Open(Panel.Heal)" disabled="@(S.OutOfAction || S.Marked == 0)">@L.Ui("play.heal")</button>
     </div>
-
-    @if (_panel != Panel.None)
-    {
-        <div class="play-panel">
-            <div class="amount">
-                <button class="step" @onclick="() => _amount = Math.Max(1, _amount - 1)" disabled="@(_amount <= 1)" aria-label="−">−</button>
-                <span class="amount-value">@_amount</span>
-                <button class="step" @onclick="() => _amount++" disabled="@(_amount >= S.LifeLine.Count)" aria-label="+">+</button>
-                <span class="amount-label">@L.Ui(_panel == Panel.Wound ? "play.wound.unit" : "play.heal.unit")</span>
-            </div>
-            @if (_panel == Panel.Wound)
-            {
-                <label class="check"><input type="checkbox" @bind="_attack" /> @L.Ui("play.wound.attack")</label>
-                <label class="check @(_attack ? null : "disabled")">
-                    <input type="checkbox" @bind="_ignoreProtection" disabled="@(!_attack)" /> @L.Ui("play.wound.ignoreProtection")
-                </label>
-                <p class="play-preview">→ @Describe(Session.PreviewWound(Slot, _amount, _attack, _ignoreProtection))</p>
-            }
-            <div class="play-row">
-                <button class="btn primary" @onclick="Apply">@L.Ui("play.apply")</button>
-                <button class="btn" @onclick="() => _panel = Panel.None">@L.Ui("play.cancel")</button>
-            </div>
-        </div>
-    }
-
-    @if (Message is not null)
-    {
-        <p class="play-msg">@Message</p>
-    }
 
     <div class="play-tracks">
         <div class="track">
@@ -89,6 +60,20 @@
             <span class="pip r"></span> @L.Ui("play.fortified")
         </button>
     </div>
+
+    @if (Session.CanChooseExtraEquipment(Cog))
+    {
+        <div class="play-extra">
+            <label for="extra-@Slot">@L.Ui("play.extra", L.AbilityName(Cog, 0))</label>
+            <select id="extra-@Slot" value="@(S.ExtraEquipmentId ?? "")" @onchange="OnExtraChanged">
+                <option value="">@L.Ui("play.extra.none")</option>
+                @foreach (var e in ExtraOptions)
+                {
+                    <option value="@e.Id">@L.EquipmentName(e)</option>
+                }
+            </select>
+        </div>
+    }
 
     @if (Tracked.Count > 0)
     {
@@ -121,22 +106,48 @@
     <details class="play-card-text">
         <summary>@L.Ui("play.cardText")</summary>
         <AbilityList Cog="Cog" />
-        @if (Equipment is not null)
+        @foreach (var e in Carried)
         {
-            <h4>@L.EquipmentName(Equipment)</h4>
-            <AbilityList Equipment="Equipment" />
+            <h4>@L.EquipmentName(e)</h4>
+            <AbilityList Equipment="e" />
         }
     </details>
 </article>
+
+@if (_panel != Panel.None)
+{
+    <Sheet Title="@($"{L.Ui(_panel == Panel.Wound ? "play.wounds.title" : "play.heal.title")} — {L.CogName(Cog)}")" OnClose="Close">
+        <div class="amount">
+            <button class="step" @onclick="() => _amount = Math.Max(1, _amount - 1)" disabled="@(_amount <= 1)" aria-label="−">−</button>
+            <span class="amount-value">@_amount</span>
+            <button class="step" @onclick="() => _amount++" disabled="@(_amount >= S.LifeLine.Count)" aria-label="+">+</button>
+            <span class="amount-label">@L.Ui(_panel == Panel.Wound ? "play.wound.unit" : "play.heal.unit")</span>
+        </div>
+        @if (_panel == Panel.Wound)
+        {
+            <label class="check"><input type="checkbox" @bind="_attack" /> @L.Ui("play.wound.attack")</label>
+            <label class="check @(_attack ? null : "disabled")">
+                <input type="checkbox" @bind="_ignoreProtection" disabled="@(!_attack)" /> @L.Ui("play.wound.ignoreProtection")
+            </label>
+            <p class="play-preview">→ @Describe(Session.PreviewWound(Slot, _amount, _attack, _ignoreProtection))</p>
+        }
+        else
+        {
+            <p class="play-preview">→ @L.Ui("play.result.healed", Math.Min(_amount, S.Marked))</p>
+        }
+        <div class="sheet-actions">
+            <button class="btn" @onclick="Close">@L.Ui("play.cancel")</button>
+            <button class="btn primary" @onclick="Apply">@L.Ui("play.apply")</button>
+        </div>
+    </Sheet>
+}
 
 @code {
     [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
     [Parameter] public int Slot { get; set; }
     [Parameter, EditorRequired] public Cog Cog { get; set; } = default!;
-    [Parameter] public Equipment? Equipment { get; set; }
-    [Parameter] public string? Message { get; set; }
 
-    /// <summary>Après chaque modification, avec son compte rendu éventuel.</summary>
+    /// <summary>Après chaque modification, avec son compte rendu éventuel (nom du rouage compris).</summary>
     [Parameter] public EventCallback<string?> OnChanged { get; set; }
 
     private enum Panel { None, Wound, Heal }
@@ -148,6 +159,16 @@
 
     private CogState S => Session.State.Cogs[Slot];
 
+    private Equipment? Main => S.EquipmentId is { } id ? Catalog.EquipmentById(id) : null;
+    private Equipment? Extra => S.ExtraEquipmentId is { } id ? Catalog.EquipmentById(id) : null;
+
+    // Cartes portées : équipement/don, puis carte supplémentaire éventuelle.
+    private List<Equipment> Carried => new[] { Main, Extra }.OfType<Equipment>().ToList();
+
+    // Pas de doublon avec les cartes de la cabale (la carte supplémentaire actuelle reste proposée).
+    private List<Equipment> ExtraOptions => Catalog.ExtraEquipmentOptions(Cog,
+        Session.State.Cogs.SelectMany(c => new[] { c.EquipmentId, c == S ? null : c.ExtraEquipmentId }).OfType<string>());
+
     private string StatusClass => S.OutOfAction ? "outOfAction" : S.Status switch
     {
         DarknessStatus.Sane => "sane",
@@ -157,11 +178,10 @@
 
     private sealed record TrackedAbility(string Key, Ability Ability, Localized Name);
 
-    // Capacités du rouage puis de son équipement/don qui ont un coût ou une limite par partie.
+    // Capacités du rouage puis de ses cartes qui ont un coût ou une limite par partie.
     private List<TrackedAbility> Tracked =>
         Cog.Abilities.Select((a, i) => new TrackedAbility(GameSession.AbilityKey(Cog.Id, i), a, L.AbilityName(Cog, i)))
-           .Concat(Equipment?.Abilities.Select((a, i) => new TrackedAbility(GameSession.AbilityKey(Equipment.Id, i), a, L.AbilityName(Equipment, i)))
-                   ?? Enumerable.Empty<TrackedAbility>())
+           .Concat(Carried.SelectMany(e => e.Abilities.Select((a, i) => new TrackedAbility(GameSession.AbilityKey(e.Id, i), a, L.AbilityName(e, i)))))
            .Where(t => GameSession.IsTracked(t.Ability))
            .ToList();
 
@@ -173,29 +193,37 @@
         _ignoreProtection = false;
     }
 
-    private Task Change(Action action, string? message = null)
+    private void Close() => _panel = Panel.None;
+
+    private Task Report(string? message) =>
+        OnChanged.InvokeAsync(message is null ? null : $"{L.CogName(Cog)} : {message}");
+
+    private Task Change(Action action)
     {
         action();
-        return OnChanged.InvokeAsync(message);
+        return Report(null);
     }
 
     private Task Apply()
     {
         var panel = _panel;
-        _panel = Panel.None;
+        Close();
         if (panel == Panel.Wound)
-        {
-            var outcome = Session.Wound(Slot, _amount, _attack, _ignoreProtection);
-            return OnChanged.InvokeAsync(Describe(outcome));
-        }
-        var healed = Session.Heal(Slot, _amount);
-        return OnChanged.InvokeAsync(L.Ui("play.result.healed", healed));
+            return Report(Describe(Session.Wound(Slot, _amount, _attack, _ignoreProtection)));
+        return Report(L.Ui("play.result.healed", Session.Heal(Slot, _amount)));
     }
 
     private Task AddDarkness()
     {
         var bile = Session.AdjustDarkness(Slot, 1);
-        return OnChanged.InvokeAsync(bile > 0 ? L.Ui("play.result.bile", bile) : null);
+        return Report(bile > 0 ? L.Ui("play.result.bile", bile) : null);
+    }
+
+    private Task OnExtraChanged(ChangeEventArgs e)
+    {
+        var id = e.Value?.ToString();
+        var extra = string.IsNullOrEmpty(id) ? null : Catalog.EquipmentById(id);
+        return Session.SetExtraEquipment(Slot, Cog, Main, extra) ? Report(null) : Task.CompletedTask;
     }
 
     private Task Use(TrackedAbility t)
@@ -204,7 +232,7 @@
         if (!Session.Use(Slot, t.Key, t.Ability)) return Task.CompletedTask;
         var parts = new List<string> { L.Ui("play.result.used", t.Name) };
         if (Session.State.Bile > bile) parts.Add(L.Ui("play.result.bile", Session.State.Bile - bile));
-        return OnChanged.InvokeAsync(string.Join(" · ", parts));
+        return Report(string.Join(" · ", parts));
     }
 
     private string Describe(WoundOutcome o)

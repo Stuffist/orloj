@@ -218,6 +218,41 @@ public class GameSessionTests
     }
 
     [Fact]
+    public async Task Medic_Ruzicka_equipement_supplementaire_de_l_Integrite_au_premier_cycle()
+    {
+        var d = await AppData.GetAsync();
+        var ruzicka = d.Cog("3R27");
+        var kit = d.Equipment("Kit d'Intégrité");
+        var hazmat = d.Equipment("Combinaison Hazmat");
+        var g = new GameSession(GameSession.NewGame(null, "BLAUKAUST",
+            new Cog?[] { ruzicka, d.Cog("2R08"), d.Cog("1R01") },
+            new Equipment?[] { kit, d.Equipment("Carapace"), d.Equipment("Harmonium") }));
+        var slot = SlotOf(g, "3R27");
+
+        // Équipements de l'Intégrité seulement, sans doublon avec ceux de la cabale.
+        var options = d.Catalog.ExtraEquipmentOptions(ruzicka, g.State.Cogs.Select(c => c.EquipmentId!));
+        Assert.Contains(options, e => e.Id == hazmat.Id);
+        Assert.DoesNotContain(options, e => e.Id == kit.Id);
+        Assert.All(options, e => Assert.True(e.Ministry == "INTEGRITY" && e.Kind == EquipmentKind.EQUIPMENT));
+        Assert.Empty(d.Catalog.ExtraEquipmentOptions(d.Cog("1R01"), Array.Empty<string>()));
+
+        Assert.False(g.SetExtraEquipment(slot, ruzicka, kit, d.Equipment("Carapace")));     // hors Intégrité
+        Assert.True(g.SetExtraEquipment(slot, ruzicka, kit, hazmat));
+        Assert.Equal(hazmat.Id, g.State.Cogs[slot].ExtraEquipmentId);
+        Assert.Equal(ruzicka.LifeLine, g.State.Cogs[slot].LifeLine);
+
+        g.Undo();
+        Assert.Null(g.State.Cogs[slot].ExtraEquipmentId);
+        g.SetExtraEquipment(slot, ruzicka, kit, hazmat);
+
+        g.EndCycle();                                         // « au début du premier cycle » seulement
+        Assert.False(g.CanChooseExtraEquipment(ruzicka));
+        Assert.False(g.SetExtraEquipment(slot, ruzicka, kit, null));
+        Assert.Equal(hazmat.Id, g.State.Cogs[slot].ExtraEquipmentId);
+        Assert.False(g.CanChooseExtraEquipment(d.Cog("1R01")));
+    }
+
+    [Fact]
     public async Task Annuler_restaure_l_etat_precedent()
     {
         var g = await NewGame();

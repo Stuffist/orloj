@@ -1,0 +1,30 @@
+@* Fenêtre superposée (panneau en bas de l'écran sur téléphone, centrée sur PC) : rien ne bouge
+   dans la page à son ouverture. Fermée par le fond, la touche Échap ou le bouton ✕. *@
+
+<div class="sheet-backdrop" @onclick="Close">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="@Title" tabindex="-1"
+         @ref="_panel" @onclick:stopPropagation="true" @onkeydown="OnKey">
+        <header class="sheet-head">
+            <h3>@Title</h3>
+            <button class="clear" @onclick="Close" aria-label="✕">✕</button>
+        </header>
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private ElementReference _panel;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await _panel.FocusAsync();     // Échap fonctionne sans clic préalable
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private Task OnKey(KeyboardEventArgs e) => e.Key == "Escape" ? Close() : Task.CompletedTask;
+}

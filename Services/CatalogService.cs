@@ -54,6 +54,20 @@ public sealed class CatalogService
     public Cog? CogById(string id) => _cogById.GetValueOrDefault(id);
     public Equipment? EquipmentById(string id) => _equipmentById.GetValueOrDefault(id);
 
+    /// <summary>
+    /// Cartes supplémentaires proposables à un rouage qui en a la capacité (Medic Ruzicka),
+    /// hors cartes déjà portées dans la cabale (pas de doublon).
+    /// </summary>
+    public List<Equipment> ExtraEquipmentOptions(Cog cog, IEnumerable<string> carriedIds)
+    {
+        if (cog.ExtraEquipment is not { } rule) return new();
+        var carried = carriedIds.ToHashSet();
+        return Catalog.Equipment
+            .Where(e => rule.Allows(e) && !carried.Contains(e.Id))
+            .OrderBy(e => _l.EquipmentName(e).Text, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
     public IReadOnlyList<Faction> AllFactions => FactionReference.Factions;
 
     public bool IsMember(Cog cog, string faction) =>
