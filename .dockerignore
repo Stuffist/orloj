@@ -1,0 +1,15 @@
+# Contexte de construction : seul le nécessaire à « dotnet publish ».
+**/bin/
+**/obj/
+.git/
+.vs/
+.vscode/
+.claude/
+tests/
+schemas/
+Properties/
+**/*.user
+Dockerfile
+.dockerignore
+docker-compose*.yml
+README.md

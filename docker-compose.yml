@@ -1,0 +1,27 @@
+# Olomòc sur le VPS : servi en https://<hôte>/olomoc/ par le nginx frontal du projet B5T,
+# qui gère le TLS et relaie /olomoc/ vers ce conteneur via le réseau Docker partagé « web ».
+#
+#   docker compose up -d --build     (depuis les sources)
+#   docker compose pull && docker compose up -d     (image publiée sur Docker Hub)
+
+services:
+  olomoc:
+    image: stuffist/olomoc
+    build:
+      context: .
+      args:
+        BASE_PATH: /olomoc/
+    restart: always
+    networks:
+      web:
+        aliases:
+          - olomoc
+    # Accès direct, local au VPS uniquement (diagnostic) : curl http://127.0.0.1:8090/olomoc/
+    ports:
+      - "127.0.0.1:${OLOMOC_PORT:-8090}:80"
+
+networks:
+  # Réseau du reverse proxy, créé par le compose de B5T (service nginx).
+  web:
+    name: web
+    external: true

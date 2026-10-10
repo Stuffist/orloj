@@ -20,6 +20,36 @@ dotnet publish -c Release
 # le site se trouve dans bin/Release/net8.0/publish/wwwroot
 ```
 
+## Déploiement (Docker, VPS)
+
+L'app est un Blazor WebAssembly : l'image (`Dockerfile`, multi-étapes) publie avec
+le SDK .NET puis sert les fichiers statiques avec nginx (≈ 65 Mo, pas de runtime
+.NET). Elle est servie sous **`/olomoc/`** (`ARG BASE_PATH`, qui fixe le
+`<base href>` et les routes de `docker/nginx.conf`).
+
+Sur le VPS, le HTTPS et les ports 80/443 sont tenus par le **nginx frontal du
+projet B5T** (`B5TPairings/nginx.conf`, certificat Let's Encrypt de l'hôte). Il
+relaie `/olomoc/` vers le conteneur `olomoc` via le réseau Docker partagé **`web`**,
+créé par le compose de B5T et rejoint ici en `external`.
+
+→ `https://vps-24cf4978.vps.ovh.net/olomoc/`
+
+**Première mise en place** (une fois) :
+
+1. B5T : déployer la version de `docker-compose.yml` / `nginx.conf` qui déclare le
+   réseau `web` et le bloc `location /olomoc/`, puis `docker compose up -d`
+   (crée le réseau et y rattache nginx).
+2. Olomoc : `docker compose up -d --build` dans ce dossier.
+
+**Mises à jour** : `git pull && docker compose up -d --build`. Variante sans les
+sources sur le VPS, comme pour B5T : `docker compose build && docker compose push`
+sur le poste (image `stuffist/olomoc` sur Docker Hub), puis sur le VPS, avec le seul
+`docker-compose.yml` : `docker compose pull && docker compose up -d`.
+
+Le nginx de B5T résout `olomoc` à chaque requête : il démarre et sert B5T même si
+Olomoc est arrêté (`/olomoc/` répond alors 502). Diagnostic sur le VPS :
+`curl -I http://127.0.0.1:8090/olomoc/` (port local, `OLOMOC_PORT` pour le changer).
+
 ## Vocabulaire
 
 - **Tout ce qui est affiché** (interface, messages, noms et effets de jeu) suit le
