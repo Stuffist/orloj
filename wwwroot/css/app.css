@@ -255,13 +255,14 @@ body {
 .play-names { display: flex; flex-direction: column; min-width: 0; }
 .play-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .play-faction { font-size: .78rem; color: var(--muted); }
-.play-counters { display: flex; gap: 1rem; align-items: center; }
+.play-counters { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
 .counter { display: flex; flex-direction: column; align-items: center; gap: .1rem; }
 .counter-label { font-size: .66rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
 .counter-value { font-size: 1.3rem; font-weight: 700; line-height: 1.1; }
 .counter-value small { font-size: .8rem; color: var(--muted); font-weight: 600; }
 .counter-track { display: flex; align-items: center; gap: .35rem; }
 .counter.lost .counter-label { color: var(--rust-soft); }
+.vp-value { min-width: 2ch; text-align: center; font-variant-numeric: tabular-nums; }
 .play-commands { display: flex; gap: .5rem; flex-wrap: wrap; }
 .play-commands .btn { min-height: 2.4rem; }
 
@@ -386,7 +387,8 @@ body {
     position: fixed; z-index: 90; left: 50%; bottom: calc(1rem + env(safe-area-inset-bottom)); transform: translateX(-50%);
     width: max-content; max-width: min(32rem, calc(100vw - 1.5rem));
     background: var(--panel-2); color: var(--ink); border: 1px solid var(--rust-soft); border-radius: 10px;
-    padding: .65rem .9rem; font-size: .88rem; box-shadow: 0 8px 24px rgba(0, 0, 0, .45); cursor: pointer;
+    display: flex; align-items: center; gap: .8rem;
+    padding: .55rem .6rem .55rem .9rem; font-size: .88rem; box-shadow: 0 8px 24px rgba(0, 0, 0, .45); cursor: pointer;
     animation: toast-in .18s ease-out;
 }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, .6rem); } }
@@ -398,7 +400,10 @@ body {
     .app-header .mark { width: 30px; height: 30px; border-width: 2px; }
     .app-header h1 { font-size: 1.02rem; }
     .subtitle { font-size: .78rem; }
-    .play-bar { padding: .5rem .6rem; gap: .5rem .8rem; }
+    /* Barre trop haute pour rester fixée : « Annuler » est aussi dans les notifications. */
+    .play-bar { position: static; padding: .5rem .6rem; gap: .5rem .8rem; }
+    .play-bar .step { width: 2rem; height: 2rem; }
+    .play-counters { gap: .45rem .8rem; }
     .play-back { width: 2.1rem; height: 2.1rem; }
     .play-cog { padding: .7rem; }
 }

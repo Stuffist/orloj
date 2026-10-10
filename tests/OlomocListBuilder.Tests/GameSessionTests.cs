@@ -164,6 +164,47 @@ public class GameSessionTests
     }
 
     [Fact]
+    public async Task Traque_plus_1_par_rouage_hors_de_combat_et_fin_a_3()
+    {
+        var g = await NewGame();
+        var bohdan = SlotOf(g, "3R06");
+        var o = g.Wound(bohdan, 50, attack: false, ignoreProtection: false);
+        Assert.True(o.HuntGained);
+        Assert.Equal(1, g.State.Hunt);
+        Assert.False(g.PreviewWound(bohdan, 1, attack: false, ignoreProtection: false).HuntGained);   // déjà hors de combat
+
+        g.TogglePoint(bohdan, 0);                             // correction : de retour en jeu, pion retiré
+        Assert.Equal(0, g.State.Hunt);
+        g.TogglePoint(bohdan, 11);
+        Assert.Equal(1, g.State.Hunt);
+        g.Heal(bohdan, 1);
+        Assert.Equal(0, g.State.Hunt);
+
+        g.AdjustHunt(2);                                      // rouages adverses : à la main
+        Assert.False(g.IsOver);
+        g.TogglePoint(bohdan, 11);
+        Assert.True(g.IsHunted);
+        Assert.True(g.IsOver);
+        Assert.Equal(0, g.EndCycle());
+        g.AdjustHunt(1);
+        Assert.Equal(GameSession.MaxHunt, g.State.Hunt);
+    }
+
+    [Fact]
+    public async Task Points_de_victoire()
+    {
+        var g = await NewGame();
+        g.AdjustVictoryPoints(-1);
+        Assert.False(g.CanUndo);                              // jamais négatifs : rien à annuler
+        g.AdjustVictoryPoints(3);
+        g.AdjustVictoryPoints(-1);
+        Assert.Equal(2, g.State.VictoryPoints);
+        Assert.Equal(2, GameSession.FromJson(GameSession.ToJson(g.State))!.VictoryPoints);
+        g.Undo();
+        Assert.Equal(3, g.State.VictoryPoints);
+    }
+
+    [Fact]
     public async Task Partie_terminee_apres_4_cycles()
     {
         var g = await NewGame();

@@ -117,5 +117,11 @@
   "play.wounds.title": "Wounds",
   "play.heal.title": "Healing",
   "play.extra": "{0}: extra equipment (first cycle)",
-  "play.extra.none": "— None —"
+  "play.extra.none": "— None —",
+  "play.hunt": "Hunt",
+  "play.hunt.title": "Hunt level: PoliSec tokens, +1 for each allied or enemy cog taken out of action (automatic for yours). At 3, the game ends.",
+  "play.vp": "Victory",
+  "play.vp.title": "Your victory points",
+  "play.hunted": "Hunt at 3: game over, count the victory points.",
+  "play.result.hunt": "+1 hunt"
 }

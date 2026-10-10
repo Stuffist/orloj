@@ -17,6 +17,8 @@ public sealed class GameState
     public string? Faction { get; set; }
     public int Cycle { get; set; } = 1;          // 1 à 4 ; 5 = partie terminée
     public int Bile { get; set; }                // 3 = partie perdue
+    public int Hunt { get; set; }                // niveau de traque (pions de la PoliSec) ; 3 = fin de partie
+    public int VictoryPoints { get; set; }
     public List<CogState> Cogs { get; set; } = new();   // ordre d'affichage : rang 3, 2, 1
 }
 
@@ -66,4 +68,5 @@ public sealed record WoundOutcome(
     int TaintedMarked,   // PV teintés cochés : un pion de Noirceur chacun
     bool Stopped,        // attaque arrêtée par un PV teinté
     int BileGained,      // pions de Noirceur au-delà de 3, passés sur la carte Fiel
-    bool OutOfAction);
+    bool OutOfAction,
+    bool HuntGained);    // rouage mis hors de combat : +1 traque

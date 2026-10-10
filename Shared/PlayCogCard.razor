@@ -243,6 +243,7 @@
         if (o.Stopped) parts.Add(L.Ui("play.result.stopped"));
         if (o.BileGained > 0) parts.Add(L.Ui("play.result.bile", o.BileGained));
         if (o.OutOfAction) parts.Add(L.Ui("play.result.outOfAction"));
+        if (o.HuntGained) parts.Add(L.Ui("play.result.hunt"));
         return string.Join(" · ", parts);
     }
 }

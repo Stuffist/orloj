@@ -46,13 +46,29 @@ else
                     <button class="step" @onclick="() => Act(() => game.AdjustBile(1))" disabled="@(s.Bile >= GameSession.MaxBile)" aria-label="@L.Ui("play.bile") +">+</button>
                 </span>
             </div>
+            <div class="counter hunt @(game.IsHunted ? "lost" : null)" title="@L.Ui("play.hunt.title")">
+                <span class="counter-label">@L.Ui("play.hunt")</span>
+                <span class="counter-track">
+                    <button class="step" @onclick="() => Act(() => game.AdjustHunt(-1))" disabled="@(s.Hunt == 0)" aria-label="@L.Ui("play.hunt") −">−</button>
+                    <TokenTrack Token="hunt" Count="s.Hunt" Max="GameSession.MaxHunt" />
+                    <button class="step" @onclick="() => Act(() => game.AdjustHunt(1))" disabled="@(s.Hunt >= GameSession.MaxHunt)" aria-label="@L.Ui("play.hunt") +">+</button>
+                </span>
+            </div>
+            <div class="counter vp" title="@L.Ui("play.vp.title")">
+                <span class="counter-label">@L.Ui("play.vp")</span>
+                <span class="counter-track">
+                    <button class="step" @onclick="() => Act(() => game.AdjustVictoryPoints(-1))" disabled="@(s.VictoryPoints == 0)" aria-label="@L.Ui("play.vp") −">−</button>
+                    <span class="counter-value vp-value">@s.VictoryPoints</span>
+                    <button class="step" @onclick="() => Act(() => game.AdjustVictoryPoints(1))" aria-label="@L.Ui("play.vp") +">+</button>
+                </span>
+            </div>
         </div>
 
         <div class="play-commands">
             <button class="btn" @onclick="Undo" disabled="@(!game.CanUndo)" title="@L.Ui("play.undo.title")">↶ @L.Ui("play.undo")</button>
             @if (game.IsOver)
             {
-                <span class="play-over @(game.IsLost ? "lost" : null)">@L.Ui(game.IsLost ? "play.lost" : "play.finished")</span>
+                <span class="play-over @(game.IsLost ? "lost" : null)">@L.Ui(OverKey(game))</span>
             }
             else
             {
@@ -79,7 +95,13 @@ else
 
     @if (_toast is not null)
     {
-        <div class="toast" role="status" aria-live="polite" @key="_toastId" @onclick="() => _toast = null">@_toast</div>
+        <div class="toast" role="status" aria-live="polite" @key="_toastId" @onclick="() => _toast = null">
+            <span>@_toast</span>
+            @if (game.CanUndo)
+            {
+                <button class="btn small" @onclick="Undo" @onclick:stopPropagation="true">↶ @L.Ui("play.undo")</button>
+            }
+        </div>
     }
 }
 
@@ -99,6 +121,7 @@ else
         // Partie sauvegardée avec des cartes disparues du référentiel : inutilisable.
         if (Games.Session is { } g && g.State.Cogs.Any(c => Catalog.CogById(c.CogId) is null))
             await Games.ClearAsync();
+        _wasOver = Games.Session?.IsOver ?? false;
         _ready = true;
     }
 
@@ -106,11 +129,21 @@ else
 
     public void Dispose() => L.Changed -= OnLanguageChanged;
 
+    private bool _wasOver;                             // pour annoncer la fin de partie une seule fois
+
     private async Task ChangedAsync(string? message)
     {
         await Games.SaveAsync();
+        var game = Games.Session!;
+        if (game.IsOver && !_wasOver)
+            message = (message is null ? "" : message + " ") + L.Ui(OverKey(game));
+        _wasOver = game.IsOver;
         Toast(message);
     }
+
+    // Fiel à 3 (défaite) avant traque à 3, avant fin du cycle 4 (LDR p.17, p.36).
+    private static string OverKey(GameSession g) =>
+        g.IsLost ? "play.lost" : g.IsHunted ? "play.hunted" : "play.finished";
 
     private Task Act(Action action)
     {
@@ -131,15 +164,20 @@ else
         }));
     }
 
-    private Task Undo() => Act(() => Games.Session!.Undo());
+    private async Task Undo()
+    {
+        Games.Session!.Undo();
+        _wasOver = Games.Session.IsOver;
+        await Games.SaveAsync();
+        Toast(null);
+    }
 
     private async Task EndCycle()
     {
         var game = Games.Session!;
         var cycle = game.State.Cycle;
         var bile = game.EndCycle();
-        await ChangedAsync(L.Ui("play.cycleEnded", cycle, bile) +
-                           (game.IsLost ? " " + L.Ui("play.lost") : game.IsFinished ? " " + L.Ui("play.finished") : ""));
+        await ChangedAsync(L.Ui("play.cycleEnded", cycle, bile));
     }
 
     private async Task AbandonAsync()

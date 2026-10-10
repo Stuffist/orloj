@@ -15,6 +15,7 @@ public sealed class GameSession
     public const int Cycles = 4;
     public const int MaxDarkness = 3;
     public const int MaxBile = 3;
+    public const int MaxHunt = 3;
     public const int ActionsPerCycle = 4;
     private const int UndoDepth = 100;
 
@@ -33,8 +34,9 @@ public sealed class GameSession
 
     public bool CanUndo => _undo.Count > 0;
     public bool IsLost => State.Bile >= MaxBile;
+    public bool IsHunted => State.Hunt >= MaxHunt;
     public bool IsFinished => State.Cycle > Cycles;
-    public bool IsOver => IsLost || IsFinished;
+    public bool IsOver => IsLost || IsHunted || IsFinished;
 
     // ---- Création et sérialisation ----
 
@@ -117,6 +119,7 @@ public sealed class GameSession
 
         int marked = 0, tainted = 0, bile = 0;
         var stopped = false;
+        var wasOut = cog.OutOfAction;
         while (wounds > 0 && !cog.OutOfAction)
         {
             var point = cog.PointAt(cog.Marked);
@@ -128,7 +131,19 @@ public sealed class GameSession
             bile += GiveDarkness(state, cog, 1);
             if (attack && wounds > 0) { stopped = true; break; }
         }
-        return new WoundOutcome(marked, isProtected, tainted, stopped, bile, cog.OutOfAction);
+        var hunt = UpdateHunt(state, cog, wasOut) > 0;
+        return new WoundOutcome(marked, isProtected, tainted, stopped, bile, cog.OutOfAction, hunt);
+    }
+
+    // Rouage (non hostile) mis hors de combat : +1 traque (LDR p.16, p.26) ; une correction
+    // qui le remet en jeu retire ce pion. Renvoie la variation du niveau de traque.
+    private static int UpdateHunt(GameState state, CogState cog, bool wasOut)
+    {
+        var delta = (cog.OutOfAction ? 1 : 0) - (wasOut ? 1 : 0);
+        var hunt = Math.Clamp(state.Hunt + delta, 0, MaxHunt);
+        delta = hunt - state.Hunt;
+        state.Hunt = hunt;
+        return delta;
     }
 
     /// <summary>Soin : décoche les derniers PV cochés.</summary>
@@ -138,7 +153,9 @@ public sealed class GameSession
         var healed = Math.Clamp(points, 0, cog.Marked);
         if (healed == 0) return 0;
         Record();
+        var wasOut = cog.OutOfAction;
         cog.Marked -= healed;
+        UpdateHunt(State, cog, wasOut);
         return healed;
     }
 
@@ -148,7 +165,9 @@ public sealed class GameSession
         var cog = Cog(slot);
         if (index < 0 || index >= cog.LifeLine.Count) return;
         Record();
+        var wasOut = cog.OutOfAction;
         cog.Marked = index < cog.Marked ? index : index + 1;
+        UpdateHunt(State, cog, wasOut);
     }
 
     // ---- Carte supplémentaire (Medic Ruzicka : « au début du premier cycle ») ----
@@ -165,9 +184,11 @@ public sealed class GameSession
         if (!CanChooseExtraEquipment(cog) || state.ExtraEquipmentId == extra?.Id) return false;
         if (extra is not null && !cog.ExtraEquipment!.Allows(extra)) return false;
         Record();
+        var wasOut = state.OutOfAction;
         state.ExtraEquipmentId = extra?.Id;
         state.LifeLine = LifeLineOf(cog, main, extra);
         state.Marked = Math.Min(state.Marked, state.LifeLine.Count);
+        UpdateHunt(State, state, wasOut);
         return true;
     }
 
@@ -211,6 +232,23 @@ public sealed class GameSession
         if (bile == State.Bile) return;
         Record();
         State.Bile = bile;
+    }
+
+    /// <summary>Niveau de traque : pions de la PoliSec, y compris pour les rouages adverses mis hors de combat.</summary>
+    public void AdjustHunt(int delta)
+    {
+        var hunt = Math.Clamp(State.Hunt + delta, 0, MaxHunt);
+        if (hunt == State.Hunt) return;
+        Record();
+        State.Hunt = hunt;
+    }
+
+    public void AdjustVictoryPoints(int delta)
+    {
+        var points = Math.Max(0, State.VictoryPoints + delta);
+        if (points == State.VictoryPoints) return;
+        Record();
+        State.VictoryPoints = points;
     }
 
     public void SetStunned(int slot, bool on)

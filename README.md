@@ -91,6 +91,7 @@ plus rapide (pas de reconstruction d'image).
 | effet de jeu                      | `gameEffect`                            |
 | pion d'action, pion de Noirceur   | `actionCost`, `darknessCost`            |
 | Sain / Teinté / Corrompu, Fiel, hors de combat, sonné | `Sane` / `Tainted` / `Corrupted`, `Bile`, `OutOfAction`, `Stunned` |
+| niveau de traque (PoliSec), points de victoire | `Hunt`, `VictoryPoints` |
 | fréquence d'utilisation           | `frequencies` (`PLANNING_PHASE`, `CYCLE`, `GAME`) |
 | taille de socle                   | `baseSize`                              |
 | recto / verso                     | `front` / `back`                        |
@@ -258,13 +259,16 @@ Règles appliquées (`Services/GameSession.cs`) :
 - **Capacités suivies** : celles qui ont un coût ou une limite par partie (cercle).
   « Utiliser » paie les pions d'action, donne les pions de Noirceur et décompte
   l'usage par partie. Les limites par planification ou par cycle ne sont pas suivies.
+- **Traque** (p.16, p.26) : +1 quand un de vos rouages est mis hors de combat (une
+  correction qui le remet en jeu retire ce pion) ; les rouages adverses s'ajoutent
+  à la main. À 3, la partie prend fin. **Points de victoire** : compteur manuel.
 - **Fin du cycle** (p.35) : +1 Fiel par rouage corrompu encore en jeu, fin des PV
   renforcés temporaires, 4 pions d'action ; partie terminée après le cycle 4.
 
-Le reste (effets des cartes, traque, points de victoire, adversaire) se fait à la
-main avec les actions génériques. Blessures et soins s'ouvrent dans une fenêtre
-superposée et leur compte rendu s'affiche en notification : les boutons des cartes
-ne bougent jamais.
+Le reste (effets des cartes, adversaire) se fait à la main avec les actions génériques. Blessures et soins s'ouvrent dans une fenêtre
+superposée et leur compte rendu s'affiche en notification, avec un bouton
+« Annuler » : les boutons des cartes ne bougent jamais. Cycle, Fiel, traque et points
+de victoire sont dans la barre du haut (fixée à l'écran, sauf sur téléphone).
 
 ## Architecture
 

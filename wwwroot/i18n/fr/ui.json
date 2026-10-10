@@ -117,5 +117,11 @@
   "play.wounds.title": "Blessures",
   "play.heal.title": "Soins",
   "play.extra": "{0} : équipement supplémentaire (premier cycle)",
-  "play.extra.none": "— Aucun —"
+  "play.extra.none": "— Aucun —",
+  "play.hunt": "Traque",
+  "play.hunt.title": "Niveau de traque : pions de la PoliSec, +1 par rouage allié ou adverse mis hors de combat (automatique pour les vôtres). À 3, la partie prend fin.",
+  "play.vp": "Victoire",
+  "play.vp.title": "Vos points de victoire",
+  "play.hunted": "Traque à 3 : partie terminée, comptez les points de victoire.",
+  "play.result.hunt": "+1 traque"
 }
