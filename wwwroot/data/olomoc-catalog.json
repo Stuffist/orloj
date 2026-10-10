@@ -1164,6 +1164,10 @@
           "darknessCost": 0
         }
       ],
+      "lifeLinePrefix": [
+        "R",
+        "R"
+      ],
       "art": {
         "front": "D01.jpg"
       },

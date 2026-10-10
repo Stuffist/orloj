@@ -1,0 +1,220 @@
+@* Mode partie : un rouage de la cabale. Ligne de vie (blessures, soins, correction au toucher),
+   Noirceur, pions d'action, état sonné, capacités à coût ou limitées par partie. Toute
+   modification passe par la GameSession (règles + annulation), puis OnChanged (sauvegarde). *@
+@inject LocalizationService L
+
+<article class="play-cog @(S.OutOfAction ? "ooa" : null)">
+    <header class="play-cog-head">
+        <span class="rank-badge">@(new string('★', S.Rank))</span>
+        <div class="play-cog-names">
+            <span class="cog-name">@L.CogName(Cog)</span>
+            @if (Equipment is not null)
+            {
+                <span class="cog-title">@L.EquipmentName(Equipment)</span>
+            }
+        </div>
+        <span class="status-badge @StatusClass">@L.Ui($"play.status.{StatusClass}")</span>
+    </header>
+
+    <div class="play-hp">
+        <div class="life-line play">
+            @for (var i = 0; i < S.LifeLine.Count; i++)
+            {
+                var index = i;
+                var point = S.PointAt(i);
+                var marked = i < S.Marked;
+                <button class="pip @point.ToString().ToLower() @(marked ? "marked" : null) @(point != S.LifeLine[i] ? "fortified" : null)"
+                        title="@L.Ui($"hp.{point}") · @L.Ui("play.hp.toggle")" aria-pressed="@marked"
+                        @onclick="() => Change(() => Session.TogglePoint(Slot, index))"></button>
+            }
+        </div>
+        <span class="hp-count">@S.Remaining<small>/@S.LifeLine.Count</small></span>
+    </div>
+
+    <div class="play-row">
+        <button class="btn" @onclick="() => Open(Panel.Wound)" disabled="@S.OutOfAction">@L.Ui("play.wounds")</button>
+        <button class="btn" @onclick="() => Open(Panel.Heal)" disabled="@(S.OutOfAction || S.Marked == 0)">@L.Ui("play.heal")</button>
+    </div>
+
+    @if (_panel != Panel.None)
+    {
+        <div class="play-panel">
+            <div class="amount">
+                <button class="step" @onclick="() => _amount = Math.Max(1, _amount - 1)" disabled="@(_amount <= 1)" aria-label="−">−</button>
+                <span class="amount-value">@_amount</span>
+                <button class="step" @onclick="() => _amount++" disabled="@(_amount >= S.LifeLine.Count)" aria-label="+">+</button>
+                <span class="amount-label">@L.Ui(_panel == Panel.Wound ? "play.wound.unit" : "play.heal.unit")</span>
+            </div>
+            @if (_panel == Panel.Wound)
+            {
+                <label class="check"><input type="checkbox" @bind="_attack" /> @L.Ui("play.wound.attack")</label>
+                <label class="check @(_attack ? null : "disabled")">
+                    <input type="checkbox" @bind="_ignoreProtection" disabled="@(!_attack)" /> @L.Ui("play.wound.ignoreProtection")
+                </label>
+                <p class="play-preview">→ @Describe(Session.PreviewWound(Slot, _amount, _attack, _ignoreProtection))</p>
+            }
+            <div class="play-row">
+                <button class="btn primary" @onclick="Apply">@L.Ui("play.apply")</button>
+                <button class="btn" @onclick="() => _panel = Panel.None">@L.Ui("play.cancel")</button>
+            </div>
+        </div>
+    }
+
+    @if (Message is not null)
+    {
+        <p class="play-msg">@Message</p>
+    }
+
+    <div class="play-tracks">
+        <div class="track">
+            <span class="track-label">@L.Ui("play.darkness")</span>
+            <button class="step" @onclick="() => Change(() => Session.AdjustDarkness(Slot, -1))" disabled="@(S.Darkness == 0)" aria-label="@L.Ui("play.darkness") −">−</button>
+            <TokenTrack Token="darkness" Count="S.Darkness" Max="GameSession.MaxDarkness" />
+            <button class="step" @onclick="AddDarkness" aria-label="@L.Ui("play.darkness") +">+</button>
+        </div>
+        <div class="track">
+            <span class="track-label">@L.Ui("play.actions")</span>
+            <button class="step" @onclick="() => Change(() => Session.AdjustActions(Slot, -1))" disabled="@(S.Actions == 0)" aria-label="@L.Ui("play.actions") −">−</button>
+            <TokenTrack Token="action" Count="S.Actions" Max="GameSession.ActionsPerCycle" />
+            <button class="step" @onclick="() => Change(() => Session.AdjustActions(Slot, 1))" disabled="@(S.Actions >= GameSession.ActionsPerCycle)" aria-label="@L.Ui("play.actions") +">+</button>
+        </div>
+    </div>
+
+    <div class="play-row toggles">
+        <button class="toggle @(S.Stunned ? "on" : null)" aria-pressed="@S.Stunned" @onclick="() => Change(() => Session.SetStunned(Slot, !S.Stunned))">
+            <img class="pict-img" src="img/icons/stunned.png" alt="" /> @L.Ui("play.stunned")
+        </button>
+        <button class="toggle @(S.Fortified ? "on" : null)" aria-pressed="@S.Fortified" title="@L.Ui("play.fortified.title")"
+                @onclick="() => Change(() => Session.SetFortified(Slot, !S.Fortified))">
+            <span class="pip r"></span> @L.Ui("play.fortified")
+        </button>
+    </div>
+
+    @if (Tracked.Count > 0)
+    {
+        <ul class="play-abilities">
+            @foreach (var t in Tracked)
+            {
+                var block = Session.CanUse(Slot, t.Key, t.Ability);
+                var limit = GameSession.GameLimit(t.Ability);
+                <li>
+                    <span class="ability-picts row">
+                        @if (t.Ability.ActionCost > 0) { <Pictogram Token="action" Count="t.Ability.ActionCost" /> }
+                        @if (t.Ability.DarknessCost > 0) { <Pictogram Token="darkness" Count="t.Ability.DarknessCost" /> }
+                        @if (limit is { } n) { <Pictogram Token="freq-game" Count="n" /> }
+                    </span>
+                    <span class="play-ability-name">@t.Name</span>
+                    @if (limit is not null)
+                    {
+                        <span class="uses-left @(block == AbilityBlock.Exhausted ? "none" : null)" title="@L.Ui("play.usesLeft")">
+                            @Session.UsesLeft(Slot, t.Key, t.Ability)/@limit
+                        </span>
+                    }
+                    <button class="btn small" disabled="@(block != AbilityBlock.None)"
+                            title="@(block == AbilityBlock.None ? null : L.Ui($"play.block.{block}"))"
+                            @onclick="() => Use(t)">@L.Ui("play.use")</button>
+                </li>
+            }
+        </ul>
+    }
+
+    <details class="play-card-text">
+        <summary>@L.Ui("play.cardText")</summary>
+        <AbilityList Cog="Cog" />
+        @if (Equipment is not null)
+        {
+            <h4>@L.EquipmentName(Equipment)</h4>
+            <AbilityList Equipment="Equipment" />
+        }
+    </details>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
+    [Parameter] public int Slot { get; set; }
+    [Parameter, EditorRequired] public Cog Cog { get; set; } = default!;
+    [Parameter] public Equipment? Equipment { get; set; }
+    [Parameter] public string? Message { get; set; }
+
+    /// <summary>Après chaque modification, avec son compte rendu éventuel.</summary>
+    [Parameter] public EventCallback<string?> OnChanged { get; set; }
+
+    private enum Panel { None, Wound, Heal }
+
+    private Panel _panel;
+    private int _amount = 1;
+    private bool _attack = true;
+    private bool _ignoreProtection;
+
+    private CogState S => Session.State.Cogs[Slot];
+
+    private string StatusClass => S.OutOfAction ? "outOfAction" : S.Status switch
+    {
+        DarknessStatus.Sane => "sane",
+        DarknessStatus.Tainted => "tainted",
+        _ => "corrupted",
+    };
+
+    private sealed record TrackedAbility(string Key, Ability Ability, Localized Name);
+
+    // Capacités du rouage puis de son équipement/don qui ont un coût ou une limite par partie.
+    private List<TrackedAbility> Tracked =>
+        Cog.Abilities.Select((a, i) => new TrackedAbility(GameSession.AbilityKey(Cog.Id, i), a, L.AbilityName(Cog, i)))
+           .Concat(Equipment?.Abilities.Select((a, i) => new TrackedAbility(GameSession.AbilityKey(Equipment.Id, i), a, L.AbilityName(Equipment, i)))
+                   ?? Enumerable.Empty<TrackedAbility>())
+           .Where(t => GameSession.IsTracked(t.Ability))
+           .ToList();
+
+    private void Open(Panel panel)
+    {
+        _panel = panel;
+        _amount = 1;
+        _attack = true;
+        _ignoreProtection = false;
+    }
+
+    private Task Change(Action action, string? message = null)
+    {
+        action();
+        return OnChanged.InvokeAsync(message);
+    }
+
+    private Task Apply()
+    {
+        var panel = _panel;
+        _panel = Panel.None;
+        if (panel == Panel.Wound)
+        {
+            var outcome = Session.Wound(Slot, _amount, _attack, _ignoreProtection);
+            return OnChanged.InvokeAsync(Describe(outcome));
+        }
+        var healed = Session.Heal(Slot, _amount);
+        return OnChanged.InvokeAsync(L.Ui("play.result.healed", healed));
+    }
+
+    private Task AddDarkness()
+    {
+        var bile = Session.AdjustDarkness(Slot, 1);
+        return OnChanged.InvokeAsync(bile > 0 ? L.Ui("play.result.bile", bile) : null);
+    }
+
+    private Task Use(TrackedAbility t)
+    {
+        var bile = Session.State.Bile;
+        if (!Session.Use(Slot, t.Key, t.Ability)) return Task.CompletedTask;
+        var parts = new List<string> { L.Ui("play.result.used", t.Name) };
+        if (Session.State.Bile > bile) parts.Add(L.Ui("play.result.bile", Session.State.Bile - bile));
+        return OnChanged.InvokeAsync(string.Join(" · ", parts));
+    }
+
+    private string Describe(WoundOutcome o)
+    {
+        var parts = new List<string> { L.Ui("play.result.marked", o.Marked) };
+        if (o.Protected) parts.Add(L.Ui("play.result.protection"));
+        if (o.TaintedMarked > 0) parts.Add(L.Ui("play.result.tainted", o.TaintedMarked));
+        if (o.Stopped) parts.Add(L.Ui("play.result.stopped"));
+        if (o.BileGained > 0) parts.Add(L.Ui("play.result.bile", o.BileGained));
+        if (o.OutOfAction) parts.Add(L.Ui("play.result.outOfAction"));
+        return string.Join(" · ", parts);
+    }
+}

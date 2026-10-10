@@ -26,6 +26,7 @@ public sealed class CatalogService
     private readonly HttpClient _http;
     private readonly LocalizationService _l;
     private Dictionary<string, Cog> _cogById = new();
+    private Dictionary<string, Equipment> _equipmentById = new();
     private Dictionary<string, Faction> _factionByCode = new();
     private Dictionary<string, HashSet<string>> _membersByFaction = new();
     private List<string> _allMinistries = new();
@@ -43,6 +44,7 @@ public sealed class CatalogService
         FactionReference = await _http.GetFromJsonAsync<FactionReference>("data/olomoc-factions.json", JsonOpts) ?? new();
 
         _cogById = Catalog.Cogs.ToDictionary(c => c.Id);
+        _equipmentById = Catalog.Equipment.ToDictionary(e => e.Id);
         _factionByCode = FactionReference.Factions.ToDictionary(f => f.Code);
         _membersByFaction = FactionReference.Factions.ToDictionary(f => f.Code, f => f.CogIds.ToHashSet());
         _allMinistries = Catalog.Ministries.Select(m => m.Code).ToList();
@@ -50,6 +52,7 @@ public sealed class CatalogService
     }
 
     public Cog? CogById(string id) => _cogById.GetValueOrDefault(id);
+    public Equipment? EquipmentById(string id) => _equipmentById.GetValueOrDefault(id);
 
     public IReadOnlyList<Faction> AllFactions => FactionReference.Factions;
 

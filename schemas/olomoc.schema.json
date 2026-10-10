@@ -436,6 +436,14 @@
             "$ref": "#/$defs/ability"
           }
         },
+        "lifeLinePrefix": {
+          "type": "array",
+          "description": "PV ajoutés au début de la ligne de vie du rouage équipé, dans l'ordre (ex. Carapace : deux PV renforcés). Appliqué par le mode partie. Absent = aucun.",
+          "items": {
+            "$ref": "#/$defs/healthPointType"
+          },
+          "minItems": 1
+        },
         "art": {
           "$ref": "#/$defs/art"
         },

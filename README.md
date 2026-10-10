@@ -90,6 +90,7 @@ plus rapide (pas de reconstruction d'image).
 | temporalité : Active / Permanente | `timing` : `Active` / `Permanent`       |
 | effet de jeu                      | `gameEffect`                            |
 | pion d'action, pion de Noirceur   | `actionCost`, `darknessCost`            |
+| Sain / Teinté / Corrompu, Fiel, hors de combat, sonné | `Sane` / `Tainted` / `Corrupted`, `Bile`, `OutOfAction`, `Stunned` |
 | fréquence d'utilisation           | `frequencies` (`PLANNING_PHASE`, `CYCLE`, `GAME`) |
 | taille de socle                   | `baseSize`                              |
 | recto / verso                     | `front` / `back`                        |
@@ -226,6 +227,37 @@ reflète la composition en cours, même incomplète (un avertissement le signale
                 "equipment": { "id": "E11", "name": "Harmonium" } }, … ] }
   ```
 
+## Mode partie
+
+Depuis le constructeur, « Lancer une partie » ouvre `/play` avec la cabale en cours
+(trois rouages requis ; une cabale illégale est acceptée, avec un avertissement).
+Pensé pour un téléphone ou une tablette, utilisable sur PC. Une seule partie par
+appareil, sauvegardée dans le `localStorage` (clé `olomoc.game`) après chaque
+modification ; « Annuler » remonte l'historique de la session (100 étapes, non sauvegardé).
+
+Règles appliquées (`Services/GameSession.cs`) :
+
+- **Ligne de vie** (LDR p.16) : blessures cochées de gauche à droite. Suite à une
+  attaque, une blessure de moins s'il reste au moins un PV renforcé à cocher (sauf
+  blessures qui ignorent la protection), et arrêt au premier PV teinté coché. Tout
+  PV teinté coché donne un pion de Noirceur (p.17), attaque ou non. Soin = décocher
+  les derniers PV cochés ; toucher un PV corrige la ligne à la main.
+- **Équipements qui modifient la ligne de vie** : `lifeLinePrefix` dans le
+  référentiel (Carapace : deux PV renforcés en tête). Interrupteur « PV renforcés »
+  (PV standards renforcés jusqu'à la fin du cycle, p. ex. Anabolisant).
+- **Noirceur et Fiel** (p.17) : statut Sain (0), Teinté (1-2), Corrompu (3) ; un
+  pion au-delà de 3 va sur le Fiel ; Fiel à 3 = partie perdue.
+- **Pions d'action** (p.33) : 4 par rouage et par cycle ; **sonné** (p.18) :
+  interdit les capacités actives.
+- **Capacités suivies** : celles qui ont un coût ou une limite par partie (cercle).
+  « Utiliser » paie les pions d'action, donne les pions de Noirceur et décompte
+  l'usage par partie. Les limites par planification ou par cycle ne sont pas suivies.
+- **Fin du cycle** (p.35) : +1 Fiel par rouage corrompu encore en jeu, fin des PV
+  renforcés temporaires, 4 pions d'action ; partie terminée après le cycle 4.
+
+Le reste (effets des cartes, traque, points de victoire, adversaire) se fait à la
+main avec les actions génériques.
+
 ## Architecture
 
 - `Models/CatalogModels.cs` — référentiel neutre (`Cog`, `Equipment`, `Ministry`,
@@ -239,8 +271,12 @@ reflète la composition en cours, même incomplète (un avertissement le signale
   `AvailableEquipment`, `RecruitVia`, `CheckLegality` (dont le couplage biparti).
 - `Services/CogQuery.cs` — analyse de la recherche (mots + conditions sur les stats).
 - `Services/CabalExporter.cs` — exports texte (format bwaaaanegamesdb.fr) et JSON.
+- `Models/GameModels.cs`, `Services/GameSession.cs`, `Services/GameStore.cs` — mode
+  partie : état sauvegardable, règles et annulation, sauvegarde dans le navigateur.
+- `Services/CabalDraft.cs` — cabale en cours de composition, conservée en naviguant.
 - `Shared/StatLine.razor`, `AbilityList.razor`, `GameEffect.razor`,
   `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre.
-- `Pages/Home.razor` — état de la cabale et UI réactive.
-- `tests/OlomocListBuilder.Tests` — xUnit : légalité, recherche, cohérence des langues
+- `Pages/Home.razor` — constructeur : composition, légalité, export, lancement d'une partie.
+- `Pages/Play.razor`, `Shared/PlayCogCard.razor`, `TokenTrack.razor` — mode partie.
+- `tests/OlomocListBuilder.Tests` — xUnit : légalité, recherche, export, mode partie, cohérence des langues
   (compile les modèles et services de l'app, lit les données de `wwwroot`).

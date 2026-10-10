@@ -5,6 +5,9 @@
 @inject LocalizationService L
 @inject CabalExporter Exporter
 @inject IJSRuntime JS
+@inject CabalDraft Draft
+@inject GameStore Games
+@inject NavigationManager Nav
 
 @if (!Catalog.Loaded || !L.Loaded)
 {
@@ -162,6 +165,26 @@ else
         }
     </section>
 
+    <section class="play-launch">
+        <h2>@L.Ui("play.launch.title")</h2>
+        <p class="play-launch-intro">@L.Ui("play.launch.intro")</p>
+        @if (_cogs.Any(c => c is null))
+        {
+            <p class="empty">@L.Ui("play.launch.incomplete")</p>
+        }
+        else if (!_legality.IsLegal)
+        {
+            <p class="export-warning">@L.Ui("play.launch.notLegal")</p>
+        }
+        <div class="play-launch-actions">
+            <button class="btn primary" disabled="@_cogs.Any(c => c is null)" @onclick="StartGameAsync">@L.Ui("play.launch.start")</button>
+            @if (Games.Session is { } game)
+            {
+                <a class="btn" href="play">@L.Ui("play.launch.resume", Math.Min(game.State.Cycle, GameSession.Cycles))</a>
+            }
+        </div>
+    </section>
+
     <section class="export">
         <h2>@L.Ui("export.title")</h2>
         <div class="export-controls">
@@ -202,15 +225,16 @@ else
 }
 
 @code {
-    private string _faction = "";
+    // Composition conservée par CabalDraft : on la retrouve en revenant du mode partie.
+    private string _faction { get => Draft.Faction; set => Draft.Faction = value; }
     private string _ministryFilter = "";
     private string _search = "";
     private CogQuery _query = CogQuery.Empty;
     private IReadOnlyDictionary<string, StatKind> _keywords = new Dictionary<string, StatKind>();
 
     // index 0 => rang 1, index 1 => rang 2, index 2 => rang 3
-    private readonly Cog?[] _cogs = new Cog?[3];
-    private readonly Equipment?[] _equipment = new Equipment?[3];
+    private Cog?[] _cogs => Draft.Cogs;
+    private Equipment?[] _equipment => Draft.Equipment;
     private LegalityResult _legality = new(false, new[] { new LegalityIssue("start") });
 
     protected override async Task OnInitializedAsync()
@@ -218,6 +242,7 @@ else
         L.Changed += OnLanguageChanged;
         await L.EnsureLoadedAsync();
         await Catalog.EnsureLoadedAsync();
+        await Games.EnsureLoadedAsync();
         _keywords = L.StatKeywords();
         Recompute();
     }
@@ -300,7 +325,7 @@ else
 
     // ---- Export ----
 
-    private string _cabalName = "";
+    private string _cabalName { get => Draft.Name; set => Draft.Name = value; }
     private bool _exportJson;
     private string? _copied;            // dernier contenu copié : le bouton l'indique tant qu'il est à jour
 
@@ -323,6 +348,15 @@ else
             // Presse-papiers indisponible (contexte non sécurisé, refus) : le texte reste sélectionnable.
             _copied = null;
         }
+    }
+
+    // ---- Mode partie ----
+
+    private async Task StartGameAsync()
+    {
+        if (Games.Session is not null && !await JS.InvokeAsync<bool>("confirm", L.Ui("play.launch.replace"))) return;
+        await Games.StartAsync(GameSession.NewGame(_cabalName, NullIfEmpty(_faction), _cogs, _equipment));
+        Nav.NavigateTo("play");
     }
 
     private static string? NullIfEmpty(string s) => string.IsNullOrWhiteSpace(s) ? null : s;

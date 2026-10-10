@@ -10,5 +10,7 @@ builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.H
 builder.Services.AddScoped<LocalizationService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<CabalExporter>();
+builder.Services.AddScoped<CabalDraft>();
+builder.Services.AddScoped<GameStore>();
 
 await builder.Build().RunAsync();

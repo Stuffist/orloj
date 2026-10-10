@@ -67,6 +67,7 @@ public sealed class Equipment
     public string? Faction { get; init; }     //   Ministère, faction,
     public string? CogId { get; init; }       //   ou rouage équipé
     public List<Ability> Abilities { get; init; } = new();
+    public List<HealthPointType> LifeLinePrefix { get; init; } = new();   // PV ajoutés en tête de ligne de vie
     public Art? Art { get; init; }
     public string? Set { get; init; }
     public List<BuildRule> BuildRules { get; init; } = new();

@@ -2,6 +2,7 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @inject LocalizationService L
+@inject NavigationManager Nav
 
 <PageTitle>@(L.Loaded ? L.Ui("app.title") : "Olomòc")</PageTitle>
 
@@ -12,7 +13,7 @@
             @if (L.Loaded)
             {
                 <h1>@L.Ui("app.title")</h1>
-                <p class="subtitle">@L.Ui("app.subtitle")</p>
+                <p class="subtitle">@L.Ui(IsPlay ? "play.subtitle" : "app.subtitle")</p>
             }
             else
             {
@@ -39,6 +40,7 @@
     protected override async Task OnInitializedAsync()
     {
         L.Changed += OnChanged;
+        Nav.LocationChanged += OnLocationChanged;
         await L.EnsureLoadedAsync();
     }
 
@@ -46,5 +48,13 @@
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => L.Changed -= OnChanged;
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => OnChanged();
+
+    private bool IsPlay => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("play", StringComparison.Ordinal);
+
+    public void Dispose()
+    {
+        L.Changed -= OnChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+    }
 }

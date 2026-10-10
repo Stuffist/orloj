@@ -1,0 +1,147 @@
+@page "/play"
+@namespace OlomocListBuilder.Pages
+@implements IDisposable
+@inject CatalogService Catalog
+@inject LocalizationService L
+@inject GameStore Games
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+@if (!_ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else if (Games.Session is not { } game)
+{
+    <section class="play-empty">
+        <p class="empty">@L.Ui("play.none")</p>
+        <a class="btn" href="">@L.Ui("play.toBuilder")</a>
+    </section>
+}
+else
+{
+    var s = game.State;
+    <section class="play-bar">
+        <div class="play-ident">
+            <a class="play-back" href="" title="@L.Ui("play.toBuilder")">←</a>
+            <div class="play-names">
+                <span class="play-name">@(s.Name ?? L.Ui("play.unnamed"))</span>
+                @if (s.Faction is { } f)
+                {
+                    <span class="play-faction">@L.FactionName(f)</span>
+                }
+            </div>
+        </div>
+
+        <div class="play-counters">
+            <div class="counter">
+                <span class="counter-label">@L.Ui("play.cycle")</span>
+                <span class="counter-value">@Math.Min(s.Cycle, GameSession.Cycles)<small>/@GameSession.Cycles</small></span>
+            </div>
+            <div class="counter bile @(game.IsLost ? "lost" : null)">
+                <span class="counter-label">@L.Ui("play.bile")</span>
+                <span class="counter-track">
+                    <button class="step" @onclick="() => Act(() => game.AdjustBile(-1))" disabled="@(s.Bile == 0)" aria-label="@L.Ui("play.bile") −">−</button>
+                    <TokenTrack Token="darkness" Count="s.Bile" Max="GameSession.MaxBile" />
+                    <button class="step" @onclick="() => Act(() => game.AdjustBile(1))" disabled="@(s.Bile >= GameSession.MaxBile)" aria-label="@L.Ui("play.bile") +">+</button>
+                </span>
+            </div>
+        </div>
+
+        <div class="play-commands">
+            <button class="btn" @onclick="Undo" disabled="@(!game.CanUndo)" title="@L.Ui("play.undo.title")">↶ @L.Ui("play.undo")</button>
+            <button class="btn primary" @onclick="EndCycle" disabled="@game.IsOver" title="@L.Ui("play.endCycle.title")">
+                @L.Ui(s.Cycle >= GameSession.Cycles ? "play.endGame" : "play.endCycle", Math.Min(s.Cycle, GameSession.Cycles))
+            </button>
+        </div>
+    </section>
+
+    @if (game.IsLost)
+    {
+        <p class="play-banner ko">@L.Ui("play.lost")</p>
+    }
+    else if (game.IsFinished)
+    {
+        <p class="play-banner">@L.Ui("play.finished")</p>
+    }
+    @if (_message is not null)
+    {
+        <p class="play-banner info">@_message</p>
+    }
+
+    <section class="play-cogs">
+        @for (var i = 0; i < s.Cogs.Count; i++)
+        {
+            var slot = i;
+            var cs = s.Cogs[slot];
+            if (Catalog.CogById(cs.CogId) is not { } cog) continue;
+            <PlayCogCard Session="game" Slot="slot" Cog="cog"
+                         Equipment="@(cs.EquipmentId is { } eid ? Catalog.EquipmentById(eid) : null)"
+                         Message="@(_cardMessage?.Slot == slot ? _cardMessage.Value.Text : null)"
+                         OnChanged="msg => CardChangedAsync(slot, msg)" />
+        }
+    </section>
+
+    <section class="play-footer">
+        <button class="btn danger" @onclick="AbandonAsync">@L.Ui("play.abandon")</button>
+    </section>
+}
+
+@code {
+    private bool _ready;
+    private string? _message;                          // compte rendu de la dernière fin de cycle
+    private (int Slot, string Text)? _cardMessage;     // compte rendu de la dernière action sur un rouage
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnLanguageChanged;
+        await L.EnsureLoadedAsync();
+        await Catalog.EnsureLoadedAsync();
+        await Games.EnsureLoadedAsync();
+        // Partie sauvegardée avec des cartes disparues du référentiel : inutilisable.
+        if (Games.Session is { } g && g.State.Cogs.Any(c => Catalog.CogById(c.CogId) is null))
+            await Games.ClearAsync();
+        _ready = true;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnLanguageChanged;
+
+    private Task SavedAsync()
+    {
+        _message = null;
+        _cardMessage = null;
+        return Games.SaveAsync();
+    }
+
+    private async Task CardChangedAsync(int slot, string? message)
+    {
+        await SavedAsync();
+        _cardMessage = message is null ? null : (slot, message);
+    }
+
+    private Task Act(Action action)
+    {
+        action();
+        return SavedAsync();
+    }
+
+    private Task Undo() => Act(() => Games.Session!.Undo());
+
+    private async Task EndCycle()
+    {
+        var game = Games.Session!;
+        var cycle = game.State.Cycle;
+        var bile = game.EndCycle();
+        await SavedAsync();
+        _message = L.Ui("play.cycleEnded", cycle, bile);
+    }
+
+    private async Task AbandonAsync()
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", L.Ui("play.abandon.confirm"))) return;
+        await Games.ClearAsync();
+        Nav.NavigateTo("");
+    }
+}

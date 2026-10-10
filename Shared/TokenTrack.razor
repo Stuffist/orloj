@@ -1,0 +1,15 @@
+@* Réserve de pions (Noirceur, action, Fiel) : Count pions posés sur Max emplacements,
+   avec l'icône du livre de règles ; les emplacements vides sont estompés. *@
+
+<span class="token-track" role="img" aria-label="@Count / @Max">
+    @for (var i = 0; i < Max; i++)
+    {
+        <img class="token @(i < Count ? "on" : "off")" src="img/icons/@(Token).png" alt="" />
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public string Token { get; set; } = "";
+    [Parameter] public int Count { get; set; }
+    [Parameter] public int Max { get; set; }
+}

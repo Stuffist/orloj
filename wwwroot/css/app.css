@@ -225,3 +225,145 @@ body {
     border-radius: 6px; padding: .45rem .9rem; font-size: .9rem; cursor: pointer; text-decoration: none;
 }
 .btn:hover { border-color: var(--rust-soft); }
+
+.btn:disabled { opacity: .45; cursor: default; border-color: var(--line); }
+.btn.primary { background: var(--rust); border-color: var(--rust); color: #fff; }
+.btn.primary:hover:not(:disabled) { background: var(--rust-soft); }
+.btn.danger { color: var(--rust-soft); border-color: var(--rust); background: transparent; }
+.btn.small { padding: .25rem .6rem; font-size: .8rem; }
+
+/* Lancement du mode partie (constructeur) */
+.play-launch { margin-top: 1.5rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; }
+.play-launch h2 { margin: 0 0 .3rem; font-size: 1.05rem; }
+.play-launch-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+.play-launch-intro { margin: 0 0 .6rem; color: var(--muted); font-size: .88rem; }
+
+/* Mode partie : pensé pour un téléphone ou une tablette posé sur la table */
+.play-empty { text-align: center; padding: 2rem 0; }
+.play-bar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: .6rem .8rem; margin-bottom: .8rem;
+}
+.play-ident { display: flex; align-items: center; gap: .6rem; flex: 1 1 12rem; min-width: 0; }
+.play-back {
+    flex: none; width: 2.4rem; height: 2.4rem; display: grid; place-items: center;
+    border: 1px solid var(--line); border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 1.1rem;
+}
+.play-back:hover { border-color: var(--rust-soft); }
+.play-names { display: flex; flex-direction: column; min-width: 0; }
+.play-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.play-faction { font-size: .78rem; color: var(--muted); }
+.play-counters { display: flex; gap: 1rem; align-items: center; }
+.counter { display: flex; flex-direction: column; align-items: center; gap: .1rem; }
+.counter-label { font-size: .66rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+.counter-value { font-size: 1.3rem; font-weight: 700; line-height: 1.1; }
+.counter-value small { font-size: .8rem; color: var(--muted); font-weight: 600; }
+.counter-track { display: flex; align-items: center; gap: .35rem; }
+.counter.lost .counter-label { color: var(--rust-soft); }
+.play-commands { display: flex; gap: .5rem; flex-wrap: wrap; }
+.play-commands .btn { min-height: 2.4rem; }
+
+.play-banner {
+    margin: 0 0 .8rem; padding: .55rem .8rem; border-radius: 8px;
+    border: 1px solid var(--ok); background: rgba(63, 166, 106, .1); font-size: .9rem;
+}
+.play-banner.ko { border-color: var(--ko); background: rgba(193, 68, 14, .12); color: var(--rust-soft); font-weight: 600; }
+.play-banner.info { border-color: var(--line); background: var(--panel-2); color: var(--ink); }
+
+.play-cogs { display: grid; grid-template-columns: minmax(0, 1fr); gap: .8rem; }
+@media (min-width: 1000px) { .play-cogs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.play-cog {
+    display: flex; flex-direction: column; gap: .65rem;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: .8rem;
+}
+.play-cog.ooa { opacity: .6; border-style: dashed; }
+.play-cog-head { display: flex; align-items: center; gap: .55rem; }
+.play-cog-names { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.status-badge {
+    flex: none; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    padding: .15rem .5rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted);
+}
+.status-badge.tainted { border-color: #8c6bb1; color: #b89ad6; }
+.status-badge.corrupted { border-color: #7b3fb8; background: #7b3fb8; color: #fff; }
+.status-badge.outOfAction { border-color: var(--rust); background: var(--rust); color: #fff; }
+
+.play-hp { display: flex; align-items: center; gap: .6rem; }
+.life-line.play { gap: 5px; flex: 1; }
+.life-line.play .pip { width: 24px; height: 24px; padding: 0; cursor: pointer; position: relative; }
+.pip.fortified { box-shadow: 0 0 0 2px var(--ok); }
+.pip.marked { opacity: .35; }
+.pip.marked::after {
+    content: "✕"; position: absolute; inset: 0; display: grid; place-items: center;
+    color: var(--ink); font-size: 14px; font-weight: 700; line-height: 1;
+}
+.hp-count { font-size: 1.25rem; font-weight: 700; white-space: nowrap; }
+.hp-count small { font-size: .8rem; color: var(--muted); }
+
+.play-row { display: flex; flex-wrap: wrap; gap: .5rem; }
+.play-row .btn { min-height: 2.3rem; }
+.play-panel {
+    display: flex; flex-direction: column; gap: .5rem;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: .65rem;
+}
+.amount { display: flex; align-items: center; gap: .5rem; }
+.amount-value { font-size: 1.4rem; font-weight: 700; min-width: 2ch; text-align: center; }
+.amount-label { color: var(--muted); font-size: .85rem; }
+.check { display: flex; align-items: center; gap: .45rem; font-size: .85rem; }
+.check input { width: 1.1rem; height: 1.1rem; accent-color: var(--rust); }
+.check.disabled { opacity: .45; }
+.play-preview { margin: 0; font-size: .85rem; color: var(--muted); }
+.play-msg { margin: 0; font-size: .85rem; border-left: 3px solid var(--rust-soft); padding-left: .5rem; }
+
+.step {
+    width: 2.3rem; height: 2.3rem; flex: none; border-radius: 8px; cursor: pointer;
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); font-size: 1.15rem; line-height: 1;
+}
+.step:hover:not(:disabled) { border-color: var(--rust-soft); }
+.step:disabled { opacity: .35; cursor: default; }
+
+.play-tracks { display: flex; flex-direction: column; gap: .4rem; }
+.track { display: flex; align-items: center; gap: .45rem; }
+.track-label { width: 5.5rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.token-track { display: inline-flex; gap: .25rem; min-width: 0; }
+.token { width: 1.5rem; height: 1.5rem; }
+.token.off { opacity: .18; filter: grayscale(1); }
+.counter .token { width: 1.25rem; height: 1.25rem; }
+
+.toggle {
+    display: inline-flex; align-items: center; gap: .4rem; cursor: pointer; min-height: 2.3rem;
+    background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); border-radius: 999px;
+    padding: .3rem .8rem; font-size: .85rem;
+}
+.toggle .pict-img { width: 1.1rem; height: 1.1rem; opacity: .5; }
+.toggle .pip { width: 13px; height: 13px; }
+.toggle.on { color: var(--ink); border-color: var(--rust-soft); background: rgba(193, 68, 14, .18); font-weight: 600; }
+.toggle.on .pict-img { opacity: 1; }
+
+.play-abilities { list-style: none; margin: 0; padding: .5rem 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: .4rem; }
+.play-abilities li { display: flex; align-items: center; gap: .5rem; font-size: .85rem; }
+.ability-picts.row { flex-direction: row; width: auto; min-width: 1.3rem; padding: 0; }
+.play-ability-name { flex: 1; min-width: 0; font-weight: 600; }
+.uses-left { font-weight: 700; font-variant-numeric: tabular-nums; }
+.uses-left.none { color: var(--rust-soft); }
+
+.play-card-text { border-top: 1px solid var(--line); padding-top: .4rem; }
+.play-card-text summary { cursor: pointer; font-size: .8rem; color: var(--muted); padding: .2rem 0; }
+.play-card-text h4 { margin: .7rem 0 .4rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .4px; }
+.play-card-text .abilities { margin-top: .4rem; }
+
+.play-footer { margin-top: 1.5rem; text-align: center; }
+
+/* Téléphone : en-tête compact, pour laisser la place aux rouages */
+@media (max-width: 600px) {
+    .app-shell { padding: .8rem .75rem 3rem; }
+    .app-header { gap: .6rem; margin-bottom: .8rem; }
+    .app-header .mark { width: 30px; height: 30px; border-width: 2px; }
+    .app-header h1 { font-size: 1.02rem; }
+    .subtitle { font-size: .78rem; }
+    .play-bar { padding: .5rem .6rem; gap: .5rem .8rem; }
+    .play-back { width: 2.1rem; height: 2.1rem; }
+    .play-cog { padding: .7rem; }
+}
