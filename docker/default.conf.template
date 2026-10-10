@@ -1,7 +1,8 @@
 # Service autonome de l'app Blazor WebAssembly (fichiers statiques), en HTTPS sur son propre port.
 #  - ${DOMAIN} est remplacé au démarrage du conteneur (modèles /etc/nginx/templates de l'image nginx) ;
 #  - __BASE_PATH__ est remplacé à la construction de l'image (ARG BASE_PATH du Dockerfile).
-# Le certificat est celui de l'hôte (Let's Encrypt, /etc/letsencrypt monté en lecture seule).
+# Certificat : celui de l'hôte (Let's Encrypt, /etc/letsencrypt monté en lecture seule) ou,
+# à défaut, un auto-signé pour l'usage local (voir 15-olomoc-cert.envsh).
 
 # Les deux serveurs servent la même app : voir olomoc-app.conf.
 
@@ -10,8 +11,9 @@ server {
     http2 on;
     server_name ${DOMAIN};
 
-    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    # Let's Encrypt de l'hôte, ou auto-signé en local : choisi par 15-olomoc-cert.envsh.
+    ssl_certificate     ${SSL_CERT};
+    ssl_certificate_key ${SSL_KEY};
     ssl_protocols       TLSv1.2 TLSv1.3;
     ssl_session_cache   shared:olomoc_ssl:1m;
 

@@ -42,7 +42,7 @@ Réglages facultatifs (fichier `.env` à côté du `docker-compose.yml`) :
 | `DOMAIN`            | `vps-24cf4978.vps.ovh.net`   | nom d'hôte, et dossier du certificat (`live/<DOMAIN>/`) |
 | `OLOMOC_HTTPS_PORT` | `8443`                       | port public HTTPS                            |
 | `OLOMOC_HTTP_PORT`  | `8090`                       | port HTTP de diagnostic, sur 127.0.0.1 seulement |
-| `CERT_ROOT`         | `/etc/letsencrypt`           | dossier Let's Encrypt de l'hôte              |
+| `CERT_ROOT`         | `/etc/letsencrypt`           | dossier Let's Encrypt de l'hôte (absent : auto-signé) |
 
 À prévoir sur le VPS :
 
@@ -62,6 +62,16 @@ sur le poste (image `stuffist/olomoc` sur Docker Hub), puis sur le VPS, avec le 
 
 L'image accepte aussi un chemin de base (`build.args.BASE_PATH`, ex. `/olomoc/`) si
 l'app doit un jour être servie sous un sous-chemin derrière un reverse proxy.
+
+**En local (Docker Desktop)** : le même `docker compose up -d --build`. Sans
+certificat Let's Encrypt monté, le conteneur génère un certificat auto-signé au
+démarrage (`docker logs olomoc` le signale) :
+
+- `http://localhost:8090/` — sans avertissement (port HTTP de diagnostic) ;
+- `https://localhost:8443/` — le navigateur avertit (certificat auto-signé) : à accepter.
+
+Arrêt : `docker compose down`. Pour le développement courant, `dotnet run` reste
+plus rapide (pas de reconstruction d'image).
 
 ## Vocabulaire
 

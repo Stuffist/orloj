@@ -22,6 +22,9 @@ COPY --from=build /app/publish/wwwroot /usr/share/nginx/html${BASE_PATH}
 # Modèle rendu au démarrage par l'image nginx (${DOMAIN}) vers /etc/nginx/conf.d/default.conf.
 COPY docker/default.conf.template /etc/nginx/templates/default.conf.template
 COPY docker/olomoc-app.conf /etc/nginx/olomoc-app.conf
+# Choix du certificat au démarrage (auto-signé si aucun n'est monté) : openssl pour le générer.
+COPY --chmod=755 docker/15-olomoc-cert.envsh /docker-entrypoint.d/15-olomoc-cert.envsh
+RUN apk add --no-cache openssl
 
 # Chemin de base : <base href> de l'app (index.html n'est pas précompressé) et routes nginx.
 RUN sed -i "s|<base href=\"/\" />|<base href=\"${BASE_PATH}\" />|" /usr/share/nginx/html${BASE_PATH}index.html \

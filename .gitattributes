@@ -1,0 +1,5 @@
+# Fichiers exécutés ou lus dans les conteneurs Linux : toujours LF, quel que soit le poste.
+*.sh       text eol=lf
+*.envsh    text eol=lf
+docker/**  text eol=lf
+Dockerfile text eol=lf
