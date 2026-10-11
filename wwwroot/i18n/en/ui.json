@@ -80,7 +80,9 @@
   "play.endCycle.title": "+1 Bile per Corrupted cog, cycle effects end, 4 action tokens per cog",
   "play.cycleEnded": "Cycle {0} over: +{1} Bile (Corrupted cogs), action tokens replenished.",
   "play.finished": "Game over: count the victory points.",
+  "play.finished.short": "Game over",
   "play.lost": "Game lost: Bile at 3.",
+  "play.lost.short": "Lost: Bile at 3",
   "play.abandon": "Abandon the game",
   "play.abandon.confirm": "Abandon the current game? Its state will be erased.",
   "play.status.sane": "Sane",
@@ -125,5 +127,6 @@
   "play.vp": "Victory",
   "play.vp.title": "Your victory points",
   "play.hunted": "Hunt at 3: game over, count the victory points.",
+  "play.hunted.short": "Over: Hunt at 3",
   "play.result.hunt": "+1 hunt"
 }

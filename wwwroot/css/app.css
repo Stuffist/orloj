@@ -263,7 +263,7 @@ body {
 .play-counters { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
 .counter { display: flex; flex-direction: column; align-items: center; gap: .1rem; }
 .counter-label { font-size: .66rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
-.counter-value { font-size: 1.3rem; font-weight: 700; line-height: 1.1; }
+.counter-value { font-size: 1.3rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .counter-value small { font-size: .8rem; color: var(--muted); font-weight: 600; }
 .counter-track { display: flex; align-items: center; gap: .35rem; }
 .counter.lost .counter-label { color: var(--rust-soft); }
@@ -357,6 +357,10 @@ body {
     border: 1px solid var(--ok); background: rgba(63, 166, 106, .12); font-size: .85rem; font-weight: 600;
 }
 .play-over.lost { border-color: var(--ko); background: rgba(193, 68, 14, .15); color: var(--rust-soft); }
+/* Même case pour tous : elle prend la taille du plus grand, l'élément courant la remplit */
+.play-end { display: grid; }
+.play-end > * { grid-area: 1 / 1; justify-content: center; text-align: center; }
+.play-end > .off { visibility: hidden; }
 
 /* Carte supplémentaire (Medic Ruzicka) */
 .play-extra { display: flex; flex-direction: column; gap: .3rem; }

@@ -80,7 +80,9 @@
   "play.endCycle.title": "+1 Fiel par rouage corrompu, fin des effets du cycle, 4 pions d’action par rouage",
   "play.cycleEnded": "Cycle {0} terminé : +{1} Fiel (rouages corrompus), pions d’action rechargés.",
   "play.finished": "Partie terminée : comptez les points de victoire.",
+  "play.finished.short": "Partie terminée",
   "play.lost": "Partie perdue : Fiel à 3.",
+  "play.lost.short": "Perdue : Fiel à 3",
   "play.abandon": "Abandonner la partie",
   "play.abandon.confirm": "Abandonner la partie en cours ? Son état sera effacé.",
   "play.status.sane": "Sain",
@@ -125,5 +127,6 @@
   "play.vp": "Victoire",
   "play.vp.title": "Vos points de victoire",
   "play.hunted": "Traque à 3 : partie terminée, comptez les points de victoire.",
+  "play.hunted.short": "Terminée : traque à 3",
   "play.result.hunt": "+1 traque"
 }

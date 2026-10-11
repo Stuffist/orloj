@@ -66,16 +66,21 @@ else
 
         <div class="play-commands">
             <button class="btn" @onclick="Undo" disabled="@(!game.CanUndo)" title="@L.Ui("play.undo.title")">↶ @L.Ui("play.undo")</button>
-            @if (game.IsOver)
-            {
-                <span class="play-over @(game.IsLost ? "lost" : null)">@L.Ui(OverKey(game))</span>
-            }
-            else
-            {
-                <button class="btn primary" @onclick="EndCycle" title="@L.Ui("play.endCycle.title")">
+            @* Bouton de fin de cycle et messages de fin superposés dans une même case, à la taille du plus
+               grand : passer de l'un à l'autre ne décale rien. Seul l'élément courant est visible. *@
+            <div class="play-end">
+                <button class="btn primary @OffUnless(!game.IsOver)" @onclick="EndCycle" title="@L.Ui("play.endCycle.title")"
+                        disabled="@game.IsOver" aria-hidden="@game.IsOver">
                     @L.Ui(s.Cycle >= GameSession.Cycles ? "play.endGame" : "play.endCycle", s.Cycle)
                 </button>
-            }
+                <button class="btn primary off" disabled tabindex="-1" aria-hidden="true">@L.Ui("play.endGame", GameSession.Cycles)</button>
+                @foreach (var key in OverKeys)
+                {
+                    var current = game.IsOver && key == OverKey(game);
+                    <span class="play-over @(key == "play.lost" ? "lost" : null) @OffUnless(current)" title="@L.Ui(key)"
+                          aria-hidden="@(!current)">@L.Ui(key + ".short")</span>
+                }
+            </div>
         </div>
     </section>
 
@@ -144,6 +149,10 @@ else
     // Fiel à 3 (défaite) avant traque à 3, avant fin du cycle 4 (LDR p.17, p.36).
     private static string OverKey(GameSession g) =>
         g.IsLost ? "play.lost" : g.IsHunted ? "play.hunted" : "play.finished";
+
+    private static readonly string[] OverKeys = { "play.lost", "play.hunted", "play.finished" };
+
+    private static string? OffUnless(bool visible) => visible ? null : "off";
 
     private Task Act(Action action)
     {
