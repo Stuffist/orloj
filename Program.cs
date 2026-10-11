@@ -12,5 +12,6 @@ builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<CabalExporter>();
 builder.Services.AddScoped<CabalDraft>();
 builder.Services.AddScoped<GameStore>();
+builder.Services.AddScoped<CabalLibrary>();
 
 await builder.Build().RunAsync();

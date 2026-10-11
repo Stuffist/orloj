@@ -70,6 +70,38 @@ public sealed class CatalogService
 
     public IReadOnlyList<Faction> AllFactions => FactionReference.Factions;
 
+    /// <summary>
+    /// Cartes d'une cabale exportée ou sauvegardée, retrouvées par leurs ids dans le référentiel
+    /// actuel. Chaque rouage reprend l'emplacement de son rang ; ce qui est introuvable (carte
+    /// retirée, rang déjà occupé) est écarté et listé, sous le nom enregistré.
+    /// </summary>
+    public ResolvedCabal Resolve(CabalExport cabal)
+    {
+        var cogs = new Cog?[3];
+        var equipment = new Equipment?[3];
+        var missing = new List<string>();
+        var faction = cabal.Faction?.Code;
+        if (faction is not null && AllFactions.All(f => f.Code != faction))
+        {
+            missing.Add(cabal.Faction!.Name);
+            faction = null;
+        }
+        foreach (var slot in cabal.Cogs)
+        {
+            if (CogById(slot.Cog.Id) is not { Rank: >= 1 and <= 3 } cog || cogs[cog.Rank - 1] is not null)
+            {
+                missing.Add(slot.Cog.Name);
+                if (slot.Equipment is { } lost) missing.Add(lost.Name);
+                continue;
+            }
+            cogs[cog.Rank - 1] = cog;
+            if (slot.Equipment is not { } e) continue;
+            if (EquipmentById(e.Id) is { } eq) equipment[cog.Rank - 1] = eq;
+            else missing.Add(e.Name);
+        }
+        return new(faction, cogs, equipment, missing);
+    }
+
     public bool IsMember(Cog cog, string faction) =>
         _membersByFaction.TryGetValue(faction, out var ids) && ids.Contains(cog.Id);
 
@@ -259,3 +291,6 @@ public sealed class CatalogService
 }
 
 public sealed record LegalityResult(bool IsLegal, IReadOnlyList<LegalityIssue> Issues);
+
+/// <summary>Cabale relue : faction, rouages et équipements/dons par emplacement, cartes introuvables.</summary>
+public sealed record ResolvedCabal(string? Faction, Cog?[] Cogs, Equipment?[] Equipment, IReadOnlyList<string> Missing);

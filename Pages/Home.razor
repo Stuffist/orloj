@@ -8,6 +8,9 @@
 @inject CabalDraft Draft
 @inject GameStore Games
 @inject NavigationManager Nav
+@inject CabalLibrary Library
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
 
 @if (!Catalog.Loaded || !L.Loaded)
 {
@@ -15,6 +18,23 @@
 }
 else
 {
+    <div class="builder-tools">
+        <button class="btn" @onclick="() => _libraryOpen = true">
+            @L.Ui("library.open")
+            @if (Library.Cabals.Count > 0)
+            {
+                <span class="count">@Library.Cabals.Count</span>
+            }
+        </button>
+        @if (_loadNotice is not null)
+        {
+            <p class="load-notice" role="status">
+                <span>@_loadNotice</span>
+                <button class="clear" @onclick="() => _loadNotice = null" title="@L.Ui("common.remove")">✕</button>
+            </p>
+        }
+    </div>
+
     <section class="filters">
         <div class="field">
             <label>@L.Ui("filter.faction")</label>
@@ -205,15 +225,22 @@ else
         <div class="export-controls">
             <div class="field grow">
                 <label for="cabal-name">@L.Ui("export.name")</label>
-                <input id="cabal-name" type="text" maxlength="80" value="@_cabalName"
-                       @oninput="e => _cabalName = e.Value?.ToString() ?? string.Empty" />
+                <input id="cabal-name" type="text" maxlength="80" value="@_cabalName" @ref="_nameInput"
+                       @oninput="e => { _cabalName = e.Value?.ToString() ?? string.Empty; _nameRequired = false; }" />
             </div>
+            <button class="btn primary" disabled="@_cogs.All(c => c is null)" @onclick="SaveAsync" title="@L.Ui("library.save.title")">
+                @L.Ui(IsSaved() ? "library.saved" : "library.save")
+            </button>
             <div class="export-modes" role="group" aria-label="@L.Ui("export.format")">
                 <button class="@(_exportJson ? null : "active")" aria-pressed="@(!_exportJson)" @onclick="() => _exportJson = false">@L.Ui("export.text")</button>
                 <button class="@(_exportJson ? "active" : null)" aria-pressed="@_exportJson" @onclick="() => _exportJson = true">JSON</button>
             </div>
         </div>
 
+        @if (_nameRequired)
+        {
+            <p class="export-warning">@L.Ui("library.nameRequired")</p>
+        }
         @if (_cogs.All(c => c is null))
         {
             <p class="empty">@L.Ui("export.empty")</p>
@@ -237,6 +264,52 @@ else
             </div>
         }
     </section>
+
+    @if (_libraryOpen)
+    {
+        <Sheet Title="@L.Ui("library.title")" OnClose="() => _libraryOpen = false">
+            @if (Library.Cabals.Count == 0)
+            {
+                <p class="empty">@L.Ui("library.empty")</p>
+            }
+            <ul class="saved-cabals">
+                @foreach (var saved in Library.Cabals)
+                {
+                    var cabal = saved.Cabal;
+                    <li class="saved-cabal">
+                        <div class="saved-head">
+                            <span class="cog-name">@cabal.Name</span>
+                            <span class="saved-meta">@(cabal.Faction is { } f ? FactionLabel(f) + " · " : null)@SavedDate(saved.SavedAt)</span>
+                        </div>
+                        <ul class="saved-slots">
+                            @foreach (var slot in cabal.Cogs.OrderByDescending(x => x.Rank))
+                            {
+                                <li>
+                                    <span class="stars">@Stars(slot.Rank)</span>
+                                    @CogLabel(slot.Cog)@(slot.Equipment is { } e ? " · " + EquipmentLabel(e) : null)
+                                </li>
+                            }
+                        </ul>
+                        <div class="saved-actions">
+                            <button class="btn small primary" @onclick="() => LoadAsync(cabal)">@L.Ui("library.load")</button>
+                            <button class="btn small danger" @onclick="() => DeleteAsync(saved)">@L.Ui("library.delete")</button>
+                        </div>
+                    </li>
+                }
+            </ul>
+            <div class="library-import">
+                <label class="btn">
+                    @L.Ui("library.import")
+                    <InputFile accept=".json,application/json" OnChange="ImportAsync" />
+                </label>
+                <span class="hint">@L.Ui("library.import.hint")</span>
+                @if (_importError)
+                {
+                    <p class="export-warning">@L.Ui("library.import.error")</p>
+                }
+            </div>
+        </Sheet>
+    }
 }
 
 @code {
@@ -258,6 +331,7 @@ else
         await L.EnsureLoadedAsync();
         await Catalog.EnsureLoadedAsync();
         await Games.EnsureLoadedAsync();
+        await Library.EnsureLoadedAsync();
         _keywords = L.StatKeywords();
         Recompute();
     }
@@ -368,6 +442,81 @@ else
             // Presse-papiers indisponible (contexte non sécurisé, refus) : le texte reste sélectionnable.
             _copied = null;
         }
+    }
+
+    // ---- Sauvegarde ----
+
+    private const long MaxImportBytes = 64 * 1024;     // un export pèse moins d'1 Ko
+    private bool _libraryOpen;
+    private bool _nameRequired;                        // sauvegarde demandée sans nom
+    private bool _importError;
+    private string? _loadNotice;                       // cartes introuvables au chargement
+    private ElementReference _nameInput;
+
+    private CabalExport CurrentCabal() => Exporter.ToModel(_cabalName, NullIfEmpty(_faction), _cogs, _equipment);
+
+    // La composition affichée est celle sauvegardée sous son nom.
+    private bool IsSaved() =>
+        Library.Find(_cabalName) is { } saved && CabalLibrary.SameCards(saved.Cabal, CurrentCabal());
+
+    private async Task SaveAsync()
+    {
+        var cabal = CurrentCabal();
+        if (cabal.Name is null)
+        {
+            _nameRequired = true;
+            await _nameInput.FocusAsync();
+            return;
+        }
+        if (Library.Find(cabal.Name) is { } old && !CabalLibrary.SameCards(old.Cabal, cabal)
+            && !await JS.InvokeAsync<bool>("confirm", L.Ui("library.replace", old.Cabal.Name!))) return;
+        await Library.SaveAsync(cabal, DateTimeOffset.Now);
+    }
+
+    private async Task LoadAsync(CabalExport cabal)
+    {
+        // Composition en cours non sauvegardée : on demande avant de l'écraser.
+        if (_cogs.Any(c => c is not null) && !IsSaved()
+            && !await JS.InvokeAsync<bool>("confirm", L.Ui("library.loadReplace"))) return;
+        var resolved = Catalog.Resolve(cabal);
+        _faction = resolved.Faction ?? "";
+        _cabalName = cabal.Name ?? "";
+        for (int i = 0; i < 3; i++) { _cogs[i] = resolved.Cogs[i]; _equipment[i] = resolved.Equipment[i]; }
+        _loadNotice = resolved.Missing.Count == 0 ? null : L.Ui("library.missing", string.Join(", ", resolved.Missing));
+        _libraryOpen = false;
+        _nameRequired = false;
+        Recompute();
+    }
+
+    private async Task DeleteAsync(SavedCabal saved)
+    {
+        if (await JS.InvokeAsync<bool>("confirm", L.Ui("library.delete.confirm", saved.Cabal.Name!)))
+            await Library.DeleteAsync(saved);
+    }
+
+    private async Task ImportAsync(InputFileChangeEventArgs e)
+    {
+        string? json = null;
+        try
+        {
+            using var reader = new StreamReader(e.File.OpenReadStream(MaxImportBytes));
+            json = await reader.ReadToEndAsync();
+        }
+        catch (IOException) { /* fichier trop gros ou illisible */ }
+        var cabal = CabalExporter.FromJson(json);
+        _importError = cabal is null;
+        if (cabal is not null) await LoadAsync(cabal);
+    }
+
+    // Noms dans la langue courante si la carte existe encore, sinon tels qu'enregistrés.
+    private string CogLabel(IdName cog) => Catalog.CogById(cog.Id) is { } c ? L.CogName(c).Text : cog.Name;
+    private string EquipmentLabel(IdName e) => Catalog.EquipmentById(e.Id) is { } x ? L.EquipmentName(x).Text : e.Name;
+    private string FactionLabel(CodeName f) => Catalog.AllFactions.Any(x => x.Code == f.Code) ? L.FactionName(f.Code).Text : f.Name;
+
+    private string SavedDate(DateTimeOffset date)
+    {
+        try { return date.ToLocalTime().ToString("g", CultureInfo.GetCultureInfo(L.Current)); }
+        catch (CultureNotFoundException) { return date.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture); }
     }
 
     // ---- Mode partie ----

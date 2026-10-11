@@ -21,3 +21,6 @@ public sealed record CabalExport(
     public const string FormatId = "olomoc-cabal";
     public const int CurrentVersion = 1;
 }
+
+/// <summary>Cabale sauvegardée sur l'appareil (CabalLibrary) et sa date de sauvegarde.</summary>
+public sealed record SavedCabal(DateTimeOffset SavedAt, CabalExport Cabal);

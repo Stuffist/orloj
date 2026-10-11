@@ -60,6 +60,25 @@ public sealed class CabalExporter
     public string ToJson(string? cabalName, string? faction, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment) =>
         JsonSerializer.Serialize(ToModel(cabalName, faction, cogs, equipment), JsonOpts);
 
+    /// <summary>
+    /// Relit un export JSON (fichier ou sauvegarde) ; null si le texte n'en est pas un, ou d'une
+    /// version plus récente que celle que l'app sait lire.
+    /// </summary>
+    public static CabalExport? FromJson(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            var cabal = JsonSerializer.Deserialize<CabalExport>(json, ReadOpts);
+            return cabal is { Format: CabalExport.FormatId, Version: >= 1 and <= CabalExport.CurrentVersion, Cogs: not null }
+                   && cabal.Cogs.All(s => s?.Cog?.Id is not null)
+                ? cabal : null;
+        }
+        catch (JsonException) { return null; }
+    }
+
+    private static readonly JsonSerializerOptions ReadOpts = new() { PropertyNameCaseInsensitive = true };
+
     /// <summary>Nom de fichier tiré du nom de la cabale : « ma-cabale.txt », ou « cabale.txt » sans nom.</summary>
     public static string FileName(string? cabalName, string extension)
     {

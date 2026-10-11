@@ -203,7 +203,7 @@ trigramme ou nom d'une stat, dans n'importe quelle langue (`tec`, `cbt`, `tir`,
 
 ## Export
 
-Sous le panneau de légalité, avec un nom de cabale facultatif ; copie dans le
+Sous le panneau de légalité, avec le nom de la cabale (facultatif pour l'export) ; copie dans le
 presse-papiers ou téléchargement (`<nom-de-la-cabale>.txt` / `.json`). L'export
 reflète la composition en cours, même incomplète (un avertissement le signale).
 
@@ -230,6 +230,21 @@ reflète la composition en cours, même incomplète (un avertissement le signale
     "cogs": [ { "rank": 1, "cog": { "id": "3R05", "name": "Dominik Kralov" },
                 "equipment": { "id": "E11", "name": "Harmonium" } }, … ] }
   ```
+
+## Cabales sauvegardées
+
+« Sauvegarder », à côté du nom de la cabale (section « Sauvegarde et export »),
+garde la composition sur l'appareil (`localStorage`, clé `olomoc.cabals`), au
+format de l'export JSON. Le nom est requis et identifie la cabale : sauvegarder sous
+un nom déjà pris la remplace, après confirmation. Le bouton indique « Sauvegardée ✓ »
+tant que la composition affichée est celle sauvegardée sous ce nom.
+
+« Mes cabales », en haut du constructeur, liste les cabales sauvegardées (la plus
+récente d'abord) : charger, supprimer, ou **importer** un export JSON (d'un autre
+appareil, par exemple ; la cabale importée est chargée, à sauvegarder ensuite).
+Charger par-dessus une composition non sauvegardée demande confirmation. Les cartes
+sont retrouvées par leurs ids, chaque rouage à l'emplacement de son rang ; une carte
+absente du référentiel actuel est écartée et signalée sous le nom enregistré.
 
 ## Mode partie
 
@@ -282,13 +297,14 @@ de victoire sont dans la barre du haut (fixée à l'écran, sauf sur téléphone
 - `Services/CatalogService.cs` — chargement + `AvailableCogs`,
   `AvailableEquipment`, `RecruitVia`, `CheckLegality` (dont le couplage biparti).
 - `Services/CogQuery.cs` — analyse de la recherche (mots + conditions sur les stats).
-- `Services/CabalExporter.cs` — exports texte (format bwaaaanegamesdb.fr) et JSON.
+- `Services/CabalExporter.cs` — exports texte (format bwaaaanegamesdb.fr) et JSON, relecture du JSON.
+- `Services/CabalLibrary.cs` — cabales sauvegardées dans le navigateur ; `CatalogService.Resolve` les relit.
 - `Models/GameModels.cs`, `Services/GameSession.cs`, `Services/GameStore.cs` — mode
   partie : état sauvegardable, règles et annulation, sauvegarde dans le navigateur.
 - `Services/CabalDraft.cs` — cabale en cours de composition, conservée en naviguant.
 - `Shared/StatLine.razor`, `AbilityList.razor`, `GameEffect.razor`,
   `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre.
-- `Pages/Home.razor` — constructeur : composition, légalité, export, lancement d'une partie.
+- `Pages/Home.razor` — constructeur : composition, légalité, sauvegarde et export, lancement d'une partie.
 - `Pages/Play.razor`, `Shared/PlayCogCard.razor`, `TokenTrack.razor`, `Sheet.razor` — mode partie.
-- `tests/OlomocListBuilder.Tests` — xUnit : légalité, recherche, export, mode partie, cohérence des langues
+- `tests/OlomocListBuilder.Tests` — xUnit : légalité, recherche, export, sauvegarde, mode partie, cohérence des langues
   (compile les modèles et services de l'app, lit les données de `wwwroot`).
