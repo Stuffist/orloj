@@ -535,7 +535,7 @@ else
     private RenderFragment Text(Localized text) => @<span class="@(text.IsFallback ? "untranslated" : null)"
                                                           title="@(text.IsFallback ? L.Ui("common.untranslated") : null)">@text.Text</span>;
 
-    // « Don · L'Axe », « Équipement · Ligue Maisel », « Équipement · affilié au rouage »
+    // « Don · L'Axe », « Équipement · Ligue de Maisel », « Équipement · affilié au rouage »
     private string AffiliationLabel(Equipment e) =>
         L.Ui($"equipment.kind.{e.Kind}") + " · " +
         (e.IsFactionAffiliated ? L.FactionName(e.Faction!).Text :

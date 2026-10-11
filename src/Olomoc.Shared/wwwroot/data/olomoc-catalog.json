@@ -1942,7 +1942,7 @@
     {
       "id": "E30",
       "kind": "EQUIPMENT",
-      "faction": "UNDERWORLD",
+      "faction": "LIBUS",
       "abilities": [
         {
           "timing": "Permanent",
@@ -1964,7 +1964,7 @@
     {
       "id": "E31",
       "kind": "EQUIPMENT",
-      "faction": "UNDERWORLD",
+      "faction": "LIBUS",
       "abilities": [
         {
           "timing": "Permanent",
@@ -2138,7 +2138,7 @@
     {
       "id": "E40",
       "kind": "EQUIPMENT",
-      "faction": "BLAUKAUST",
+      "faction": "BLOCKHAUS",
       "abilities": [
         {
           "timing": "Permanent",
@@ -2154,7 +2154,7 @@
     {
       "id": "E41",
       "kind": "EQUIPMENT",
-      "faction": "BLAUKAUST",
+      "faction": "BLOCKHAUS",
       "abilities": [
         {
           "timing": "Permanent",

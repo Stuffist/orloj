@@ -69,7 +69,7 @@ public class CabalExportTests
         Assert.Equal("fr", root.GetProperty("language").GetString());
         Assert.Equal("Ma Cabale Test", root.GetProperty("name").GetString());
         Assert.Equal("MAISEL", root.GetProperty("faction").GetProperty("code").GetString());
-        Assert.Equal("Ligue Maisel", root.GetProperty("faction").GetProperty("name").GetString());
+        Assert.Equal("Ligue de Maisel", root.GetProperty("faction").GetProperty("name").GetString());
 
         var slots = root.GetProperty("cogs").EnumerateArray().ToList();
         Assert.Equal(new[] { 1, 2, 3 }, slots.Select(s => s.GetProperty("rank").GetInt32()));

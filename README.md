@@ -99,10 +99,11 @@ plus rapide (pas de reconstruction d'image).
 | Référentiel de faction            | `FactionReference`                      |
 | Ministère de la Coordination, de l'Intégrité, de l'Effort, du Progrès, de l'Harmonie, de l'Édification, de la Sécurité ; la Frange, l'Axe (Ministères dévoyés) | `COORDINATION`, `INTEGRITY`, `EFFORT`, `PROGRESS`, `HARMONY`, `EDIFICATION`, `SECURITY`, `FRINGE`, `AXIS` |
 
-Les factions ne sont nommées dans aucun des deux livres : leurs codes gardent les
-noms propres (`BLAUKAUST`, `MAISEL`, `URKARAS`, `RUBIN`) et traduisent le reste
-(`OTHERS` = Les Autres, `DYKOVIAN` = Cabale Dykovienne, `UNDERWORLD` = La Pègre),
-en attendant un référentiel de faction anglais officiel.
+Les noms des factions suivent le [référentiel de faction](https://www.occicat.com/wp-content/uploads/2026/09/FACTIONS_FR.pdf)
+(septembre 2026) : Les Autres, Blockhaus Devet, Cabale Dykovienne, Ligue de Maisel,
+Famille Urkaras, Loups de Libus, Réseau Rubin ; repris tels quels en anglais, faute de
+référentiel anglais. Codes : `OTHERS`, `BLOCKHAUS`, `DYKOVIAN`, `MAISEL`, `URKARAS`,
+`LIBUS`, `RUBIN`.
 
 ## Données
 
@@ -227,7 +228,7 @@ reflète la composition en cours, même incomplète (un avertissement le signale
   ```json
   { "format": "olomoc-cabal", "version": 1, "language": "fr",
     "name": "Ma Cabale Test",
-    "faction": { "code": "MAISEL", "name": "Ligue Maisel" },
+    "faction": { "code": "MAISEL", "name": "Ligue de Maisel" },
     "cogs": [ { "rank": 1, "cog": { "id": "3R05", "name": "Dominik Kralov" },
                 "equipment": { "id": "E11", "name": "Harmonium" } }, … ] }
   ```

@@ -265,7 +265,7 @@ public class GameSessionTests
         var ruzicka = d.Cog("3R27");
         var kit = d.Equipment("Kit d'Intégrité");
         var hazmat = d.Equipment("Combinaison Hazmat");
-        var g = new GameSession(GameSession.NewGame(null, "BLAUKAUST",
+        var g = new GameSession(GameSession.NewGame(null, "BLOCKHAUS",
             new Cog?[] { ruzicka, d.Cog("2R08"), d.Cog("1R01") },
             new Equipment?[] { kit, d.Equipment("Carapace"), d.Equipment("Harmonium") }));
         var slot = SlotOf(g, "3R27");
