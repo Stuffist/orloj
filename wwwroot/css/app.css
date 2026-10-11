@@ -149,6 +149,11 @@ body {
 
 .equipment-zone { display: flex; flex-direction: column; gap: .3rem; border-top: 1px solid var(--line); padding-top: .6rem; }
 .equipment-zone label { font-size: .72rem; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.equip-stepper { display: flex; align-items: center; gap: .35rem; }
+.equip-stepper select { flex: 1; }
+.equip-stepper .step { width: 2.2rem; height: 2.2rem; font-size: 1.3rem; }
+.equip-position { font-size: .72rem; color: var(--muted); text-align: center; }
+
 .equipment-zone select {
     background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
     border-radius: 6px; padding: .45rem .5rem; font-size: .9rem;

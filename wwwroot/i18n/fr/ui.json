@@ -33,6 +33,8 @@
   "picker.recruitVia": "Hors faction · via « {0} »",
   "cog.equipment": "Équipement/don",
   "cog.noEquipment": "Aucun équipement/don disponible pour ce rouage.",
+  "equipment.previous": "Équipement/don précédent",
+  "equipment.next": "Équipement/don suivant",
   "equipment.kind.EQUIPMENT": "Équipement",
   "equipment.kind.BOON": "Don",
   "equipment.cogAffiliated": "affilié au rouage",

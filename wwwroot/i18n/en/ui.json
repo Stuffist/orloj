@@ -33,6 +33,8 @@
   "picker.recruitVia": "Outside faction · via “{0}”",
   "cog.equipment": "Equipment/boon",
   "cog.noEquipment": "No equipment/boon available for this cog.",
+  "equipment.previous": "Previous equipment/boon",
+  "equipment.next": "Next equipment/boon",
   "equipment.kind.EQUIPMENT": "Equipment",
   "equipment.kind.BOON": "Boon",
   "equipment.cogAffiliated": "affiliated with the cog",

@@ -130,21 +130,35 @@ else
 
                         <div class="equipment-zone">
                             <label>@L.Ui("cog.equipment")</label>
-                            @{ var available = Catalog.AvailableEquipment(idx, _cogs, _equipment, NullIfEmpty(_faction)); }
-                            <select value="@current?.Id" @onchange="e => SelectEquipment(idx, e)">
-                                <option value="">@L.Ui("common.choose")</option>
-                                @foreach (var eq in available)
-                                {
-                                    <option value="@eq.Id">@L.EquipmentName(eq) · @AffiliationLabel(eq)</option>
-                                }
-                            </select>
-                            @if (available.Count == 0)
+                            @{
+                                var available = Catalog.AvailableEquipment(idx, _cogs, _equipment, NullIfEmpty(_faction));
+                                var position = current is null ? -1 : available.FindIndex(e => e.Id == current.Id);
+                            }
+                            @* ‹ › choisit directement la carte voisine : son effet s'affiche aussitôt dessous. *@
+                            <div class="equip-stepper">
+                                <button class="step" disabled="@(position <= 0)" title="@L.Ui("equipment.previous")" aria-label="@L.Ui("equipment.previous")"
+                                        @onclick="() => SelectEquipment(idx, available[position - 1])">‹</button>
+                                <select value="@current?.Id" @onchange="e => SelectEquipment(idx, e)">
+                                    <option value="">@L.Ui("common.choose")</option>
+                                    @foreach (var eq in available)
+                                    {
+                                        <option value="@eq.Id">@L.EquipmentName(eq) · @AffiliationLabel(eq)</option>
+                                    }
+                                </select>
+                                <button class="step" disabled="@(position >= available.Count - 1)" title="@L.Ui("equipment.next")" aria-label="@L.Ui("equipment.next")"
+                                        @onclick="() => SelectEquipment(idx, available[position + 1])">›</button>
+                            </div>
+                            @if (available.Count > 0)
                             {
-                                <p class="empty">@L.Ui("cog.noEquipment")</p>
+                                <span class="equip-position">@(position + 1) / @available.Count</span>
                             }
                             @if (current is not null)
                             {
                                 <AbilityList Equipment="current" />
+                            }
+                            @if (available.Count == 0)
+                            {
+                                <p class="empty">@L.Ui("cog.noEquipment")</p>
                             }
                         </div>
                     </div>
@@ -300,7 +314,12 @@ else
     private void SelectEquipment(int idx, ChangeEventArgs e)
     {
         var id = e.Value?.ToString();
-        _equipment[idx] = string.IsNullOrEmpty(id) ? null : Catalog.Catalog.Equipment.FirstOrDefault(x => x.Id == id);
+        SelectEquipment(idx, string.IsNullOrEmpty(id) ? null : Catalog.EquipmentById(id));
+    }
+
+    private void SelectEquipment(int idx, Equipment? eq)
+    {
+        _equipment[idx] = eq;
         PruneEquipment();                   // retirer un Passe-droit peut invalider les autres équipements/dons
         Recompute();
     }
