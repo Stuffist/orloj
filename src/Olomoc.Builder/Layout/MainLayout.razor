@@ -1,0 +1,60 @@
+@namespace Olomoc.Builder.Layout
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject LocalizationService L
+@inject NavigationManager Nav
+
+<PageTitle>@(L.Loaded ? L.Ui("app.title") : "Olomòc")</PageTitle>
+
+<div class="app-shell">
+    <header class="app-header">
+        <span class="mark"></span>
+        <div class="app-titles">
+            @if (L.Loaded)
+            {
+                <h1>@L.Ui("app.title")</h1>
+                <p class="subtitle">@L.Ui(IsPlay ? "play.subtitle" : "app.subtitle")</p>
+            }
+            else
+            {
+                <h1>Olomòc</h1>
+            }
+        </div>
+        @if (L.Loaded && L.Languages.Count > 1)
+        {
+            <label class="lang-switch">
+                <span class="sr-only">@L.Ui("app.language")</span>
+                <select value="@L.Current" @onchange="OnLanguageChanged" title="@L.Ui("app.language")">
+                    @foreach (var lang in L.Languages)
+                    {
+                        <option value="@lang.Code">@lang.Name</option>
+                    }
+                </select>
+            </label>
+        }
+    </header>
+    <main>@Body</main>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        Nav.LocationChanged += OnLocationChanged;
+        await L.EnsureLoadedAsync();
+    }
+
+    private Task OnLanguageChanged(ChangeEventArgs e) => L.SetLanguageAsync(e.Value?.ToString() ?? "");
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => OnChanged();
+
+    private bool IsPlay => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("play", StringComparison.Ordinal);
+
+    public void Dispose()
+    {
+        L.Changed -= OnChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+}

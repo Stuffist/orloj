@@ -1,24 +1,25 @@
 # Olomòc — Constructeur de cabale (Blazor WebAssembly)
 
 Application cliente qui charge le référentiel depuis deux fichiers JSON statiques
-(`wwwroot/data/`) — pas de base de données — et compose une cabale légale.
+(`src/Olomoc.Shared/wwwroot/data/`) — pas de base de données — et compose une cabale légale.
 
 ## Lancer
 
 Nécessite le SDK .NET 8.
 
 ```bash
-cd OlomocListBuilder
-dotnet run
+dotnet run --project src/Olomoc.Builder
 ```
 
-Puis ouvrir l'URL affichée (typiquement `https://localhost:5001`).
+Puis ouvrir l'URL affichée (`http://localhost:55772`).
 Pour un build statique déployable sur n'importe quel hébergeur de fichiers :
 
 ```bash
-dotnet publish -c Release
-# le site se trouve dans bin/Release/net8.0/publish/wwwroot
+dotnet publish src/Olomoc.Builder -c Release
+# le site se trouve dans src/Olomoc.Builder/bin/Release/net8.0/publish/wwwroot
 ```
+
+Tests : `dotnet test` à la racine (solution `Olomoc.slnx`).
 
 ## Déploiement (Docker, VPS)
 
@@ -107,15 +108,15 @@ en attendant un référentiel de faction anglais officiel.
 
 Le référentiel est **neutre en langue** ; les textes vivent dans des paquets par langue.
 
-- `wwwroot/data/olomoc-catalog.json` — rouages, équipements/dons, ministères : ids,
+- `src/Olomoc.Shared/wwwroot/data/olomoc-catalog.json` — rouages, équipements/dons, ministères : ids,
   codes, caractéristiques, lignes de vie, coûts, fréquences, règles de composition
   (schéma `schemas/olomoc.schema.json`).
-- `wwwroot/data/olomoc-factions.json` — appartenances aux factions
+- `src/Olomoc.Shared/wwwroot/data/olomoc-factions.json` — appartenances aux factions
   (schéma `schemas/olomoc-factions.schema.json`).
-- `wwwroot/i18n/<langue>/cards.json` — textes des cartes : noms, titres, noms et
+- `src/Olomoc.Shared/wwwroot/i18n/<langue>/cards.json` — textes des cartes : noms, titres, noms et
   effets de jeu des capacités, noms des Ministères et des factions
   (schéma `schemas/olomoc-texts.schema.json`).
-- `wwwroot/i18n/<langue>/ui.json` — libellés de l'interface
+- `src/Olomoc.Shared/wwwroot/i18n/<langue>/ui.json` — libellés de l'interface
   (schéma `schemas/olomoc-ui.schema.json`).
 
 Chaque fichier référence son schéma via `$schema` (validation et autocomplétion
@@ -124,8 +125,8 @@ dans l'éditeur). Le dossier `schemas/` contient aussi des exemples minimaux
 il n'est ni copié dans le build ni publié. Validation en ligne de commande :
 
 ```bash
-npx ajv-cli@5 validate --spec=draft2020 --strict=false   -s schemas/olomoc.schema.json -d wwwroot/data/olomoc-catalog.json
-npx ajv-cli@5 validate --spec=draft2020 --strict=false   -s schemas/olomoc-texts.schema.json -d "wwwroot/i18n/*/cards.json"
+npx ajv-cli@5 validate --spec=draft2020 --strict=false   -s schemas/olomoc.schema.json -d src/Olomoc.Shared/wwwroot/data/olomoc-catalog.json
+npx ajv-cli@5 validate --spec=draft2020 --strict=false   -s schemas/olomoc-texts.schema.json -d "src/Olomoc.Shared/wwwroot/i18n/*/cards.json"
 ```
 
 Remplacer ces fichiers suffit à mettre l'app à jour ; aucun code à toucher. Les
@@ -146,18 +147,18 @@ images des cartes. Conventions de transcription (pictogrammes : LDR p.20) :
 
 ## Multilingue
 
-- `wwwroot/i18n/languages.json` liste les langues proposées (sélecteur dans
+- `src/Olomoc.Shared/wwwroot/i18n/languages.json` liste les langues proposées (sélecteur dans
   l'en-tête). La langue est détectée depuis le navigateur, puis mémorisée.
 - `fr` est la **langue de référence**, complète. Les autres paquets peuvent être
   partiels : tout texte manquant se replie sur `fr` (affiché en italique souligné).
   Les règles indépendantes de la langue (doublons de nom) comparent les noms `fr`.
-- **Ajouter une langue** : créer `wwwroot/i18n/<code>/ui.json` et `cards.json`, puis
+- **Ajouter une langue** : créer `src/Olomoc.Shared/wwwroot/i18n/<code>/ui.json` et `cards.json`, puis
   l'ajouter à `languages.json`. Les clés de `ui.json` sont celles de `fr` ; les
   trigrammes et noms de stats (`stat.*.abbr`, `stat.*.name`) deviennent aussi des
   mots-clés de recherche, valables quelle que soit la langue affichée.
 - **Pictogrammes** : identiques dans toutes les langues, jamais traduits. Dans les
   effets de jeu, ce sont des jetons neutres rendus par les icônes du livre de règles
-  (`wwwroot/img/icons/`, `wwwroot/img/stats/`) :
+  (`src/Olomoc.Shared/wwwroot/img/icons/`, `src/Olomoc.Shared/wwwroot/img/stats/`) :
   `{tech}` `{melee}` `{ranged}` `{dodge}` `{active}` `{action}` `{darkness}`
   `{stunned}` (pion sonné) et `{freq:planning|cycle|game:N}`.
 - **Factions** : sans nom anglais officiel, `en/cards.json` reprend les noms
@@ -287,6 +288,15 @@ de victoire sont dans la barre du haut (fixée à l'écran, sauf sur téléphone
 
 ## Architecture
 
+```
+Olomoc.slnx
+src/Olomoc.Shared/    bibliothèque Razor commune : modèles, règles, composants des cartes,
+                      fichiers statiques servis sous _content/Olomoc.Shared/ (Assets.Base)
+src/Olomoc.Builder/   app Blazor WebAssembly du constructeur et du mode partie
+tests/Olomoc.Tests/   xUnit
+```
+
+**`src/Olomoc.Shared`**
 - `Models/CatalogModels.cs` — référentiel neutre (`Cog`, `Equipment`, `Ministry`,
   `Faction`…), désérialisé en insensible à la casse ; enums `HealthPointType`
   (S/R/T), `Timing`, `EquipmentKind`, `BuildRuleType`.
@@ -302,9 +312,14 @@ de victoire sont dans la barre du haut (fixée à l'écran, sauf sur téléphone
 - `Models/GameModels.cs`, `Services/GameSession.cs`, `Services/GameStore.cs` — mode
   partie : état sauvegardable, règles et annulation, sauvegarde dans le navigateur.
 - `Services/CabalDraft.cs` — cabale en cours de composition, conservée en naviguant.
-- `Shared/StatLine.razor`, `AbilityList.razor`, `GameEffect.razor`,
-  `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre.
+- `Components/StatLine.razor`, `AbilityList.razor`, `GameEffect.razor`,
+  `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre ;
+  `TokenTrack.razor` (réserve de pions), `Sheet.razor` (fenêtre superposée).
+- `wwwroot/` — référentiel (`data/`), langues (`i18n/`), pictogrammes (`img/`), styles (`css/app.css`).
+
+**`src/Olomoc.Builder`**
 - `Pages/Home.razor` — constructeur : composition, légalité, sauvegarde et export, lancement d'une partie.
-- `Pages/Play.razor`, `Shared/PlayCogCard.razor`, `TokenTrack.razor`, `Sheet.razor` — mode partie.
-- `tests/OlomocListBuilder.Tests` — xUnit : légalité, recherche, export, sauvegarde, mode partie, cohérence des langues
-  (compile les modèles et services de l'app, lit les données de `wwwroot`).
+- `Pages/Play.razor`, `Shared/PlayCogCard.razor` — mode partie.
+
+**`tests/Olomoc.Tests`** — légalité, recherche, export, sauvegarde, mode partie, cohérence
+des langues ; référence `Olomoc.Shared` et lit ses fichiers statiques sur le disque.

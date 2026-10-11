@@ -1,6 +1,0 @@
-<Solution>
-  <Folder Name="/tests/">
-    <Project Path="tests/OlomocListBuilder.Tests/OlomocListBuilder.Tests.csproj" />
-  </Folder>
-  <Project Path="OlomocListBuilder.csproj" />
-</Solution>

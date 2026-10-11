@@ -8,11 +8,12 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Restauration seule d'abord : couche mise en cache tant que le .csproj ne change pas.
-COPY OlomocListBuilder.csproj .
-RUN dotnet restore OlomocListBuilder.csproj
+COPY src/Olomoc.Shared/Olomoc.Shared.csproj src/Olomoc.Shared/
+COPY src/Olomoc.Builder/Olomoc.Builder.csproj src/Olomoc.Builder/
+RUN dotnet restore src/Olomoc.Builder/Olomoc.Builder.csproj
 
-COPY . .
-RUN dotnet publish OlomocListBuilder.csproj -c Release -o /app/publish --no-restore
+COPY src/ src/
+RUN dotnet publish src/Olomoc.Builder/Olomoc.Builder.csproj -c Release -o /app/publish --no-restore
 
 
 FROM nginx:1.27-alpine AS final

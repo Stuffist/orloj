@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Olomoc.Shared/Olomoc.Shared.csproj" />
+    <Project Path="src/Olomoc.Builder/Olomoc.Builder.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Olomoc.Tests/Olomoc.Tests.csproj" />
+  </Folder>
+</Solution>

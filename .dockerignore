@@ -7,7 +7,7 @@
 .claude/
 tests/
 schemas/
-Properties/
+**/Properties/
 **/*.user
 Dockerfile
 .dockerignore
