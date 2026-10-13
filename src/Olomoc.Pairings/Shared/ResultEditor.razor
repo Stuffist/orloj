@@ -1,0 +1,86 @@
+@* Saisie des PV d'une table (organisateur). Mise en page fixe : les champs et le bouton ne
+   bougent pas ; l'état (enregistré, modifié, erreur) occupe une case de largeur constante. *@
+@inject LocalizationService L
+
+<li class="tn-result @(Table.IsBye ? "bye" : null)">
+    <span class="tn-table-number">@L.Ui("pairings.tableN", Table.Number)</span>
+    <span class="tn-side">
+        <span class="tn-player-name">@View.Player(Table.PlayerA)?.Name</span>
+    </span>
+    @if (Table.IsBye)
+    {
+        <span class="tn-score tn-bye">@L.Ui("pairings.bye")</span>
+        <span class="tn-side"></span>
+        <span class="tn-result-save"></span>
+    }
+    else
+    {
+        <span class="tn-score tn-inputs">
+            <input type="number" min="0" max="@TournamentRules.MaxVictoryPoints" inputmode="numeric" value="@_a"
+                   @oninput="e => Edit(ref _a, e)" disabled="@ReadOnly" aria-label="@L.Ui("pairings.vpOf", View.Player(Table.PlayerA)?.Name ?? "")" />
+            <span>–</span>
+            <input type="number" min="0" max="@TournamentRules.MaxVictoryPoints" inputmode="numeric" value="@_b"
+                   @oninput="e => Edit(ref _b, e)" disabled="@ReadOnly" aria-label="@L.Ui("pairings.vpOf", View.Player(Table.PlayerB!)?.Name ?? "")" />
+        </span>
+        <span class="tn-side tn-right">
+            <span class="tn-player-name">@View.Player(Table.PlayerB!)?.Name</span>
+        </span>
+        <span class="tn-result-save">
+            <button class="btn small" disabled="@(!CanSave)" @onclick="SaveAsync" title="@L.Ui("pairings.result.save")">@L.Ui("pairings.result.validate")</button>
+            <span class="tn-result-state @StateClass" title="@StateTitle">@StateMark</span>
+        </span>
+    }
+</li>
+
+@code {
+    [Parameter, EditorRequired] public TournamentView View { get; set; } = default!;
+    [Parameter, EditorRequired] public int RoundNumber { get; set; }
+    [Parameter, EditorRequired] public Table Table { get; set; } = default!;
+    /// <summary>Enregistrement : renvoie les problèmes (aucun si accepté).</summary>
+    [Parameter, EditorRequired] public Func<int, int, int?, int?, Task<IReadOnlyList<Problem>>> Save { get; set; } = default!;
+    /// <summary>Tournoi terminé : résultats affichés, plus modifiables.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    private string _a = "", _b = "";
+    private bool _dirty, _busy;
+    private IReadOnlyList<Problem>? _problems;
+
+    // Valeurs du serveur reprises tant que la saisie n'est pas en cours (actualisation périodique).
+    protected override void OnParametersSet()
+    {
+        if (_dirty) return;
+        _a = Table.VpA?.ToString() ?? "";
+        _b = Table.VpB?.ToString() ?? "";
+    }
+
+    private void Edit(ref string field, ChangeEventArgs e)
+    {
+        field = e.Value?.ToString() ?? "";
+        _dirty = _a != (Table.VpA?.ToString() ?? "") || _b != (Table.VpB?.ToString() ?? "");
+        _problems = null;
+    }
+
+    private static int? Parse(string s) => int.TryParse(s, out var n) ? n : null;
+
+    // Deux valeurs (ou aucune, pour effacer), différentes de ce qui est enregistré.
+    private bool CanSave => !ReadOnly && _dirty && !_busy && (_a.Length == 0) == (_b.Length == 0)
+                            && (_a.Length == 0 || (Parse(_a) is >= 0 and <= TournamentRules.MaxVictoryPoints
+                                                   && Parse(_b) is >= 0 and <= TournamentRules.MaxVictoryPoints));
+
+    private async Task SaveAsync()
+    {
+        if (!CanSave) return;
+        _busy = true;
+        try
+        {
+            _problems = await Save(RoundNumber, Table.Number, Parse(_a), Parse(_b));
+            if (_problems.Count == 0) _dirty = false;
+        }
+        finally { _busy = false; }
+    }
+
+    private string StateClass => _problems is { Count: > 0 } ? "error" : _dirty ? "dirty" : Table.HasResult ? "saved" : "";
+    private string StateMark => _problems is { Count: > 0 } ? "!" : _dirty ? "•" : Table.HasResult ? "✓" : "";
+    private string? StateTitle => _problems is { Count: > 0 } p ? string.Join(" ", p.Select(L.Describe))
+                                  : _dirty ? L.Ui("pairings.result.unsaved") : Table.HasResult ? L.Ui("pairings.result.saved") : null;
+}

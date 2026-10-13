@@ -1,34 +1,39 @@
-# Olomòc — Constructeur de cabale (Blazor WebAssembly)
+# Olomòc — Constructeur de cabale et tournois (Blazor WebAssembly)
 
 Application cliente qui charge le référentiel depuis deux fichiers JSON statiques
 (`src/Olomoc.Shared/wwwroot/data/`) — pas de base de données — et compose une cabale légale.
+Le site est servi par un petit hôte ASP.NET Core (`src/Olomoc.Server`) : constructeur
+sous `/builder/` (la racine `/` y renvoie), tournois sous `/pairings/` (inscriptions,
+appariements, résultats, classement), avec leur API (`/api/tournaments`).
 
 ## Lancer
 
 Nécessite le SDK .NET 8.
 
 ```bash
-dotnet run --project src/Olomoc.Builder
+dotnet run --project src/Olomoc.Server
 ```
 
-Puis ouvrir l'URL affichée (`http://localhost:55772`).
-Pour un build statique déployable sur n'importe quel hébergeur de fichiers :
-
-```bash
-dotnet publish src/Olomoc.Builder -c Release
-# le site se trouve dans src/Olomoc.Builder/bin/Release/net8.0/publish/wwwroot
-```
+Puis ouvrir `http://localhost:55772/` (renvoie vers `/builder/`).
 
 Tests : `dotnet test` à la racine (solution `Olomoc.slnx`).
 
 ## Déploiement (Docker, VPS)
 
-L'app est un Blazor WebAssembly : l'image (`Dockerfile`, multi-étapes) publie avec
-le SDK .NET puis sert les fichiers statiques avec nginx (≈ 65 Mo, pas de runtime
-.NET). Le déploiement est **autonome** : Olomoc a son propre port HTTPS et ne
-dépend d'aucun autre projet du VPS (B5T garde les ports 80/443). Il réutilise le
-certificat Let's Encrypt de l'hôte (`/etc/letsencrypt`, monté en lecture seule) :
-un certificat vaut pour le nom d'hôte, quel que soit le port.
+Une seule image (`Dockerfile`, multi-étapes) : publication avec le SDK .NET, puis
+l'hôte `Olomoc.Server` sur le runtime ASP.NET (Alpine, ≈ 140 Mo). Il sert le
+constructeur (`/builder/`) et les tournois (`/pairings/`), fichiers `_framework`
+précompressés en Brotli/gzip, les fichiers communs (`/_content/Olomoc.Shared/`), l'API
+des tournois, redirige `/` vers `/builder/`, et répond à `/healthz`. Le HTTPS est
+assuré directement par Kestrel, sans nginx. Les tournois sont des fichiers JSON dans
+`/data` du conteneur, monté sur le dossier `./data` à côté du `docker-compose.yml` (créé
+au premier démarrage) : conservés par `down`/`up`, `--force-recreate` et `--build`, et
+sauvegardés en copiant ce dossier (`tar czf olomoc-data.tgz data`).
+
+Le déploiement est **autonome** : Olomoc a son propre port HTTPS et ne dépend d'aucun
+autre projet du VPS (B5T garde les ports 80/443). Il réutilise le certificat
+Let's Encrypt de l'hôte (`/etc/letsencrypt`, monté en lecture seule) : un certificat
+vaut pour le nom d'hôte, quel que soit le port.
 
 → `https://vps-24cf4978.vps.ovh.net:8443/`
 
@@ -49,20 +54,17 @@ Réglages facultatifs (fichier `.env` à côté du `docker-compose.yml`) :
 
 - **Pare-feu** : ouvrir le port HTTPS (`8443/tcp`) s'il y en a un (`ufw allow 8443/tcp`,
   pare-feu réseau OVH).
-- **Renouvellement du certificat** : nginx lit le certificat au démarrage. Après un
-  renouvellement par certbot, recharger le conteneur, par exemple avec un hook
-  `/etc/letsencrypt/renewal-hooks/deploy/olomoc.sh` (exécutable) :
-  `docker exec olomoc nginx -s reload`.
-- Un `http://…:8443` est renvoyé vers `https://…:8443`. Diagnostic local :
-  `curl -I http://127.0.0.1:8090/` ; état : `docker ps` (healthcheck `/healthz`).
+- **Renouvellement du certificat** : rien à faire. L'hôte relit `live/<DOMAIN>/` toutes
+  les 10 minutes et sert le nouveau certificat dès que certbot l'a renouvelé
+  (`docker logs olomoc` le signale). L'ancien hook `nginx -s reload` n'a plus lieu d'être.
+- Un `http://…:8443` est renvoyé vers `https://…:8443` (même adresse, `301`).
+  Diagnostic local : `curl -I http://127.0.0.1:8090/healthz` ; état : `docker ps`
+  (healthcheck `/healthz`).
 
 **Mises à jour** : `git pull && docker compose up -d --build`. Variante sans les
 sources sur le VPS, comme pour B5T : `docker compose build && docker compose push`
 sur le poste (image `stuffist/olomoc` sur Docker Hub), puis sur le VPS, avec le seul
 `docker-compose.yml` : `docker compose pull && docker compose up -d`.
-
-L'image accepte aussi un chemin de base (`build.args.BASE_PATH`, ex. `/olomoc/`) si
-l'app doit un jour être servie sous un sous-chemin derrière un reverse proxy.
 
 **En local (Docker Desktop)** : le même `docker compose up -d --build`. Sans
 certificat Let's Encrypt monté, le conteneur génère un certificat auto-signé au
@@ -71,8 +73,8 @@ démarrage (`docker logs olomoc` le signale) :
 - `http://localhost:8090/` — sans avertissement (port HTTP de diagnostic) ;
 - `https://localhost:8443/` — le navigateur avertit (certificat auto-signé) : à accepter.
 
-Arrêt : `docker compose down`. Pour le développement courant, `dotnet run` reste
-plus rapide (pas de reconstruction d'image).
+Arrêt : `docker compose down`. Pour le développement courant, `dotnet run --project
+src/Olomoc.Server` reste plus rapide (pas de reconstruction d'image).
 
 ## Vocabulaire
 
@@ -287,13 +289,71 @@ superposée et leur compte rendu s'affiche en notification, avec un bouton
 « Annuler » : les boutons des cartes ne bougent jamais. Cycle, Fiel, traque et points
 de victoire sont dans la barre du haut (fixée à l'écran, sauf sur téléphone).
 
+## Tournois
+
+`/pairings/` : l'organisateur crée un tournoi (nom, date, nombre de rondes, 1 ou 2 cabales
+par joueur, mode d'appariement) et reçoit un **code** à 6 caractères à donner aux joueurs,
+ainsi qu'un **lien d'administration**. Pas de compte ni de base de données : un fichier
+JSON par tournoi sur le serveur ; jetons et mot de passe ne sont conservés que hachés.
+L'organisateur peut **supprimer** son tournoi (en bas de l'administration, en retapant le
+code). Sinon, un tournoi est supprimé automatiquement après 90 jours sans
+modification, si sa date est passée ou s'il n'en a pas ; un tournoi daté d'aujourd'hui ou
+plus tard ne l'est **jamais** (contrôle quotidien).
+
+- **Administrer depuis plusieurs appareils** (créer le tournoi sur PC, le gérer sur
+  téléphone le jour J), deux clés au choix :
+  - le **lien d'administration** (jeton secret dans l'adresse), mis en avant juste après la
+    création avec son **QR code** : on le scanne avec le téléphone, ou on le copie. Il
+    reste dans « Partage » (QR sur demande, pour ne pas l'afficher par mégarde) ;
+  - un **mot de passe** facultatif (8 caractères au moins), choisi à la création ou plus
+    tard dans « Accès organisateur » : sur un appareil sans le lien, la page
+    d'administration le demande et ouvre une session propre à cet appareil. Le changer ou
+    le retirer ferme les autres sessions (pas celle de l'appareil qui le change ; le lien
+    reste valable). Haché côté serveur (PBKDF2), 10 essais par quart d'heure et par adresse.
+  Le lien public a aussi son QR code, à afficher sur place pour les inscriptions.
+- **Inscriptions** : nom, faction, cabales choisies dans « Mes cabales » (sauvegardes du
+  constructeur sur l'appareil, même site), composées sur le moment (« Composer… » ouvre le
+  constructeur dans un nouvel onglet, sur la faction choisie ; la cabale sauvegardée apparaît
+  dans la liste au retour sur l'onglet, sans perdre la saisie) ou **collées** (« Coller… ») :
+  liste au format texte de l'export (une ligne par rouage, « ROUAGE - ÉQUIPEMENT/DON », nom
+  en première ligne facultatif ; format du builder bwaaaanegamesdb aussi), tapée à la main ou
+  copiée, sans souci de casse, d'accents ni de tiret, ou export JSON (`Services/CabalImport.cs`).
+  Aperçu immédiat (cartes reconnues, lignes inconnues, légalité) ; un texte valable dans
+  plusieurs factions fait choisir la sienne. Faction
+  commune et légalité vérifiées dans le navigateur, puis par le serveur avec les mêmes
+  règles que le constructeur. Chacun peut modifier ou retirer son inscription (jeton
+  joueur, gardé sur son appareil) tant qu'elles sont ouvertes. Les listes des autres
+  restent masquées jusqu'à la clôture, qui les révèle à tous.
+- **Appariements** (`Tournaments/Pairer.cs`), entre les joueurs actifs (hors abandons) :
+  - *Ronde suisse* : ronde 1 au hasard, puis par classement, chacun contre le plus
+    proche en points (1 c. 2, 3 c. 4…) ; option : à points égaux, préférer l'alignement
+    opposé ;
+  - *Lumières contre Ténèbres* : au hasard, alignements opposés, le surplus d'un camp
+    s'affrontant entre lui.
+  Jamais de revanche si c'est possible (recherche avec retour arrière) ; sinon elle est
+  admise et signalée. Nombre impair : exempt au moins bien classé qui n'en a pas eu (camp
+  le plus nombreux en mode Alignement). Alignements (`olomoc-factions.json`) : Lumières
+  — Cabale Dykovienne, Famille Urkaras, Loups de Libus, Réseau Rubin ; Ténèbres — Les
+  Autres, Blockhaus Devet, Ligue de Maisel.
+- **Résultats et classement** (feuille de ronde officielle) : l'organisateur saisit les
+  PV de chaque table ; points de tournoi 3/1/0 (exempt : 3, différence 0), classement par
+  points, puis différence de PV cumulée, puis PV marqués. La ronde suivante s'apparie
+  quand la précédente est complète ; la dernière ronde s'annule tant qu'aucun résultat
+  n'y est saisi. Les pages se mettent à jour toutes les 30 secondes.
+- **Garde-fous** : 128 joueurs par tournoi, requêtes de 64 Ko au plus, 10 créations de
+  tournoi par heure, 10 essais de mot de passe par quart d'heure et 120 écritures par
+  minute par adresse IP (`RATE_CREATE_PER_HOUR`, `RATE_LOGINS_PER_15_MINUTES`,
+  `RATE_WRITES_PER_MINUTE`).
+
 ## Architecture
 
 ```
 Olomoc.slnx
 src/Olomoc.Shared/    bibliothèque Razor commune : modèles, règles, composants des cartes,
-                      fichiers statiques servis sous _content/Olomoc.Shared/ (Assets.Base)
-src/Olomoc.Builder/   app Blazor WebAssembly du constructeur et du mode partie
+                      fichiers statiques servis sous /_content/Olomoc.Shared/ (Assets.Base)
+src/Olomoc.Builder/   app Blazor WebAssembly du constructeur et du mode partie (/builder/)
+src/Olomoc.Pairings/  app Blazor WebAssembly des tournois (/pairings/)
+src/Olomoc.Server/    hôte ASP.NET Core : apps, fichiers communs, API des tournois, HTTPS
 tests/Olomoc.Tests/   xUnit
 ```
 
@@ -316,11 +376,38 @@ tests/Olomoc.Tests/   xUnit
 - `Components/StatLine.razor`, `AbilityList.razor`, `GameEffect.razor`,
   `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre ;
   `TokenTrack.razor` (réserve de pions), `Sheet.razor` (fenêtre superposée).
-- `wwwroot/` — référentiel (`data/`), langues (`i18n/`), pictogrammes (`img/`), styles (`css/app.css`).
+- `Components/HeaderTools.razor` — fin de l'en-tête des deux apps : lien vers l'autre app, langue.
+- `Tournaments/` — tournoi (`TournamentModels.cs`), classement (`Standings.cs`),
+  appariements (`Pairer.cs`), règles des phases et des inscriptions (`TournamentRules.cs`),
+  échanges avec l'API (`TournamentApiModels.cs`).
+- `wwwroot/` — référentiel (`data/`), langues (`i18n/`), pictogrammes (`img/`), styles
+  (`css/app.css`), téléchargement de fichier (`js/olomoc.js`).
 
 **`src/Olomoc.Builder`**
 - `Pages/Home.razor` — constructeur : composition, légalité, sauvegarde et export, lancement d'une partie.
 - `Pages/Play.razor`, `Shared/PlayCogCard.razor` — mode partie.
 
+**`src/Olomoc.Pairings`**
+- `Pages/Index.razor` — créer un tournoi, en rejoindre un, « Mes tournois » (localStorage).
+- `Pages/TournamentPage.razor` — page publique : inscription, ronde, classement, joueurs.
+- `Pages/Admin.razor`, `Shared/ResultEditor.razor` — administration : clôture, rondes,
+  saisie des PV, abandons, export, liens de partage.
+- `Services/TournamentApi.cs` (appels à l'API), `Services/MyTournaments.cs` (jetons gardés
+  sur l'appareil).
+
+**`src/Olomoc.Server`**
+- `Program.cs` — en-têtes (`Cache-Control: no-cache`, `nosniff`), `/` → `/builder/`,
+  `/healthz`, limites de débit et de taille des requêtes.
+- `Tournaments/TournamentEndpoints.cs` — API `/api/tournaments` (droits par jeton) ;
+  `TournamentStore.cs` (fichiers JSON, verrou par tournoi, écriture atomique),
+  `ServerCatalog.cs` (référentiel côté serveur), `TournamentPurge.cs` (90 jours sans modification, date passée ou absente).
+- `Hosting/ClientApps.cs` — une app WebAssembly par chemin (`StaticWebAssetBasePath`),
+  routes de l'app renvoyées vers son `index.html`.
+- `Hosting/Tls.cs` — HTTPS du conteneur (variable `DOMAIN`) : certificat Let's Encrypt
+  relu à chaud, ou auto-signé ; `Hosting/PlainHttpRedirect.cs` — HTTP en clair reçu sur le
+  port HTTPS renvoyé vers `https://`.
+
 **`tests/Olomoc.Tests`** — légalité, recherche, export, sauvegarde, mode partie, cohérence
-des langues ; référence `Olomoc.Shared` et lit ses fichiers statiques sur le disque.
+des langues, tournois (classement, appariements, règles) ; référence `Olomoc.Shared` et lit
+ses fichiers statiques sur le disque ; hôte démarré en mémoire (`WebApplicationFactory`)
+pour les routes du site et l'API des tournois (dossier de données temporaire).

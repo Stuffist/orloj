@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Hôte du site : sert les apps Blazor WebAssembly (constructeur sous /builder/, tournois
+       sous /pairings/) et l'API des tournois (/api/tournaments). Seul processus du conteneur,
+       HTTPS compris. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Olomoc.Server</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Olomoc.Builder\Olomoc.Builder.csproj" />
+    <ProjectReference Include="..\Olomoc.Pairings\Olomoc.Pairings.csproj" />
+  </ItemGroup>
+
+</Project>

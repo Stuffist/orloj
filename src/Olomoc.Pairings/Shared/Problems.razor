@@ -1,0 +1,16 @@
+@* Problèmes renvoyés par l'API (ou constatés avant l'envoi), traduits. *@
+@inject LocalizationService L
+
+@if (Items is { Count: > 0 })
+{
+    <ul class="tn-problems" role="alert">
+        @foreach (var p in Items)
+        {
+            <li>@L.Describe(p)</li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<Problem>? Items { get; set; }
+}

@@ -51,14 +51,14 @@ public sealed class AppData
         throw new DirectoryNotFoundException("Olomoc.slnx introuvable au-dessus du dossier de test.");
     }
 
-    // Requêtes vers _content/Olomoc.Shared/… (Assets.Base) : fichiers de WwwRoot.
+    // Requêtes vers /_content/Olomoc.Shared/… (Assets.Base) : fichiers de WwwRoot.
     private sealed class FileHandler(string root) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
-            var relative = request.RequestUri!.AbsolutePath.TrimStart('/');
-            if (relative.StartsWith(Assets.Base)) relative = relative[Assets.Base.Length..];
-            var path = Path.Combine(root, relative);
+            var path = request.RequestUri!.AbsolutePath;
+            if (path.StartsWith(Assets.Base)) path = path[Assets.Base.Length..];
+            path = Path.Combine(root, path.TrimStart('/'));
             return Task.FromResult(File.Exists(path)
                 ? new HttpResponseMessage(HttpStatusCode.OK)
                   {

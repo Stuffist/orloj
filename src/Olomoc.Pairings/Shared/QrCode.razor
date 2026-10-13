@@ -1,0 +1,22 @@
+@* QR code d'une adresse, généré dans l'app (QRCoder, image PNG) : à scanner avec un téléphone. *@
+@using QRCoder
+
+<img class="tn-qr" src="@_src" alt="@Alt" width="@Size" height="@Size" />
+
+@code {
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+    [Parameter] public string? Alt { get; set; }
+    [Parameter] public int Size { get; set; } = 180;
+
+    private string? _text;
+    private string _src = "";
+
+    protected override void OnParametersSet()
+    {
+        if (Text == _text) return;
+        _text = Text;
+        using var generator = new QRCodeGenerator();
+        using var data = generator.CreateQrCode(Text, QRCodeGenerator.ECCLevel.M);
+        _src = "data:image/png;base64," + Convert.ToBase64String(new PngByteQRCode(data).GetGraphic(8));
+    }
+}

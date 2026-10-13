@@ -70,6 +70,9 @@ public sealed class CatalogService
 
     public IReadOnlyList<Faction> AllFactions => FactionReference.Factions;
 
+    /// <summary>Alignement d'une faction (Lumières / Ténèbres) ; null si le code est inconnu.</summary>
+    public Alignment? AlignmentOf(string factionCode) => AllFactions.FirstOrDefault(f => f.Code == factionCode)?.Alignment;
+
     /// <summary>
     /// Cartes d'une cabale exportée ou sauvegardée, retrouvées par leurs ids dans le référentiel
     /// actuel. Chaque rouage reprend l'emplacement de son rang ; ce qui est introuvable (carte

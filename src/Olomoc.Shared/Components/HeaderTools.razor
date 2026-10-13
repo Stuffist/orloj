@@ -1,0 +1,47 @@
+@* Fin de l'en-tête commun aux apps : lien vers l'autre app (constructeur ⇄ tournois) et choix
+   de la langue. Les apps ont la même origine : la langue choisie vaut pour les deux. *@
+@inject LocalizationService L
+@implements IDisposable
+
+@if (L.Loaded)
+{
+    <nav class="app-nav">
+        @if (Current == "pairings")
+        {
+            <a href="/builder/">@L.Ui("nav.builder")</a>
+        }
+        else
+        {
+            <a href="/pairings/">@L.Ui("nav.pairings")</a>
+        }
+    </nav>
+    @if (L.Languages.Count > 1)
+    {
+        <label class="lang-switch">
+            <span class="sr-only">@L.Ui("app.language")</span>
+            <select value="@L.Current" @onchange="OnLanguageChanged" title="@L.Ui("app.language")">
+                @foreach (var lang in L.Languages)
+                {
+                    <option value="@lang.Code">@lang.Name</option>
+                }
+            </select>
+        </label>
+    }
+}
+
+@code {
+    /// <summary>App affichée : « builder » ou « pairings ».</summary>
+    [Parameter, EditorRequired] public string Current { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        await L.EnsureLoadedAsync();          // affiché dès que les langues sont chargées
+    }
+
+    private Task OnLanguageChanged(ChangeEventArgs e) => L.SetLanguageAsync(e.Value?.ToString() ?? "");
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnChanged;
+}

@@ -2,9 +2,9 @@ namespace Olomoc;
 
 /// <summary>
 /// Fichiers statiques communs (référentiel, langues, pictogrammes, styles) : publiés par la
-/// bibliothèque Olomoc.Shared sous ce chemin, relatif au &lt;base href&gt; de chaque app.
+/// bibliothèque Olomoc.Shared à la racine du site, partagés par toutes les apps (/builder/…).
 /// </summary>
 public static class Assets
 {
-    public const string Base = "_content/Olomoc.Shared/";
+    public const string Base = "/_content/Olomoc.Shared/";
 }

@@ -18,6 +18,15 @@
 }
 else
 {
+    @* Ouvert depuis l'inscription à un tournoi (« Composer… ») : que faire de la cabale composée. *@
+    @if (Tournament is { Length: > 0 } tournament)
+    {
+        <p class="tournament-notice" role="note">
+            <span>@L.Ui("library.forTournament", tournament)</span>
+            <a href="/pairings/t/@Uri.EscapeDataString(tournament)">@L.Ui("library.forTournament.back")</a>
+        </p>
+    }
+
     <div class="builder-tools">
         <button class="btn" @onclick="() => _libraryOpen = true">
             @L.Ui("library.open")
@@ -333,8 +342,14 @@ else
         await Games.EnsureLoadedAsync();
         await Library.EnsureLoadedAsync();
         _keywords = L.StatKeywords();
+        // Faction choisie à l'inscription au tournoi, si rien n'est encore composé.
+        if (FactionParam is { } f && _cogs.All(c => c is null) && Catalog.AllFactions.Any(x => x.Code == f)) _faction = f;
         Recompute();
     }
+
+    // Ouverture depuis l'inscription à un tournoi : /builder/?tournament=CODE&faction=MAISEL
+    [SupplyParameterFromQuery(Name = "tournament")] public string? Tournament { get; set; }
+    [SupplyParameterFromQuery(Name = "faction")] public string? FactionParam { get; set; }
 
     // Les textes se résolvent au rendu : un changement de langue ne demande qu'un re-rendu.
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);

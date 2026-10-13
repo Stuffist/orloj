@@ -1,0 +1,35 @@
+@* Tables d'une ronde (lecture) : adversaires, factions et résultat une fois saisi. *@
+@inject LocalizationService L
+
+<ol class="tn-tables">
+    @foreach (var table in Round.Tables)
+    {
+        var a = View.Player(table.PlayerA);
+        var b = table.PlayerB is null ? null : View.Player(table.PlayerB);
+        <li class="tn-table @(table.Involves(View.MyPlayerId ?? "") ? "mine" : null)">
+            <span class="tn-table-number">@L.Ui("pairings.tableN", table.Number)</span>
+            <span class="tn-side">
+                <span class="tn-player-name">@a?.Name</span>
+                @if (a is not null) { <FactionBadge Code="@a.Faction" /> }
+            </span>
+            @if (table.IsBye)
+            {
+                <span class="tn-score tn-bye">@L.Ui("pairings.bye")</span>
+                <span class="tn-side"></span>
+            }
+            else
+            {
+                <span class="tn-score">@(table.HasResult ? $"{table.VpA} – {table.VpB}" : L.Ui("pairings.versus"))</span>
+                <span class="tn-side tn-right">
+                    <span class="tn-player-name">@b?.Name</span>
+                    @if (b is not null) { <FactionBadge Code="@b.Faction" /> }
+                </span>
+            }
+        </li>
+    }
+</ol>
+
+@code {
+    [Parameter, EditorRequired] public TournamentView View { get; set; } = default!;
+    [Parameter, EditorRequired] public Round Round { get; set; } = default!;
+}

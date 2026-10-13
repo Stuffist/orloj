@@ -1,0 +1,36 @@
+@* Légalité d'une cabale avant inscription : faction attendue, cartes introuvables, règles du
+   constructeur (le serveur revérifie à l'inscription). *@
+@inject LocalizationService L
+@inject CatalogService Catalog
+
+@if (Faction is { Length: > 0 } && Cabal.Faction?.Code != Faction)
+{
+    <p class="export-warning">@L.Ui("pairings.problem.cabalFaction", L.FactionName(Faction).Text)</p>
+}
+else if (Issues() is { Count: > 0 } issues)
+{
+    <ul class="tn-problems">
+        @foreach (var issue in issues)
+        {
+            <li>@issue</li>
+        }
+    </ul>
+}
+else
+{
+    <p class="tn-legal">@L.Ui("legality.legal")</p>
+}
+
+@code {
+    [Parameter, EditorRequired] public CabalExport Cabal { get; set; } = default!;
+    /// <summary>Faction du joueur, si elle est déjà choisie.</summary>
+    [Parameter] public string? Faction { get; set; }
+
+    // Cartes introuvables, puis problèmes de légalité dans la faction de la cabale.
+    private List<string> Issues()
+    {
+        var resolved = Catalog.Resolve(Cabal);
+        if (resolved.Missing.Count > 0) return new() { L.Ui("pairings.problem.cabalMissing", string.Join(", ", resolved.Missing)) };
+        return Catalog.CheckLegality(resolved.Faction, resolved.Cogs, resolved.Equipment).Issues.Select(L.Describe).ToList();
+    }
+}

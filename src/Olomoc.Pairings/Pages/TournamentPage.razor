@@ -1,0 +1,126 @@
+@page "/t/{Code}"
+@inherits TournamentPageBase
+
+@if (!Ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else if (View is not { } v)
+{
+    <section class="panel">
+        <Problems Items="LoadProblems" />
+        <a class="btn" href="">@L.Ui("pairings.home")</a>
+    </section>
+}
+else
+{
+    var me = v.Player(v.MyPlayerId);
+    <TournamentHeader View="v" Settings="@Settings(v)" Date="@DateLabel(v.Date)">
+        <span class="tn-share">
+            <code>@PublicLink</code>
+            <button class="btn small" @onclick="() => CopyAsync(PublicLink)">@CopyLabel(PublicLink)</button>
+        </span>
+        @if (v.IsOrganizer)
+        {
+            <a class="btn small primary" href="t/@v.Code/admin">@L.Ui("pairings.admin.open")</a>
+        }
+    </TournamentHeader>
+
+    @if (v.Phase == TournamentPhase.Registration)
+    {
+        <section class="panel">
+            <h3>@L.Ui("pairings.register.title")</h3>
+            @if (me is not null && !_editing)
+            {
+                <p class="tn-intro">@L.Ui("pairings.register.done")</p>
+                <div class="tn-player-card">
+                    <div><span class="tn-player-name">@me.Name</span> <FactionBadge Code="@me.Faction" /></div>
+                    <div class="tn-cabals">
+                        @for (var i = 0; i < (me.Cabals?.Count ?? 0); i++)
+                        {
+                            <CabalSummary Cabal="me.Cabals![i]" Title="@CabalTitle(i, me.Cabals![i])" />
+                        }
+                    </div>
+                </div>
+                <div class="tn-actions">
+                    <button class="btn" @onclick="() => _editing = true">@L.Ui("pairings.register.edit")</button>
+                    <button class="btn danger" @onclick="UnregisterAsync">@L.Ui("pairings.register.withdraw")</button>
+                </div>
+                <Problems Items="_problems" />
+            }
+            else
+            {
+                <p class="tn-intro">@L.Ui("pairings.register.intro", v.CabalsPerPlayer)</p>
+                <RegistrationForm CabalCount="v.CabalsPerPlayer" TournamentCode="@v.Code" Existing="@(_editing ? me : null)" Submit="SubmitAsync"
+                                  OnCancel="@(_editing ? EventCallback.Factory.Create(this, () => _editing = false) : default)" />
+            }
+        </section>
+    }
+
+    @if (v.LastRound is { } round)
+    {
+        <section class="panel">
+            <h3>@L.Ui("pairings.roundOf", round.Number, v.RoundCount)</h3>
+            <RoundTables View="v" Round="round" />
+            @if (v.Rounds.Count > 1)
+            {
+                <details class="tn-history">
+                    <summary>@L.Ui("pairings.previousRounds")</summary>
+                    @foreach (var previous in v.Rounds.Take(v.Rounds.Count - 1).Reverse())
+                    {
+                        <h4>@L.Ui("pairings.roundN", previous.Number)</h4>
+                        <RoundTables View="v" Round="previous" />
+                    }
+                </details>
+            }
+        </section>
+        <section class="panel">
+            <h3>@L.Ui("pairings.standings")</h3>
+            <StandingsTable View="v" />
+        </section>
+    }
+
+    <section class="panel">
+        <h3>@L.Ui("pairings.players", v.Players.Count)</h3>
+        <PlayerList View="v" />
+    </section>
+}
+
+@code {
+    private bool _editing;
+
+    private string CabalTitle(int i, CabalExport c) =>
+        c.Name is { Length: > 0 } name ? $"{L.Ui("pairings.cabalN", i + 1)} — {name}" : L.Ui("pairings.cabalN", i + 1);
+    private IReadOnlyList<Problem>? _problems;
+
+    private async Task<IReadOnlyList<Problem>> SubmitAsync(RegistrationRequest request)
+    {
+        var v = View!;
+        if (_editing && v.MyPlayerId is { } id)
+        {
+            var updated = await Api.UpdateRegistrationAsync(v.Code, id, request, Entry?.OrganizerToken, Entry?.PlayerToken);
+            if (!updated.Ok) return updated.Problems;
+            _editing = false;
+        }
+        else
+        {
+            var registered = await Api.RegisterAsync(v.Code, request);
+            if (registered.Value is not { } r) return registered.Problems;
+            await Mine.RememberAsync(v.Code, v.Name, playerId: r.PlayerId, playerToken: r.PlayerToken);
+        }
+        await RefreshAsync();
+        StateHasChanged();                  // envoi depuis le formulaire (composant enfant) : la page change
+        return Array.Empty<Problem>();
+    }
+
+    private async Task UnregisterAsync()
+    {
+        var v = View!;
+        if (v.MyPlayerId is not { } id || !await ConfirmAsync(L.Ui("pairings.register.withdraw.confirm"))) return;
+        var result = await Api.UnregisterAsync(v.Code, id, Entry?.OrganizerToken, Entry?.PlayerToken);
+        _problems = result.Problems;
+        if (!result.Ok) return;
+        await Mine.ForgetPlayerAsync(v.Code);
+        await RefreshAsync();
+    }
+}

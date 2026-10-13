@@ -1,0 +1,116 @@
+@* Inscription (ou modification) : nom, faction, et les cabales demandées par le tournoi. *@
+@inject LocalizationService L
+@inject CatalogService Catalog
+@inject CabalLibrary Library
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<form class="tn-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault="true">
+    <div class="tn-fields">
+        <div class="field grow">
+            <label for="player-name">@L.Ui("pairings.register.name")</label>
+            <input id="player-name" type="text" maxlength="@TournamentRules.MaxNameLength" value="@_name"
+                   @oninput="e => _name = e.Value?.ToString() ?? string.Empty" autocomplete="nickname" />
+        </div>
+        <div class="field">
+            <label for="player-faction">@L.Ui("filter.faction")</label>
+            <select id="player-faction" value="@_faction" @onchange="e => _faction = e.Value?.ToString() ?? string.Empty">
+                <option value="">@L.Ui("common.choose")</option>
+                @foreach (var f in Catalog.AllFactions.OrderBy(f => L.FactionName(f.Code).Text))
+                {
+                    <option value="@f.Code">@L.FactionName(f.Code)</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @for (var i = 0; i < _cabals.Length; i++)
+    {
+        var index = i;
+        <CabalPicker Index="index" Faction="@_faction" Value="_cabals[index]" ValueChanged="c => OnCabalChanged(index, c)"
+                     TournamentCode="@TournamentCode" LibraryVersion="_libraryVersion" />
+    }
+
+    <Problems Items="_problems" />
+    <div class="tn-actions">
+        <button class="btn primary" type="submit" disabled="@(_busy || !Complete)">
+            @L.Ui(Existing is null ? "pairings.register.submit" : "pairings.register.save")
+        </button>
+        @if (OnCancel.HasDelegate)
+        {
+            <button class="btn" type="button" @onclick="OnCancel">@L.Ui("pairings.cancel")</button>
+        }
+    </div>
+</form>
+
+@code {
+    [Parameter, EditorRequired] public int CabalCount { get; set; }
+    [Parameter, EditorRequired] public string TournamentCode { get; set; } = "";
+    [Parameter] public PlayerView? Existing { get; set; }
+    /// <summary>Envoi : renvoie les problèmes (aucun si l'inscription est acceptée).</summary>
+    [Parameter, EditorRequired] public Func<RegistrationRequest, Task<IReadOnlyList<Problem>>> Submit { get; set; } = default!;
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string _name = "";
+    private string _faction = "";
+    private CabalExport?[] _cabals = Array.Empty<CabalExport?>();
+    private IReadOnlyList<Problem>? _problems;
+    private bool _busy;
+
+    // Retour sur l'onglet (après « Composer… » dans le constructeur) : « Mes cabales » relu.
+    private int _libraryVersion;
+    private DotNetObjectReference<RegistrationForm>? _self;
+    private int? _visibilityHandler;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _self = DotNetObjectReference.Create(this);
+        try { _visibilityHandler = await JS.InvokeAsync<int>("olomoc.onVisible", _self, nameof(OnPageVisibleAsync)); }
+        catch (JSException) { /* sans script : la liste se relit au prochain chargement */ }
+    }
+
+    [JSInvokable]
+    public async Task OnPageVisibleAsync()
+    {
+        await Library.ReloadAsync();
+        _libraryVersion++;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_visibilityHandler is { } id)
+        {
+            try { await JS.InvokeVoidAsync("olomoc.offVisible", id); }
+            catch (Exception e) when (e is JSException or JSDisconnectedException) { }
+        }
+        _self?.Dispose();
+    }
+
+    protected override void OnInitialized()
+    {
+        _cabals = new CabalExport?[CabalCount];
+        if (Existing is null) return;
+        _name = Existing.Name;
+        _faction = Existing.Faction;
+        for (var i = 0; i < Math.Min(CabalCount, Existing.Cabals?.Count ?? 0); i++) _cabals[i] = Existing.Cabals![i];
+    }
+
+    private bool Complete => _name.Trim().Length > 0 && _faction.Length > 0 && _cabals.All(c => c is not null);
+
+    private void OnCabalChanged(int index, CabalExport? cabal)
+    {
+        _cabals[index] = cabal;
+        // Première cabale choisie : sa faction devient celle du joueur.
+        if (_faction.Length == 0 && cabal?.Faction is { } f) _faction = f.Code;
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (!Complete || _busy) return;
+        _busy = true;
+        try { _problems = await Submit(new RegistrationRequest(_name.Trim(), _faction, _cabals.Select(c => c!).ToList())); }
+        finally { _busy = false; }
+    }
+}

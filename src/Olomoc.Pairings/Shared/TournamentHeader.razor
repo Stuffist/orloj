@@ -1,0 +1,30 @@
+@* En-tête d'un tournoi : nom, date et réglages, code à partager, phase. *@
+@inject LocalizationService L
+
+<section class="panel tn-head">
+    <div class="tn-head-main">
+        <h2>@View.Name</h2>
+        <p class="tn-meta">
+            @if (Date.Length > 0)
+            {
+                <span>@Date · </span>
+            }
+            <span>@Settings</span>
+        </p>
+    </div>
+    <div class="tn-head-side">
+        <span class="tn-phase @View.Phase.ToString().ToLowerInvariant()">@L.Ui($"pairings.phase.{View.Phase}")</span>
+        <span class="tn-code" title="@L.Ui("pairings.code.title")">@View.Code</span>
+    </div>
+    @if (ChildContent is not null)
+    {
+        <div class="tn-head-tools">@ChildContent</div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public TournamentView View { get; set; } = default!;
+    [Parameter] public string Settings { get; set; } = "";
+    [Parameter] public string Date { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

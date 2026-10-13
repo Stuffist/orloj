@@ -33,3 +33,6 @@ node_modules/
 # Système
 .DS_Store
 Thumbs.db
+App_Data/
+# Tournois du conteneur (dossier monté par docker-compose.yml), pas le référentiel
+/data/

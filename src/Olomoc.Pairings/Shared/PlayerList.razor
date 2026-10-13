@@ -1,0 +1,53 @@
+@* Joueurs inscrits (ordre d'inscription) ; leurs listes une fois révélées, ou la sienne. *@
+@inject LocalizationService L
+
+@if (View.Players.Count == 0)
+{
+    <p class="empty">@L.Ui("pairings.players.empty")</p>
+}
+else
+{
+    <ul class="tn-players">
+        @foreach (var p in View.Players)
+        {
+            <li class="@(p.Id == View.MyPlayerId ? "mine" : null) @(p.Dropped ? "dropped" : null)">
+                <div class="tn-player-line">
+                    <span class="tn-player-name">@p.Name</span>
+                    <FactionBadge Code="@p.Faction" />
+                    @if (p.Dropped)
+                    {
+                        <span class="tn-dropped">@L.Ui("pairings.dropped")</span>
+                    }
+                    @if (Actions is not null)
+                    {
+                        <span class="tn-player-actions">@Actions(p)</span>
+                    }
+                </div>
+                @if (p.Cabals is { Count: > 0 } cabals)
+                {
+                    <details class="tn-player-lists">
+                        <summary>@L.Ui("pairings.lists")</summary>
+                        <div class="tn-cabals">
+                            @for (var i = 0; i < cabals.Count; i++)
+                            {
+                                <CabalSummary Cabal="cabals[i]" Title="@CabalTitle(i, cabals[i])" />
+                            }
+                        </div>
+                    </details>
+                }
+            </li>
+        }
+    </ul>
+    @if (View.Phase == TournamentPhase.Registration && !View.IsOrganizer)
+    {
+        <p class="hint">@L.Ui("pairings.lists.hidden")</p>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public TournamentView View { get; set; } = default!;
+    [Parameter] public RenderFragment<PlayerView>? Actions { get; set; }
+
+    private string CabalTitle(int i, CabalExport c) =>
+        c.Name is { Length: > 0 } name ? $"{L.Ui("pairings.cabalN", i + 1)} — {name}" : L.Ui("pairings.cabalN", i + 1);
+}

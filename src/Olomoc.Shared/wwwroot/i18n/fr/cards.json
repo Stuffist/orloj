@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../schemas/olomoc-texts.schema.json",
+  "$schema": "../../../../../schemas/olomoc-texts.schema.json",
   "language": "fr",
   "ministries": {
     "COORDINATION": {

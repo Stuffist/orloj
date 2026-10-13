@@ -1,0 +1,379 @@
+@page "/t/{Code}/admin"
+@inherits TournamentPageBase
+
+@if (!Ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else if (View is not { } v)
+{
+    <section class="panel">
+        <Problems Items="LoadProblems" />
+        <a class="btn" href="">@L.Ui("pairings.home")</a>
+    </section>
+}
+else if (!v.IsOrganizer)
+{
+    <section class="panel">
+        <h3>@v.Name</h3>
+        @if (v.HasPassword)
+        {
+            <p class="tn-intro">@L.Ui("pairings.admin.login.intro")</p>
+            <form class="tn-inline" @onsubmit="LoginAsync" @onsubmit:preventDefault="true">
+                <input type="password" autocomplete="current-password" maxlength="@TournamentRules.MaxPasswordLength" value="@_password"
+                       @oninput="e => _password = e.Value?.ToString() ?? string.Empty" aria-label="@L.Ui("pairings.admin.password")"
+                       placeholder="@L.Ui("pairings.admin.password")" class="tn-password" />
+                <button class="btn primary" type="submit" disabled="@(_busy || _password.Length == 0)">@L.Ui("pairings.admin.login")</button>
+            </form>
+            <Problems Items="_accessProblems" />
+            <p class="hint">@L.Ui("pairings.admin.login.orLink")</p>
+        }
+        else
+        {
+            <p class="export-warning">@L.Ui("pairings.admin.denied")</p>
+        }
+        <a class="btn" href="t/@v.Code">@L.Ui("pairings.admin.publicPage")</a>
+    </section>
+}
+else
+{
+    var last = v.LastRound;
+    <TournamentHeader View="v" Settings="@Settings(v)" Date="@DateLabel(v.Date)">
+        <a class="btn small" href="t/@v.Code">@L.Ui("pairings.admin.publicPage")</a>
+    </TournamentHeader>
+
+    @* Juste après la création : le lien d'administration, à garder (seule clé sans mot de passe). *@
+    @if (Created)
+    {
+        <section class="panel tn-keep">
+            <h3>@L.Ui("pairings.admin.keep.title")</h3>
+            <p class="tn-intro">@L.Ui(v.HasPassword ? "pairings.admin.keep.withPassword" : "pairings.admin.keep.intro")</p>
+            <div class="tn-keep-body">
+                <QrCode Text="@AdminLink" Alt="@L.Ui("pairings.admin.adminLink")" />
+                <div class="tn-keep-link">
+                    <span class="tn-share">
+                        <code>@AdminLink</code>
+                        <button class="btn small" @onclick="() => CopyAsync(AdminLink)">@CopyLabel(AdminLink)</button>
+                    </span>
+                    <span class="hint">@L.Ui("pairings.admin.keep.qr")</span>
+                    <button class="btn" @onclick="DismissCreated">@L.Ui("pairings.admin.keep.done")</button>
+                </div>
+            </div>
+        </section>
+    }
+
+    @* Pilotage : boutons toujours présents (désactivés au besoin), comptes rendus dans une notification. *@
+    <section class="panel tn-control">
+        <h3>@L.Ui("pairings.admin.control")</h3>
+        <div class="tn-actions">
+            @if (v.Phase == TournamentPhase.Registration)
+            {
+                <button class="btn primary" disabled="@(_busy || v.Players.Count(p => !p.Dropped) < 2)" @onclick="StartAsync">
+                    @L.Ui("pairings.admin.start")
+                </button>
+            }
+            else
+            {
+                <button class="btn primary" disabled="@(_busy || !CanPair(v))" @onclick="PairAsync">
+                    @L.Ui("pairings.admin.pair", Math.Min(v.Rounds.Count + 1, v.RoundCount))
+                </button>
+                <button class="btn" disabled="@(_busy || last is null || last.HasAnyResult || v.Phase == TournamentPhase.Finished)" @onclick="UndoAsync">
+                    @L.Ui("pairings.admin.undo", last?.Number ?? 1)
+                </button>
+                <button class="btn" disabled="@(_busy || last is null || !last.IsComplete || v.Phase == TournamentPhase.Finished)" @onclick="FinishAsync">
+                    @L.Ui("pairings.admin.finish")
+                </button>
+            }
+            <button class="btn" disabled="@_busy" @onclick="ExportAsync">@L.Ui("pairings.admin.export")</button>
+        </div>
+        <p class="hint">@ControlHint(v)</p>
+    </section>
+
+    @if (last is not null)
+    {
+        <section class="panel">
+            <h3>@L.Ui("pairings.admin.results", last.Number, v.RoundCount)</h3>
+            <ol class="tn-results">
+                @foreach (var table in last.Tables)
+                {
+                    <ResultEditor @key="(last.Number, table.Number, table.PlayerA, table.PlayerB)" View="v" RoundNumber="last.Number" Table="table" Save="SaveResultAsync" ReadOnly="@(v.Phase == TournamentPhase.Finished)" />
+                }
+            </ol>
+            @if (v.Rounds.Count > 1)
+            {
+                <details class="tn-history">
+                    <summary>@L.Ui("pairings.admin.previousResults")</summary>
+                    @foreach (var previous in v.Rounds.Take(v.Rounds.Count - 1).Reverse())
+                    {
+                        <h4>@L.Ui("pairings.roundN", previous.Number)</h4>
+                        <ol class="tn-results">
+                            @foreach (var table in previous.Tables)
+                            {
+                                <ResultEditor @key="(previous.Number, table.Number, table.PlayerA, table.PlayerB)" View="v" RoundNumber="previous.Number" Table="table" Save="SaveResultAsync" ReadOnly="@(v.Phase == TournamentPhase.Finished)" />
+                            }
+                        </ol>
+                    }
+                </details>
+            }
+        </section>
+        <section class="panel">
+            <h3>@L.Ui("pairings.standings")</h3>
+            <StandingsTable View="v" />
+        </section>
+    }
+
+    <section class="panel">
+        <h3>@L.Ui("pairings.players", v.Players.Count)</h3>
+        <PlayerList View="v">
+            <Actions Context="p">
+                @if (v.Phase == TournamentPhase.Registration)
+                {
+                    <button class="btn small danger" disabled="@_busy" @onclick="() => RemoveAsync(p)">@L.Ui("pairings.admin.remove")</button>
+                }
+                else if (v.Phase == TournamentPhase.Started)
+                {
+                    <button class="btn small" disabled="@_busy" @onclick="() => SetDroppedAsync(p, !p.Dropped)">
+                        @L.Ui(p.Dropped ? "pairings.admin.reinstate" : "pairings.admin.drop")
+                    </button>
+                }
+            </Actions>
+        </PlayerList>
+    </section>
+
+    <section class="panel">
+        <h3>@L.Ui("pairings.admin.share")</h3>
+        <div class="tn-links">
+            <div class="field">
+                <label>@L.Ui("pairings.admin.publicLink")</label>
+                <span class="tn-share">
+                    <code>@PublicLink</code>
+                    <button class="btn small" @onclick="() => CopyAsync(PublicLink)">@CopyLabel(PublicLink)</button>
+                </span>
+                <QrCode Text="@PublicLink" Alt="@L.Ui("pairings.admin.publicLink")" />
+                <span class="hint">@L.Ui("pairings.admin.publicLink.qr")</span>
+            </div>
+            <div class="field">
+                <label>@L.Ui("pairings.admin.adminLink")</label>
+                <span class="tn-share">
+                    <code>@AdminLink</code>
+                    <button class="btn small" @onclick="() => CopyAsync(AdminLink)">@CopyLabel(AdminLink)</button>
+                    <button class="btn small" @onclick="() => _showAdminQr = !_showAdminQr">@L.Ui(_showAdminQr ? "pairings.admin.qr.hide" : "pairings.admin.qr.show")</button>
+                </span>
+                @if (_showAdminQr)
+                {
+                    <QrCode Text="@AdminLink" Alt="@L.Ui("pairings.admin.adminLink")" />
+                }
+                <span class="hint">@L.Ui("pairings.admin.adminLink.help")</span>
+            </div>
+        </div>
+    </section>
+
+    @* Mot de passe : administration depuis un autre appareil sans le lien. *@
+    <section class="panel">
+        <h3>@L.Ui("pairings.admin.access")</h3>
+        <p class="tn-intro">@L.Ui(v.HasPassword ? "pairings.admin.access.set" : "pairings.admin.access.none", TournamentRules.MinPasswordLength)</p>
+        <form class="tn-inline" @onsubmit="SetPasswordAsync" @onsubmit:preventDefault="true">
+            <input type="password" autocomplete="new-password" maxlength="@TournamentRules.MaxPasswordLength" value="@_newPassword"
+                   @oninput="e => _newPassword = e.Value?.ToString() ?? string.Empty" aria-label="@L.Ui("pairings.admin.password.new")"
+                   placeholder="@L.Ui("pairings.admin.password.new")" class="tn-password" />
+            <button class="btn" type="submit" disabled="@(_busy || _newPassword.Length < TournamentRules.MinPasswordLength)">
+                @L.Ui(v.HasPassword ? "pairings.admin.password.change" : "pairings.admin.password.set")
+            </button>
+            @if (v.HasPassword)
+            {
+                <button class="btn danger" type="button" disabled="@_busy" @onclick="RemovePasswordAsync">@L.Ui("pairings.admin.password.remove")</button>
+            }
+        </form>
+    </section>
+
+    @* À part, loin du pilotage : suppression définitive, confirmée en retapant le code. *@
+    <section class="panel tn-danger">
+        <h3>@L.Ui("pairings.admin.delete.title")</h3>
+        <p class="tn-intro">@L.Ui("pairings.admin.delete.help")</p>
+        <button class="btn danger" disabled="@_busy" @onclick="DeleteAsync">@L.Ui("pairings.admin.delete")</button>
+    </section>
+
+    @if (_toast is not null)
+    {
+        <div class="toast" role="status" aria-live="polite" @key="_toastId" @onclick="() => _toast = null">
+            <span>@_toast</span>
+        </div>
+    }
+}
+
+@code {
+    private const int ToastMilliseconds = 6000;
+    private bool _busy;
+    private string? _toast;
+    private int _toastId;
+
+    // Arrivée juste après la création (?created=true) : encadré « Gardez ce lien ».
+    [SupplyParameterFromQuery(Name = "created")] public bool Created { get; set; }
+
+    private string _password = "", _newPassword = "";
+    private IReadOnlyList<Problem>? _accessProblems;
+    private bool _showAdminQr;
+
+    private string Token => Entry?.OrganizerToken ?? "";
+    private string AdminLink => $"{PublicLink}/admin#{Token}";
+
+    // Jeton reçu dans l'adresse (lien d'administration) : gardé sur cet appareil, retiré de l'adresse.
+    protected override async Task BeforeLoadAsync()
+    {
+        var fragment = new Uri(Nav.Uri).Fragment;
+        if (fragment.Length <= 1) return;
+        await Mine.RememberAsync(Code, Entry?.Name ?? "", organizerToken: Uri.UnescapeDataString(fragment[1..]));
+        Nav.NavigateTo($"t/{Code}/admin", replace: true);
+    }
+
+    private static bool CanPair(TournamentView v) =>
+        v.Phase == TournamentPhase.Started && v.LastRound is null or { IsComplete: true }
+        && v.Rounds.Count < v.RoundCount && v.Players.Count(p => !p.Dropped) >= 2;
+
+    private string ControlHint(TournamentView v) => v.Phase switch
+    {
+        TournamentPhase.Registration => L.Ui("pairings.admin.hint.registration"),
+        TournamentPhase.Finished => L.Ui("pairings.admin.hint.finished"),
+        _ when v.LastRound is { IsComplete: false } r => L.Ui("pairings.admin.hint.results", r.Number),
+        _ when v.Rounds.Count >= v.RoundCount => L.Ui("pairings.admin.hint.lastRound"),
+        _ => L.Ui("pairings.admin.hint.pair", v.Rounds.Count + 1),
+    };
+
+    private async Task<bool> RunAsync<T>(Func<Task<ApiResult<T>>> action, Func<T?, string?>? report = null)
+    {
+        if (_busy) return false;
+        _busy = true;
+        try
+        {
+            var result = await action();
+            Toast(result.Ok ? report?.Invoke(result.Value) : string.Join(" ", result.Problems.Select(L.Describe)));
+            await RefreshAsync();
+            return result.Ok;
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task StartAsync()
+    {
+        if (!await ConfirmAsync(L.Ui("pairings.admin.start.confirm"))) return;
+        await RunAsync(() => Api.StartAsync(Code, Token), _ => L.Ui("pairings.admin.started"));
+    }
+
+    private Task PairAsync() => RunAsync(() => Api.PairAsync(Code, Token), s => s is null ? null : string.Join(" ", new[]
+    {
+        L.Ui("pairings.admin.paired", s.Round),
+        s.Rematches > 0 ? L.Ui("pairings.admin.rematches", s.Rematches) : null,
+        s.SameAlignment > 0 && (View!.Pairing == PairingMode.Alignment || View.AvoidSameAlignment) ? L.Ui("pairings.admin.sameAlignment", s.SameAlignment) : null,
+    }.Where(x => x is not null)));
+
+    private async Task UndoAsync()
+    {
+        if (!await ConfirmAsync(L.Ui("pairings.admin.undo.confirm", View!.LastRound!.Number))) return;
+        await RunAsync(() => Api.UndoRoundAsync(Code, Token), _ => L.Ui("pairings.admin.undone"));
+    }
+
+    private async Task FinishAsync()
+    {
+        if (!await ConfirmAsync(L.Ui("pairings.admin.finish.confirm"))) return;
+        await RunAsync(() => Api.FinishAsync(Code, Token), _ => L.Ui("pairings.admin.finished"));
+    }
+
+    private async Task RemoveAsync(PlayerView p)
+    {
+        if (!await ConfirmAsync(L.Ui("pairings.admin.remove.confirm", p.Name))) return;
+        await RunAsync(() => Api.UnregisterAsync(Code, p.Id, Token, null));
+    }
+
+    private Task SetDroppedAsync(PlayerView p, bool dropped) =>
+        RunAsync(() => Api.SetDroppedAsync(Code, p.Id, dropped, Token),
+            _ => L.Ui(dropped ? "pairings.admin.droppedDone" : "pairings.admin.reinstated", p.Name));
+
+    private async Task<IReadOnlyList<Problem>> SaveResultAsync(int round, int table, int? vpA, int? vpB)
+    {
+        var result = await Api.SetResultAsync(Code, round, table, vpA, vpB, Token);
+        if (result.Ok)
+        {
+            await RefreshAsync();
+            StateHasChanged();              // saisie depuis une ligne (composant enfant) : classement, boutons
+        }
+        return result.Problems;
+    }
+
+    private void DismissCreated() => Nav.NavigateTo($"t/{Code}/admin", replace: true);
+
+    // Appareil sans jeton : le mot de passe en ouvre un, gardé sur cet appareil.
+    private async Task LoginAsync()
+    {
+        if (_busy || _password.Length == 0) return;
+        _busy = true;
+        try
+        {
+            var result = await Api.LoginAsync(Code, _password);
+            _accessProblems = result.Problems;
+            if (result.Value is not { } login) return;
+            _password = "";
+            await Mine.RememberAsync(Code, View?.Name ?? "", organizerToken: login.OrganizerToken);
+            await RefreshAsync();
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task SetPasswordAsync()
+    {
+        if (_newPassword.Length < TournamentRules.MinPasswordLength) return;
+        var password = _newPassword;
+        if (await RunAsync(() => Api.SetPasswordAsync(Code, password, Token), _ => L.Ui("pairings.admin.password.saved")))
+            _newPassword = "";
+    }
+
+    private async Task RemovePasswordAsync()
+    {
+        if (!await ConfirmAsync(L.Ui("pairings.admin.password.remove.confirm"))) return;
+        await RunAsync(() => Api.SetPasswordAsync(Code, null, Token), _ => L.Ui("pairings.admin.password.removed"));
+    }
+
+    private async Task DeleteAsync()
+    {
+        var typed = await JS.InvokeAsync<string?>("prompt", L.Ui("pairings.admin.delete.confirm", View!.Name, View.Code));
+        if (typed is null) return;
+        if (!string.Equals(typed.Trim(), View.Code, StringComparison.OrdinalIgnoreCase))
+        {
+            Toast(L.Ui("pairings.admin.delete.mismatch"));
+            return;
+        }
+        _busy = true;
+        try
+        {
+            var result = await Api.DeleteAsync(Code, Token);
+            if (!result.Ok)
+            {
+                Toast(string.Join(" ", result.Problems.Select(L.Describe)));
+                return;
+            }
+            await Mine.ForgetAsync(Code);
+            Nav.NavigateTo("");
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task ExportAsync()
+    {
+        var result = await Api.ExportAsync(Code, Token);
+        if (result.Value is { } json)
+            await JS.InvokeVoidAsync("olomoc.download", $"tournoi-{Code.ToLowerInvariant()}.json", json, "application/json");
+        else Toast(string.Join(" ", result.Problems.Select(L.Describe)));
+    }
+
+    private void Toast(string? message)
+    {
+        var id = ++_toastId;
+        _toast = string.IsNullOrWhiteSpace(message) ? null : message;
+        if (_toast is null) return;
+        _ = Task.Delay(ToastMilliseconds).ContinueWith(_ => InvokeAsync(() =>
+        {
+            if (_toastId != id) return;
+            _toast = null;
+            StateHasChanged();
+        }));
+    }
+}

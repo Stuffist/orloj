@@ -26,12 +26,15 @@ public sealed class CabalLibrary
 
     public Task EnsureLoadedAsync() => _loading ??= LoadAsync();
 
+    /// <summary>Relit les sauvegardes : une autre page du site (le constructeur, dans un autre onglet) a pu en ajouter.</summary>
+    public Task ReloadAsync() => _loading = LoadAsync();
+
     private async Task LoadAsync()
     {
         try
         {
             var json = await _js.InvokeAsync<string?>("localStorage.getItem", StorageKey);
-            if (string.IsNullOrEmpty(json)) return;
+            if (string.IsNullOrEmpty(json)) { _cabals = new(); return; }
             _cabals = (JsonSerializer.Deserialize<List<SavedCabal>>(json, JsonOpts) ?? new())
                 .Where(c => c.Cabal is { Name: not null, Cogs: not null })
                 .OrderByDescending(c => c.SavedAt)

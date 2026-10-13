@@ -9,6 +9,7 @@ public enum HealthPointType { S, R, T }     // Standard, Reinforced (Protection)
 public enum Timing { Active, Permanent }
 public enum EquipmentKind { EQUIPMENT, BOON }
 public enum BuildRuleType { ALL_MINISTRIES, RECRUIT_WEARER, RECRUIT_MINISTRY }
+public enum Alignment { LIGHT, DARK }       // Lumières, Ténèbres (référentiel de faction)
 
 public sealed class Ministry
 {
@@ -117,6 +118,7 @@ public sealed class Catalog
 public sealed class Faction
 {
     public string Code { get; init; } = "";
+    public Alignment Alignment { get; init; }
     public List<string> CogIds { get; init; } = new();
 }
 

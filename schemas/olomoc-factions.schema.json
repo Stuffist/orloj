@@ -49,11 +49,19 @@
       "additionalProperties": false,
       "required": [
         "code",
+        "alignment",
         "cogIds"
       ],
       "properties": {
         "code": {
           "$ref": "#/$defs/factionCode"
+        },
+        "alignment": {
+          "enum": [
+            "LIGHT",
+            "DARK"
+          ],
+          "description": "Alignement de la faction : Lumières (LIGHT) ou Ténèbres (DARK). Sert aux appariements de tournoi qui évitent les affrontements de même alignement."
         },
         "cogIds": {
           "type": "array",

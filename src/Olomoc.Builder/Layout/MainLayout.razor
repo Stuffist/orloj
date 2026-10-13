@@ -20,18 +20,7 @@
                 <h1>Olomòc</h1>
             }
         </div>
-        @if (L.Loaded && L.Languages.Count > 1)
-        {
-            <label class="lang-switch">
-                <span class="sr-only">@L.Ui("app.language")</span>
-                <select value="@L.Current" @onchange="OnLanguageChanged" title="@L.Ui("app.language")">
-                    @foreach (var lang in L.Languages)
-                    {
-                        <option value="@lang.Code">@lang.Name</option>
-                    }
-                </select>
-            </label>
-        }
+        <HeaderTools Current="builder" />
     </header>
     <main>@Body</main>
 </div>
@@ -43,8 +32,6 @@
         Nav.LocationChanged += OnLocationChanged;
         await L.EnsureLoadedAsync();
     }
-
-    private Task OnLanguageChanged(ChangeEventArgs e) => L.SetLanguageAsync(e.Value?.ToString() ?? "");
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 

@@ -1,0 +1,31 @@
+@* Une cabale inscrite : nom, puis un rouage par ligne (rang 3 à 1) avec son équipement/don,
+   dans la langue courante (noms enregistrés si la carte n'existe plus). *@
+@inject LocalizationService L
+@inject CatalogService Catalog
+
+<div class="tn-cabal">
+    @if (Title is not null || Cabal.Name is not null)
+    {
+        <div class="tn-cabal-name">@(Title ?? Cabal.Name)</div>
+    }
+    <ul>
+        @foreach (var slot in Cabal.Cogs.OrderByDescending(s => s.Rank))
+        {
+            <li>
+                <span class="stars">@(new string('★', slot.Rank))</span>
+                <span>@CogName(slot.Cog)</span>@if (slot.Equipment is { } e)
+                {
+                    <span class="tn-equipment"> · @EquipmentName(e)</span>
+                }
+            </li>
+        }
+    </ul>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CabalExport Cabal { get; set; } = default!;
+    [Parameter] public string? Title { get; set; }
+
+    private string CogName(IdName cog) => Catalog.CogById(cog.Id) is { } c ? L.CogName(c).Text : cog.Name;
+    private string EquipmentName(IdName e) => Catalog.EquipmentById(e.Id) is { } x ? L.EquipmentName(x).Text : e.Name;
+}

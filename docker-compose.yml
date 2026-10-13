@@ -1,4 +1,5 @@
-# Olomòc sur le VPS, de façon autonome : https://<DOMAIN>:<OLOMOC_HTTPS_PORT>/
+# Olomòc sur le VPS, de façon autonome : https://<DOMAIN>:<OLOMOC_HTTPS_PORT>/ (→ /builder/ ;
+# tournois sous /pairings/)
 # Indépendant des autres projets (B5T garde 80/443) ; réutilise le certificat Let's Encrypt
 # de l'hôte, monté en lecture seule. Réglages facultatifs dans un fichier .env à côté.
 #
@@ -20,3 +21,6 @@ services:
     volumes:
       # Tout /etc/letsencrypt : live/ contient des liens vers archive/.
       - ${CERT_ROOT:-/etc/letsencrypt}:/etc/letsencrypt:ro
+      # Tournois : un fichier JSON par tournoi dans ./data, à côté de ce fichier (créé au premier
+      # démarrage). Conservé par down/up/--force-recreate/--build ; à sauvegarder comme un dossier.
+      - ./data:/data

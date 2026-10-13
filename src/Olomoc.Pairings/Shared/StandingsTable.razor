@@ -1,0 +1,48 @@
+@* Classement : points de tournoi, différence de PV, PV marqués, bilan. *@
+@inject LocalizationService L
+
+@if (View.Standings.Any(s => s.Played > 0))
+{
+    <div class="tn-scroll">
+        <table class="tn-standings">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th class="tn-left">@L.Ui("pairings.player")</th>
+                    <th title="@L.Ui("pairings.points.title")">@L.Ui("pairings.points")</th>
+                    <th title="@L.Ui("pairings.diff.title")">@L.Ui("pairings.diff")</th>
+                    <th title="@L.Ui("pairings.vp.title")">@L.Ui("pairings.vp")</th>
+                    <th title="@L.Ui("pairings.record.title")">@L.Ui("pairings.record")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in View.Standings)
+                {
+                    var player = View.Player(s.PlayerId);
+                    <tr class="@(s.PlayerId == View.MyPlayerId ? "mine" : null) @(player?.Dropped == true ? "dropped" : null)">
+                        <td>@s.Rank</td>
+                        <td class="tn-left">
+                            <span class="tn-player-name">@player?.Name</span>
+                            @if (player is not null)
+                            {
+                                <FactionBadge Code="@player.Faction" />
+                            }
+                        </td>
+                        <td class="tn-strong">@s.Points</td>
+                        <td>@(s.Diff > 0 ? "+" : "")@s.Diff</td>
+                        <td>@s.VpFor</td>
+                        <td>@s.Wins/@s.Draws/@s.Losses</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <p class="empty">@L.Ui("pairings.standings.empty")</p>
+}
+
+@code {
+    [Parameter, EditorRequired] public TournamentView View { get; set; } = default!;
+}

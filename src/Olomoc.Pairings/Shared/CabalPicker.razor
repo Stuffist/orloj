@@ -1,0 +1,155 @@
+@* Choix d'une cabale à inscrire : parmi « Mes cabales » (sauvegardées par le constructeur sur
+   cet appareil), composée dans le constructeur (« Composer… », nouvel onglet), ou collée (export
+   texte ou JSON). Légalité vérifiée aussitôt, avec les règles du constructeur (le serveur la
+   revérifie à l'inscription). *@
+@inject LocalizationService L
+@inject CatalogService Catalog
+@inject CabalLibrary Library
+@inject CabalImport Import
+
+<div class="tn-picker">
+    <div class="tn-picker-head">
+        <span class="tn-picker-title">@L.Ui("pairings.cabalN", Index + 1)</span>
+        <select value="@SelectedSaved" @onchange="OnSavedChanged" disabled="@(Library.Cabals.Count == 0)"
+                aria-label="@L.Ui("pairings.register.fromLibrary")">
+            <option value="">@L.Ui(Library.Cabals.Count == 0 ? "pairings.register.libraryEmpty" : "pairings.register.fromLibrary")</option>
+            @for (var i = 0; i < Library.Cabals.Count; i++)
+            {
+                var saved = Library.Cabals[i].Cabal;
+                <option value="@i">@saved.Name@(saved.Faction is { } f ? " — " + L.FactionName(f.Code) : "")</option>
+            }
+        </select>
+        <a class="btn small" href="@ComposeLink" target="_blank" rel="noopener" title="@L.Ui("pairings.register.compose.title")">
+            @L.Ui("pairings.register.compose")
+        </a>
+        <button class="btn small" type="button" @onclick="OpenPaste">@L.Ui("pairings.register.paste")</button>
+    </div>
+    @if (Value is { } cabal)
+    {
+        <CabalSummary Cabal="cabal" />
+        <LegalityStatus Cabal="cabal" Faction="@Faction" />
+    }
+</div>
+
+@if (_pasting)
+{
+    <Sheet Title="@L.Ui("pairings.paste.title", Index + 1)" OnClose="() => _pasting = false">
+        <p class="tn-intro">@L.Ui("pairings.paste.help")</p>
+        <textarea class="tn-paste" rows="7" spellcheck="false" placeholder="@L.Ui("pairings.paste.placeholder")"
+                  value="@_text" @oninput="OnTextChanged" aria-label="@L.Ui("pairings.paste.title", Index + 1)"></textarea>
+        @if (_result is { } result)
+        {
+            @if (result.Issues.Count > 0)
+            {
+                <ul class="tn-problems">
+                    @foreach (var issue in result.Issues)
+                    {
+                        <li>@L.Ui("import." + issue.Key, issue.Args.Cast<object>().ToArray())</li>
+                    }
+                </ul>
+            }
+            @if (result.Cabal is { } read)
+            {
+                @* Texte sans faction, valable dans plusieurs : au joueur de choisir. *@
+                @if (string.IsNullOrEmpty(Faction) && result.Factions.Count > 1)
+                {
+                    <div class="field">
+                        <label for="paste-faction-@Index">@L.Ui("pairings.paste.faction")</label>
+                        <select id="paste-faction-@Index" value="@read.Faction?.Code" @onchange="OnPasteFactionChanged">
+                            @foreach (var factionCode in result.Factions)
+                            {
+                                <option value="@factionCode">@L.FactionName(factionCode)</option>
+                            }
+                        </select>
+                    </div>
+                }
+                <CabalSummary Cabal="read" />
+                <LegalityStatus Cabal="read" Faction="@Faction" />
+            }
+        }
+        <div class="sheet-actions">
+            <button class="btn" type="button" @onclick="() => _pasting = false">@L.Ui("pairings.cancel")</button>
+            <button class="btn primary" type="button" disabled="@(_result?.Cabal is null)" @onclick="UsePastedAsync">@L.Ui("pairings.paste.use")</button>
+        </div>
+    </Sheet>
+}
+
+@code {
+    [Parameter] public int Index { get; set; }
+    [Parameter] public string? Faction { get; set; }
+    [Parameter] public CabalExport? Value { get; set; }
+    [Parameter] public EventCallback<CabalExport?> ValueChanged { get; set; }
+    /// <summary>Code du tournoi : le constructeur, ouvert par « Composer… », l'indique.</summary>
+    [Parameter] public string TournamentCode { get; set; } = "";
+    /// <summary>Change quand « Mes cabales » a été relu : la liste est redessinée.</summary>
+    [Parameter] public int LibraryVersion { get; set; }
+
+    // Constructeur dans un nouvel onglet, sur la faction choisie, avec un rappel du tournoi.
+    private string ComposeLink => $"/builder/?tournament={Uri.EscapeDataString(TournamentCode)}"
+        + (Faction is { Length: > 0 } f ? $"&faction={Uri.EscapeDataString(f)}" : "");
+
+    private bool _pasting;
+    private string _text = "";
+    private ImportResult? _result;
+    private string? _pasteFaction;           // faction choisie dans la fenêtre (texte sans faction)
+
+    protected override Task OnInitializedAsync() => Library.EnsureLoadedAsync();
+
+    // Sauvegarde choisie : celle dont le contenu est la cabale affichée (même après relecture).
+    private string SelectedSaved
+    {
+        get
+        {
+            for (var i = 0; i < Library.Cabals.Count; i++)
+            {
+                var saved = Library.Cabals[i].Cabal;
+                if (Value is not null && saved.Name == Value.Name && CabalLibrary.SameCards(saved, Value)) return i.ToString();
+            }
+            return "";
+        }
+    }
+
+    private Task OnSavedChanged(ChangeEventArgs e)
+    {
+        var cabal = int.TryParse(e.Value?.ToString(), out var i) && i < Library.Cabals.Count ? Library.Cabals[i].Cabal : null;
+        return ValueChanged.InvokeAsync(cabal);
+    }
+
+    private void OpenPaste()
+    {
+        _text = "";
+        _result = null;
+        _pasteFaction = null;
+        _pasting = true;
+    }
+
+    // Lecture à chaque frappe : aperçu immédiat des cartes reconnues et de la légalité.
+    private void OnTextChanged(ChangeEventArgs e)
+    {
+        _text = e.Value?.ToString() ?? "";
+        Read();
+    }
+
+    private void OnPasteFactionChanged(ChangeEventArgs e)
+    {
+        _pasteFaction = e.Value?.ToString();
+        Read();
+    }
+
+    // Faction du joueur si elle est choisie, sinon celle choisie dans la fenêtre (parmi les possibles).
+    private void Read()
+    {
+        var faction = string.IsNullOrEmpty(Faction) ? _pasteFaction : Faction;
+        _result = _text.Trim().Length == 0 ? null : Import.Parse(_text, faction);
+        // Liste des possibles : celle de la lecture sans préférence, pour pouvoir changer d'avis.
+        if (_result is { Cabal: not null } && string.IsNullOrEmpty(Faction) && _pasteFaction is not null)
+            _result = _result with { Factions = Import.Parse(_text, null).Factions };
+    }
+
+    private async Task UsePastedAsync()
+    {
+        if (_result?.Cabal is not { } cabal) return;
+        _pasting = false;
+        await ValueChanged.InvokeAsync(cabal);
+    }
+}

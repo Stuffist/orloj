@@ -1,0 +1,15 @@
+@* Faction d'un joueur et son alignement (Lumières / Ténèbres). *@
+@inject LocalizationService L
+@inject CatalogService Catalog
+
+<span class="tn-faction">
+    @L.FactionName(Code)
+    @if (Catalog.AlignmentOf(Code) is { } alignment)
+    {
+        <span class="tn-alignment @alignment.ToString().ToLowerInvariant()">@L.Ui($"pairings.alignment.{alignment}")</span>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public string Code { get; set; } = "";
+}

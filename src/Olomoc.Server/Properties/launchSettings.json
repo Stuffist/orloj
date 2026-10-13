@@ -1,12 +1,13 @@
 {
   "profiles": {
-    "Olomoc.Builder": {
+    "Olomoc.Server": {
       "commandName": "Project",
       "launchBrowser": true,
+      "launchUrl": "builder/",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "https://localhost:55771;http://localhost:55772"
+      "applicationUrl": "http://localhost:55772"
     }
   }
 }

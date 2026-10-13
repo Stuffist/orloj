@@ -5,6 +5,7 @@
   "factions": [
     {
       "code": "BLACK_GUARD",
+      "alignment": "DARK",
       "cogIds": [
         "1R01",
         "2R04",

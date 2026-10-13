@@ -1,5 +1,5 @@
 {
-  "$schema": "../../schemas/olomoc.schema.json",
+  "$schema": "../../../../schemas/olomoc.schema.json",
   "version": "2026.10",
   "ministries": [
     {

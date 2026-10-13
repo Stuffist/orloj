@@ -1,0 +1,175 @@
+@page "/"
+@inject LocalizationService L
+@inject CatalogService Catalog
+@inject TournamentApi Api
+@inject MyTournaments Mine
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IDisposable
+
+@if (!_ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else
+{
+    <section class="panel tn-join">
+        <h2>@L.Ui("pairings.join.title")</h2>
+        <form class="tn-inline" @onsubmit="Join" @onsubmit:preventDefault="true">
+            <input type="text" maxlength="6" placeholder="@L.Ui("pairings.join.placeholder")" value="@_joinCode"
+                   @oninput="e => _joinCode = e.Value?.ToString() ?? string.Empty" aria-label="@L.Ui("pairings.join.placeholder")"
+                   autocapitalize="characters" autocomplete="off" spellcheck="false" />
+            <button class="btn primary" type="submit" disabled="@(_joinCode.Trim().Length != 6)">@L.Ui("pairings.join.open")</button>
+        </form>
+    </section>
+
+    @if (Mine.All.Count > 0)
+    {
+        <section class="panel">
+            <h2>@L.Ui("pairings.mine.title")</h2>
+            <ul class="tn-mine">
+                @foreach (var t in Mine.All)
+                {
+                    <li>
+                        <a class="tn-mine-name" href="t/@t.Code">@(t.Name.Length > 0 ? t.Name : t.Code)</a>
+                        <span class="tn-code-small">@t.Code</span>
+                        @if (t.OrganizerToken is not null)
+                        {
+                            <span class="tn-role">@L.Ui("pairings.mine.organizer")</span>
+                        }
+                        @if (t.PlayerId is not null)
+                        {
+                            <span class="tn-role">@L.Ui("pairings.mine.player")</span>
+                        }
+                        <span class="tn-mine-actions">
+                            @if (t.OrganizerToken is not null)
+                            {
+                                <a class="btn small" href="t/@t.Code/admin">@L.Ui("pairings.admin.open")</a>
+                            }
+                            <button class="btn small danger" @onclick="() => ForgetAsync(t)">@L.Ui("pairings.mine.forget")</button>
+                        </span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
+    <section class="panel">
+        <h2>@L.Ui("pairings.create.title")</h2>
+        <p class="tn-intro">@L.Ui("pairings.create.intro")</p>
+        <form class="tn-form" @onsubmit="CreateAsync" @onsubmit:preventDefault="true">
+            <div class="tn-fields">
+                <div class="field grow">
+                    <label for="t-name">@L.Ui("pairings.create.name")</label>
+                    <input id="t-name" type="text" maxlength="@TournamentRules.MaxNameLength" value="@_name"
+                           @oninput="e => _name = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="field">
+                    <label for="t-date">@L.Ui("pairings.create.date")</label>
+                    <input id="t-date" type="date" value="@(_date?.ToString("yyyy-MM-dd"))" @onchange="OnDateChanged" />
+                </div>
+            </div>
+            <div class="tn-fields">
+                <div class="field">
+                    <label for="t-rounds">@L.Ui("pairings.create.rounds")</label>
+                    <select id="t-rounds" value="@_rounds" @onchange="e => _rounds = int.Parse(e.Value!.ToString()!)">
+                        @for (var n = 1; n <= TournamentRules.MaxRounds; n++)
+                        {
+                            <option value="@n">@n</option>
+                        }
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="t-cabals">@L.Ui("pairings.create.cabals")</label>
+                    <select id="t-cabals" value="@_cabals" @onchange="e => _cabals = int.Parse(e.Value!.ToString()!)">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                    </select>
+                </div>
+            </div>
+            <fieldset class="tn-modes">
+                <legend>@L.Ui("pairings.create.mode")</legend>
+                <label>
+                    <input type="radio" name="mode" checked="@(_mode == PairingMode.Swiss)" @onchange="() => _mode = PairingMode.Swiss" />
+                    <span><strong>@L.Ui("pairings.mode.swiss")</strong> — @L.Ui("pairings.mode.swiss.help")</span>
+                </label>
+                <label class="tn-sub @(_mode == PairingMode.Swiss ? null : "off")">
+                    <input type="checkbox" checked="@_avoidSame" disabled="@(_mode != PairingMode.Swiss)"
+                           @onchange="e => _avoidSame = e.Value is true" />
+                    <span>@L.Ui("pairings.mode.avoidSame")</span>
+                </label>
+                <label>
+                    <input type="radio" name="mode" checked="@(_mode == PairingMode.Alignment)" @onchange="() => _mode = PairingMode.Alignment" />
+                    <span><strong>@L.Ui("pairings.mode.alignment")</strong> — @L.Ui("pairings.mode.alignment.help")</span>
+                </label>
+            </fieldset>
+            <div class="field">
+                <label for="t-password">@L.Ui("pairings.create.password")</label>
+                <input id="t-password" type="password" autocomplete="new-password" maxlength="@TournamentRules.MaxPasswordLength"
+                       value="@_password" @oninput="e => _password = e.Value?.ToString() ?? string.Empty" />
+                <span class="hint">@L.Ui("pairings.create.password.help", TournamentRules.MinPasswordLength)</span>
+            </div>
+            <Problems Items="_problems" />
+            <div class="tn-actions">
+                <button class="btn primary" type="submit" disabled="@(_busy || _name.Trim().Length == 0)">@L.Ui("pairings.create.submit")</button>
+            </div>
+        </form>
+    </section>
+}
+
+@code {
+    private bool _ready;
+    private string _joinCode = "";
+    private string _name = "";
+    private DateOnly? _date;
+    private int _rounds = 3;
+    private int _cabals = 2;
+    private PairingMode _mode = PairingMode.Swiss;
+    private bool _avoidSame;
+    private string _password = "";
+    private IReadOnlyList<Problem>? _problems;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnLanguageChanged;
+        await L.EnsureLoadedAsync();
+        await Catalog.EnsureLoadedAsync();
+        await Mine.EnsureLoadedAsync();
+        _ready = true;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnLanguageChanged;
+
+    private void OnDateChanged(ChangeEventArgs e) =>
+        _date = DateOnly.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : null;
+
+    private void Join() => Nav.NavigateTo($"t/{_joinCode.Trim().ToUpperInvariant()}");
+
+    private async Task CreateAsync()
+    {
+        if (_busy) return;
+        _busy = true;
+        try
+        {
+            var result = await Api.CreateAsync(new CreateTournamentRequest(_name.Trim(), _date, _rounds, _cabals, _mode, _avoidSame,
+                _password.Length == 0 ? null : _password));
+            if (result.Value is not { } created)
+            {
+                _problems = result.Problems;
+                return;
+            }
+            await Mine.RememberAsync(created.Code, _name.Trim(), organizerToken: created.OrganizerToken);
+            Nav.NavigateTo($"t/{created.Code}/admin?created=true");    // encadré « Gardez ce lien »
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task ForgetAsync(MyTournament t)
+    {
+        var key = t.OrganizerToken is null ? "pairings.mine.forget.confirm" : "pairings.mine.forget.confirmOrganizer";
+        if (await JS.InvokeAsync<bool>("confirm", L.Ui(key, t.Name.Length > 0 ? t.Name : t.Code))) await Mine.ForgetAsync(t.Code);
+    }
+}
