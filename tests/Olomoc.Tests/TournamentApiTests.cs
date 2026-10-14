@@ -21,11 +21,12 @@ public sealed class TournamentApiTests : IDisposable
         if (Directory.Exists(_data)) Directory.Delete(_data, recursive: true);
     }
 
-    private HttpClient Server(int createPerHour = 1000)
+    private HttpClient Server(int createPerHour = 1000, int readsPerMinute = 1000)
     {
         var server = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("DATA_DIR", _data)
-            .UseSetting("RATE_CREATE_PER_HOUR", createPerHour.ToString()));
+            .UseSetting("RATE_CREATE_PER_HOUR", createPerHour.ToString())
+            .UseSetting("RATE_READS_PER_MINUTE", readsPerMinute.ToString()));
         _servers.Add(server);
         return server.CreateClient();
     }
@@ -371,5 +372,18 @@ public sealed class TournamentApiTests : IDisposable
         var third = await http.PostAsJsonAsync("/api/tournaments",
             new CreateTournamentRequest("Trop", null, 3, 2, PairingMode.Swiss, false), TournamentJson.Options);
         Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
+    }
+
+    [Fact]
+    public async Task Lectures_limitees_par_adresse()
+    {
+        // Essai de codes en série : au-delà de la limite, refusé, que le code existe ou non.
+        var http = Server(readsPerMinute: 3);
+        var t = await Create(http);
+        var statuses = new List<HttpStatusCode>();
+        foreach (var code in new[] { t.Code, "ZZZZZZ", "YYYYYY", t.Code })
+            statuses.Add((await http.GetAsync($"/api/tournaments/{code}")).StatusCode);
+        Assert.Equal(new[] { HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.NotFound, HttpStatusCode.TooManyRequests }, statuses);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await http.GetAsync("/api/stats")).StatusCode);
     }
 }

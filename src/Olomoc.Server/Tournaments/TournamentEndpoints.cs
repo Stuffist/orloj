@@ -10,7 +10,8 @@ namespace Olomoc.Server.Tournaments;
 /// </summary>
 public static class TournamentEndpoints
 {
-    public const string WritePolicy = "tournament-write", CreatePolicy = "tournament-create", LoginPolicy = "tournament-login";
+    public const string WritePolicy = "tournament-write", CreatePolicy = "tournament-create", LoginPolicy = "tournament-login",
+        ReadPolicy = "tournament-read";
 
     /// <summary>Sessions ouvertes par mot de passe, par tournoi : au-delà, les plus anciennes sont fermées.</summary>
     private const int MaxSessions = 20;
@@ -20,8 +21,8 @@ public static class TournamentEndpoints
         var api = app.MapGroup("/api/tournaments");
 
         api.MapPost("", Create).RequireRateLimiting(CreatePolicy);
-        api.MapGet("{code}", Get);
-        api.MapGet("{code}/export", Export);
+        api.MapGet("{code}", Get).RequireRateLimiting(ReadPolicy);
+        api.MapGet("{code}/export", Export).RequireRateLimiting(ReadPolicy);
         api.MapPost("{code}/organizer/login", Login).RequireRateLimiting(LoginPolicy);
 
         var write = api.MapGroup("{code}").RequireRateLimiting(WritePolicy);
@@ -56,7 +57,8 @@ public static class TournamentEndpoints
                 return (true, Results.NoContent());
             }));
 
-        app.MapGet("/api/stats", (StatsArchive stats) => Results.Json(stats.Stats(), TournamentJson.Options));
+        app.MapGet("/api/stats", (StatsArchive stats) => Results.Json(stats.Stats(), TournamentJson.Options))
+            .RequireRateLimiting(ReadPolicy);
     }
 
     // ---- Création et lecture ----

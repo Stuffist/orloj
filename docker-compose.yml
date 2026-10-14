@@ -12,6 +12,14 @@ services:
     build: .
     container_name: olomoc
     restart: always
+    # Durcissement : aucun privilège root superflu (capacités retirées, sauf l'ouverture des ports
+    # 80/443), pas d'élévation possible, système de fichiers en lecture seule hormis /data et /tmp.
+    # L'utilisateur reste root pour lire la clé privée de Let's Encrypt (réservée à root sur l'hôte).
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    tmpfs: [/tmp]
     environment:
       DOMAIN: ${DOMAIN:-vps-24cf4978.vps.ovh.net}
     ports:

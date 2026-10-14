@@ -7,7 +7,9 @@ namespace Olomoc.Server.Hosting;
 /// HTTPS du conteneur, servi directement par Kestrel. Actif quand la variable DOMAIN est
 /// définie (docker-compose) : HTTPS sur 443 (HTTP en clair reçu sur ce port : renvoyé vers
 /// https://), HTTP sur 80 (healthcheck, diagnostic local).
-/// Sans DOMAIN (développement) : adresses habituelles (launchSettings, ASPNETCORE_URLS).
+/// Noms d'hôte acceptés (AllowedHosts, sauf réglage explicite) : le domaine, et localhost /
+/// 127.0.0.1 pour le healthcheck et le diagnostic local ; les autres reçoivent une erreur 400.
+/// Sans DOMAIN (développement) : adresses habituelles (launchSettings, ASPNETCORE_URLS), tout hôte.
 /// </summary>
 public static class Tls
 {
@@ -15,6 +17,7 @@ public static class Tls
     {
         var domain = builder.Configuration["DOMAIN"];
         if (string.IsNullOrWhiteSpace(domain)) return;
+        builder.Configuration["AllowedHosts"] ??= $"{domain};localhost;127.0.0.1";
 
         var certificates = new CertificateSource(domain, $"/etc/letsencrypt/live/{domain}");
         builder.WebHost.ConfigureKestrel(kestrel =>

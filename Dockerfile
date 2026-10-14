@@ -23,7 +23,8 @@ WORKDIR /app
 COPY --from=build /app .
 
 # Ports fixés par l'app (Hosting/Tls.cs) : 443 HTTPS, 80 HTTP (healthcheck, diagnostic local).
-# Utilisateur root, comme l'image nginx d'avant : ports < 1024 et clé privée de l'hôte.
+# Utilisateur root : la clé privée de Let's Encrypt de l'hôte n'est lisible que par root. Ses
+# privilèges sont retirés par docker-compose.yml (cap_drop, no-new-privileges, read_only).
 ENV ASPNETCORE_HTTP_PORTS=
 ENV DATA_DIR=/data
 VOLUME /data
