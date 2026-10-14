@@ -18,7 +18,8 @@ public class TournamentTests
 
     private static Tournament NewTournament(PairingMode mode, params string[] factions)
     {
-        var t = new Tournament { Code = "TEST", Name = "Test", RoundCount = 10, Pairing = mode, Phase = TournamentPhase.Started };
+        // Une cabale par joueur : la cabale jouée est implicite (voir Cabale_jouee_exigee_avec_deux_cabales).
+        var t = new Tournament { Code = "TEST", Name = "Test", RoundCount = 10, CabalsPerPlayer = 1, Pairing = mode, Phase = TournamentPhase.Started };
         for (var i = 0; i < factions.Length; i++)
             t.Players.Add(new Player { Id = $"p{i}", Name = $"Joueur {i}", Faction = factions[i] });
         return t;
@@ -275,6 +276,25 @@ public class TournamentTests
         Assert.Equal("victoryPoints", TournamentRules.SetResult(t, 1, 1, 5, null)?.Key);
         Assert.Equal("victoryPoints", TournamentRules.SetResult(t, 1, 1, -1, 2)?.Key);
         Assert.Null(TournamentRules.SetResult(t, 1, 1, null, null));                  // effacer
+    }
+
+    [Fact]
+    public void Cabale_jouee_exigee_avec_deux_cabales()
+    {
+        var t = NewTournament(PairingMode.Swiss, "L", "D");
+        t.CabalsPerPlayer = 2;
+        Pair(t);
+        Assert.Equal("cabalPlayed", TournamentRules.SetResult(t, 1, 1, 7, 3)?.Key);
+        Assert.Equal("cabalPlayed", TournamentRules.SetResult(t, 1, 1, 7, 3, 0, null)?.Key);
+        Assert.Equal("cabalPlayed", TournamentRules.SetResult(t, 1, 1, 7, 3, 0, 2)?.Key);     // hors bornes
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3, 1, 0));
+        Assert.Equal((1, 0), (t.Rounds[0].Tables[0].CabalA, t.Rounds[0].Tables[0].CabalB));
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, null, null, 1, 0));                    // effacer : cabales aussi
+        Assert.Equal((null, null), (t.Rounds[0].Tables[0].CabalA, t.Rounds[0].Tables[0].CabalB));
+
+        t.CabalsPerPlayer = 1;                                                                // une seule : implicite
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, 4, 4));
+        Assert.Equal((0, 0), (t.Rounds[0].Tables[0].CabalA, t.Rounds[0].Tables[0].CabalB));
     }
 
     [Fact]

@@ -29,7 +29,7 @@ public static class TournamentHeaders
 /// <summary>Mot de passe facultatif : donne l'administration sur un autre appareil, sans le lien.</summary>
 public sealed record CreateTournamentRequest(
     string Name, DateOnly? Date, int RoundCount, int CabalsPerPlayer, PairingMode Pairing, bool AvoidSameAlignment,
-    string? Password = null);
+    string? Password = null, bool ExcludeFromStats = false);
 
 /// <summary>Jeton organisateur : renvoyé une seule fois, à garder par l'organisateur.</summary>
 public sealed record TournamentCreated(string Code, string OrganizerToken);
@@ -39,7 +39,10 @@ public sealed record RegistrationRequest(string Name, string Faction, List<Cabal
 /// <summary>Jeton joueur : pour modifier ou retirer son inscription tant qu'elles sont ouvertes.</summary>
 public sealed record PlayerRegistered(string PlayerId, string PlayerToken);
 
-public sealed record ResultRequest(int? VpA, int? VpB);
+/// <summary>PV de chacun et cabale jouée (index), exigée avec deux cabales par joueur.</summary>
+public sealed record ResultRequest(int? VpA, int? VpB, int? CabalA = null, int? CabalB = null);
+
+public sealed record StatsRequest(bool Exclude);
 
 public sealed record PasswordRequest(string? Password);
 
@@ -60,7 +63,7 @@ public sealed record TournamentView(
     string Code, string Name, DateOnly? Date, int RoundCount, int CabalsPerPlayer,
     PairingMode Pairing, bool AvoidSameAlignment, TournamentPhase Phase,
     IReadOnlyList<PlayerView> Players, IReadOnlyList<Round> Rounds, IReadOnlyList<Standing> Standings,
-    bool IsOrganizer, string? MyPlayerId, bool HasPassword)
+    bool IsOrganizer, string? MyPlayerId, bool HasPassword, bool ExcludeFromStats = false)
 {
     public PlayerView? Player(string? id) => Players.FirstOrDefault(p => p.Id == id);
     public Round? LastRound => Rounds.Count == 0 ? null : Rounds[^1];

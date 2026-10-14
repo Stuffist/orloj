@@ -607,6 +607,37 @@ body {
 .tn-result-state.dirty { color: var(--rust-soft); }
 .tn-result-state.error { color: var(--ko); }
 
+/* Statistiques : barres en CSS seul (libellé, barre, %, détail), estompées si l'échantillon est petit */
+.stat-row {
+    display: grid; grid-template-columns: minmax(8rem, 15rem) minmax(4rem, 1fr) 3.2rem minmax(5rem, 11rem);
+    align-items: center; gap: .3rem .7rem; padding: .3rem 0; border-bottom: 1px solid var(--line); font-size: .88rem;
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-row.muted { opacity: .55; }
+.stat-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat-bar { height: .7rem; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
+.stat-bar > span { display: block; height: 100%; background: var(--rust); border-radius: 999px; }
+.stat-value { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-detail { color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
+.tn-home-links { margin: 0 0 1rem; text-align: right; }
+.hint a { color: var(--rust-soft); }
+#stats-faction { max-width: 24rem; }
+.tn-home-links a { color: var(--rust-soft); font-weight: 600; }
+.tn-check { display: flex; gap: .5rem; align-items: baseline; font-size: .88rem; cursor: pointer; }
+.tn-played { display: block; font-size: .72rem; color: var(--muted); }
+.tn-cabal-choice { display: inline-flex; gap: .25rem; margin-top: .2rem; }
+.tn-cabal-choice button {
+    width: 2.4rem; padding: .15rem 0; font-size: .75rem; cursor: pointer;
+    background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 5px;
+}
+.tn-cabal-choice button.on { background: var(--rust); border-color: var(--rust); color: #fff; }
+.tn-cabal-choice button:disabled { cursor: default; }
+@media (max-width: 600px) {
+    .stat-row { grid-template-columns: minmax(0, 1fr) 3.2rem; }
+    .stat-bar { grid-column: 1 / -1; grid-row: 2; }
+    .stat-detail { grid-column: 1 / -1; }
+}
+
 .tn-scroll { overflow-x: auto; }
 .tn-standings { width: 100%; border-collapse: collapse; font-size: .88rem; font-variant-numeric: tabular-nums; }
 .tn-standings th { font-size: .7rem; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); font-weight: 600; }

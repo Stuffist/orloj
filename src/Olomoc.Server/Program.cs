@@ -10,6 +10,7 @@ builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = 64 * 1024); 
 // Tournois : fichiers JSON dans DATA_DIR (/data dans le conteneur, monté sur ./data).
 var dataDirectory = builder.Configuration["DATA_DIR"] ?? Path.Combine(builder.Environment.ContentRootPath, "App_Data");
 builder.Services.AddSingleton(new TournamentStore(Path.Combine(dataDirectory, "tournaments")));
+builder.Services.AddSingleton(new StatsArchive(Path.Combine(dataDirectory, "stats")));    // jamais purgées
 builder.Services.AddSingleton<ServerCatalog>();
 builder.Services.AddHostedService<TournamentPurge>();
 builder.Services.ConfigureHttpJsonOptions(o => TournamentJson.Configure(o.SerializerOptions));
@@ -31,6 +32,9 @@ builder.Services.AddRateLimiter(o =>
 });
 
 var app = builder.Build();
+
+// Tournois terminés avant les statistiques (ou dont l'archive manque) : archivés au démarrage.
+await app.Services.GetRequiredService<StatsArchive>().BackfillAsync(app.Services.GetRequiredService<TournamentStore>());
 
 if (app.Environment.IsDevelopment()) app.UseWebAssemblyDebugging();
 

@@ -46,8 +46,16 @@ public sealed class TournamentApi(HttpClient http)
     public Task<ApiResult<bool>> UndoRoundAsync(string code, string organizer) =>
         SendAsync<bool>(HttpMethod.Delete, $"{Root}/{code}/rounds/last", null, organizer);
 
-    public Task<ApiResult<bool>> SetResultAsync(string code, int round, int table, int? vpA, int? vpB, string organizer) =>
-        SendAsync<bool>(HttpMethod.Put, $"{Root}/{code}/rounds/{round}/tables/{table}", new ResultRequest(vpA, vpB), organizer);
+    public Task<ApiResult<bool>> SetResultAsync(string code, int round, int table, ResultRequest result, string organizer) =>
+        SendAsync<bool>(HttpMethod.Put, $"{Root}/{code}/rounds/{round}/tables/{table}", result, organizer);
+
+    /// <summary>Compter (ou non) le tournoi dans les statistiques.</summary>
+    public Task<ApiResult<bool>> SetExcludeFromStatsAsync(string code, bool exclude, string organizer) =>
+        SendAsync<bool>(HttpMethod.Put, $"{Root}/{code}/stats", new StatsRequest(exclude), organizer);
+
+    /// <summary>Statistiques des tournois terminés et comptés.</summary>
+    public Task<ApiResult<Olomoc.Tournaments.Stats.StatsView>> GetStatsAsync() =>
+        SendAsync<Olomoc.Tournaments.Stats.StatsView>(HttpMethod.Get, "/api/stats", null);
 
     public Task<ApiResult<bool>> FinishAsync(string code, string organizer) =>
         SendAsync<bool>(HttpMethod.Post, $"{Root}/{code}/finish", null, organizer);

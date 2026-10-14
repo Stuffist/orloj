@@ -1,0 +1,114 @@
+using System.Text.Json;
+using Olomoc.Models;
+using Olomoc.Tournaments;
+using Olomoc.Tournaments.Stats;
+using Xunit;
+
+namespace Olomoc.Tests;
+
+/// <summary>Statistiques des tournois archivés, et archive anonyme d'un tournoi.</summary>
+public class TournamentStatsTests
+{
+    private static IReadOnlyList<ArchivedSlot> Cabal(string r3, string r2, string r1) =>
+        new[] { new ArchivedSlot(1, r1, null), new ArchivedSlot(2, r2, null), new ArchivedSlot(3, r3, "E1") };
+
+    // Maisel : p0 (deux cabales, rang 3 A3 puis B3), p1 (une cabale, A3) ; Rubin : p2, p3.
+    private static readonly ArchivedTournament Sample = new(1, "AAAAAA", new DateOnly(2026, 10, 1), DateTimeOffset.UtcNow, 2,
+        new[]
+        {
+            new ArchivedPlayer(0, "MAISEL", new[] { Cabal("A3", "A2", "A1"), Cabal("B3", "A2", "B1") }),
+            new ArchivedPlayer(1, "MAISEL", new[] { Cabal("A3", "C2", "C1") }),
+            new ArchivedPlayer(2, "RUBIN", new[] { Cabal("R3", "R2", "R1") }),
+            new ArchivedPlayer(3, "RUBIN", new[] { Cabal("S3", "R2", "S1") }),
+        },
+        new[]
+        {
+            new ArchivedGame(0, 2, 0, 0, 10, 5),         // Maisel (A3) bat Rubin (R3)
+            new ArchivedGame(1, 0, 0, 1, 6, 6),          // Maisel c. Maisel, nul : A3 et B3
+            new ArchivedGame(3, 1, null, 0, 2, 8),       // Rubin (cabale inconnue) perd contre Maisel (A3)
+        });
+
+    [Fact]
+    public void Totaux_et_factions_jouees()
+    {
+        var s = TournamentStats.Compute(new[] { Sample });
+        Assert.Equal((1, 4, 3), (s.Tournaments, s.Players, s.Games));
+        Assert.Equal(new[] { ("MAISEL", 50.0), ("RUBIN", 50.0) }, s.Factions.Select(f => (f.Key, f.Percent)));
+    }
+
+    [Fact]
+    public void Choix_des_rouages_par_faction_sur_les_cabales_inscrites()
+    {
+        var maisel = TournamentStats.Compute(new[] { Sample }).Picks.Single(p => p.Faction == "MAISEL");
+        Assert.Equal(3, maisel.Cabals);                                  // les deux cabales de p0 comptent
+        var share = maisel.Cogs.ToDictionary(c => c.Key, c => c.Count);
+        Assert.Equal(2, share["A3"]);
+        Assert.Equal(2, share["A2"]);
+        Assert.Equal(1, share["B3"]);
+        Assert.Equal(66.7, Math.Round(maisel.Cogs.Single(c => c.Key == "A3").Percent, 1));
+        Assert.DoesNotContain(maisel.Cogs, c => c.Key == "R3");
+    }
+
+    [Fact]
+    public void Victoires_par_faction_chaque_camp_compte()
+    {
+        var wins = TournamentStats.Compute(new[] { Sample }).FactionWins.ToDictionary(w => w.Key);
+        Assert.Equal((4, 2, 2, 0), (wins["MAISEL"].Games, wins["MAISEL"].Wins, wins["MAISEL"].Draws, wins["MAISEL"].Losses));
+        Assert.Equal(50.0, wins["MAISEL"].Percent);
+        Assert.Equal((2, 0, 2), (wins["RUBIN"].Games, wins["RUBIN"].Wins, wins["RUBIN"].Losses));
+    }
+
+    [Fact]
+    public void Victoires_par_rouage_de_rang_3_de_la_cabale_jouee()
+    {
+        var wins = TournamentStats.Compute(new[] { Sample }).Rank3Wins.ToDictionary(w => w.Key);
+        Assert.Equal((3, 2, 1), (wins["A3"].Games, wins["A3"].Wins, wins["A3"].Draws));
+        Assert.Equal((1, 0, 1), (wins["B3"].Games, wins["B3"].Wins, wins["B3"].Draws));
+        Assert.Equal((1, 0, 1), (wins["R3"].Games, wins["R3"].Wins, wins["R3"].Losses));
+        Assert.False(wins.ContainsKey("S3"));                            // cabale jouée inconnue : non comptée
+        Assert.Equal("A3", TournamentStats.Compute(new[] { Sample }).Rank3Wins[0].Key);   // tri par taux
+    }
+
+    [Fact]
+    public void Aucune_donnee()
+    {
+        var s = StatsView.Empty;
+        Assert.Equal((0, 0, 0), (s.Tournaments, s.Players, s.Games));
+        Assert.Empty(s.Factions);
+    }
+
+    [Fact]
+    public async Task Archive_anonyme_d_un_tournoi()
+    {
+        var d = await AppData.GetAsync();
+        var x = new Olomoc.Services.CabalExporter(d.L);
+        CabalExport Cabal(params (string Cog, string Equipment)[] slots) =>
+            x.ToModel("Secrète", "MAISEL", slots.Select(s => (Cog?)d.Cog(s.Cog)).ToArray(), slots.Select(s => (Equipment?)d.Equipment(s.Equipment)).ToArray());
+        var cabal = Cabal(("3R06", "Phéromones"), ("2R08", "Carapace"), ("1R01", "Harmonium"));
+        var t = new Tournament
+        {
+            Code = "BBBBBB", Name = "Open", CabalsPerPlayer = 1, Phase = TournamentPhase.Finished,
+            OrganizerTokenHash = "HASH-ORGA",
+            Players =
+            {
+                new Player { Id = "id-ana", Name = "Ana Lys", Faction = "MAISEL", TokenHash = "HASH-ANA", Cabals = { cabal } },
+                new Player { Id = "id-bo", Name = "Bo", Faction = "MAISEL", TokenHash = "HASH-BO", Cabals = { cabal } },
+                new Player { Id = "id-cy", Name = "Cy", Faction = "MAISEL", TokenHash = "HASH-CY", Cabals = { cabal } },
+            },
+            Rounds =
+            {
+                new Round { Number = 1, Tables = { new Table { Number = 1, PlayerA = "id-ana", PlayerB = "id-bo", VpA = 9, VpB = 4, CabalA = 0, CabalB = 0 }, new Table { Number = 2, PlayerA = "id-cy" } } },
+                new Round { Number = 2, Tables = { new Table { Number = 1, PlayerA = "id-cy", PlayerB = "id-ana" } } },   // sans résultat
+            },
+        };
+
+        var archive = ArchivedTournament.From(t, DateTimeOffset.UtcNow);
+        var json = JsonSerializer.Serialize(archive, TournamentJson.Options);
+        foreach (var secret in new[] { "Ana Lys", "Bo\"", "HASH-", "Secrète", "id-" })
+            Assert.DoesNotContain(secret, json);
+        Assert.Equal(new[] { 0, 1, 2 }, archive.Players.Select(p => p.Number));
+        var game = Assert.Single(archive.Games);                         // exempt et partie sans résultat exclus
+        Assert.Equal((0, 1, 9, 4), (game.A, game.B, game.VpA, game.VpB));
+        Assert.Equal("3R06", archive.Players[0].Cabals[0].Single(s => s.Rank == 1).Cog);
+    }
+}

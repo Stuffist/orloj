@@ -1,0 +1,19 @@
+@* Une ligne de statistique : libellé, barre proportionnelle (CSS seul), pourcentage, détail.
+   Estompée quand l'échantillon est trop petit pour être significatif. *@
+
+<div class="stat-row @(Muted ? "muted" : null)" title="@Title">
+    <span class="stat-label">@ChildContent</span>
+    <span class="stat-bar" aria-hidden="true"><span style="width:@Width"></span></span>
+    <span class="stat-value">@Percent.ToString("0", System.Globalization.CultureInfo.InvariantCulture) %</span>
+    <span class="stat-detail">@Detail</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
+    [Parameter, EditorRequired] public double Percent { get; set; }
+    [Parameter] public string? Detail { get; set; }
+    [Parameter] public bool Muted { get; set; }
+    [Parameter] public string? Title { get; set; }
+
+    private string Width => Math.Clamp(Percent, 0, 100).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "%";
+}

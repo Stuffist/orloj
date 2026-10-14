@@ -186,6 +186,16 @@ else
         </form>
     </section>
 
+    @* Statistiques : un tournoi terminé y entre (anonymement), sauf s'il est exclu ici. *@
+    <section class="panel">
+        <h3>@L.Ui("pairings.admin.stats")</h3>
+        <label class="tn-check">
+            <input type="checkbox" checked="@v.ExcludeFromStats" disabled="@_busy" @onchange="e => SetExcludeFromStatsAsync(e.Value is true)" />
+            <span>@L.Ui("pairings.stats.exclude")</span>
+        </label>
+        <p class="hint">@L.Ui("pairings.admin.stats.help") <a href="stats">@L.Ui("pairings.stats.open")</a></p>
+    </section>
+
     @* À part, loin du pilotage : suppression définitive, confirmée en retapant le code. *@
     <section class="panel tn-danger">
         <h3>@L.Ui("pairings.admin.delete.title")</h3>
@@ -288,9 +298,9 @@ else
         RunAsync(() => Api.SetDroppedAsync(Code, p.Id, dropped, Token),
             _ => L.Ui(dropped ? "pairings.admin.droppedDone" : "pairings.admin.reinstated", p.Name));
 
-    private async Task<IReadOnlyList<Problem>> SaveResultAsync(int round, int table, int? vpA, int? vpB)
+    private async Task<IReadOnlyList<Problem>> SaveResultAsync(int round, int table, ResultRequest request)
     {
-        var result = await Api.SetResultAsync(Code, round, table, vpA, vpB, Token);
+        var result = await Api.SetResultAsync(Code, round, table, request, Token);
         if (result.Ok)
         {
             await RefreshAsync();
@@ -355,6 +365,10 @@ else
         }
         finally { _busy = false; }
     }
+
+    private Task SetExcludeFromStatsAsync(bool exclude) =>
+        RunAsync(() => Api.SetExcludeFromStatsAsync(Code, exclude, Token),
+            _ => L.Ui(exclude ? "pairings.admin.stats.excluded" : "pairings.admin.stats.included"));
 
     private async Task ExportAsync()
     {

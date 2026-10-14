@@ -1,0 +1,126 @@
+@page "/stats"
+@using Olomoc.Tournaments.Stats
+@implements IDisposable
+@inject LocalizationService L
+@inject CatalogService Catalog
+@inject TournamentApi Api
+
+@* Statistiques des tournois terminés et comptés (archives anonymes) : factions jouées, choix des
+   rouages par faction, victoires par faction et par rouage de rang 3. *@
+
+@if (!_ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else if (_stats is not { } s)
+{
+    <section class="panel">
+        <Problems Items="_problems" />
+        <a class="btn" href="">@L.Ui("pairings.home")</a>
+    </section>
+}
+else
+{
+    <section class="panel">
+        <h2>@L.Ui("pairings.stats.title")</h2>
+        <p class="tn-meta">@L.Ui("pairings.stats.totals", s.Tournaments, s.Players, s.Games)</p>
+        <p class="hint">@L.Ui("pairings.stats.method", StatsView.MinGames)</p>
+    </section>
+
+    @if (s.Tournaments == 0)
+    {
+        <section class="panel"><p class="empty">@L.Ui("pairings.stats.empty")</p></section>
+    }
+    else
+    {
+        <section class="panel">
+            <h3>@L.Ui("pairings.stats.factions")</h3>
+            @foreach (var f in s.Factions)
+            {
+                <PercentBar Percent="f.Percent" Detail="@L.Ui("pairings.stats.players", f.Count)">
+                    <FactionBadge Code="@f.Key" />
+                </PercentBar>
+            }
+        </section>
+
+        <section class="panel">
+            <h3>@L.Ui("pairings.stats.picks")</h3>
+            <div class="field">
+                <label for="stats-faction">@L.Ui("filter.faction")</label>
+                <select id="stats-faction" value="@PicksFaction" @onchange="e => _faction = e.Value?.ToString()">
+                    @foreach (var p in s.Picks)
+                    {
+                        <option value="@p.Faction">@L.FactionName(p.Faction) (@L.Ui("pairings.stats.cabals", p.Cabals))</option>
+                    }
+                </select>
+            </div>
+            @if (s.Picks.FirstOrDefault(p => p.Faction == PicksFaction) is { } picks)
+            {
+                @foreach (var rank in new[] { 3, 2, 1 })
+                {
+                    var cogs = picks.Cogs.Where(c => Catalog.CogById(c.Key)?.Rank == rank).ToList();
+                    if (cogs.Count == 0) continue;
+                    <h4>@L.Ui("slot.rank", rank)</h4>
+                    @foreach (var c in cogs)
+                    {
+                        <PercentBar Percent="c.Percent" Detail="@($"{c.Count} / {c.Total}")">@CogName(c.Key)</PercentBar>
+                    }
+                }
+            }
+        </section>
+
+        <section class="panel">
+            <h3>@L.Ui("pairings.stats.factionWins")</h3>
+            @foreach (var w in s.FactionWins)
+            {
+                <PercentBar Percent="w.Percent" Detail="@Record(w)" Muted="@(w.Games < StatsView.MinGames)" Title="@LowSample(w)">
+                    <FactionBadge Code="@w.Key" />
+                </PercentBar>
+            }
+        </section>
+
+        <section class="panel">
+            <h3>@L.Ui("pairings.stats.rank3Wins")</h3>
+            @if (s.Rank3Wins.Count == 0)
+            {
+                <p class="empty">@L.Ui("pairings.stats.rank3Empty")</p>
+            }
+            @foreach (var w in s.Rank3Wins)
+            {
+                <PercentBar Percent="w.Percent" Detail="@Record(w)" Muted="@(w.Games < StatsView.MinGames)" Title="@LowSample(w)">@CogName(w.Key)</PercentBar>
+            }
+        </section>
+    }
+}
+
+@code {
+    private bool _ready;
+    private StatsView? _stats;
+    private IReadOnlyList<Problem>? _problems;
+    private string? _faction;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnLanguageChanged;
+        await L.EnsureLoadedAsync();
+        await Catalog.EnsureLoadedAsync();
+        var result = await Api.GetStatsAsync();
+        _stats = result.Value;
+        _problems = result.Problems;
+        _ready = true;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnLanguageChanged;
+
+    // Faction choisie pour les rouages : la plus jouée par défaut.
+    private string? PicksFaction => _faction ?? _stats?.Picks.FirstOrDefault()?.Faction;
+
+    private string CogName(string id) => Catalog.CogById(id) is { } cog ? L.CogName(cog).Text : id;
+
+    // « 5 V · 1 N · 2 D — 8 parties »
+    private string Record(WinRate w) => L.Ui("pairings.stats.record", w.Wins, w.Draws, w.Losses, w.Games);
+
+    private string? LowSample(WinRate w) => w.Games < StatsView.MinGames ? L.Ui("pairings.stats.lowSample", StatsView.MinGames) : null;
+}

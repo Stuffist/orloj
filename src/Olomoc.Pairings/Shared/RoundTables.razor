@@ -11,6 +11,7 @@
             <span class="tn-side">
                 <span class="tn-player-name">@a?.Name</span>
                 @if (a is not null) { <FactionBadge Code="@a.Faction" /> }
+                @Played(a, table.CabalA)
             </span>
             @if (table.IsBye)
             {
@@ -23,6 +24,7 @@
                 <span class="tn-side tn-right">
                     <span class="tn-player-name">@b?.Name</span>
                     @if (b is not null) { <FactionBadge Code="@b.Faction" /> }
+                    @Played(b, table.CabalB)
                 </span>
             }
         </li>
@@ -32,4 +34,9 @@
 @code {
     [Parameter, EditorRequired] public TournamentView View { get; set; } = default!;
     [Parameter, EditorRequired] public Round Round { get; set; } = default!;
+
+    // « Cabale 2 — Nom » si le joueur a joué une cabale connue parmi plusieurs.
+    private RenderFragment? Played(PlayerView? player, int? cabal) => player is null || cabal is not { } i || View.CabalsPerPlayer < 2
+        ? null
+        : @<span class="tn-played">@(player.Cabals is { } c && i < c.Count && c[i].Name is { Length: > 0 } name ? $"{L.Ui("pairings.cabalN", i + 1)} — {name}" : L.Ui("pairings.cabalN", i + 1))</span>;
 }

@@ -1,11 +1,16 @@
-@* Saisie des PV d'une table (organisateur). Mise en page fixe : les champs et le bouton ne
-   bougent pas ; l'état (enregistré, modifié, erreur) occupe une case de largeur constante. *@
+@* Saisie des PV d'une table (organisateur), et de la cabale jouée par chacun quand le tournoi en
+   demande deux (pour les statistiques). Mise en page fixe : les champs et les boutons ne bougent
+   pas ; l'état (enregistré, modifié, erreur) occupe une case de largeur constante. *@
 @inject LocalizationService L
 
 <li class="tn-result @(Table.IsBye ? "bye" : null)">
     <span class="tn-table-number">@L.Ui("pairings.tableN", Table.Number)</span>
     <span class="tn-side">
         <span class="tn-player-name">@View.Player(Table.PlayerA)?.Name</span>
+        @if (!Table.IsBye && TwoCabals)
+        {
+            @CabalChoice(Table.PlayerA, _cabalA, i => Pick(ref _cabalA, i))
+        }
     </span>
     @if (Table.IsBye)
     {
@@ -24,6 +29,10 @@
         </span>
         <span class="tn-side tn-right">
             <span class="tn-player-name">@View.Player(Table.PlayerB!)?.Name</span>
+            @if (TwoCabals)
+            {
+                @CabalChoice(Table.PlayerB!, _cabalB, i => Pick(ref _cabalB, i))
+            }
         </span>
         <span class="tn-result-save">
             <button class="btn small" disabled="@(!CanSave)" @onclick="SaveAsync" title="@L.Ui("pairings.result.save")">@L.Ui("pairings.result.validate")</button>
@@ -36,14 +45,31 @@
     [Parameter, EditorRequired] public TournamentView View { get; set; } = default!;
     [Parameter, EditorRequired] public int RoundNumber { get; set; }
     [Parameter, EditorRequired] public Table Table { get; set; } = default!;
-    /// <summary>Enregistrement : renvoie les problèmes (aucun si accepté).</summary>
-    [Parameter, EditorRequired] public Func<int, int, int?, int?, Task<IReadOnlyList<Problem>>> Save { get; set; } = default!;
+    /// <summary>Enregistrement (n° de ronde, de table, résultat) : renvoie les problèmes (aucun si accepté).</summary>
+    [Parameter, EditorRequired] public Func<int, int, ResultRequest, Task<IReadOnlyList<Problem>>> Save { get; set; } = default!;
     /// <summary>Tournoi terminé : résultats affichés, plus modifiables.</summary>
     [Parameter] public bool ReadOnly { get; set; }
 
     private string _a = "", _b = "";
+    private int? _cabalA, _cabalB;
     private bool _dirty, _busy;
     private IReadOnlyList<Problem>? _problems;
+
+    private bool TwoCabals => View.CabalsPerPlayer > 1;
+
+    // Choix de la cabale jouée : « C1 » / « C2 », nom de la cabale en info-bulle.
+    private RenderFragment CabalChoice(string playerId, int? chosen, Action<int> pick) => @<span class="tn-cabal-choice" role="group" aria-label="@L.Ui("pairings.result.cabalOf", View.Player(playerId)?.Name ?? "")">
+        @for (var i = 0; i < View.CabalsPerPlayer; i++)
+        {
+            var index = i;
+            <button type="button" class="@(chosen == index ? "on" : null)" disabled="@ReadOnly" aria-pressed="@(chosen == index ? "true" : "false")"
+                    title="@CabalName(playerId, index)" @onclick="() => pick(index)">@L.Ui("pairings.result.cabalShort", index + 1)</button>
+        }
+    </span>;
+
+    private string CabalName(string playerId, int index) =>
+        View.Player(playerId)?.Cabals is { } cabals && index < cabals.Count && cabals[index].Name is { Length: > 0 } name
+            ? name : L.Ui("pairings.cabalN", index + 1);
 
     // Valeurs du serveur reprises tant que la saisie n'est pas en cours (actualisation périodique).
     protected override void OnParametersSet()
@@ -51,21 +77,37 @@
         if (_dirty) return;
         _a = Table.VpA?.ToString() ?? "";
         _b = Table.VpB?.ToString() ?? "";
+        _cabalA = Table.CabalA;
+        _cabalB = Table.CabalB;
     }
 
     private void Edit(ref string field, ChangeEventArgs e)
     {
         field = e.Value?.ToString() ?? "";
-        _dirty = _a != (Table.VpA?.ToString() ?? "") || _b != (Table.VpB?.ToString() ?? "");
+        Changed();
+    }
+
+    private void Pick(ref int? field, int index)
+    {
+        field = index;
+        Changed();
+    }
+
+    private void Changed()
+    {
+        _dirty = _a != (Table.VpA?.ToString() ?? "") || _b != (Table.VpB?.ToString() ?? "")
+                 || (TwoCabals && (_cabalA != Table.CabalA || _cabalB != Table.CabalB));
         _problems = null;
     }
 
     private static int? Parse(string s) => int.TryParse(s, out var n) ? n : null;
 
-    // Deux valeurs (ou aucune, pour effacer), différentes de ce qui est enregistré.
+    // Deux valeurs (ou aucune, pour effacer), différentes de ce qui est enregistré ; avec deux
+    // cabales par joueur, la cabale jouée par chacun.
     private bool CanSave => !ReadOnly && _dirty && !_busy && (_a.Length == 0) == (_b.Length == 0)
                             && (_a.Length == 0 || (Parse(_a) is >= 0 and <= TournamentRules.MaxVictoryPoints
-                                                   && Parse(_b) is >= 0 and <= TournamentRules.MaxVictoryPoints));
+                                                   && Parse(_b) is >= 0 and <= TournamentRules.MaxVictoryPoints
+                                                   && (!TwoCabals || (_cabalA.HasValue && _cabalB.HasValue))));
 
     private async Task SaveAsync()
     {
@@ -73,7 +115,7 @@
         _busy = true;
         try
         {
-            _problems = await Save(RoundNumber, Table.Number, Parse(_a), Parse(_b));
+            _problems = await Save(RoundNumber, Table.Number, new ResultRequest(Parse(_a), Parse(_b), _cabalA, _cabalB));
             if (_problems.Count == 0) _dirty = false;
         }
         finally { _busy = false; }

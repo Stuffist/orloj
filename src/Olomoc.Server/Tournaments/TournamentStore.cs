@@ -33,6 +33,10 @@ public sealed class TournamentStore
         return upper is { Length: CodeLength } && upper.All(Alphabet.Contains) ? upper : null;
     }
 
+    /// <summary>Codes des tournois enregistrés.</summary>
+    public IEnumerable<string> Codes() =>
+        Directory.EnumerateFiles(_directory, "*.json").Select(Path.GetFileNameWithoutExtension).OfType<string>();
+
     public async Task<Tournament?> LoadAsync(string code)
     {
         if (Normalize(code) is not { } c || !File.Exists(PathOf(c))) return null;

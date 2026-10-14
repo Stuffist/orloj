@@ -352,10 +352,32 @@ plus tard ne l'est **jamais** (contrôle quotidien).
   points, puis différence de PV cumulée, puis PV marqués. La ronde suivante s'apparie
   quand la précédente est complète ; la dernière ronde s'annule tant qu'aucun résultat
   n'y est saisi. Les pages se mettent à jour toutes les 30 secondes.
+- **Cabale jouée** : avec deux cabales par joueur, l'orga indique à la saisie des PV laquelle
+  chacun a jouée (« C1 » / « C2 » sous chaque nom ; le nom de la cabale en info-bulle).
 - **Garde-fous** : 128 joueurs par tournoi, requêtes de 64 Ko au plus, 10 créations de
   tournoi par heure, 10 essais de mot de passe par quart d'heure et 120 écritures par
   minute par adresse IP (`RATE_CREATE_PER_HOUR`, `RATE_LOGINS_PER_15_MINUTES`,
   `RATE_WRITES_PER_MINUTE`).
+
+## Statistiques
+
+`/pairings/stats` (lien depuis l'accueil des tournois), publiques, sur les tournois **terminés**
+— sauf ceux que leur orga exclut (« Ne pas compter dans les statistiques », à la création ou
+à tout moment dans l'administration) :
+
+- **factions jouées** : part des joueurs ;
+- **choix des rouages**, par faction (sélecteur) et par rang : part des cabales inscrites de la
+  faction qui contiennent le rouage (les deux cabales d'un joueur comptent) ;
+- **victoires par faction** et **par rouage de rang 3** de la cabale jouée : victoires / parties,
+  chaque camp d'une partie comptant (affrontement de même faction : des deux côtés ; exempts
+  exclus), avec V/N/D et le nombre de parties ; estompé en dessous de 10 parties.
+
+Pas de base de données : à la fin d'un tournoi, une **archive anonyme** (factions, cabales en ids,
+parties ; ni noms ni jetons) est écrite dans `data/stats/<code>.json`, que la purge des tournois
+ne touche pas : les statistiques couvrent tout l'historique. Elles sont calculées en mémoire
+(`Tournaments/Stats/TournamentStats.cs`) et recalculées à chaque archive ajoutée ou retirée
+(`GET /api/stats`). Supprimer un tournoi, ou l'exclure, retire son archive ; au démarrage, un
+tournoi terminé sans archive en reçoit une.
 
 ## Architecture
 

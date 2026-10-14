@@ -24,6 +24,7 @@ public sealed class Tournament
     public int CabalsPerPlayer { get; set; } = 2;
     public PairingMode Pairing { get; set; } = PairingMode.Swiss;
     public bool AvoidSameAlignment { get; set; }        // ronde suisse : préférer les alignements opposés
+    public bool ExcludeFromStats { get; set; }          // tournoi d'essai : hors statistiques
     public TournamentPhase Phase { get; set; } = TournamentPhase.Registration;
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -58,7 +59,10 @@ public sealed class Round
     public bool HasAnyResult => Tables.Any(t => t.IsBye is false && (t.VpA.HasValue || t.VpB.HasValue));
 }
 
-/// <summary>Une table : PlayerA contre PlayerB (null : exempt, « bye »), PV de chacun une fois saisis.</summary>
+/// <summary>
+/// Une table : PlayerA contre PlayerB (null : exempt, « bye »), PV de chacun une fois saisis, et
+/// la cabale que chacun a jouée (index dans ses cabales inscrites).
+/// </summary>
 public sealed class Table
 {
     public int Number { get; set; }
@@ -66,6 +70,8 @@ public sealed class Table
     public string? PlayerB { get; set; }
     public int? VpA { get; set; }
     public int? VpB { get; set; }
+    public int? CabalA { get; set; }                    // cabale jouée (index), pour les statistiques
+    public int? CabalB { get; set; }
 
     public bool IsBye => PlayerB is null;
     public bool HasResult => IsBye || (VpA.HasValue && VpB.HasValue);

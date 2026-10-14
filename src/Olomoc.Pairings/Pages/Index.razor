@@ -13,6 +13,8 @@
 }
 else
 {
+    <p class="tn-home-links"><a href="stats">@L.Ui("pairings.stats.open")</a></p>
+
     <section class="panel tn-join">
         <h2>@L.Ui("pairings.join.title")</h2>
         <form class="tn-inline" @onsubmit="Join" @onsubmit:preventDefault="true">
@@ -109,6 +111,10 @@ else
                        value="@_password" @oninput="e => _password = e.Value?.ToString() ?? string.Empty" />
                 <span class="hint">@L.Ui("pairings.create.password.help", TournamentRules.MinPasswordLength)</span>
             </div>
+            <label class="tn-check">
+                <input type="checkbox" checked="@_excludeFromStats" @onchange="e => _excludeFromStats = e.Value is true" />
+                <span>@L.Ui("pairings.stats.exclude")</span>
+            </label>
             <Problems Items="_problems" />
             <div class="tn-actions">
                 <button class="btn primary" type="submit" disabled="@(_busy || _name.Trim().Length == 0)">@L.Ui("pairings.create.submit")</button>
@@ -127,6 +133,7 @@ else
     private PairingMode _mode = PairingMode.Swiss;
     private bool _avoidSame;
     private string _password = "";
+    private bool _excludeFromStats;
     private IReadOnlyList<Problem>? _problems;
     private bool _busy;
 
@@ -155,7 +162,7 @@ else
         try
         {
             var result = await Api.CreateAsync(new CreateTournamentRequest(_name.Trim(), _date, _rounds, _cabals, _mode, _avoidSame,
-                _password.Length == 0 ? null : _password));
+                _password.Length == 0 ? null : _password, _excludeFromStats));
             if (result.Value is not { } created)
             {
                 _problems = result.Problems;

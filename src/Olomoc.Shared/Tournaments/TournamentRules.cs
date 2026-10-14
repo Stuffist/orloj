@@ -122,16 +122,25 @@ public static class TournamentRules
         return null;
     }
 
-    /// <summary>PV d'une table (deux valeurs, ou aucune pour effacer le résultat).</summary>
-    public static Problem? SetResult(Tournament t, int roundNumber, int tableNumber, int? vpA, int? vpB)
+    /// <summary>
+    /// PV d'une table (deux valeurs, ou aucune pour effacer le résultat) et cabales jouées : avec
+    /// deux cabales par joueur, celle de chacun est exigée ; avec une seule, c'est la première.
+    /// </summary>
+    public static Problem? SetResult(Tournament t, int roundNumber, int tableNumber, int? vpA, int? vpB,
+        int? cabalA = null, int? cabalB = null)
     {
         if (t.Phase == TournamentPhase.Finished) return Problem.Of("finished");
         var table = t.Rounds.FirstOrDefault(r => r.Number == roundNumber)?.Tables.FirstOrDefault(x => x.Number == tableNumber);
         if (table is null || table.IsBye) return Problem.Of("unknownTable");
         if (vpA.HasValue != vpB.HasValue || vpA is < 0 or > MaxVictoryPoints || vpB is < 0 or > MaxVictoryPoints)
             return Problem.Of("victoryPoints", MaxVictoryPoints.ToString());
+        if (vpA.HasValue && t.CabalsPerPlayer > 1
+            && (cabalA is not { } a || cabalB is not { } b || a < 0 || b < 0 || a >= t.CabalsPerPlayer || b >= t.CabalsPerPlayer))
+            return Problem.Of("cabalPlayed");
         table.VpA = vpA;
         table.VpB = vpB;
+        table.CabalA = vpA.HasValue ? (t.CabalsPerPlayer > 1 ? cabalA : 0) : null;
+        table.CabalB = vpA.HasValue ? (t.CabalsPerPlayer > 1 ? cabalB : 0) : null;
         return null;
     }
 

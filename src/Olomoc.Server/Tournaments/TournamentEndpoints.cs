@@ -38,9 +38,25 @@ public static class TournamentEndpoints
         write.MapDelete("rounds/last", (string code, HttpContext ctx, TournamentStore store) =>
             Organizer(code, ctx, store, t => Done(TournamentRules.UndoLastRound(t))));
         write.MapPut("rounds/{round:int}/tables/{table:int}", (string code, int round, int table, ResultRequest body, HttpContext ctx, TournamentStore store) =>
-            Organizer(code, ctx, store, t => Done(TournamentRules.SetResult(t, round, table, body.VpA, body.VpB), status: 400)));
-        write.MapPost("finish", (string code, HttpContext ctx, TournamentStore store) =>
-            Organizer(code, ctx, store, t => Done(TournamentRules.Finish(t))));
+            Organizer(code, ctx, store, t => Done(TournamentRules.SetResult(t, round, table, body.VpA, body.VpB, body.CabalA, body.CabalB), status: 400)));
+        // Fin du tournoi : archive anonyme pour les statistiques (s'il est compté).
+        write.MapPost("finish", (string code, HttpContext ctx, TournamentStore store, StatsArchive stats) =>
+            Organizer(code, ctx, store, t =>
+            {
+                var result = Done(TournamentRules.Finish(t));
+                if (result.Item1) stats.Update(t, DateTimeOffset.UtcNow);
+                return result;
+            }));
+        // Compter ou non le tournoi dans les statistiques, à tout moment.
+        write.MapPut("stats", (string code, StatsRequest body, HttpContext ctx, TournamentStore store, StatsArchive stats) =>
+            Organizer(code, ctx, store, t =>
+            {
+                t.ExcludeFromStats = body.Exclude;
+                stats.Update(t, DateTimeOffset.UtcNow);
+                return (true, Results.NoContent());
+            }));
+
+        app.MapGet("/api/stats", (StatsArchive stats) => Results.Json(stats.Stats(), TournamentJson.Options));
     }
 
     // ---- Création et lecture ----
@@ -60,6 +76,7 @@ public static class TournamentEndpoints
             t.CabalsPerPlayer = body.CabalsPerPlayer;
             t.Pairing = body.Pairing;
             t.AvoidSameAlignment = body.Pairing == PairingMode.Swiss && body.AvoidSameAlignment;
+            t.ExcludeFromStats = body.ExcludeFromStats;
             t.OrganizerTokenHash = Tokens.Hash(token);
             if (NullIfEmpty(body.Password) is { } password) t.OrganizerPasswordHash = Tokens.HashPassword(password);
         });
@@ -116,8 +133,14 @@ public static class TournamentEndpoints
     private static string? NullIfEmpty(string? s) => string.IsNullOrEmpty(s) ? null : s;
 
     /// <summary>Suppression définitive du tournoi par son organisateur.</summary>
-    private static async Task<IResult> Delete(string code, HttpContext ctx, TournamentStore store) =>
-        await store.DeleteAsync(code, t => IsOrganizer(ctx, t) ? (true, Results.NoContent()) : (false, Forbidden())) ?? NotFound();
+    /// <summary>Suppression par l'organisateur : le tournoi et son archive de statistiques.</summary>
+    private static async Task<IResult> Delete(string code, HttpContext ctx, TournamentStore store, StatsArchive stats) =>
+        await store.DeleteAsync(code, t =>
+        {
+            if (!IsOrganizer(ctx, t)) return (false, Forbidden());
+            stats.Remove(t.Code);
+            return (true, Results.NoContent());
+        }) ?? NotFound();
 
     // ---- Inscriptions ----
 
@@ -192,7 +215,7 @@ public static class TournamentEndpoints
         t.Code, t.Name, t.Date, t.RoundCount, t.CabalsPerPlayer, t.Pairing, t.AvoidSameAlignment, t.Phase,
         t.Players.Select(p => new PlayerView(p.Id, p.Name, p.Faction, p.Dropped,
             t.Phase != TournamentPhase.Registration || organizer || p == me ? p.Cabals : null)).ToList(),
-        t.Rounds, Standings.Compute(t), organizer, me?.Id, t.OrganizerPasswordHash.Length > 0);
+        t.Rounds, Standings.Compute(t), organizer, me?.Id, t.OrganizerPasswordHash.Length > 0, t.ExcludeFromStats);
 
     // Jeton du lien d'administration, ou d'une session ouverte par mot de passe.
     private static bool IsOrganizer(HttpContext ctx, Tournament t)
