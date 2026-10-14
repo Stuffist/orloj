@@ -100,6 +100,6 @@ public sealed class CertificateSource(string domain, string liveDirectory)
     // Clé privée rattachée de façon durable au certificat (exigé par SslStream sous Windows).
     private static X509Certificate2 Reimported(X509Certificate2 certificate)
     {
-        using (certificate) return new X509Certificate2(certificate.Export(X509ContentType.Pkcs12));
+        using (certificate) return X509CertificateLoader.LoadPkcs12(certificate.Export(X509ContentType.Pkcs12), password: null);
     }
 }

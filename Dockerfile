@@ -4,7 +4,7 @@
 #
 # Le domaine (certificat) est fourni au démarrage : variable d'environnement DOMAIN.
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Restauration seule d'abord : couche mise en cache tant que les .csproj ne changent pas.
@@ -18,7 +18,7 @@ COPY src/ src/
 RUN dotnet publish src/Olomoc.Server/Olomoc.Server.csproj -c Release -o /app --no-restore
 
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
 WORKDIR /app
 COPY --from=build /app .
 

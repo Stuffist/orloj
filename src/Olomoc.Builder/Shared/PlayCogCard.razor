@@ -53,7 +53,7 @@
 
     <div class="play-row toggles">
         <button class="toggle @(S.Stunned ? "on" : null)" aria-pressed="@S.Stunned" @onclick="() => Change(() => Session.SetStunned(Slot, !S.Stunned))">
-            <img class="pict-img" src="@(Assets.Base)img/icons/stunned.png" alt="" /> @L.Ui("play.stunned")
+            <img class="pict-img" src="@(Olomoc.Assets.Base)img/icons/stunned.png" alt="" /> @L.Ui("play.stunned")
         </button>
         <button class="toggle @(S.Fortified ? "on" : null)" aria-pressed="@S.Fortified" title="@L.Ui("play.fortified.title")"
                 @onclick="() => Change(() => Session.SetFortified(Slot, !S.Fortified))">

@@ -8,7 +8,7 @@ appariements, résultats, classement), avec leur API (`/api/tournaments`).
 
 ## Lancer
 
-Nécessite le SDK .NET 8.
+Nécessite le SDK .NET 10.
 
 ```bash
 dotnet run --project src/Olomoc.Server
