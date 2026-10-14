@@ -44,6 +44,8 @@ public class ServerTests(WebApplicationFactory<Program> factory) : IClassFixture
     [InlineData(Assets.Base + "i18n/fr/ui.json")]
     [InlineData(Assets.Base + "css/app.css")]
     [InlineData(Assets.Base + "img/icons/darkness.png")]
+    [InlineData(Assets.Base + "img/cards/E11.jpg")]
+    [InlineData("/builder/cards")]
     public async Task Fichiers_servis(string path) =>
         (await Client().GetAsync(path)).EnsureSuccessStatusCode();
 

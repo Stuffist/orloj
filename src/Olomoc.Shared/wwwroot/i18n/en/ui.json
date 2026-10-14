@@ -332,5 +332,14 @@
   "import.noCog": "No cog recognized: one line per cog, “COG - EQUIPMENT/BOON”.",
   "import.unknownLine": "Line {0} not recognized: “{1}”.",
   "import.sameRank": "Line {0}: a cog of that rank is already listed (“{1}”).",
-  "pairings.paste.faction": "Faction of this cabal"
+  "pairings.paste.faction": "Faction of this cabal",
+  "export.cards": "Cards (PDF / PNG)",
+  "export.cards.title": "A4 landscape sheet of the cabal’s cards, at actual size: print it, save it as PDF or download it as PNG.",
+  "cards.title": "Cabal cards",
+  "cards.help": "A4 landscape, cards at actual size (63 × 89 mm). For a PDF: “Print / PDF”, then “Save as PDF”; scale 100%, margins “None”.",
+  "cards.print": "Print / PDF",
+  "cards.png": "Download PNG",
+  "cards.rendering": "Preparing…",
+  "cards.back": "Builder",
+  "cards.empty": "No card: build a cabal in the builder first."
 }

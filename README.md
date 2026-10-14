@@ -121,6 +121,10 @@ Le référentiel est **neutre en langue** ; les textes vivent dans des paquets p
   (schéma `schemas/olomoc-texts.schema.json`).
 - `src/Olomoc.Shared/wwwroot/i18n/<langue>/ui.json` — libellés de l'interface
   (schéma `schemas/olomoc-ui.schema.json`).
+- `src/Olomoc.Shared/wwwroot/img/cards/<id>.jpg` — images des cartes (recto), une par
+  rouage et équipement/don, nommées par leur id : 1051 × 744 px, soit 300 ppp à la taille
+  réelle (89 × 63 mm). Relevées sur bwaaaanegamesdb.fr et recompressées ; ce sont les
+  illustrations d'Occicat Games, réservées à un usage privé.
 
 Chaque fichier référence son schéma via `$schema` (validation et autocomplétion
 dans l'éditeur). Le dossier `schemas/` contient aussi des exemples minimaux
@@ -234,6 +238,14 @@ reflète la composition en cours, même incomplète (un avertissement le signale
     "cogs": [ { "rank": 1, "cog": { "id": "3R05", "name": "Dominik Kralov" },
                 "equipment": { "id": "E11", "name": "Harmonium" } }, … ] }
   ```
+
+- **Cartes (PDF / PNG)** — planche des cartes de la cabale, ouverte dans un nouvel onglet
+  (`/builder/cards?c=3R05.E11,2R04,1R01.E38&name=…` : la cabale passe dans l'adresse, le
+  lien se partage). Une page A4 paysage, cartes à taille réelle (89 × 63 mm) centrées : rang
+  1 à 3 de gauche à droite, chaque rouage au-dessus de son équipement/don, 4 mm entre les
+  rouages, 1,5 mm entre un rouage et son équipement (`Services/CardSheet.cs`).
+  « Imprimer / PDF » passe par l'impression du navigateur (« Enregistrer au format PDF »,
+  échelle 100 %) ; « Télécharger PNG » produit la même page en 2339 × 1654 px (200 ppp).
 
 ## Cabales sauvegardées
 

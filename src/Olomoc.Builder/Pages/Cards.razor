@@ -1,0 +1,103 @@
+@page "/cards"
+@namespace Olomoc.Builder.Pages
+@implements IDisposable
+@inject CatalogService Catalog
+@inject LocalizationService L
+@inject IJSRuntime JS
+
+@* Planche des cartes d'une cabale (A4 paysage, taille réelle) : à imprimer ou enregistrer en
+   PDF depuis le navigateur, ou à télécharger en PNG. La cabale vient de l'adresse
+   (?c=…&name=…) : la page s'ouvre dans son propre onglet et se partage. *@
+
+@if (!Catalog.Loaded || !L.Loaded)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else
+{
+    var cells = CardSheet.Cells(_cogs, _equipment);
+    <section class="cards-toolbar">
+        <div class="cards-titles">
+            <h2>@(string.IsNullOrWhiteSpace(Name) ? L.Ui("cards.title") : Name)</h2>
+            <p class="hint">@L.Ui("cards.help")</p>
+        </div>
+        <div class="cards-actions">
+            <button class="btn primary" disabled="@(cells.Count == 0)" @onclick="PrintAsync">@L.Ui("cards.print")</button>
+            <button class="btn" disabled="@(cells.Count == 0 || _rendering)" @onclick="DownloadPngAsync">
+                @L.Ui(_rendering ? "cards.rendering" : "cards.png")
+            </button>
+            <a class="btn" href="">@L.Ui("cards.back")</a>
+        </div>
+    </section>
+
+    @if (cells.Count == 0)
+    {
+        <p class="empty">@L.Ui("cards.empty")</p>
+    }
+    else
+    {
+        @* Page à l'échelle de l'écran à l'affichage, à 297 × 210 mm à l'impression : positions en %. *@
+        <div class="card-sheet" role="img" aria-label="@L.Ui("cards.title")">
+            @for (var column = 0; column < 3; column++)
+            {
+                for (var row = 0; row < 2; row++)
+                {
+                    var cell = cells.FirstOrDefault(c => c.Column == column && c.Row == row);
+                    if (cell is not null)
+                    {
+                        <img class="card-sheet-card" src="@CardSheet.ImagePath(cell.Id)" alt="@CardName(cell)" style="@CardSheet.Style(cell)" />
+                    }
+                    else
+                    {
+                        <span class="card-sheet-empty" style="@CardSheet.Style(CardSheet.Slot(column, row))"></span>
+                    }
+                }
+            }
+        </div>
+    }
+}
+
+@code {
+    private const int PngDpi = 200;            // 2339 × 1654 px : net à l'écran comme à l'impression
+
+    [SupplyParameterFromQuery(Name = "c")] public string? Slots { get; set; }
+    [SupplyParameterFromQuery(Name = "name")] public string? Name { get; set; }
+
+    private Cog?[] _cogs = new Cog?[3];
+    private Equipment?[] _equipment = new Equipment?[3];
+    private bool _rendering;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnLanguageChanged;
+        await L.EnsureLoadedAsync();
+        await Catalog.EnsureLoadedAsync();
+        (_cogs, _equipment) = CardSheet.Decode(Slots, Catalog);
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnLanguageChanged;
+
+    private string CardName(CardSheet.Cell cell) => cell.Row == 0
+        ? L.CogName(Catalog.CogById(cell.Id)!).Text
+        : L.EquipmentName(Catalog.EquipmentById(cell.Id)!).Text;
+
+    private Task PrintAsync() => JS.InvokeVoidAsync("olomoc.print").AsTask();
+
+    private async Task DownloadPngAsync()
+    {
+        _rendering = true;
+        try
+        {
+            var cards = CardSheet.Cells(_cogs, _equipment).Select(c => new
+            {
+                x = c.XMm, y = c.YMm, w = CardSheet.CardWidthMm, h = CardSheet.CardHeightMm,
+                src = CardSheet.ImagePath(c.Id),
+            });
+            await JS.InvokeVoidAsync("olomoc.renderCards", CabalExporter.FileName(Name, "png"),
+                CardSheet.PageWidthMm, CardSheet.PageHeightMm, PngDpi, cards);
+        }
+        finally { _rendering = false; }
+    }
+}

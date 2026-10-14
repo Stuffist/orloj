@@ -332,5 +332,14 @@
   "import.noCog": "Aucun rouage reconnu : une ligne par rouage, « ROUAGE - ÉQUIPEMENT/DON ».",
   "import.unknownLine": "Ligne {0} non reconnue : « {1} ».",
   "import.sameRank": "Ligne {0} : un rouage de ce rang est déjà dans la liste (« {1} »).",
-  "pairings.paste.faction": "Faction de cette cabale"
+  "pairings.paste.faction": "Faction de cette cabale",
+  "export.cards": "Cartes (PDF / PNG)",
+  "export.cards.title": "Planche A4 paysage des cartes de la cabale, à taille réelle : à imprimer, enregistrer en PDF ou télécharger en PNG.",
+  "cards.title": "Cartes de la cabale",
+  "cards.help": "A4 paysage, cartes à taille réelle (63 × 89 mm). Pour un PDF : « Imprimer / PDF », puis « Enregistrer au format PDF » ; échelle 100 %, marges « Aucune ».",
+  "cards.print": "Imprimer / PDF",
+  "cards.png": "Télécharger PNG",
+  "cards.rendering": "Préparation…",
+  "cards.back": "Constructeur",
+  "cards.empty": "Aucune carte : composez d’abord une cabale dans le constructeur."
 }

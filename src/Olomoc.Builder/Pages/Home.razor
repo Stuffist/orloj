@@ -270,6 +270,9 @@ else
                 <a class="btn" href="@DataUri(content)" download="@CabalExporter.FileName(_cabalName, _exportJson ? "json" : "txt")">
                     @L.Ui("export.download")
                 </a>
+                <a class="btn" href="@CardsLink" target="_blank" rel="noopener" title="@L.Ui("export.cards.title")">
+                    @L.Ui("export.cards")
+                </a>
             </div>
         }
     </section>
@@ -441,6 +444,10 @@ else
     private string ExportContent() => _exportJson
         ? Exporter.ToJson(_cabalName, NullIfEmpty(_faction), _cogs, _equipment)
         : Exporter.ToText(_cabalName, _cogs, _equipment);
+
+    // Planche des cartes (impression / PDF / PNG), dans un nouvel onglet : la cabale passe dans l'adresse.
+    private string CardsLink => $"cards?c={Uri.EscapeDataString(CardSheet.Encode(_cogs, _equipment))}"
+        + (string.IsNullOrWhiteSpace(_cabalName) ? "" : $"&name={Uri.EscapeDataString(_cabalName.Trim())}");
 
     private string DataUri(string content) =>
         (_exportJson ? "data:application/json;charset=utf-8," : "data:text/plain;charset=utf-8,") + Uri.EscapeDataString(content);
