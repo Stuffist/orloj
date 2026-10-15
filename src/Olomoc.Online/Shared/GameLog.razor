@@ -1,0 +1,34 @@
+@* Journal de la partie : arrivées, mise en place, comptes rendus des joueurs, fins de cycle ;
+   le plus récent en haut. Les textes sont traduits ici (clé « online.log.* » et arguments). *@
+@inject LocalizationService L
+
+<details class="panel online-log" open="@Open">
+    <summary>@L.Ui("online.log.title")</summary>
+    <ol reversed>
+        @foreach (var e in View.Log.Reverse())
+        {
+            <li>
+                <time datetime="@e.At.ToString("o")">@e.At.ToLocalTime().ToString("HH:mm")</time>
+                <span>@Text(e)</span>
+            </li>
+        }
+    </ol>
+</details>
+
+@code {
+    [Parameter, EditorRequired] public OnlineView View { get; set; } = default!;
+    [Parameter] public bool Open { get; set; }
+
+    private string Who(int? seat) => seat is { } i && i < View.Seats.Count ? View.Seats[i].Name : "";
+
+    private string Text(OnlineLogEntry e)
+    {
+        var args = e.Args ?? Array.Empty<string>();
+        object[] values = e.Key switch
+        {
+            "agenda" => new object[] { Who(e.Seat), L.Ui($"agenda.{args.ElementAtOrDefault(0)}") },
+            _ => new object[] { Who(e.Seat) }.Concat(args).ToArray(),
+        };
+        return L.Ui($"online.log.{e.Key}", values);
+    }
+}

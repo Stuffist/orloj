@@ -16,6 +16,7 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
     [InlineData("/builder", "/builder/")]
     [InlineData("/builder?x=1", "/builder/?x=1")]
     [InlineData("/pairings", "/pairings/")]
+    [InlineData("/online", "/online/")]
     public async Task Redirections(string path, string location)
     {
         var response = await Client().GetAsync(path);
@@ -32,6 +33,8 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
     [InlineData("/pairings/")]
     [InlineData("/pairings/stats")]
     [InlineData("/pairings/t/ABCDEF/admin")]
+    [InlineData("/online/")]
+    [InlineData("/online/g/ABCDEF")]
     public async Task Sections_de_l_app(string path)
     {
         var response = await Client().GetAsync(path);

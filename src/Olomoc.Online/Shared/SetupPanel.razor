@@ -1,0 +1,72 @@
+@* Mise en place guidée (LDR p.31). Initiative : chaque joueur lance 5 D6 (tirés par le serveur),
+   réussite à 5+, le plus de réussites devient J1, égalité : on relance. Agenda : J1 le choisit
+   ou le tire au sort parmi le recueil officiel. *@
+@inject LocalizationService L
+
+<section class="panel">
+    @if (View.Step == OnlineStep.Initiative)
+    {
+        <h2>@L.Ui("online.initiative.title")</h2>
+        <p class="hint">@L.Ui("online.initiative.help", OnlineRules.InitiativeDice, OnlineRules.Success)</p>
+        @if (View.Log.LastOrDefault()?.Key == "initiativeTie")
+        {
+            <p class="export-warning">@L.Ui("online.initiative.tie")</p>
+        }
+        <ul class="online-dice-rows">
+            @for (var i = 0; i < View.Seats.Count; i++)
+            {
+                var seat = View.Seats[i];
+                <li>
+                    <span class="online-seat-name">@seat.Name</span>
+                    @if (seat.Initiative is { } dice)
+                    {
+                        <span class="online-dice">
+                            @foreach (var d in dice)
+                            {
+                                <span class="online-die @(d >= OnlineRules.Success ? "hit" : null)">@d</span>
+                            }
+                        </span>
+                        <span class="online-successes">@L.Ui("online.initiative.successes", OnlineRules.Successes(dice))</span>
+                    }
+                    else if (View.Me == i)
+                    {
+                        <button class="btn primary" type="button" @onclick="() => Send(new(OnlineCommandType.RollInitiative))">@L.Ui("online.initiative.roll")</button>
+                    }
+                    else
+                    {
+                        <span class="hint">@L.Ui("online.initiative.waiting")</span>
+                    }
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <h2>@L.Ui("online.agenda.title")</h2>
+        <p>@L.Ui("online.first", View.Seats[View.First!.Value].Name)</p>
+        @if (View.Me == View.First)
+        {
+            <div class="online-inline">
+                <select aria-label="@L.Ui("online.agenda.title")" value="@_agenda" @onchange="e => _agenda = e.Value?.ToString() ?? Agendas.All[0]">
+                    @foreach (var id in Agendas.All)
+                    {
+                        <option value="@id">@L.Ui($"agenda.{id}")</option>
+                    }
+                </select>
+                <button class="btn primary" type="button" @onclick="() => Send(new(OnlineCommandType.ChooseAgenda, _agenda))">@L.Ui("online.agenda.choose")</button>
+                <button class="btn" type="button" @onclick="() => Send(new(OnlineCommandType.DrawAgenda))">@L.Ui("online.agenda.draw")</button>
+            </div>
+        }
+        else
+        {
+            <p class="hint">@L.Ui("online.agenda.waiting", View.Seats[View.First!.Value].Name)</p>
+        }
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public OnlineView View { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<OnlineCommand, Task> Send { get; set; } = default!;
+
+    private string _agenda = Agendas.All[0];
+}

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Olomoc.Online.Services;
 using Olomoc.Pairings.Services;
 using Olomoc.Services;
 
@@ -25,5 +26,10 @@ builder.Services.AddScoped<Olomoc.Builder.Shared.AdminCatalogApi>();   // édite
 builder.Services.AddScoped<CabalImport>();              // cabale collée (texte ou JSON)
 builder.Services.AddScoped<TournamentApi>();
 builder.Services.AddScoped<MyTournaments>();
+
+// Parties en ligne.
+builder.Services.AddScoped<OnlineApi>();
+builder.Services.AddScoped<OnlineConnection>();         // hub SignalR, ouvert sur la page d'une partie
+builder.Services.AddScoped<MyGames>();
 
 await builder.Build().RunAsync();

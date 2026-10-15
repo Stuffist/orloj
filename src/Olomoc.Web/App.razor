@@ -1,7 +1,8 @@
 @namespace Olomoc.Web
 
-@* Une seule app pour tout le site : pages du constructeur (/builder/…) et des tournois
-   (/pairings/…) ; la navigation de l'une à l'autre se fait sans rechargement. *@
+@* Une seule app pour tout le site : pages du constructeur (/builder/…), des tournois
+   (/pairings/…) et des parties en ligne (/online/…) ; la navigation de l'une à l'autre se fait
+   sans rechargement. *@
 <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="@Pages">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
@@ -19,5 +20,6 @@
     [
         typeof(Olomoc.Builder.Pages.Home).Assembly,
         typeof(Olomoc.Pairings.Pages.Index).Assembly,
+        typeof(Olomoc.Online.Pages.Home).Assembly,
     ];
 }

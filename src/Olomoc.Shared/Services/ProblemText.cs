@@ -1,7 +1,7 @@
 using Olomoc.Services;
 using Olomoc.Tournaments;
 
-namespace Olomoc.Pairings.Services;
+namespace Olomoc.Services;
 
 /// <summary>Texte d'un problème renvoyé par l'API, dans la langue courante.</summary>
 public static class ProblemText

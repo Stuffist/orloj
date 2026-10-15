@@ -2,11 +2,13 @@
    Noirceur, pions d'action, état sonné, capacités à coût ou limitées par partie. Toute
    modification passe par la GameSession (règles + annulation), puis OnChanged (sauvegarde,
    compte rendu en notification). Les fenêtres et notifications se superposent à la page :
-   les boutons de la carte ne bougent pas. *@
+   les boutons de la carte ne bougent pas. ReadOnly (camp adverse d'une partie en ligne) :
+   mêmes informations, commandes désactivées. *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 
 <article class="play-cog @(S.OutOfAction ? "ooa" : null)">
+<fieldset class="play-cog-lock" disabled="@ReadOnly">
     <header class="play-cog-head">
         <span class="rank-badge">@(new string('★', S.Rank))</span>
         <div class="play-cog-names">
@@ -115,6 +117,7 @@
             <AbilityList Equipment="e" />
         }
     </details>
+</fieldset>
 </article>
 
 @if (_panel != Panel.None)
@@ -149,6 +152,7 @@
     [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
     [Parameter] public int Slot { get; set; }
     [Parameter, EditorRequired] public Cog Cog { get; set; } = default!;
+    [Parameter] public bool ReadOnly { get; set; }
 
     /// <summary>Après chaque modification, avec son compte rendu éventuel (nom du rouage compris).</summary>
     [Parameter] public EventCallback<string?> OnChanged { get; set; }

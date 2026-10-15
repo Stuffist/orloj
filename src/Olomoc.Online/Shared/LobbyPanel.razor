@@ -1,0 +1,127 @@
+@* Salon : les deux sièges (nom, présence, cabale choisie, prêt), le lien d'invitation pour le
+   créateur, et pour son propre siège : nom, cabale (« Mes cabales », composée, collée ; ou l'une
+   de celles inscrites au tournoi) et « Prêt ». La cabale de l'adversaire reste secrète jusqu'à
+   ce que les deux soient prêts (LDR p.32). *@
+@inject LocalizationService L
+@inject CatalogService Catalog
+
+<section class="panel">
+    <h2>@L.Ui("online.lobby.title")</h2>
+    <p class="hint">@L.Ui("online.lobby.help")</p>
+
+    @if (InviteLink is { } invite && View.Seats[1].Name.Length == 0)
+    {
+        <div class="online-invite">
+            <span class="online-label">@L.Ui("online.invite")</span>
+            <div class="tn-share">
+                <code>@invite</code>
+                <button class="btn small" type="button" @onclick="() => CopyAsync(invite)">@L.Ui(_copied ? "online.copied" : "online.copy")</button>
+            </div>
+            <p class="hint">@L.Ui("online.invite.help")</p>
+        </div>
+    }
+
+    <ul class="online-seats">
+        @for (var i = 0; i < View.Seats.Count; i++)
+        {
+            var seat = View.Seats[i];
+            <li class="@(View.Me == i ? "me" : null)">
+                <span class="online-presence @(seat.Connected ? "on" : null)" title="@L.Ui(seat.Connected ? "online.connected" : "online.disconnected")"></span>
+                <span class="online-seat-name">@(seat.Name.Length > 0 ? seat.Name : L.Ui("online.seat.waiting"))</span>
+                @if (View.Me == i)
+                {
+                    <span class="online-badge">@L.Ui("online.seat.you")</span>
+                }
+                <span class="online-seat-status @(seat.Ready ? "ready" : null)">
+                    @L.Ui(seat.Ready ? "online.seat.ready" : seat.HasCabal ? "online.seat.cabal" : "online.seat.noCabal")
+                </span>
+            </li>
+        }
+    </ul>
+</section>
+
+@if (View.Mine is { } mine)
+{
+    <section class="panel">
+        <h2>@L.Ui("online.lobby.mine")</h2>
+        @if (View.Tournament is null)
+        {
+            <div class="field">
+                <label for="online-name">@L.Ui("online.name")</label>
+                <div class="online-inline">
+                    <input id="online-name" type="text" maxlength="@OnlineRules.MaxNameLength" value="@NameValue"
+                           disabled="@mine.Ready" @oninput="e => _name = e.Value?.ToString()" />
+                    <button class="btn small" type="button" disabled="@(mine.Ready || !NameChanged)" @onclick="SaveNameAsync">@L.Ui("online.name.save")</button>
+                </div>
+            </div>
+        }
+
+        @if (mine.AllowedCabals.Count > 0)
+        {
+            @* Table de tournoi : l'une des cabales inscrites. *@
+            <div class="online-cabals">
+                @for (var i = 0; i < mine.AllowedCabals.Count; i++)
+                {
+                    var cabal = mine.AllowedCabals[i];
+                    var chosen = mine.Cabal is not null && CabalLibrary.SameCards(mine.Cabal, cabal);
+                    <button type="button" class="online-cabal-choice @(chosen ? "on" : null)" aria-pressed="@chosen"
+                            disabled="@mine.Ready" @onclick="() => Send(new(OnlineCommandType.SetCabal, Cabal: cabal))">
+                        <CabalSummary Cabal="cabal" Title="@L.Ui("pairings.cabalN", i + 1)" />
+                    </button>
+                }
+            </div>
+        }
+        else if (mine.Ready && mine.Cabal is { } ready)
+        {
+            <CabalSummary Cabal="ready" />
+        }
+        else
+        {
+            <CabalPicker Index="0" Value="mine.Cabal" ValueChanged="c => Send(new(OnlineCommandType.SetCabal, Cabal: c))" />
+        }
+
+        <div class="online-inline">
+            @if (mine.Ready)
+            {
+                <button class="btn" type="button" @onclick="() => Send(new(OnlineCommandType.SetReady, Flag: false))">@L.Ui("online.notReady")</button>
+                <span class="hint">@L.Ui(View.Other?.Ready == true ? "online.starting" : "online.waitingOther")</span>
+            }
+            else
+            {
+                <button class="btn primary" type="button" disabled="@(mine.Cabal is null || mine.Name.Length == 0)"
+                        @onclick="() => Send(new(OnlineCommandType.SetReady, Flag: true))">@L.Ui("online.ready")</button>
+                @if (mine.Name.Length == 0)
+                {
+                    <span class="hint">@L.Ui("online.ready.needName")</span>
+                }
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public OnlineView View { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<OnlineCommand, Task> Send { get; set; } = default!;
+    /// <summary>Lien d'invitation (créateur d'une partie libre), s'il est connu sur cet appareil.</summary>
+    [Parameter] public string? InviteLink { get; set; }
+    [Parameter] public Func<string, Task>? Copy { get; set; }
+
+    private string? _name;
+    private bool _copied;
+
+    private string NameValue => _name ?? View.Mine?.Name ?? "";
+    private bool NameChanged => _name is not null && _name.Trim().Length > 0 && _name.Trim() != View.Mine?.Name;
+
+    private async Task SaveNameAsync()
+    {
+        await Send(new(OnlineCommandType.SetName, _name));
+        _name = null;
+    }
+
+    private async Task CopyAsync(string text)
+    {
+        if (Copy is null) return;
+        await Copy(text);
+        _copied = true;
+    }
+}

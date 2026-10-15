@@ -1,10 +1,11 @@
 # Orloj — Constructeur de cabale et tournois pour Olomòc (Blazor WebAssembly)
 
 Une app Blazor WebAssembly : constructeur de cabale et mode partie (`/builder/`, la racine
-`/` y renvoie), tournois et statistiques (`/pairings/`), comptes facultatifs et éditeur du
-référentiel. Elle est servie par un hôte ASP.NET Core (`src/Olomoc.Server`) : API, base
-SQLite, e-mails. Le référentiel (rouages, équipements, factions, textes) est en JSON dans le
-dépôt (`src/Olomoc.Shared/wwwroot/`).
+`/` y renvoie), tournois et statistiques (`/pairings/`), parties en ligne à deux
+(`/online/`, synchronisées par SignalR), comptes facultatifs et éditeur du référentiel. Elle
+est servie par un hôte ASP.NET Core (`src/Olomoc.Server`) : API, hub des parties en ligne,
+base SQLite, e-mails. Le référentiel (rouages, équipements, factions, textes) est en JSON
+dans le dépôt (`src/Olomoc.Shared/wwwroot/`).
 
 **Architecture, technos, onglets et leurs données, limites connues :
 [docs/architecture.md](docs/architecture.md).**
@@ -536,6 +537,48 @@ plus tard ne l'est **jamais** (contrôle quotidien).
   minute par adresse IP (`RATE_CREATE_PER_HOUR`, `RATE_LOGINS_PER_15_MINUTES`,
   `RATE_WRITES_PER_MINUTE`).
 
+## Parties en ligne
+
+`/online/` : une partie à deux, synchronisée en direct (SignalR, WebSocket). Le **serveur fait
+autorité** : chaque joueur envoie des commandes, que `Online/OnlineRules.cs` vérifie selon
+l'étape et le siège ; chacun ne reçoit que **sa** vue (`OnlineRules.View`). Après chaque
+changement, la salle reçoit « Changed » et chaque client relit sa vue : rien de secret ne
+transite vers une autre connexion.
+
+- **Accès** sans compte :
+  - **partie libre** : « Créer la partie » donne le lien du créateur et un **lien
+    d'invitation** (jeton du second siège, dans l'ancre `#…`, gardé sur l'appareil puis
+    retiré de l'adresse) ;
+  - **table de tournoi** : « Jouer en ligne » sur sa table de la ronde en cours (tournoi
+    lancé). La partie est créée au premier appel puis retrouvée. Chaque joueur s'y identifie
+    avec son jeton de joueur du tournoi et choisit l'une de ses cabales inscrites, qui est
+    notée à la table au lancement. La table affiche un lien « en ligne » pour la suivre ;
+  - **spectateurs** : le lien sans jeton suit la partie sans pouvoir jouer.
+- **Étapes guidées** (`OnlineStep`) :
+  - **salon** : nom, cabale (« Mes cabales », composer, coller), « Prêt ». La cabale
+    adverse reste secrète jusqu'à ce que les deux soient prêts (LDR p.32) ;
+  - **numéro des joueurs** : 5 D6 lancés par le serveur, réussite à 5+, le plus de réussites
+    devient J1, égalité : on relance (LDR p.31) ;
+  - **agenda** : choisi ou tiré au sort par J1 ;
+  - **cycles** : chacun suit son camp avec les fiches du mode partie (`PlayCogCard`, en
+    lecture seule pour le camp adverse). La fin de cycle s'applique aux deux camps quand les
+    deux l'ont confirmée ; la partie se termine après le 4ᵉ cycle, ou dès Fiel ou traque à 3.
+- **Suivi d'un camp** : comme sur une vraie table, le joueur a la main sur sa fiche. Il envoie
+  l'état de son camp avec la révision dont il part (`UpdateState`) : le serveur refuse un
+  état dépassé (le client recharge), ou incohérent (autres cartes, ligne de vie qui ne découle
+  pas des cartes, compteurs hors bornes). Il impose le cycle commun. Annulation : les 30
+  derniers états de son camp, jusqu'à la fin de cycle.
+- **Journal** : arrivées, dés, agenda, comptes rendus des fiches, fins de cycle.
+- **Stockage** : un document par partie dans la base (table `Documents`, sorte `online`), supprimé après 7 jours sans
+  activité. La présence (siège connecté) est gardée en mémoire. Reconnexion automatique :
+  le client rejoint la partie de nouveau et relit sa vue. Quitter la page de la partie (vers un
+  autre onglet du site) ferme la connexion : le joueur n'est plus compté comme présent.
+- **Garde-fous** : 2 000 parties, messages de 32 Ko au plus, 20 appels par seconde et par
+  connexion, créations limitées comme les tournois (`RATE_CREATE_PER_HOUR`).
+
+Étapes suivantes prévues : le Bloc (plateau de 16″, décors, figurines, mesures), puis les
+cartes (Ministères, Artefact, planification révélée simultanément).
+
 ## Statistiques
 
 `/pairings/stats` (onglet « Statistiques »), publiques, sur les tournois **terminés**
@@ -568,11 +611,12 @@ Olomoc.slnx
 src/Olomoc.Shared/    bibliothèque Razor commune : modèles, règles, composants des cartes,
                       fichiers statiques servis sous /_content/Olomoc.Shared/ (Assets.Base)
 src/Olomoc.Web/       app Blazor WebAssembly du site (servie à la racine) : routeur, démarrage,
-                      layout ; réunit les deux bibliothèques de pages ci-dessous, sans
+                      layout ; réunit les trois bibliothèques de pages ci-dessous, sans
                       rechargement de l'une à l'autre
 src/Olomoc.Builder/   pages du constructeur, du mode partie, du compte et de l'éditeur (/builder/…)
 src/Olomoc.Pairings/  pages des tournois et des statistiques (/pairings/…)
-src/Olomoc.Server/    hôte ASP.NET Core : app, fichiers communs, API, HTTPS
+src/Olomoc.Online/    pages des parties en ligne (/online/…)
+src/Olomoc.Server/    hôte ASP.NET Core : app, fichiers communs, API, hub des parties en ligne, HTTPS
 tests/Olomoc.Tests/   xUnit
 ```
 
@@ -592,14 +636,20 @@ tests/Olomoc.Tests/   xUnit
   (`Accounts/CabalSyncModels.cs`) ; `CatalogService.Resolve` les relit.
 - `Models/GameModels.cs`, `Services/GameSession.cs`, `Services/GameStore.cs` — mode
   partie : état sauvegardable, règles et annulation, sauvegarde dans le navigateur.
+- `Online/` — partie en ligne (`OnlineModels.cs`), règles des étapes, des commandes et des
+  vues (`OnlineRules.cs`), échanges avec le hub (`OnlineApiModels.cs`).
 - `Services/CabalDraft.cs` — cabale en cours de composition, conservée en naviguant.
 - `Components/StatLine.razor`, `AbilityList.razor`, `GameEffect.razor`,
   `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre ;
   `Emblem.razor` (logo de faction, emblème de Ministère) ;
   `TokenTrack.razor` (réserve de pions), `Sheet.razor` (fenêtre superposée).
+- `Components/PlayCogCard.razor` — fiche d'un rouage en partie (mode partie, parties en ligne).
+- `Components/CabalPicker.razor`, `CabalSummary.razor`, `LegalityStatus.razor`,
+  `Problems.razor`, `FactionBadge.razor`, `ScenarioTag.razor` — choix et résumé d'une
+  cabale, problèmes renvoyés par le serveur (tournois, parties en ligne).
 - `Components/AppNav.razor` — menu du site : onglets sous l'en-tête (ordinateur), barre fixée en bas
-  (téléphone) ; constructeur, partie (point si une partie est en cours), tournois, statistiques,
-  éditeur (éditeurs et admins), compte. `Components/HeaderTools.razor` — choix de la langue.
+  (téléphone) ; constructeur, partie (point si une partie est en cours), tournois, en ligne,
+  statistiques, éditeur (éditeurs et admins), compte. `Components/HeaderTools.razor` — choix de la langue.
 - `Accounts/AccountApiModels.cs` (règles et échanges de l'API des comptes), `Services/AccountService.cs`
   (session du site).
 - `Tournaments/` — tournoi (`TournamentModels.cs`), classement (`Standings.cs`),
@@ -610,12 +660,12 @@ tests/Olomoc.Tests/   xUnit
   (`js/olomoc.js`), application installable (`manifest.webmanifest`, icônes dans `img/app/`).
 
 **`src/Olomoc.Web`**
-- `App.razor` (routeur : pages de Builder et Pairings), `Program.cs` (services),
+- `App.razor` (routeur : pages de Builder, Pairings et Online), `Program.cs` (services),
   `Layout/MainLayout.razor` (en-tête de la section, langue, menu), `wwwroot/index.html` (`<base href="/">`).
 
 **`src/Olomoc.Builder`** (bibliothèque Razor, routes `/builder/…`)
 - `Pages/Home.razor` — constructeur : composition, légalité, sauvegarde et export, lancement d'une partie.
-- `Pages/Play.razor`, `Shared/PlayCogCard.razor` — mode partie.
+- `Pages/Play.razor` — mode partie.
 - `Pages/AdminCatalog.razor`, `Shared/CogEditor.razor`, `EquipmentEditor.razor`, `AbilitiesEditor.razor`,
   `CatalogDrafts.cs`, `AdminCatalogApi.cs` — éditeur du référentiel (éditeurs et admins) ;
   `Shared/RolesPanel.razor` — rôles des comptes (admins).
@@ -629,6 +679,12 @@ tests/Olomoc.Tests/   xUnit
   saisie des PV, abandons, export, liens de partage.
 - `Services/TournamentApi.cs` (appels à l'API), `Services/MyTournaments.cs` (jetons gardés
   sur l'appareil).
+
+**`src/Olomoc.Online`** (bibliothèque Razor, routes `/online/…`)
+- `Pages/Home.razor` — créer une partie, parties suivies sur l'appareil (`Services/MyGames.cs`).
+- `Pages/Game.razor` — une partie : salon (`Shared/LobbyPanel.razor`), mise en place
+  (`Shared/SetupPanel.razor`), camps (`Shared/CampPanel.razor`), journal (`Shared/GameLog.razor`).
+- `Services/OnlineConnection.cs` — connexion au hub, reconnexion automatique.
 
 **`src/Olomoc.Server`**
 - `Program.cs` — en-têtes (`Cache-Control: no-cache`, `nosniff`), `/` → `/builder/`,
@@ -650,8 +706,11 @@ tests/Olomoc.Tests/   xUnit
   `DbBackup.cs` (copie quotidienne, `VACUUM INTO`).
 - `Hosting/DocumentStore.cs` — documents JSON sous un code public de 6 caractères (création,
   modification et suppression sous verrou, purge des inactifs).
+- `Online/` — création des parties (`OnlineEndpoints.cs` : `/api/online`, table de tournoi),
+  hub SignalR `/hubs/online` (`OnlineHub.cs`, limite d'appels par connexion), stockage et purge
+  (`OnlineStore.cs` : un document par partie, sorte `online`), présence des joueurs (`OnlinePresence.cs`).
 - `Hosting/ClientApps.cs` — l'app WebAssembly à la racine (`_framework/`) ; routes des sections
-  `/builder/…` et `/pairings/…` renvoyées vers `index.html`.
+  `/builder/…`, `/pairings/…` et `/online/…` renvoyées vers `index.html`.
 - `Hosting/SecurityHeaders.cs` — CSP, cadres interdits, Referrer-Policy, HSTS en HTTPS.
 - `wwwroot/service-worker.js` — hors connexion : réseau d'abord, copie en cache si le réseau
   manque (jamais l'API) ; à la racine pour couvrir l'app et `/_content/` (voir `docs/pwa.md`).
@@ -660,7 +719,7 @@ tests/Olomoc.Tests/   xUnit
 nom d'hôte entre Orloj et B5T.
 
 **`tests/Olomoc.Tests`** — légalité, recherche, export, sauvegarde, mode partie, cohérence
-des langues, tournois (classement, appariements, règles) ; référence `Olomoc.Shared` et lit
+des langues, tournois (classement, appariements, règles), parties en ligne (règles, hub) ; référence `Olomoc.Shared` et lit
 ses fichiers statiques sur le disque ; hôte démarré en mémoire (`WebApplicationFactory`)
 pour les routes du site et les API (tournois, comptes, référentiel ; dossier de données
 temporaire, e-mails écrits sur le disque).

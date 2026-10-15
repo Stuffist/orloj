@@ -1,0 +1,78 @@
+@page "/online"
+@implements IDisposable
+@inject LocalizationService L
+@inject OnlineApi Api
+@inject MyGames Games
+@inject NavigationManager Nav
+
+@* Accueil : créer une partie (lien de la partie, puis lien d'invitation à envoyer), et les
+   parties suivies sur cet appareil. *@
+
+@if (!_ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else
+{
+    <section class="panel">
+        <h2>@L.Ui("online.create.title")</h2>
+        <p class="hint">@L.Ui("online.create.help")</p>
+        <div class="field">
+            <label for="online-create-name">@L.Ui("online.name")</label>
+            <div class="online-inline">
+                <input id="online-create-name" type="text" maxlength="@OnlineRules.MaxNameLength" @bind="_name" @bind:event="oninput" />
+                <button class="btn primary" type="button" disabled="@_busy" @onclick="CreateAsync">@L.Ui("online.create")</button>
+            </div>
+        </div>
+        <Problems Items="_problems" />
+    </section>
+
+    @if (Games.All.Count > 0)
+    {
+        <section class="panel">
+            <h2>@L.Ui("online.mine.title")</h2>
+            <ul class="online-games">
+                @foreach (var g in Games.All)
+                {
+                    <li>
+                        <a href="online/g/@g.Code">@(g.Title ?? g.Code)</a>
+                        <span class="hint">@g.Code · @g.SeenAt.ToLocalTime().ToString("g")</span>
+                        <button class="btn small" type="button" @onclick="() => Games.ForgetAsync(g.Code)">@L.Ui("online.forget")</button>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+}
+
+@code {
+    private bool _ready, _busy;
+    private string _name = "";
+    private IReadOnlyList<Problem>? _problems;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnLanguageChanged;
+        await L.EnsureLoadedAsync();
+        await Games.EnsureLoadedAsync();
+        _ready = true;
+    }
+
+    private async Task CreateAsync()
+    {
+        _busy = true;
+        try
+        {
+            var result = await Api.CreateAsync(_name);
+            _problems = result.Problems;
+            if (result.Value is not { } created) return;
+            await Games.RememberAsync(created.Code, created.Token, created.InviteToken, L.Ui("online.game.title", created.Code));
+            Nav.NavigateTo($"online/g/{created.Code}");
+        }
+        finally { _busy = false; }
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnLanguageChanged;
+}

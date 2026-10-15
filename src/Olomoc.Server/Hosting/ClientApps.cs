@@ -2,14 +2,15 @@ namespace Olomoc.Server.Hosting;
 
 /// <summary>
 /// Le site dans le navigateur : une seule app Blazor WebAssembly (Olomoc.Web), servie à la racine
-/// (_framework/…, index.html), dont les pages vivent sous deux sections : le constructeur
-/// (/builder/…) et les tournois (/pairings/…). Toute adresse d'une section sans fichier
+/// (_framework/…, index.html), dont les pages vivent sous trois sections : le constructeur
+/// (/builder/…), les tournois (/pairings/…) et les parties en ligne (/online/…). Toute adresse
+/// d'une section sans fichier
 /// correspondant renvoie index.html : le routeur Blazor prend le relais, sans rechargement d'une
 /// section à l'autre.
 /// </summary>
 public static class ClientApps
 {
-    public static readonly string[] Sections = ["builder", "pairings"];
+    public static readonly string[] Sections = ["builder", "pairings", "online"];
 
     public static void Map(WebApplication app)
     {

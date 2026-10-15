@@ -946,3 +946,68 @@ body {
     .tn-faction { font-size: .72rem; }
     .tn-head-side { align-items: flex-start; flex-direction: row; }
 }
+
+/* Parties en ligne : salon, mise en place, camps des deux joueurs, journal */
+.play-cog-lock { display: flex; flex-direction: column; gap: .65rem; border: 0; margin: 0; padding: 0; min-width: 0; }
+.online-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .6rem 1rem; }
+.online-head h2 { margin: 0; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.online-head-tools { display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; min-width: 0; max-width: 100%; }
+.online-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); flex: none; }
+.online-badge {
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .5px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 0 .45rem; margin-left: .4rem;
+}
+.online-inline { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.online-inline input, .online-inline select {
+    flex: 1 1 12rem; min-width: 0; background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: .5rem .6rem; font-size: .95rem;
+}
+.online-invite { display: flex; flex-direction: column; gap: .3rem; margin-bottom: 1rem; }
+.online-seats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+.online-seats li {
+    display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: .45rem .7rem;
+}
+.online-seats li.me { border-color: var(--rust-soft); }
+.online-seat-name { font-weight: 600; }
+.online-seat-status { margin-left: auto; font-size: .8rem; color: var(--muted); }
+.online-seat-status.ready { color: var(--ok); }
+.online-presence { display: inline-block; width: .55rem; height: .55rem; border-radius: 50%; background: var(--line); flex: none; vertical-align: middle; }
+.online-presence.on { background: var(--ok); }
+.online-cabals { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .6rem; margin-bottom: .8rem; }
+.online-cabal-choice {
+    text-align: left; background: var(--panel-2); color: var(--ink); cursor: pointer;
+    border: 1px solid var(--line); border-radius: 8px; padding: .6rem .7rem;
+}
+.online-cabal-choice.on { border-color: var(--rust-soft); box-shadow: inset 0 0 0 1px var(--rust-soft); }
+.online-dice-rows { list-style: none; margin: .6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
+.online-dice-rows li { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; }
+.online-dice { display: flex; gap: .3rem; }
+.online-die {
+    width: 1.9rem; height: 1.9rem; display: grid; place-items: center; font-weight: 700;
+    border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); color: var(--muted);
+}
+.online-die.hit { color: #fff; border-color: var(--rust-soft); background: var(--rust); }
+.online-successes { font-size: .85rem; color: var(--muted); }
+.online-commands { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .8rem; }
+.online-commands .btn { min-height: 2.4rem; }
+.online-camps { display: flex; flex-direction: column; gap: 1.2rem; }
+.online-camp .play-bar { position: static; }
+.online-camp.mine .play-bar { border-color: var(--rust-soft); }
+.online-over { border-color: var(--rust-soft); }
+.online-score { font-size: 1.1rem; margin: .3rem 0 .6rem; }
+.online-score strong { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.online-log summary { cursor: pointer; font-weight: 600; }
+.online-log ol {
+    margin: .5rem 0 0; padding-left: 1.4rem; display: flex; flex-direction: column; gap: .2rem;
+    font-size: .85rem; max-height: 18rem; overflow-y: auto;
+}
+.online-log time { color: var(--muted); margin-right: .4rem; font-variant-numeric: tabular-nums; }
+.online-games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+.online-games li { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.online-games .btn { margin-left: auto; }
+@media (max-width: 600px) {
+    .online-head-tools { align-items: stretch; width: 100%; }
+}
+.tn-online { margin-left: .4rem; font-size: .72rem; color: var(--ok); text-decoration: none; border: 1px solid; border-radius: 999px; padding: 0 .4rem; }
+.online-head a { color: var(--rust-soft); }

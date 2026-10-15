@@ -9,35 +9,39 @@ Vue d'ensemble technique d'Orloj. Le détail des règles et des fonctions est da
 Navigateur ── une app Blazor WebAssembly (Olomoc.Web), téléchargée une fois
    │            /builder/…  pages de Olomoc.Builder   (constructeur, partie, compte, éditeur)
    │            /pairings/… pages de Olomoc.Pairings  (tournois, statistiques)
-   │            localStorage : cabales, partie, langue, tournois suivis
+   │            /online/…   pages de Olomoc.Online    (parties en ligne à deux)
+   │            localStorage : cabales, partie, langue, tournois et parties en ligne suivis
    │
-   │  HTTPS (Caddy, deploy/proxy)
+   │  HTTPS (Caddy, deploy/proxy) ; WebSocket pour les parties en ligne
    ▼
 Olomoc.Server (ASP.NET Core, un conteneur)
    ├── fichiers : l'app (/_framework/, index.html), /_content/Olomoc.Shared/ (CSS, images, langues)
    ├── référentiel : fichiers du dépôt + modifications de l'éditeur (DATA_DIR/catalog)
-   ├── API : /api/tournaments, /api/stats, /api/account, /api/admin/…
+   ├── API : /api/tournaments, /api/stats, /api/account, /api/online, /api/admin/…
+   ├── hub SignalR : /hubs/online (parties en ligne)
    └── SQLite : DATA_DIR/olomoc.db (+ backups/, mail/ sans SMTP)
 ```
 
 | Projet | Rôle |
 |---|---|
 | `Olomoc.Shared` | Bibliothèque commune au navigateur et au serveur : modèles, règles (légalité, partie, appariements, classement, statistiques), services du navigateur, composants d'affichage, fichiers statiques. |
-| `Olomoc.Web` | L'app du navigateur : démarrage, routeur, layout, menu. Réunit les deux bibliothèques de pages ; on passe de l'une à l'autre sans rechargement. |
+| `Olomoc.Web` | L'app du navigateur : démarrage, routeur, layout, menu. Réunit les trois bibliothèques de pages ; on passe de l'une à l'autre sans rechargement. |
 | `Olomoc.Builder` | Pages `/builder/…`. |
 | `Olomoc.Pairings` | Pages `/pairings/…`. |
-| `Olomoc.Server` | Hôte : sert l'app et les fichiers, API, base, e-mails, tâches de fond (purge, sauvegarde, e-mail de contrôle). |
+| `Olomoc.Online` | Pages `/online/…` ; client SignalR. |
+| `Olomoc.Server` | Hôte : sert l'app et les fichiers, API, hub des parties en ligne, base, e-mails, tâches de fond (purges, sauvegarde, e-mail de contrôle). |
 | `tests/Olomoc.Tests` | xUnit : règles (Shared) et API (serveur en mémoire, base temporaire). |
 
 Les règles sont dans `Olomoc.Shared` et tournent des deux côtés : le navigateur les applique
 pour l'affichage, le serveur les revérifie pour tout ce qu'il enregistre (inscriptions,
-résultats, référentiel).
+résultats, référentiel, commandes des parties en ligne).
 
 ## Technos
 
 - **.NET 10** : Blazor WebAssembly (navigateur), ASP.NET Core (serveur), xUnit.
 - **SQLite + EF Core** : une base dans un fichier, schéma par migrations appliquées au
-  démarrage. Tournois et archives de statistiques : documents JSON (table `Documents`).
+  démarrage. Tournois, archives de statistiques et parties en ligne : documents JSON (table `Documents`).
+- **SignalR** (WebSocket) : synchronisation des parties en ligne.
 - **ASP.NET Core Identity** : comptes, mots de passe, rôles, cookie de session (90 jours,
   prolongé à l'usage), clés de chiffrement dans la base.
 - **MailKit** : e-mails par un relais SMTP (Brevo) ; sans `SMTP_HOST`, écrits dans `DATA_DIR/mail`.
@@ -54,6 +58,7 @@ résultats, référentiel).
 | **Constructeur** `/builder/` | Compose une cabale (faction, 3 rouages, équipements), vérifie la légalité, exporte (texte, JSON, planche de cartes), sauvegarde. Catalogue des équipements dans une fenêtre à part. | Référentiel (`olomoc-catalog.json`, `olomoc-factions.json`, `i18n/*/cards.json`) | `olomoc.cabals` (localStorage) ; avec un compte : table `SavedCabals` (`/api/account/cabals/sync`). Cabale en cours : mémoire, partagée avec la fenêtre des équipements (`olomoc.draft`). |
 | **Partie** `/builder/play` | Suit une partie : PV, Noirceur, Fiel, pions, capacités limitées, 4 cycles ; annulation. | La cabale lancée depuis le constructeur | `olomoc.game` (localStorage, une partie par appareil). Historique d'annulation : mémoire. |
 | **Tournois** `/pairings/` | Crée ou rejoint un tournoi ; page publique (inscription, rondes, classement) ; administration (rondes, résultats, abandons, export). Rafraîchie toutes les 30 s. | `/api/tournaments/{code}` | Tournoi : table `Documents` (sorte `tournament`). Jetons organisateur et joueur : `olomoc.tournaments` (localStorage) et lien d'administration (jeton dans l'ancre). |
+| **En ligne** `/online/` | Partie à deux synchronisée : salon (cabales secrètes jusqu'à « Prêt »), numéro des joueurs, agenda, cycles ; chacun suit son camp, l'autre en lecture. Partie libre (lien d'invitation) ou table de tournoi. | Hub `/hubs/online` (vue propre à chaque siège) | Partie : table `Documents` (sorte `online`). Jetons de siège : `olomoc.online` (localStorage) ; présence : mémoire du serveur. |
 | **Stats** `/pairings/stats` | Statistiques publiques des tournois terminés : factions, rouages, victoires, scénarios, decks. | `/api/stats`, calculées en mémoire | — (l'archive anonyme est écrite à la fin d'un tournoi : `Documents`, sorte `stats`) |
 | **Éditeur** `/builder/admin` (éditeurs, admins) | Crée et modifie rouages, équipements, dons, factions, en français et en anglais ; publication ; export zip. | Référentiel fusionné, brouillons compris | `DATA_DIR/catalog/` (JSON au format du dépôt, entrées modifiées seulement). Le dépôt n'est jamais modifié : export puis commit. |
 | **Compte** `/builder/account` | Connexion, création, e-mail (confirmation, mot de passe oublié), mot de passe, autres appareils, suppression ; rôles des comptes et mot de passe temporaire (admins). | `/api/account/me` | Tables d'Identity (comptes, rôles), `SavedCabals`. Session : cookie `olomoc_session`. |
@@ -99,4 +104,8 @@ Langue : `olomoc.lang` (localStorage) ; textes de l'interface `i18n/*/ui.json`, 
 - **Taille** : l'app entière (constructeur et tournois) est téléchargée à la première visite,
   puis mise en cache.
 - **Langues** : français et anglais ; une carte sans texte anglais s'affiche en français.
+- **Parties en ligne** :
+  - sans compte : perdre le lien (jeton du siège) sur un autre appareil, c'est jouer en spectateur ;
+  - 2 000 parties en base, purgées après 7 jours sans activité ;
+  - le Bloc (plateau, figurines) n'est pas encore géré : seuls les camps sont suivis.
 - **Branche `online-salon`** (mode en ligne) : à part, pas sur `main`.

@@ -84,6 +84,16 @@ else
         <section class="panel">
             <h3>@L.Ui("pairings.roundOf", round.Number, v.RoundCount)<ScenarioTag Scenario="v.ScenarioOf(round.Number)" /></h3>
             <RoundTables View="v" Round="round" />
+            @* Sa table de la ronde en cours, contre un adversaire et sans résultat : partie en ligne. *@
+            @if (v.Phase == TournamentPhase.Started && Entry?.PlayerToken is not null && v.MyPlayerId is { } myId
+                 && round.Tables.FirstOrDefault(t => t.Involves(myId)) is { IsBye: false, HasResult: false } myTable)
+            {
+                <div class="tn-actions">
+                    <button class="btn primary" type="button" disabled="@_opening" title="@L.Ui("pairings.online.play.title")"
+                            @onclick="() => PlayOnlineAsync(round.Number, myTable.Number)">@L.Ui("pairings.online.play")</button>
+                </div>
+                <Problems Items="_onlineProblems" />
+            }
             @if (v.Rounds.Count > 1)
             {
                 <details class="tn-history">
@@ -110,6 +120,22 @@ else
 
 @code {
     private bool _editing;
+    private bool _opening;
+    private IReadOnlyList<Problem>? _onlineProblems;
+
+    // Partie en ligne de sa table : ouverte (ou retrouvée) par le serveur, puis rejointe avec son jeton de joueur.
+    private async Task PlayOnlineAsync(int round, int table)
+    {
+        if (Entry?.PlayerToken is not { } token) return;
+        _opening = true;
+        try
+        {
+            var result = await Api.OpenOnlineAsync(Code, round, table, token);
+            _onlineProblems = result.Problems;
+            if (result.Value is { } opened) Nav.NavigateTo($"online/g/{opened.Code}#{token}");
+        }
+        finally { _opening = false; }
+    }
 
     private string CabalTitle(int i, CabalExport c) =>
         c.Name is { Length: > 0 } name ? $"{L.Ui("pairings.cabalN", i + 1)} — {name}" : L.Ui("pairings.cabalN", i + 1);

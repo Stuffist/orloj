@@ -79,6 +79,8 @@ public sealed class Table
     public int? CabalB { get; set; }
     public TableSide? First { get; set; }               // J1
     public GameEnd? End { get; set; }
+    /// <summary>Partie en ligne ouverte pour cette table (code), s'il y en a une.</summary>
+    public string? OnlineCode { get; set; }
 
     public bool IsBye => PlayerB is null;
     public bool HasResult => IsBye || (VpA.HasValue && VpB.HasValue);

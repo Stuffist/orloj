@@ -25,6 +25,10 @@ public sealed class TournamentApi(HttpClient http)
     public Task<ApiResult<TournamentView>> GetAsync(string code, string? organizer, string? player) =>
         SendAsync<TournamentView>(HttpMethod.Get, $"{Root}/{Uri.EscapeDataString(code)}", null, organizer, player);
 
+    /// <summary>Partie en ligne de la table (ouverte au premier appel), pour l'un de ses deux joueurs.</summary>
+    public Task<ApiResult<Olomoc.Online.OnlineOpened>> OpenOnlineAsync(string code, int round, int table, string player) =>
+        SendAsync<Olomoc.Online.OnlineOpened>(HttpMethod.Post, $"{Root}/{code}/rounds/{round}/tables/{table}/online", null, player: player);
+
     public Task<ApiResult<PlayerRegistered>> RegisterAsync(string code, RegistrationRequest request) =>
         SendAsync<PlayerRegistered>(HttpMethod.Post, $"{Root}/{code}/players", request);
 

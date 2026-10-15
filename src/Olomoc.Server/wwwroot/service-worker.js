@@ -1,11 +1,11 @@
-// Service worker du site (portée « / » : l'app, ses sections /builder/ et /pairings/, et /_content/) :
+// Service worker du site (portée « / » : l'app, ses sections /builder/, /pairings/ et /online/, et /_content/) :
 // l'app reste utilisable hors connexion. Réseau d'abord : en ligne, tout vient du serveur comme
 // sans service worker (un redéploiement est vu aussitôt) ; la copie gardée en cache ne sert que
 // si le réseau manque, ou tarde à répondre. Enregistré par olomoc.js.
 
 const CACHE = "olomoc";
 const NETWORK_TIMEOUT_MS = 4000;            // réseau trop lent (salle de jeu mal couverte) : copie en cache
-const SECTIONS = ["builder", "pairings"];
+const SECTIONS = ["builder", "pairings", "online"];
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", event => event.waitUntil(self.clients.claim()));
@@ -18,8 +18,8 @@ self.addEventListener("fetch", event => {
 });
 
 // Fichiers du site (pas les blob: des téléchargements), hors API (tournois, statistiques :
-// données vivantes, jetons d'organisateur).
-const cacheable = url => url.protocol === location.protocol && url.origin === location.origin && !url.pathname.startsWith("/api/");
+// données vivantes, jetons d'organisateur) et hub des parties en ligne (/hubs/).
+const cacheable = url => url.protocol === location.protocol && url.origin === location.origin && !url.pathname.startsWith("/api/") && !url.pathname.startsWith("/hubs/");
 
 // Toutes les routes des sections renvoient le même index.html : une seule copie.
 function cacheKey(url, page) {

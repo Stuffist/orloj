@@ -1,12 +1,14 @@
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Olomoc.Accounts;
 using Olomoc.Server.Accounts;
 using Olomoc.Server.CardCatalog;
 using Olomoc.Server.Data;
 using Olomoc.Server.Hosting;
+using Olomoc.Server.Online;
 using Olomoc.Server.Tournaments;
 using Olomoc.Tournaments;
 
@@ -84,6 +86,16 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<MailQueue>());
 builder.Services.AddHostedService(sp => new MailCheck(builder.Configuration["MAIL_CHECK_TO"], sp.GetRequiredService<IMailSender>(),
     sp.GetRequiredService<IDbContextFactory<OlomocDb>>(), sp.GetRequiredService<ILogger<MailCheck>>()));
 
+// Parties en ligne : documents dans la base (sorte « online »), synchronisées par SignalR (WebSocket).
+builder.Services.AddSingleton(sp => new OnlineStore(sp.GetRequiredService<IDbContextFactory<OlomocDb>>()));
+builder.Services.AddSingleton<OnlinePresence>();
+builder.Services.AddHostedService<OnlinePurge>();
+builder.Services.AddSignalR(o =>
+{
+    o.MaximumReceiveMessageSize = 32 * 1024;   // une commande pèse au plus quelques Ko (état d'un camp)
+    o.AddFilter<OnlineRateFilter>();
+}).AddJsonProtocol(o => TournamentJson.Configure(o.PayloadSerializerOptions));
+
 // Limites par adresse IP : créations de tournoi, essais de mot de passe, écritures, lectures.
 var createPerHour = builder.Configuration.GetValue("RATE_CREATE_PER_HOUR", 10);
 var writesPerMinute = builder.Configuration.GetValue("RATE_WRITES_PER_MINUTE", 120);
@@ -137,7 +149,7 @@ app.Use((ctx, next) =>
 });
 app.UseSecurityHeaders();
 
-ClientApps.Map(app);                        // app du navigateur : /_framework, sections /builder et /pairings
+ClientApps.Map(app);                        // app du navigateur : /_framework, sections /builder, /pairings et /online
 app.UseStaticFiles();                       // index.html, fichiers communs : /_content/Olomoc.Shared/…
 app.UseRateLimiter();
 app.UseAuthentication();                    // après les fichiers : seule l'API lit la session
@@ -146,6 +158,7 @@ app.UseAuthorization();
 app.MapTournaments();
 app.MapAccounts();
 app.MapCatalog();                           // avant les fichiers statiques : référentiel fusionné
+app.MapOnline();
 app.MapGet("/", () => Results.Redirect("/builder/"));
 app.MapGet("/healthz", () => "ok\n");
 ClientApps.MapFallbacks(app);               // routes de l'app : index.html

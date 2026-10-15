@@ -4,7 +4,7 @@
 @inject LocalizationService L
 @inject NavigationManager Nav
 
-@* En-tête de tout le site : titre et sous-titre de la section (constructeur ou tournois), langue,
+@* En-tête de tout le site : titre et sous-titre de la section (constructeur, tournois, en ligne), langue,
    puis le menu (AppNav). Fenêtre à part ouverte par le constructeur (?window=true) : en-tête
    compact, sans menu. *@
 
@@ -12,7 +12,7 @@
 
 <div class="app-shell@(IsWindow ? " compact" : null)">
     <header class="app-header">
-        <a class="mark" href="@(IsPairings ? "pairings/" : "builder/")" title="@(L.Loaded ? L.Ui(IsPairings ? "pairings.home" : "nav.builder") : null)"></a>
+        <a class="mark" href="@Section/" title="@(L.Loaded ? L.Ui(Home) : null)"></a>
         <div class="app-titles">
             @if (L.Loaded)
             {
@@ -48,19 +48,37 @@
     // Adresse sans la base : « builder/play », « pairings/t/ABCDEF »…
     private string[] Segments => Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-    private bool IsPairings => Segments.FirstOrDefault() == "pairings";
+    // Section : « builder », « pairings » ou « online » (constructeur par défaut).
+    private string Section => Segments.FirstOrDefault() is "pairings" or "online" ? Segments[0] : "builder";
 
     // Page du constructeur : « play », « equipment »… ; vide pour l'accueil.
     private string Page => Segments.ElementAtOrDefault(1) ?? "";
 
-    private string Title => IsPairings ? "pairings.title" : "app.title";
-
-    private string Subtitle => IsPairings ? "pairings.subtitle" : Page switch
+    private string Home => Section switch
     {
-        "play" => "play.subtitle",
-        "equipment" => "equipment.subtitle",
-        "account" or "privacy" => "account.subtitle",
-        _ => "app.subtitle",
+        "pairings" => "pairings.home",
+        "online" => "online.home",
+        _ => "nav.builder",
+    };
+
+    private string Title => Section switch
+    {
+        "pairings" => "pairings.title",
+        "online" => "online.title",
+        _ => "app.title",
+    };
+
+    private string Subtitle => Section switch
+    {
+        "pairings" => "pairings.subtitle",
+        "online" => "online.subtitle",
+        _ => Page switch
+        {
+            "play" => "play.subtitle",
+            "equipment" => "equipment.subtitle",
+            "account" or "privacy" => "account.subtitle",
+            _ => "app.subtitle",
+        },
     };
 
     private bool IsWindow => new Uri(Nav.Uri).Query.Contains("window=true", StringComparison.Ordinal);

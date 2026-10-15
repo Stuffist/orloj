@@ -1,0 +1,250 @@
+@page "/online/g/{Code}"
+@implements IAsyncDisposable
+@inject LocalizationService L
+@inject CatalogService Catalog
+@inject OnlineConnection Hub
+@inject MyGames Games
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+@* Partie en ligne : on la rejoint avec le jeton de son siège (lien reçu, gardé sur l'appareil),
+   ou sans jeton en spectateur. Chaque changement annoncé par le serveur fait relire la vue.
+   Le camp du joueur est suivi localement (GameSession) et chaque modification part au serveur
+   avec la révision dont elle part ; refusée (état dépassé…), la vue du serveur est reprise. *@
+
+@if (!_ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else if (_view is not { } v)
+{
+    <section class="panel">
+        <p class="export-warning" role="alert">@L.Ui($"online.error.{_error ?? "network"}")</p>
+        <a class="btn" href="online/">@L.Ui("online.home")</a>
+    </section>
+}
+else
+{
+    <section class="panel online-head">
+        <div>
+            <h2>@L.Ui("online.game.title", v.Code) <ScenarioTag Scenario="v.Agenda" /></h2>
+            <p class="tn-meta">
+                @L.Ui($"online.step.{v.Step}")
+                @if (v.Step is OnlineStep.Cycle)
+                {
+                    <span> · @L.Ui("online.cycle", Math.Min(v.Cycle, GameSession.Cycles), GameSession.Cycles)</span>
+                }
+                @if (v.First is { } first)
+                {
+                    <span> · @L.Ui("online.first", v.Seats[first].Name)</span>
+                }
+                @if (v.Me is null)
+                {
+                    <span class="online-badge">@L.Ui("online.spectator")</span>
+                }
+            </p>
+            @if (v.Tournament is { } tr)
+            {
+                <p class="tn-meta">
+                    <a href="pairings/t/@tr.Code">@L.Ui("online.tournament", tr.Code, tr.Round, tr.Table)</a>
+                </p>
+            }
+        </div>
+        <div class="online-head-tools">
+            @if (Hub.Status != Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
+            {
+                <span class="export-warning">@L.Ui("online.reconnecting")</span>
+            }
+            <div class="tn-share" title="@L.Ui("online.watch.help")">
+                <span class="online-label">@L.Ui("online.watch")</span>
+                <code>@WatchLink</code>
+                <button class="btn small" type="button" @onclick="() => CopyAsync(WatchLink)">@L.Ui("online.copy")</button>
+            </div>
+        </div>
+    </section>
+
+    <Problems Items="_problems" />
+
+    @switch (v.Step)
+    {
+        case OnlineStep.Lobby:
+            <LobbyPanel View="v" Send="SendAsync" InviteLink="@InviteLink" Copy="CopyAsync" />
+            break;
+        case OnlineStep.Initiative or OnlineStep.Agenda:
+            <SetupPanel View="v" Send="SendAsync" />
+            break;
+        default:
+            @if (v.Over)
+            {
+                <section class="panel online-over">
+                    <h2>@L.Ui("online.over.title")</h2>
+                    <p class="online-score">
+                        @v.Seats[0].Name <strong>@v.Seats[0].State?.VictoryPoints</strong> – <strong>@v.Seats[1].State?.VictoryPoints</strong> @v.Seats[1].Name
+                    </p>
+                    @foreach (var seat in v.Seats.Where(s => s.State is not null))
+                    {
+                        @if (seat.State!.Bile >= GameSession.MaxBile)
+                        {
+                            <p class="export-warning">@L.Ui("online.over.lost", seat.Name)</p>
+                        }
+                        else if (seat.State.Hunt >= GameSession.MaxHunt)
+                        {
+                            <p class="hint">@L.Ui("online.over.hunted", seat.Name)</p>
+                        }
+                    }
+                </section>
+            }
+            @if (v.Mine is { } mine && v.Step == OnlineStep.Cycle)
+            {
+                <section class="online-commands">
+                    <button class="btn" type="button" disabled="@(!mine.CanUndo)" title="@L.Ui("play.undo.title")"
+                            @onclick="() => SendAsync(new(OnlineCommandType.Undo))">↶ @L.Ui("play.undo")</button>
+                    @if (!v.Over)
+                    {
+                        <button class="btn @(mine.EndCycleReady ? null : "primary")" type="button" aria-pressed="@mine.EndCycleReady"
+                                title="@L.Ui("play.endCycle.title")"
+                                @onclick="() => SendAsync(new(OnlineCommandType.SetEndCycle, Flag: !mine.EndCycleReady))">
+                            @(mine.EndCycleReady ? L.Ui("online.endCycle.cancel") : L.Ui(v.Cycle >= GameSession.Cycles ? "play.endGame" : "play.endCycle", v.Cycle))
+                        </button>
+                        <span class="hint">
+                            @(mine.EndCycleReady ? L.Ui("online.endCycle.waiting", v.Other!.Name)
+                              : v.Other!.EndCycleReady ? L.Ui("online.endCycle.otherReady", v.Other.Name) : null)
+                        </span>
+                    }
+                </section>
+            }
+            <div class="online-camps">
+                @foreach (var i in CampOrder(v))
+                {
+                    var seat = v.Seats[i];
+                    if (SessionOf(v, i) is not { } session) continue;
+                    <CampPanel Seat="seat" Session="session" Editable="@(v.Me == i && v.Step == OnlineStep.Cycle)"
+                               IsFirst="@(v.First == i)" OnChanged="ChangedAsync" />
+                }
+            </div>
+            break;
+    }
+
+    <GameLog View="v" Open="@(v.Step != OnlineStep.Cycle)" />
+}
+
+@code {
+    [Parameter] public string Code { get; set; } = "";
+
+    private bool _ready;
+    private string? _error;
+    private OnlineView? _view;
+    private IReadOnlyList<Problem>? _problems;
+    private MyGame? _entry;
+
+    // Camp du joueur, suivi localement : chaque modification part au serveur à partir de _basedOn.
+    private GameSession? _mine;
+    private int _basedOn;
+    private int _pending;
+    private readonly SemaphoreSlim _sending = new(1, 1);
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnLanguageChanged;
+        await L.EnsureLoadedAsync();
+        await Catalog.EnsureLoadedAsync();
+        await Games.EnsureLoadedAsync();
+
+        // Jeton reçu dans le lien (#jeton) : gardé sur l'appareil, puis retiré de l'adresse.
+        var fragment = new Uri(Nav.Uri).Fragment.TrimStart('#');
+        if (fragment.Length > 0)
+        {
+            await Games.RememberAsync(Code, token: fragment, title: L.Ui("online.game.title", Code.ToUpperInvariant()));
+            Nav.NavigateTo($"online/g/{Code}", replace: true);
+        }
+        _entry = Games.Get(Code);
+
+        Hub.Changed += OnServerChanged;
+        Hub.StatusChanged += OnStatusChanged;
+        var joined = await Hub.JoinAsync(Code, _entry?.Token);
+        _error = joined.Error;
+        if (joined.View is { } view)
+        {
+            Apply(view, force: true);
+            if (_entry is not null) await Games.RememberAsync(Code);
+        }
+        _ready = true;
+    }
+
+    private string WatchLink => $"{Nav.BaseUri}online/g/{_view?.Code ?? Code}";
+    private string? InviteLink => _entry?.InviteToken is { } invite ? $"{WatchLink}#{invite}" : null;
+
+    // Son camp d'abord, puis l'autre ; spectateur : dans l'ordre des sièges.
+    private static IEnumerable<int> CampOrder(OnlineView v) => v.Me is { } me ? new[] { me, 1 - me } : new[] { 0, 1 };
+
+    private GameSession? SessionOf(OnlineView v, int seat) =>
+        seat == v.Me ? _mine : v.Seats[seat].State is { } s ? new GameSession(s) : null;
+
+    private void Apply(OnlineView view, bool force = false)
+    {
+        _view = view;
+        // État de son camp repris du serveur s'il a changé ailleurs (fin de cycle, annulation…),
+        // sauf pendant un envoi : la réponse dira de quelle révision repartir.
+        if (view.Mine?.State is { } state && (force || _mine is null || (_pending == 0 && view.Mine.StateRevision != _basedOn)))
+        {
+            _mine = new GameSession(GameSession.FromJson(GameSession.ToJson(state))!);
+            _basedOn = view.Mine.StateRevision;
+        }
+    }
+
+    private async Task RefreshAsync(bool force = false)
+    {
+        if (await Hub.GetViewAsync() is { } view) Apply(view, force);
+    }
+
+    private Task OnServerChanged() => InvokeAsync(async () =>
+    {
+        await RefreshAsync();
+        StateHasChanged();
+    });
+
+    private void OnStatusChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task SendAsync(OnlineCommand command)
+    {
+        var result = await Hub.SendAsync(command);
+        _problems = result.Problems;
+        await RefreshAsync(force: !result.Ok);
+    }
+
+    // Modification de son camp : envoyée dans l'ordre, chacune à partir de la révision précédente.
+    private async Task ChangedAsync(string? note)
+    {
+        if (_mine is null) return;
+        _pending++;
+        await _sending.WaitAsync();
+        try
+        {
+            var result = await Hub.SendAsync(new(OnlineCommandType.UpdateState, State: _mine.State, BasedOn: _basedOn, Note: note));
+            _problems = result.Problems;
+            if (result.Ok) _basedOn = result.StateRevision ?? _basedOn;
+        }
+        finally
+        {
+            _pending--;
+            _sending.Release();
+        }
+        if (_problems.Count > 0) await RefreshAsync(force: true);
+    }
+
+    private async Task CopyAsync(string text)
+    {
+        try { await JS.InvokeVoidAsync("navigator.clipboard.writeText", text); }
+        catch (JSException) { /* presse-papiers indisponible : le lien reste affiché */ }
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public async ValueTask DisposeAsync()
+    {
+        L.Changed -= OnLanguageChanged;
+        Hub.Changed -= OnServerChanged;
+        Hub.StatusChanged -= OnStatusChanged;
+        await Hub.LeaveAsync();
+    }
+}

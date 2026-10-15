@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <!-- Hôte du site : sert l'app Blazor WebAssembly (Olomoc.Web : constructeur sous
-       /builder/, tournois sous /pairings/) et l'API des tournois (/api/tournaments). Seul processus du conteneur,
+       /builder/, tournois sous /pairings/, parties en ligne sous /online/), l'API et la
+       synchronisation des parties en ligne (/hubs/online). Seul processus du conteneur,
        HTTPS compris. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>

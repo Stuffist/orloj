@@ -212,7 +212,8 @@ public sealed class GameSession
         return true;
     }
 
-    private static List<HealthPointType> LifeLineOf(Cog cog, params Equipment?[] equipment) =>
+    /// <summary>Ligne de vie de la partie : PV ajoutés par les cartes portées, puis ceux du rouage.</summary>
+    public static List<HealthPointType> LifeLineOf(Cog cog, params Equipment?[] equipment) =>
         equipment.SelectMany(e => e?.LifeLinePrefix ?? new()).Concat(cog.LifeLine).ToList();
 
     public void SetFortified(int slot, bool on)
