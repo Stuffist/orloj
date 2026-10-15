@@ -4,44 +4,69 @@ namespace Olomoc.Services;
 
 public enum EquipmentSort { Ministry, Name }
 
-/// <summary>Groupe de la liste : code de Ministère, <see cref="EquipmentBrowser.Factions"/> ou <see cref="EquipmentBrowser.CogAffiliated"/>.</summary>
+/// <summary>Groupe de la liste : code de Ministère, <see cref="EquipmentBrowser.FactionPrefix"/> + code de faction, ou <see cref="EquipmentBrowser.CogAffiliated"/>.</summary>
 public sealed record EquipmentGroup(string Key, IReadOnlyList<Equipment> Items);
 
 /// <summary>
-/// Catalogue des équipements et dons (page « Équipements ») : filtre par groupe, recherche
-/// dans les noms et les effets (sans accents ni casse, langue courante et de référence), tri.
-/// <list type="bullet">
-/// <item>par Ministère : un groupe par Ministère dans l'ordre du référentiel (l'Axe, les dons,
-/// en dernier), puis les cartes de faction (par faction), puis celles affiliées à un rouage ;</item>
-/// <item>par nom : un seul groupe, de A à Z dans la langue courante.</item>
-/// </list>
+/// Équipements et dons rangés par affiliation : chaque Ministère dans l'ordre du référentiel
+/// (l'Axe, les dons, en dernier), puis les cartes de chaque faction (ordre des factions), puis
+/// celles affiliées à un rouage ; dans un groupe, de A à Z dans la langue courante. Sert au
+/// choix de l'équipement d'un rouage et au catalogue (filtre par groupe, recherche dans les
+/// noms et les effets sans accents ni casse, tri par Ministère ou par nom).
 /// </summary>
 public static class EquipmentBrowser
 {
-    public const string Factions = "FACTIONS", CogAffiliated = "COG";
+    /// <summary>Filtre : toutes les cartes de faction.</summary>
+    public const string Factions = "FACTIONS";
+    public const string FactionPrefix = "FACTION:", CogAffiliated = "COG";
 
-    public static string GroupOf(Equipment e) => e.Ministry ?? (e.IsFactionAffiliated ? Factions : CogAffiliated);
+    public static string GroupOf(Equipment e) =>
+        e.Ministry ?? (e.Faction is { } f ? FactionPrefix + f : CogAffiliated);
 
-    /// <param name="group">Groupe à afficher seul (code de Ministère, Factions…), ou null pour tous.</param>
+    /// <summary>Rangées par groupe d'affiliation, puis par nom.</summary>
+    public static List<Equipment> Ordered(IEnumerable<Equipment> equipment, CatalogService catalog, LocalizationService l)
+    {
+        var order = catalog.Catalog.Ministries.Select(m => m.Code)
+            .Concat(catalog.AllFactions.Select(f => FactionPrefix + f.Code))
+            .Append(CogAffiliated)
+            .Select((key, i) => (key, i)).ToDictionary(x => x.key, x => x.i);
+        return equipment
+            .OrderBy(e => order.GetValueOrDefault(GroupOf(e), int.MaxValue))
+            .ThenBy(e => SortName(e, l), StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <summary>Groupes successifs d'une liste déjà rangée par <see cref="Ordered"/>.</summary>
+    public static IReadOnlyList<EquipmentGroup> Grouped(IReadOnlyList<Equipment> ordered) =>
+        ordered.GroupBy(GroupOf).Select(g => new EquipmentGroup(g.Key, g.ToList())).ToList();
+
+    /// <param name="group">Groupe à afficher seul (code de Ministère, <see cref="Factions"/>,
+    /// <see cref="FactionPrefix"/> + code…), ou null pour tous.</param>
     public static IReadOnlyList<EquipmentGroup> Browse(CatalogService catalog, LocalizationService l, string? group, string? search, EquipmentSort sort)
     {
         var words = CogQuery.Fold(search ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        string SortName(Equipment e) => CogQuery.Fold(l.EquipmentName(e).Text);
         var items = catalog.Catalog.Equipment
-            .Where(e => group is null || GroupOf(e) == group)
+            .Where(e => InGroup(e, group))
             .Where(e => words.Length == 0 || words.All(CogQuery.Fold(l.SearchText(e)).Contains))
             .ToList();
 
         if (sort == EquipmentSort.Name)
-            return items.Count == 0 ? [] : [new EquipmentGroup("", items.OrderBy(SortName, StringComparer.Ordinal).ToList())];
-
-        var factionOrder = catalog.AllFactions.Select((f, i) => (f.Code, i)).ToDictionary(x => x.Code, x => x.i);
-        var order = catalog.Catalog.Ministries.Select(m => m.Code).Append(Factions).Append(CogAffiliated).ToList();
-        return items.GroupBy(GroupOf)
-            .OrderBy(g => order.IndexOf(g.Key) is var i && i < 0 ? int.MaxValue : i)
-            .Select(g => new EquipmentGroup(g.Key, g
-                .OrderBy(e => e.Faction is { } f ? factionOrder.GetValueOrDefault(f, int.MaxValue) : 0)
-                .ThenBy(SortName, StringComparer.Ordinal).ToList()))
-            .ToList();
+            return items.Count == 0 ? [] : [new EquipmentGroup("", items.OrderBy(e => SortName(e, l), StringComparer.Ordinal).ToList())];
+        return Grouped(Ordered(items, catalog, l));
     }
+
+    /// <summary>Titre d'un groupe : nom du Ministère ou de la faction.</summary>
+    public static string GroupTitle(string key, LocalizationService l) =>
+        key == CogAffiliated ? l.Ui("equipment.group.cog")
+        : key.StartsWith(FactionPrefix, StringComparison.Ordinal) ? l.FactionName(key[FactionPrefix.Length..]).Text
+        : l.MinistryName(key).Text;
+
+    private static bool InGroup(Equipment e, string? group) => group switch
+    {
+        null => true,
+        Factions => e.IsFactionAffiliated,
+        _ => GroupOf(e) == group,
+    };
+
+    private static string SortName(Equipment e, LocalizationService l) => CogQuery.Fold(l.EquipmentName(e).Text);
 }

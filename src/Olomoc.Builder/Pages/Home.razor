@@ -35,7 +35,15 @@ else
                 <span class="count">@Library.Cabals.Count</span>
             }
         </button>
-        <button class="btn" @onclick="OpenEquipmentAsync" title="@L.Ui("equipment.open.title")">@L.Ui("equipment.open")</button>
+        @* Mode partie : composition complète requise ; illégale, la partie suit la composition actuelle. *@
+        <button class="btn @(_cogs.Any(c => c is null) ? null : "primary")" disabled="@_cogs.Any(c => c is null)" @onclick="StartGameAsync"
+                title="@L.Ui(_cogs.Any(c => c is null) ? "play.launch.incomplete" : _legality.IsLegal ? "play.launch.intro" : "play.launch.notLegal")">
+            @L.Ui("play.launch.button")
+        </button>
+        @if (Games.Session is { } game)
+        {
+            <a class="btn" href="play">@L.Ui("play.launch.resumeShort", Math.Min(game.State.Cycle, GameSession.Cycles))</a>
+        }
         @if (_loadNotice is not null)
         {
             <p class="load-notice" role="status">
@@ -44,6 +52,70 @@ else
             </p>
         }
     </div>
+
+    @* Sauvegarde et export en tête, avec l'état de la cabale (légale ou non, et pourquoi). *@
+    <section class="export">
+        <div class="export-head">
+            <h2>@L.Ui("export.title")</h2>
+            <span class="legality-badge @(_legality.IsLegal ? "ok" : "ko")" role="status">
+                @(_legality.IsLegal ? null : "⚠ ")@L.Ui(_legality.IsLegal ? "legality.legal" : "legality.illegal")
+            </span>
+        </div>
+        @if (_legality.Issues.Count > 0)
+        {
+            <ul class="legality-issues">
+                @foreach (var issue in _legality.Issues)
+                {
+                    <li>@L.Describe(issue)</li>
+                }
+            </ul>
+        }
+        <div class="export-controls">
+            <div class="field grow">
+                <label for="cabal-name">@L.Ui("export.name")</label>
+                <input id="cabal-name" type="text" maxlength="80" value="@_cabalName" @ref="_nameInput"
+                       @oninput="e => { _cabalName = e.Value?.ToString() ?? string.Empty; _nameRequired = false; }" />
+            </div>
+            <button class="btn primary" disabled="@_cogs.All(c => c is null)" @onclick="SaveAsync" title="@L.Ui("library.save.title")">
+                @L.Ui(IsSaved() ? "library.saved" : "library.save")
+            </button>
+        </div>
+
+        @if (_nameRequired)
+        {
+            <p class="export-warning">@L.Ui("library.nameRequired")</p>
+        }
+        @if (_cogs.All(c => c is null))
+        {
+            <p class="empty">@L.Ui("export.empty")</p>
+        }
+        else
+        {
+            var content = ExportContent();
+            <div class="export-actions">
+                <div class="export-modes" role="group" aria-label="@L.Ui("export.format")">
+                    <button class="@(_exportJson ? null : "active")" aria-pressed="@(!_exportJson)" @onclick="() => _exportJson = false">@L.Ui("export.text")</button>
+                    <button class="@(_exportJson ? "active" : null)" aria-pressed="@_exportJson" @onclick="() => _exportJson = true">JSON</button>
+                </div>
+                <button class="btn" @onclick="() => CopyAsync(content)">
+                    @L.Ui(_copied == content ? "export.copied" : "export.copy")
+                </button>
+                <a class="btn" href="@DataUri(content)" download="@CabalExporter.FileName(_cabalName, _exportJson ? "json" : "txt")">
+                    @L.Ui("export.download")
+                </a>
+                <a class="btn" href="@CardsLink" target="_blank" rel="noopener" title="@L.Ui("export.cards.title")">
+                    @L.Ui("export.cards")
+                </a>
+            </div>
+            @* Texte de l'export replié : copier / télécharger n'en ont pas besoin, et il repousserait
+               les rouages vers le bas. *@
+            <details class="export-preview">
+                <summary>@L.Ui("export.preview")</summary>
+                <textarea class="export-output" readonly rows="@Math.Min(content.Split('\n').Length, 18)"
+                          value="@content" aria-label="@L.Ui("export.title")"></textarea>
+            </details>
+        }
+    </section>
 
     <section class="filters">
         <div class="field">
@@ -161,7 +233,8 @@ else
                         <div class="equipment-zone">
                             <label>@L.Ui("cog.equipment")</label>
                             @{
-                                var available = Catalog.AvailableEquipment(idx, _cogs, _equipment, NullIfEmpty(_faction));
+                                // Rangés par Ministère / faction, puis par nom : la liste et ‹ › suivent cet ordre.
+                                var available = EquipmentBrowser.Ordered(Catalog.AvailableEquipment(idx, _cogs, _equipment, NullIfEmpty(_faction)), Catalog, L);
                                 var position = current is null ? -1 : available.FindIndex(e => e.Id == current.Id);
                             }
                             @* ‹ › choisit directement la carte voisine : son effet s'affiche aussitôt dessous. *@
@@ -170,9 +243,14 @@ else
                                         @onclick="() => SelectEquipment(idx, available[position - 1])">‹</button>
                                 <select value="@current?.Id" @onchange="e => SelectEquipment(idx, e)">
                                     <option value="">@L.Ui("common.choose")</option>
-                                    @foreach (var eq in available)
+                                    @foreach (var group in EquipmentBrowser.Grouped(available))
                                     {
-                                        <option value="@eq.Id">@L.EquipmentName(eq) · @L.EquipmentAffiliation(eq)</option>
+                                        <optgroup label="@EquipmentBrowser.GroupTitle(group.Key, L)">
+                                            @foreach (var eq in group.Items)
+                                            {
+                                                <option value="@eq.Id">@L.EquipmentName(eq) · @L.EquipmentAffiliation(eq)</option>
+                                            }
+                                        </optgroup>
                                     }
                                 </select>
                                 <button class="step" disabled="@(position >= available.Count - 1)" title="@L.Ui("equipment.next")" aria-label="@L.Ui("equipment.next")"
@@ -197,84 +275,19 @@ else
         }
     </section>
 
-    <section class="legality @(_legality.IsLegal ? "ok" : "ko")">
-        <h2>@L.Ui(_legality.IsLegal ? "legality.legal" : "legality.illegal")</h2>
-        @if (_legality.Issues.Count > 0)
-        {
-            <ul>
-                @foreach (var issue in _legality.Issues)
-                {
-                    <li>@L.Describe(issue)</li>
-                }
-            </ul>
-        }
-    </section>
-
-    <section class="play-launch">
-        <h2>@L.Ui("play.launch.title")</h2>
-        <p class="play-launch-intro">@L.Ui("play.launch.intro")</p>
-        @if (_cogs.Any(c => c is null))
-        {
-            <p class="empty">@L.Ui("play.launch.incomplete")</p>
-        }
-        else if (!_legality.IsLegal)
-        {
-            <p class="export-warning">@L.Ui("play.launch.notLegal")</p>
-        }
-        <div class="play-launch-actions">
-            <button class="btn primary" disabled="@_cogs.Any(c => c is null)" @onclick="StartGameAsync">@L.Ui("play.launch.start")</button>
-            @if (Games.Session is { } game)
-            {
-                <a class="btn" href="play">@L.Ui("play.launch.resume", Math.Min(game.State.Cycle, GameSession.Cycles))</a>
-            }
-        </div>
-    </section>
-
-    <section class="export">
-        <h2>@L.Ui("export.title")</h2>
-        <div class="export-controls">
-            <div class="field grow">
-                <label for="cabal-name">@L.Ui("export.name")</label>
-                <input id="cabal-name" type="text" maxlength="80" value="@_cabalName" @ref="_nameInput"
-                       @oninput="e => { _cabalName = e.Value?.ToString() ?? string.Empty; _nameRequired = false; }" />
-            </div>
-            <button class="btn primary" disabled="@_cogs.All(c => c is null)" @onclick="SaveAsync" title="@L.Ui("library.save.title")">
-                @L.Ui(IsSaved() ? "library.saved" : "library.save")
+    @* Catalogue de tous les équipements et dons, indépendant de la cabale ; détachable dans une
+       petite fenêtre à poser à côté (il se replie alors ici). *@
+    <section class="equip-section">
+        <div class="equip-section-head">
+            <h2>@L.Ui("equipment.section")</h2>
+            <button class="btn small" aria-expanded="@(_equipShown ? "true" : "false")" @onclick="() => _equipShown = !_equipShown">
+                @L.Ui(_equipShown ? "equipment.hide" : "equipment.show")
             </button>
-            <div class="export-modes" role="group" aria-label="@L.Ui("export.format")">
-                <button class="@(_exportJson ? null : "active")" aria-pressed="@(!_exportJson)" @onclick="() => _exportJson = false">@L.Ui("export.text")</button>
-                <button class="@(_exportJson ? "active" : null)" aria-pressed="@_exportJson" @onclick="() => _exportJson = true">JSON</button>
-            </div>
+            <button class="btn small" @onclick="DetachEquipmentAsync" title="@L.Ui("equipment.detach.title")">@L.Ui("equipment.detach")</button>
         </div>
-
-        @if (_nameRequired)
+        @if (_equipShown)
         {
-            <p class="export-warning">@L.Ui("library.nameRequired")</p>
-        }
-        @if (_cogs.All(c => c is null))
-        {
-            <p class="empty">@L.Ui("export.empty")</p>
-        }
-        else
-        {
-            var content = ExportContent();
-            @if (!_legality.IsLegal)
-            {
-                <p class="export-warning">@L.Ui("export.notLegal")</p>
-            }
-            <textarea class="export-output" readonly rows="@Math.Min(content.Split('\n').Length, 18)"
-                      value="@content" aria-label="@L.Ui("export.title")"></textarea>
-            <div class="export-actions">
-                <button class="btn" @onclick="() => CopyAsync(content)">
-                    @L.Ui(_copied == content ? "export.copied" : "export.copy")
-                </button>
-                <a class="btn" href="@DataUri(content)" download="@CabalExporter.FileName(_cabalName, _exportJson ? "json" : "txt")">
-                    @L.Ui("export.download")
-                </a>
-                <a class="btn" href="@CardsLink" target="_blank" rel="noopener" title="@L.Ui("export.cards.title")">
-                    @L.Ui("export.cards")
-                </a>
-            </div>
+            <EquipmentPanel />
         }
     </section>
 
@@ -542,12 +555,16 @@ else
         catch (CultureNotFoundException) { return date.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture); }
     }
 
-    // Catalogue des équipements dans une fenêtre à part ; fenêtre bloquée : dans cet onglet
-    // (la composition en cours est conservée par CabalDraft).
-    private async Task OpenEquipmentAsync()
+    // ---- Catalogue des équipements ----
+
+    private bool _equipShown = true;
+
+    // Fenêtre à part (réutilisée si déjà ouverte) : le catalogue se replie ici. Fenêtre bloquée
+    // par le navigateur : il reste affiché dans la page.
+    private async Task DetachEquipmentAsync()
     {
-        if (!await JS.InvokeAsync<bool>("olomoc.openWindow", "equipment?window=true", "olomoc-equipment"))
-            Nav.NavigateTo("equipment");
+        if (await JS.InvokeAsync<bool>("olomoc.openWindow", "equipment?window=true", "olomoc-equipment"))
+            _equipShown = false;
     }
 
     // ---- Mode partie ----

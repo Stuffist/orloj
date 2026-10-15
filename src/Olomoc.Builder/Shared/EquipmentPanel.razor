@@ -1,0 +1,115 @@
+@namespace Olomoc.Builder.Shared
+@implements IDisposable
+@inject CatalogService Catalog
+@inject LocalizationService L
+
+@* Catalogue des équipements et dons, indépendant de la cabale en cours : en bas du constructeur,
+   et seul dans la fenêtre détachée (page /equipment). Référentiel et textes déjà chargés. *@
+
+@{
+    var groups = EquipmentBrowser.Browse(Catalog, L, _group is "" ? null : _group, _search, _sort);
+    var count = groups.Sum(g => g.Items.Count);
+}
+
+<div class="filters">
+    <div class="field">
+        <label for="equip-group">@L.Ui("equipment.group")</label>
+        <select id="equip-group" value="@_group" @onchange="e => _group = e.Value?.ToString() ?? string.Empty">
+            <option value="">@L.Ui("equipment.group.all")</option>
+            <optgroup label="@L.Ui("equipment.ministries")">
+                @foreach (var m in Catalog.Catalog.Ministries)
+                {
+                    <option value="@m.Code">@L.MinistryName(m.Code)</option>
+                }
+            </optgroup>
+            <optgroup label="@L.Ui("equipment.factions")">
+                <option value="@EquipmentBrowser.Factions">@L.Ui("equipment.factions.all")</option>
+                @foreach (var f in Catalog.AllFactions.Where(f => Catalog.Catalog.Equipment.Any(e => e.Faction == f.Code)))
+                {
+                    <option value="@(EquipmentBrowser.FactionPrefix + f.Code)">@L.FactionName(f.Code)</option>
+                }
+            </optgroup>
+        </select>
+    </div>
+    <div class="field grow">
+        <label for="equip-search">@L.Ui("filter.search")</label>
+        <input id="equip-search" type="text" placeholder="@L.Ui("equipment.search.placeholder")" value="@_search"
+               @oninput="e => _search = e.Value?.ToString() ?? string.Empty" />
+    </div>
+    <div class="field equip-sort">
+        <label>@L.Ui("equipment.sort")</label>
+        <div class="export-modes" role="group" aria-label="@L.Ui("equipment.sort")">
+            @foreach (var sort in Enum.GetValues<EquipmentSort>())
+            {
+                <button class="@(_sort == sort ? "active" : null)" aria-pressed="@(_sort == sort ? "true" : "false")"
+                        @onclick="() => _sort = sort">@L.Ui($"equipment.sort.{sort}")</button>
+            }
+        </div>
+    </div>
+</div>
+
+<p class="equip-count" role="status">@L.Ui("equipment.count", count)</p>
+@if (count == 0)
+{
+    <p class="empty">@L.Ui("equipment.none")</p>
+}
+
+@foreach (var group in groups)
+{
+    <div class="equip-group">
+        @if (_sort == EquipmentSort.Ministry)
+        {
+            <h3>@EquipmentBrowser.GroupTitle(group.Key, L)</h3>
+        }
+        <div class="equip-catalog">
+            @foreach (var e in group.Items)
+            {
+                var name = L.EquipmentName(e);
+                <article class="equip-entry">
+                    <div class="equip-entry-head">
+                        <div>
+                            <div class="cog-name">@Text(name)</div>
+                            <div class="cog-min">@L.EquipmentAffiliation(e)</div>
+                        </div>
+                        <button class="btn small" @onclick="() => _shown = e" title="@L.Ui("equipment.showCard")">@L.Ui("equipment.card")</button>
+                    </div>
+                    @if (e.LifeLinePrefix.Count > 0)
+                    {
+                        <div class="life-line" title="@L.Ui("equipment.lifeLinePrefix")">
+                            @foreach (var hp in e.LifeLinePrefix)
+                            {
+                                <span class="pip @hp.ToString().ToLower()" title="@L.Ui($"hp.{hp}")"></span>
+                            }
+                        </div>
+                    }
+                    <AbilityList Equipment="e" />
+                </article>
+            }
+        </div>
+    </div>
+}
+
+@if (_shown is { } shown)
+{
+    <Sheet Title="@L.EquipmentName(shown).Text" OnClose="() => _shown = null">
+        <img class="card-full" src="@CardSheet.ImagePath(shown.Id)" alt="@L.EquipmentName(shown).Text" />
+        <p class="cog-min">@L.EquipmentAffiliation(shown)</p>
+    </Sheet>
+}
+
+@code {
+    private string _group = "";
+    private string _search = "";
+    private EquipmentSort _sort = EquipmentSort.Ministry;
+    private Equipment? _shown;                     // carte affichée en grand
+
+    // Sans paramètres, le composant ne se redessine pas avec la page : il suit lui-même la langue.
+    protected override void OnInitialized() => L.Changed += OnLanguageChanged;
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+    public void Dispose() => L.Changed -= OnLanguageChanged;
+
+
+    // Texte de carte, stylé s'il se replie sur la langue de référence faute de traduction.
+    private RenderFragment Text(Localized text) => @<span class="@(text.IsFallback ? "untranslated" : null)"
+                                                          title="@(text.IsFallback ? L.Ui("common.untranslated") : null)">@text.Text</span>;
+}

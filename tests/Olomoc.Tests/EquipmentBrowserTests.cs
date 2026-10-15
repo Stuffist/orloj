@@ -13,27 +13,61 @@ public class EquipmentBrowserTests
         var groups = EquipmentBrowser.Browse(d.Catalog, d.L, null, "", EquipmentSort.Ministry);
         Assert.Equal(d.Catalog.Catalog.Equipment.Count, groups.Sum(g => g.Items.Count));
         Assert.Equal(53, groups.Sum(g => g.Items.Count));
-        Assert.Equal(new[] { "COORDINATION", "INTEGRITY", "EFFORT", "PROGRESS", "HARMONY", "EDIFICATION", "SECURITY", "FRINGE", "AXIS", EquipmentBrowser.Factions },
-            groups.Select(g => g.Key));
+        string[] ministries = ["COORDINATION", "INTEGRITY", "EFFORT", "PROGRESS", "HARMONY", "EDIFICATION", "SECURITY", "FRINGE", "AXIS"];
+        Assert.Equal(ministries, groups.Take(ministries.Length).Select(g => g.Key));
         Assert.All(groups.Single(g => g.Key == "AXIS").Items, e => Assert.Equal(Olomoc.Models.EquipmentKind.BOON, e.Kind));
 
-        // Cartes de faction : regroupées par faction, dans l'ordre du référentiel de faction.
-        var factions = groups.Last().Items.Select(e => e.Faction!).ToList();
-        var order = d.Catalog.AllFactions.Select(f => f.Code).ToList();
-        Assert.Equal(factions.OrderBy(order.IndexOf), factions);
-        Assert.Equal(13, factions.Count);
+        // Puis un groupe par faction, dans l'ordre du référentiel des factions.
+        var factionGroups = groups.Skip(ministries.Length).ToList();
+        var order = d.Catalog.AllFactions.Select(f => EquipmentBrowser.FactionPrefix + f.Code).ToList();
+        Assert.All(factionGroups, g => Assert.Contains(g.Key, order));
+        Assert.Equal(factionGroups.Select(g => g.Key).OrderBy(order.IndexOf), factionGroups.Select(g => g.Key));
+        Assert.All(factionGroups, g => Assert.All(g.Items, e => Assert.Equal(g.Key, EquipmentBrowser.FactionPrefix + e.Faction)));
+        Assert.Equal(13, factionGroups.Sum(g => g.Items.Count));
+
+        // Dans chaque groupe : de A à Z.
+        Assert.All(groups, g =>
+        {
+            var names = g.Items.Select(e => CogQuery.Fold(d.L.EquipmentName(e).Text)).ToList();
+            Assert.Equal(names.Order(StringComparer.Ordinal), names);
+        });
+        Assert.Equal(d.L.FactionName(factionGroups[0].Key[EquipmentBrowser.FactionPrefix.Length..]).Text,
+            EquipmentBrowser.GroupTitle(factionGroups[0].Key, d.L));
+        Assert.Equal(d.L.MinistryName("HARMONY").Text, EquipmentBrowser.GroupTitle("HARMONY", d.L));
     }
 
     [Theory]
     [InlineData("HARMONY", 5)]
     [InlineData("AXIS", 8)]
-    [InlineData(EquipmentBrowser.Factions, 13)]
-    public async Task Filtre_par_groupe(string group, int count)
+    public async Task Filtre_par_ministere(string group, int count)
     {
         var d = await AppData.GetAsync();
         var groups = EquipmentBrowser.Browse(d.Catalog, d.L, group, null, EquipmentSort.Ministry);
         Assert.Equal(group, Assert.Single(groups).Key);
         Assert.Equal(count, groups[0].Items.Count);
+    }
+
+    [Fact]
+    public async Task Filtre_par_faction()
+    {
+        var d = await AppData.GetAsync();
+        var all = EquipmentBrowser.Browse(d.Catalog, d.L, EquipmentBrowser.Factions, null, EquipmentSort.Ministry);
+        Assert.Equal(13, all.Sum(g => g.Items.Count));
+        Assert.True(all.Count > 1);                     // un groupe par faction
+
+        var first = all[0];
+        var one = EquipmentBrowser.Browse(d.Catalog, d.L, first.Key, null, EquipmentSort.Ministry);
+        Assert.Equal(first.Items, Assert.Single(one).Items);
+    }
+
+    [Fact]
+    public async Task Choix_d_un_equipement_range_par_groupe_puis_par_nom()
+    {
+        var d = await AppData.GetAsync();
+        var shuffled = d.Catalog.Catalog.Equipment.OrderByDescending(e => e.Id).ToList();
+        var ordered = EquipmentBrowser.Ordered(shuffled, d.Catalog, d.L);
+        var browsed = EquipmentBrowser.Browse(d.Catalog, d.L, null, null, EquipmentSort.Ministry).SelectMany(g => g.Items);
+        Assert.Equal(browsed.Select(e => e.Id), ordered.Select(e => e.Id));
     }
 
     [Theory]

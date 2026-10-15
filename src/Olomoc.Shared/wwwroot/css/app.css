@@ -160,15 +160,15 @@ body {
     width: 100%; min-width: 0; text-overflow: ellipsis;
 }
 
-/* Légalité */
-.legality { margin-top: 1.5rem; border-radius: 10px; padding: 1rem 1.2rem; border: 1px solid var(--line); }
-.legality h2 { margin: 0 0 .4rem; font-size: 1.05rem; }
-.legality.ok { border-color: var(--ok); background: rgba(63, 166, 106, .1); }
-.legality.ok h2 { color: var(--ok); }
-.legality.ko { border-color: var(--ko); background: rgba(193, 68, 14, .08); }
-.legality.ko h2 { color: var(--rust-soft); }
-.legality ul { margin: .3rem 0 0; padding-left: 1.1rem; color: var(--muted); }
-.legality li { margin: .15rem 0; }
+/* Légalité : pastille dans l'en-tête « Sauvegarde et export », raisons dessous */
+.legality-badge {
+    display: inline-block; padding: .2rem .65rem; border-radius: 999px; border: 1px solid var(--line);
+    font-size: .85rem; font-weight: 600;
+}
+.legality-badge.ok { border-color: var(--ok); background: rgba(63, 166, 106, .1); color: var(--ok); }
+.legality-badge.ko { border-color: var(--ko); background: rgba(193, 68, 14, .08); color: var(--rust-soft); }
+.legality-issues { margin: 0 0 .8rem; padding-left: 1.1rem; color: var(--muted); font-size: .88rem; }
+.legality-issues li { margin: .15rem 0; }
 
 #blazor-error-ui {
     display: none; position: fixed; bottom: 0; left: 0; right: 0;
@@ -208,8 +208,9 @@ body {
 .untranslated { font-style: italic; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
 
 /* Export (texte au format bwaaaanegamesdb.fr, ou JSON) */
-.export { margin-top: 1.5rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; }
-.export h2 { margin: 0 0 .7rem; font-size: 1.05rem; }
+.export { margin-bottom: 1rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; }
+.export-head { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; margin-bottom: .7rem; }
+.export h2 { margin: 0; font-size: 1.05rem; }
 .export-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-bottom: .8rem; }
 .export-modes { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .export-modes button {
@@ -224,7 +225,10 @@ body {
     border: 1px solid var(--line); border-radius: 6px; padding: .6rem .7rem;
     font-family: Consolas, "Cascadia Mono", monospace; font-size: .85rem; line-height: 1.45;
 }
-.export-actions { display: flex; gap: .6rem; margin-top: .6rem; }
+.export-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.export-preview { margin-top: .6rem; }
+.export-preview summary { cursor: pointer; color: var(--muted); font-size: .85rem; }
+.export-preview .export-output { margin-top: .5rem; }
 .btn {
     display: inline-block; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
     border-radius: 6px; padding: .45rem .9rem; font-size: .9rem; cursor: pointer; text-decoration: none;
@@ -269,6 +273,7 @@ body {
 
 /* Cabales sauvegardées sur l'appareil */
 .builder-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-bottom: .8rem; }
+.builder-tools > .btn { align-self: stretch; }      /* même hauteur, ▶ compris */
 .builder-tools .count {
     display: inline-block; min-width: 1.3rem; margin-left: .3rem; padding: 0 .35rem; border-radius: 999px;
     background: var(--rust); color: #fff; font-size: .75rem; font-weight: 700; text-align: center;
@@ -292,11 +297,6 @@ body {
 .library-import input[type="file"] { display: none; }
 .library-import .export-warning { margin: 0; }
 
-/* Lancement du mode partie (constructeur) */
-.play-launch { margin-top: 1.5rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; }
-.play-launch h2 { margin: 0 0 .3rem; font-size: 1.05rem; }
-.play-launch-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
-.play-launch-intro { margin: 0 0 .6rem; color: var(--muted); font-size: .88rem; }
 
 /* Mode partie : pensé pour un téléphone ou une tablette posé sur la table */
 .play-empty { text-align: center; padding: 2rem 0; }
@@ -484,9 +484,12 @@ body {
 }
 .app-nav a:hover { border-color: var(--rust-soft); }
 
-/* ---- Catalogue des équipements et dons (/builder/equipment) ---- */
+/* ---- Catalogue des équipements et dons (bas du constructeur, fenêtre détachée /builder/equipment) ---- */
+.equip-section { margin-top: 1.5rem; }
+.equip-section-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .8rem; }
+.equip-section-head h2 { margin: 0 auto 0 0; font-size: 1.05rem; }
 .equip-count { margin: 0 0 .6rem; font-size: .85rem; color: var(--muted); }
-.equip-group h2 { font-size: 1rem; margin: 1.2rem 0 .6rem; padding-bottom: .3rem; border-bottom: 1px solid var(--line); }
+.equip-group h3 { font-size: 1rem; margin: 1.2rem 0 .6rem; padding-bottom: .3rem; border-bottom: 1px solid var(--line); }
 .equip-catalog { display: grid; grid-template-columns: minmax(0, 1fr); gap: .7rem; }
 @media (min-width: 760px) { .equip-catalog { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .equip-entry {
