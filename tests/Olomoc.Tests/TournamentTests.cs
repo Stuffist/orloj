@@ -70,16 +70,32 @@ public class TournamentTests
             {
                 new Table { Number = 1, PlayerA = "p0", PlayerB = "p1", VpA = 12, VpB = 2 },   // p0 +10
                 new Table { Number = 2, PlayerA = "p2", PlayerB = "p3", VpA = 8, VpB = 8 },    // nul
-                new Table { Number = 3, PlayerA = "p4" },                                     // exempt
+                new Table { Number = 3, PlayerA = "p4" },                                     // exempt : 7-0
             },
         });
         var s = Standings.Compute(t);
 
         Assert.Equal(new[] { "p0", "p4", "p2", "p3", "p1" }, s.Select(x => x.PlayerId));
         Assert.Equal(new[] { 3, 3, 1, 1, 0 }, s.Select(x => x.Points));
-        Assert.Equal(new[] { 10, 0, 0, 0, -10 }, s.Select(x => x.Diff));
+        Assert.Equal(new[] { 10, 7, 0, 0, -10 }, s.Select(x => x.Diff));
+        Assert.Equal(new[] { 12, 7, 8, 8, 2 }, s.Select(x => x.VpFor));
         Assert.Equal(new[] { 1, 2, 3, 3, 5 }, s.Select(x => x.Rank));       // p2 et p3 à égalité parfaite
-        Assert.Equal(1, s.Single(x => x.PlayerId == "p4").Byes);
+        Assert.Equal((1, 1), (s.Single(x => x.PlayerId == "p4").Byes, s.Single(x => x.PlayerId == "p4").Wins));
+    }
+
+    [Fact]
+    public void Exempt_vaut_une_victoire_au_Fiel_7_0()
+    {
+        // Victoire 6-2 (+4) contre exempt (+7) : l'exempt passe devant au départage.
+        var t = NewTournament(PairingMode.Swiss, "L", "D", "L");
+        t.Rounds.Add(new Round
+        {
+            Number = 1,
+            Tables = { new Table { Number = 1, PlayerA = "p0", PlayerB = "p1", VpA = 6, VpB = 2 }, new Table { Number = 2, PlayerA = "p2" } },
+        });
+        var s = Standings.Compute(t);
+        Assert.Equal(new[] { "p2", "p0", "p1" }, s.Select(x => x.PlayerId));
+        Assert.Equal((3, 7, 7), (s[0].Points, s[0].Diff, s[0].VpFor));
     }
 
     [Fact]
@@ -308,6 +324,62 @@ public class TournamentTests
         Assert.Null(TournamentRules.SetResult(t, 1, 1, null, null));
         Assert.Null(TournamentRules.UndoLastRound(t));
         Assert.Empty(t.Rounds);
+    }
+
+    [Fact]
+    public void Echanger_deux_joueurs_de_la_ronde_en_cours()
+    {
+        var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D", "L");
+        var round = Pair(t);
+        var t1 = round.Tables[0];
+        var t2 = round.Tables[1];
+        var bye = round.Tables.Single(x => x.IsBye);
+        var (a, b, c, d, e) = (t1.PlayerA, t1.PlayerB!, t2.PlayerA, t2.PlayerB!, bye.PlayerA);
+
+        // A et D échangent leur place : A rejoint la table 2, D la table 1.
+        Assert.Null(TournamentRules.SwapPlayers(t, 1, a, d));
+        Assert.Equal((d, b), (t1.PlayerA, t1.PlayerB));
+        Assert.Equal((c, a), (t2.PlayerA, t2.PlayerB));
+
+        // Avec l'exempt : l'exemption change de joueur.
+        Assert.Null(TournamentRules.SwapPlayers(t, 1, e, b));
+        Assert.Equal(b, bye.PlayerA);
+        Assert.True(bye.IsBye);
+        Assert.Equal((d, e), (t1.PlayerA, t1.PlayerB));
+        AssertEveryoneOnce(t, round);
+
+        Assert.Equal("sameTable", TournamentRules.SwapPlayers(t, 1, d, e)?.Key);
+        Assert.Equal("unknownPlayer", TournamentRules.SwapPlayers(t, 1, d, "absent")?.Key);
+        Assert.Equal("notCurrentRound", TournamentRules.SwapPlayers(t, 2, d, c)?.Key);
+
+        // Table avec un résultat (même partiel) : intouchable ; effacé, l'échange redevient possible.
+        Assert.Null(TournamentRules.SetResult(t, 1, t1.Number, 6, 2));
+        Assert.Equal("tableHasResult", TournamentRules.SwapPlayers(t, 1, d, c)?.Key);
+        Assert.Equal("tableHasResult", TournamentRules.SwapPlayers(t, 1, b, e)?.Key);
+        Assert.Null(TournamentRules.SetResult(t, 1, t1.Number, null, null));
+        Assert.Null(TournamentRules.SwapPlayers(t, 1, d, c));
+
+        // Ronde précédente : figée.
+        Play(round, (_, _) => true);
+        Pair(t);
+        Assert.Equal("notCurrentRound", TournamentRules.SwapPlayers(t, 1, a, c)?.Key);
+
+        t.Phase = TournamentPhase.Finished;
+        Assert.Equal("finished", TournamentRules.SwapPlayers(t, 2, a, c)?.Key);
+    }
+
+    [Fact]
+    public void Revanche_reperee_dans_les_rondes_precedentes()
+    {
+        var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D");
+        var first = Pair(t);
+        Play(first, (_, _) => true);
+        var (a, b) = (first.Tables[0].PlayerA, first.Tables[0].PlayerB!);
+        Pair(t);
+        Assert.Equal(1, TournamentRules.MetBefore(t.Rounds, 2, a, b));
+        Assert.Equal(1, TournamentRules.MetBefore(t.Rounds, 2, b, a));
+        Assert.Null(TournamentRules.MetBefore(t.Rounds, 1, a, b));                    // pas avant la ronde 1
+        Assert.Null(TournamentRules.MetBefore(t.Rounds, 2, a, first.Tables[1].PlayerA));
     }
 
     [Fact]

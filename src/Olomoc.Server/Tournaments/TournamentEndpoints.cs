@@ -38,6 +38,8 @@ public static class TournamentEndpoints
         write.MapPost("rounds", PairNext);
         write.MapDelete("rounds/last", (string code, HttpContext ctx, TournamentStore store) =>
             Organizer(code, ctx, store, t => Done(TournamentRules.UndoLastRound(t))));
+        write.MapPost("rounds/{round:int}/swap", (string code, int round, SwapRequest body, HttpContext ctx, TournamentStore store) =>
+            Organizer(code, ctx, store, t => Done(TournamentRules.SwapPlayers(t, round, body.First, body.Second))));
         write.MapPut("rounds/{round:int}/tables/{table:int}", (string code, int round, int table, ResultRequest body, HttpContext ctx, TournamentStore store) =>
             Organizer(code, ctx, store, t => Done(TournamentRules.SetResult(t, round, table, body.VpA, body.VpB, body.CabalA, body.CabalB), status: 400)));
         // Fin du tournoi : archive anonyme pour les statistiques (s'il est compté).

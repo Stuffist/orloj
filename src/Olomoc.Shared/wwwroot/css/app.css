@@ -662,6 +662,17 @@ body {
 }
 .tn-cabal-choice button.on { background: var(--rust); border-color: var(--rust); color: #fff; }
 .tn-cabal-choice button:disabled { cursor: default; }
+/* Échange de deux joueurs de la ronde en cours (organisateur) */
+.tn-swap {
+    align-self: flex-start; margin-top: .15rem; padding: 0 .4rem; font-size: .85rem; line-height: 1.4; cursor: pointer;
+    background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 5px;
+}
+.tn-side.tn-right .tn-swap { align-self: flex-end; }
+.tn-swap:hover:not(:disabled) { border-color: var(--rust-soft); color: var(--ink); }
+.tn-swap.on { background: var(--rust); border-color: var(--rust); color: #fff; }
+.tn-swap:disabled { opacity: .35; cursor: default; }
+.tn-swap-hint { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.tn-swap-hint.active { color: var(--rust-soft); font-weight: 600; }
 @media (max-width: 600px) {
     .stat-row { grid-template-columns: minmax(0, 1fr) 3.2rem; }
     .stat-bar { grid-column: 1 / -1; grid-row: 2; }

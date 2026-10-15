@@ -163,6 +163,36 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Organisateur_echange_deux_joueurs_de_la_ronde_en_cours()
+    {
+        var http = Server();
+        var (a, b) = await MaiselCabals();
+        var t = await Create(http);
+        var url = $"/api/tournaments/{t.Code}";
+        foreach (var name in new[] { "Ana", "Bo", "Cy" }) await Register(http, t.Code, name, a, b);
+        await http.SendAsync(Request(HttpMethod.Post, $"{url}/start", organizer: t.OrganizerToken));
+        await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken));
+        var round = Assert.Single((await View(http, t.Code)).Rounds);
+        var game = round.Tables.Single(x => !x.IsBye);
+        var exempt = round.Tables.Single(x => x.IsBye).PlayerA;
+
+        // Réservé à l'organisateur.
+        var swap = new SwapRequest(game.PlayerA, exempt);
+        Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds/1/swap", swap))).StatusCode);
+
+        // L'exempt prend la place du joueur A, qui devient exempt.
+        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds/1/swap", swap, t.OrganizerToken))).StatusCode);
+        var after = (await View(http, t.Code)).Rounds[0];
+        Assert.Equal((exempt, game.PlayerB), (after.Tables.Single(x => !x.IsBye).PlayerA, after.Tables.Single(x => !x.IsBye).PlayerB));
+        Assert.Equal(game.PlayerA, after.Tables.Single(x => x.IsBye).PlayerA);
+
+        // Même table : refusé, avec la raison.
+        var refused = await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds/1/swap", new SwapRequest(exempt, game.PlayerB!), t.OrganizerToken));
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Equal("sameTable", Assert.Single((await Read<ProblemList>(refused)).Problems).Key);
+    }
+
+    [Fact]
     public async Task Joueur_modifie_ou_retire_seulement_sa_propre_inscription()
     {
         var http = Server();

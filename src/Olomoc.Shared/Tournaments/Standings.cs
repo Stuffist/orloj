@@ -7,12 +7,12 @@ public sealed record Standing(
 
 /// <summary>
 /// Classement (feuille de ronde) : points de tournoi (victoire 3, nul 1, défaite 0), puis
-/// différence de PV cumulée, puis PV marqués. Un exempt (bye) vaut une victoire à 3 points,
-/// différence 0. Seules les tables dont le résultat est saisi comptent.
+/// différence de PV cumulée, puis PV marqués. Un exempt (bye) vaut une victoire au Fiel 7-0 :
+/// 3 points, +7 de différence, 7 PV marqués. Seules les tables dont le résultat est saisi comptent.
 /// </summary>
 public static class Standings
 {
-    public const int WinPoints = 3, DrawPoints = 1, ByePoints = 3;
+    public const int WinPoints = 3, DrawPoints = 1, ByePoints = 3, ByeVictoryPoints = 7;
 
     public static IReadOnlyList<Standing> Compute(Tournament t)
     {
@@ -49,7 +49,7 @@ public static class Standings
         public string Id => id;
         public int Points, Diff, VpFor, Played, Wins, Draws, Losses, Byes;
 
-        public void Bye() { Byes++; Wins++; Played++; Points += ByePoints; }
+        public void Bye() { Byes++; Wins++; Played++; Points += ByePoints; VpFor += ByeVictoryPoints; Diff += ByeVictoryPoints; }
 
         public void Game(int vpFor, int vpAgainst)
         {

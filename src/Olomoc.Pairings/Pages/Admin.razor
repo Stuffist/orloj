@@ -93,12 +93,25 @@ else
     {
         <section class="panel">
             <h3>@L.Ui("pairings.admin.results", last.Number, v.RoundCount)</h3>
+            @{ var swapping = v.Phase == TournamentPhase.Started; }
             <ol class="tn-results">
                 @foreach (var table in last.Tables)
                 {
-                    <ResultEditor @key="(last.Number, table.Number, table.PlayerA, table.PlayerB)" View="v" RoundNumber="last.Number" Table="table" Save="SaveResultAsync" ReadOnly="@(v.Phase == TournamentPhase.Finished)" />
+                    <ResultEditor @key="(last.Number, table.Number, table.PlayerA, table.PlayerB)" View="v" RoundNumber="last.Number" Table="table" Save="SaveResultAsync" ReadOnly="@(v.Phase == TournamentPhase.Finished)"
+                                  OnSwap="@(swapping ? EventCallback.Factory.Create<string>(this, PickSwapAsync) : default)" SwapSelected="@_swapFrom" />
                 }
             </ol>
+            @if (swapping)
+            {
+                @* Correction à la main : ⇄ sur un joueur, puis sur celui avec qui l'échanger. *@
+                <p class="hint tn-swap-hint @(_swapFrom is null ? null : "active")">
+                    @(_swapFrom is { } from ? L.Ui("pairings.swap.choose", v.Player(from)?.Name ?? "") : L.Ui("pairings.swap.help"))
+                    @if (_swapFrom is not null)
+                    {
+                        <button class="btn small" @onclick="() => _swapFrom = null">@L.Ui("pairings.swap.cancel")</button>
+                    }
+                </p>
+            }
             @if (v.Rounds.Count > 1)
             {
                 <details class="tn-history">
@@ -307,6 +320,36 @@ else
             StateHasChanged();              // saisie depuis une ligne (composant enfant) : classement, boutons
         }
         return result.Problems;
+    }
+
+    // ---- Échange de deux joueurs de la ronde en cours ----
+
+    private string? _swapFrom;                // premier joueur choisi (⇄)
+
+    private async Task PickSwapAsync(string playerId)
+    {
+        if (_swapFrom is null || _swapFrom == playerId)
+        {
+            _swapFrom = _swapFrom == playerId ? null : playerId;
+            return;
+        }
+        var (first, second) = (_swapFrom, playerId);
+        _swapFrom = null;
+        var v = View!;
+        var round = v.LastRound!;
+
+        // Nouveaux adversaires après l'échange : revanche signalée avant de confirmer.
+        string? Opponent(string id) => round.Tables.First(x => x.Involves(id)) is var x && x.IsBye ? null : x.PlayerA == id ? x.PlayerB : x.PlayerA;
+        var rematches = new[] { (first, Opponent(second)), (second, Opponent(first)) }
+            .Where(p => p.Item2 is not null && p.Item2 != first && p.Item2 != second)
+            .Select(p => (p.Item1, Other: p.Item2!, Round: TournamentRules.MetBefore(v.Rounds, round.Number, p.Item1, p.Item2!)))
+            .Where(p => p.Round is not null)
+            .Select(p => L.Ui("pairings.swap.rematch", v.Player(p.Item1)?.Name ?? "", v.Player(p.Other)?.Name ?? "", p.Round!.Value))
+            .ToList();
+        var question = string.Join(" ", rematches.Append(L.Ui("pairings.swap.confirm", v.Player(first)?.Name ?? "", v.Player(second)?.Name ?? "")));
+        if (!await ConfirmAsync(question)) return;
+        await RunAsync(() => Api.SwapPlayersAsync(Code, round.Number, first, second, Token),
+            _ => L.Ui("pairings.swap.done", v.Player(first)?.Name ?? "", v.Player(second)?.Name ?? ""));
     }
 
     private void DismissCreated() => Nav.NavigateTo($"t/{Code}/admin", replace: true);

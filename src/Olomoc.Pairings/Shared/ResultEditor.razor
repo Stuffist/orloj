@@ -7,6 +7,7 @@
     <span class="tn-table-number">@L.Ui("pairings.tableN", Table.Number)</span>
     <span class="tn-side">
         <span class="tn-player-name">@View.Player(Table.PlayerA)?.Name</span>
+        @SwapButton(Table.PlayerA)
         @if (!Table.IsBye && TwoCabals)
         {
             @CabalChoice(Table.PlayerA, _cabalA, i => Pick(ref _cabalA, i))
@@ -29,6 +30,7 @@
         </span>
         <span class="tn-side tn-right">
             <span class="tn-player-name">@View.Player(Table.PlayerB!)?.Name</span>
+            @SwapButton(Table.PlayerB!)
             @if (TwoCabals)
             {
                 @CabalChoice(Table.PlayerB!, _cabalB, i => Pick(ref _cabalB, i))
@@ -49,6 +51,28 @@
     [Parameter, EditorRequired] public Func<int, int, ResultRequest, Task<IReadOnlyList<Problem>>> Save { get; set; } = default!;
     /// <summary>Tournoi terminé : résultats affichés, plus modifiables.</summary>
     [Parameter] public bool ReadOnly { get; set; }
+    /// <summary>
+    /// Échange de joueurs (ronde en cours) : bouton ⇄ sur chaque joueur d'une table sans résultat ;
+    /// <see cref="SwapSelected"/> est le joueur déjà choisi, le second clic désigne l'autre.
+    /// </summary>
+    [Parameter] public EventCallback<string> OnSwap { get; set; }
+    [Parameter] public string? SwapSelected { get; set; }
+
+    // Table sans PV enregistrés (l'exempt compris) : ses joueurs peuvent être échangés.
+    private bool Swappable => OnSwap.HasDelegate && !ReadOnly && (Table.IsBye || (Table.VpA is null && Table.VpB is null));
+
+    private RenderFragment? SwapButton(string playerId)
+    {
+        if (!Swappable) return null;
+        var selected = SwapSelected == playerId;
+        // Second joueur : pas à la même table que le premier (ce ne serait pas un échange).
+        var sameTable = SwapSelected is { } s && !selected && Table.Involves(s);
+        var title = selected ? L.Ui("pairings.swap.cancel")
+            : SwapSelected is { } first ? L.Ui("pairings.swap.with", View.Player(first)?.Name ?? "")
+            : L.Ui("pairings.swap.pick");
+        return @<button type="button" class="tn-swap @(selected ? "on" : null)" disabled="@sameTable" title="@title" aria-label="@title"
+                        aria-pressed="@(selected ? "true" : "false")" @onclick="() => OnSwap.InvokeAsync(playerId)">⇄</button>;
+    }
 
     private string _a = "", _b = "";
     private int? _cabalA, _cabalB;

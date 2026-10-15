@@ -352,7 +352,7 @@ plus tard ne l'est **jamais** (contrôle quotidien).
   — Cabale Dykovienne, Famille Urkaras, Loups de Libus, Réseau Rubin ; Ténèbres — Les
   Autres, Blockhaus Devet, Ligue de Maisel.
 - **Résultats et classement** (feuille de ronde officielle) : l'organisateur saisit les
-  PV de chaque table ; points de tournoi 3/1/0 (exempt : 3, différence 0), classement par
+  PV de chaque table ; points de tournoi 3/1/0 (exempt : victoire au Fiel 7-0, soit 3 points, +7), classement par
   points, puis différence de PV cumulée, puis PV marqués. La ronde suivante s'apparie
   quand la précédente est complète ; la dernière ronde s'annule tant qu'aucun résultat
   n'y est saisi. Les pages se mettent à jour toutes les 30 secondes.

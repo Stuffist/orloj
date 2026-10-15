@@ -51,6 +51,9 @@ public sealed record OrganizerLogin(string OrganizerToken);
 
 public sealed record DroppedRequest(bool Dropped);
 
+/// <summary>Deux joueurs de la ronde en cours à échanger (correction d'un appariement).</summary>
+public sealed record SwapRequest(string First, string Second);
+
 public sealed record ProblemList(IReadOnlyList<Problem> Problems);
 
 public sealed record PairingSummary(int Round, int Rematches, int SameAlignment);

@@ -123,6 +123,37 @@ public static class TournamentRules
     }
 
     /// <summary>
+    /// Correction à la main d'un appariement : échange deux joueurs de la ronde en cours, assis à
+    /// des tables différentes sans résultat saisi (l'exempt compris : l'exemption change de
+    /// joueur). Une revanche n'est pas interdite, l'organisateur décide (voir <see cref="MetBefore"/>).
+    /// </summary>
+    public static Problem? SwapPlayers(Tournament t, int roundNumber, string playerX, string playerY)
+    {
+        if (t.Phase != TournamentPhase.Started) return Problem.Of(t.Phase == TournamentPhase.Finished ? "finished" : "notStarted");
+        if (t.LastRound is not { } last || last.Number != roundNumber) return Problem.Of("notCurrentRound");
+        var tableX = last.Tables.FirstOrDefault(x => x.Involves(playerX));
+        var tableY = last.Tables.FirstOrDefault(x => x.Involves(playerY));
+        if (tableX is null || tableY is null) return Problem.Of("unknownPlayer");
+        if (tableX == tableY) return Problem.Of("sameTable");
+        if (HasScore(tableX) || HasScore(tableY)) return Problem.Of("tableHasResult");
+        Replace(tableX, playerX, playerY);
+        Replace(tableY, playerY, playerX);
+        return null;
+
+        static bool HasScore(Table x) => !x.IsBye && (x.VpA.HasValue || x.VpB.HasValue);
+        static void Replace(Table x, string from, string to)
+        {
+            if (x.PlayerA == from) x.PlayerA = to;
+            else x.PlayerB = to;
+        }
+    }
+
+    /// <summary>Ronde (la plus récente) où deux joueurs se sont déjà affrontés avant la ronde donnée ; null sinon.</summary>
+    public static int? MetBefore(IEnumerable<Round> rounds, int beforeRound, string a, string b) =>
+        rounds.Where(r => r.Number < beforeRound && r.Tables.Any(x => !x.IsBye && x.Involves(a) && x.Involves(b)))
+              .Select(r => (int?)r.Number).LastOrDefault();
+
+    /// <summary>
     /// PV d'une table (deux valeurs, ou aucune pour effacer le résultat) et cabales jouées : avec
     /// deux cabales par joueur, celle de chacun est exigée ; avec une seule, c'est la première.
     /// </summary>
