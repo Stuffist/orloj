@@ -1,16 +1,16 @@
-@* Fin de l'en-tête commun aux apps : lien vers l'autre app (constructeur ⇄ tournois) et choix
-   de la langue. Les apps ont la même origine : la langue choisie vaut pour les deux. *@
+@* Fin de l'en-tête commun aux apps : liens vers les autres pages (constructeur, tournois) et
+   choix de la langue. Le catalogue des équipements s'ouvre depuis le constructeur (bouton). Les apps ont la même origine : la langue choisie vaut pour les deux. *@
 @inject LocalizationService L
 @implements IDisposable
 
 @if (L.Loaded)
 {
     <nav class="app-nav">
-        @if (Current == "pairings")
+        @if (Current != "builder")
         {
             <a href="/builder/">@L.Ui("nav.builder")</a>
         }
-        else
+        @if (Current != "pairings")
         {
             <a href="/pairings/">@L.Ui("nav.pairings")</a>
         }
@@ -30,7 +30,7 @@
 }
 
 @code {
-    /// <summary>App affichée : « builder » ou « pairings ».</summary>
+    /// <summary>Page affichée : « builder », « equipment » (catalogue du constructeur) ou « pairings ».</summary>
     [Parameter, EditorRequired] public string Current { get; set; } = "";
 
     protected override async Task OnInitializedAsync()

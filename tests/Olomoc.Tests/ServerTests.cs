@@ -26,6 +26,7 @@ public class ServerTests(WebApplicationFactory<Program> factory) : IClassFixture
     [Theory]
     [InlineData("/builder/", "/builder/")]
     [InlineData("/builder/play", "/builder/")]          // route de l'app : index.html, le routeur Blazor prend le relais
+    [InlineData("/builder/equipment", "/builder/")]
     [InlineData("/pairings/", "/pairings/")]
     [InlineData("/pairings/t/ABCDEF/admin", "/pairings/")]
     public async Task Apps_sous_leur_chemin(string path, string baseHref)

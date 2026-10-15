@@ -35,6 +35,7 @@ else
                 <span class="count">@Library.Cabals.Count</span>
             }
         </button>
+        <button class="btn" @onclick="OpenEquipmentAsync" title="@L.Ui("equipment.open.title")">@L.Ui("equipment.open")</button>
         @if (_loadNotice is not null)
         {
             <p class="load-notice" role="status">
@@ -171,7 +172,7 @@ else
                                     <option value="">@L.Ui("common.choose")</option>
                                     @foreach (var eq in available)
                                     {
-                                        <option value="@eq.Id">@L.EquipmentName(eq) · @AffiliationLabel(eq)</option>
+                                        <option value="@eq.Id">@L.EquipmentName(eq) · @L.EquipmentAffiliation(eq)</option>
                                     }
                                 </select>
                                 <button class="step" disabled="@(position >= available.Count - 1)" title="@L.Ui("equipment.next")" aria-label="@L.Ui("equipment.next")"
@@ -541,6 +542,14 @@ else
         catch (CultureNotFoundException) { return date.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture); }
     }
 
+    // Catalogue des équipements dans une fenêtre à part ; fenêtre bloquée : dans cet onglet
+    // (la composition en cours est conservée par CabalDraft).
+    private async Task OpenEquipmentAsync()
+    {
+        if (!await JS.InvokeAsync<bool>("olomoc.openWindow", "equipment?window=true", "olomoc-equipment"))
+            Nav.NavigateTo("equipment");
+    }
+
     // ---- Mode partie ----
 
     private async Task StartGameAsync()
@@ -556,11 +565,4 @@ else
     // Texte de carte, stylé s'il se replie sur la langue de référence faute de traduction.
     private RenderFragment Text(Localized text) => @<span class="@(text.IsFallback ? "untranslated" : null)"
                                                           title="@(text.IsFallback ? L.Ui("common.untranslated") : null)">@text.Text</span>;
-
-    // « Don · L'Axe », « Équipement · Ligue de Maisel », « Équipement · affilié au rouage »
-    private string AffiliationLabel(Equipment e) =>
-        L.Ui($"equipment.kind.{e.Kind}") + " · " +
-        (e.IsFactionAffiliated ? L.FactionName(e.Faction!).Text :
-         e.IsCogAffiliated ? L.Ui("equipment.cogAffiliated") :
-         L.MinistryName(e.Ministry!).Text);
 }

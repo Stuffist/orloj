@@ -36,6 +36,15 @@ window.olomoc = {
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
 
+    // Petite fenêtre à part (réutilisée si elle est déjà ouverte sous ce nom), à poser à côté
+    // de la page. Renvoie false si le navigateur l'a bloquée.
+    openWindow(url, name) {
+        const w = window.open(url, name, "popup,width=480,height=900");
+        if (!w) return false;
+        w.focus();
+        return true;
+    },
+
     // Fenêtre d'impression du navigateur (impression ou « Enregistrer au format PDF »).
     print() { window.print(); },
 

@@ -95,8 +95,8 @@ public sealed class CogQuery
         string.Join(' ', input.Remove(condition.Start, condition.Length)
             .Split(' ', StringSplitOptions.RemoveEmptyEntries));
 
-    // Minuscules sans diacritiques, espaces normalisés : « Pétra » -> « petra ».
-    private static string Fold(string s)
+    /// <summary>Minuscules sans diacritiques, espaces normalisés : « Pétra » -> « petra ».</summary>
+    public static string Fold(string s)
     {
         var sb = new StringBuilder(s.Length);
         foreach (var ch in s.Normalize(NormalizationForm.FormD))

@@ -6,21 +6,21 @@
 
 <PageTitle>@(L.Loaded ? L.Ui("app.title") : "Olomòc")</PageTitle>
 
-<div class="app-shell">
+<div class="app-shell@(IsWindow ? " compact" : null)">
     <header class="app-header">
         <span class="mark"></span>
         <div class="app-titles">
             @if (L.Loaded)
             {
                 <h1>@L.Ui("app.title")</h1>
-                <p class="subtitle">@L.Ui(IsPlay ? "play.subtitle" : "app.subtitle")</p>
+                <p class="subtitle">@L.Ui(Page switch { "play" => "play.subtitle", "equipment" => "equipment.subtitle", _ => "app.subtitle" })</p>
             }
             else
             {
                 <h1>Olomòc</h1>
             }
         </div>
-        <HeaderTools Current="builder" />
+        <HeaderTools Current="@(Page == "equipment" ? "equipment" : "builder")" />
     </header>
     <main>@Body</main>
 </div>
@@ -37,7 +37,11 @@
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => OnChanged();
 
-    private bool IsPlay => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("play", StringComparison.Ordinal);
+    // Page affichée : premier segment de l'adresse (« play », « equipment »… ; vide pour l'accueil).
+    private string Page => Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#', '/')[0];
+
+    // Fenêtre à part ouverte par le constructeur (?window=true) : en-tête compact, sans navigation.
+    private bool IsWindow => new Uri(Nav.Uri).Query.Contains("window=true", StringComparison.Ordinal);
 
     public void Dispose()
     {

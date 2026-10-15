@@ -167,6 +167,26 @@ public sealed class LocalizationService
         return string.Join(' ', parts.Where(p => p is not null));
     }
 
+    /// <summary>Texte cherchable d'un équipement/don : nom, noms et effets des capacités, dans la langue courante et de référence.</summary>
+    public string SearchText(Equipment e)
+    {
+        var parts = new List<string?>();
+        foreach (var lang in new[] { Current, ReferenceLanguage }.Distinct())
+            if (_cards.TryGetValue(lang, out var t) && t.Equipment.TryGetValue(e.Id, out var x))
+            {
+                parts.Add(x.Name);
+                foreach (var a in x.Abilities) parts.AddRange(new[] { a.Name, a.GameEffect });
+            }
+        return string.Join(' ', parts.Where(p => p is not null));
+    }
+
+    /// <summary>Affiliation d'un équipement/don : « Don · L'Axe », « Équipement · Ligue de Maisel », « Équipement · affilié au rouage ».</summary>
+    public string EquipmentAffiliation(Equipment e) =>
+        Ui($"equipment.kind.{e.Kind}") + " · " +
+        (e.IsFactionAffiliated ? FactionName(e.Faction!).Text :
+         e.IsCogAffiliated ? Ui("equipment.cogAffiliated") :
+         MinistryName(e.Ministry!).Text);
+
     /// <summary>Message de légalité dans la langue courante.</summary>
     public string Describe(LegalityIssue issue) =>
         Ui($"legality.{issue.Key}", issue.Args.Select(a => (object)string.Join(", ", a.Values.Select(v => a.Kind switch
