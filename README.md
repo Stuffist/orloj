@@ -6,6 +6,9 @@ Le site est servi par un petit hôte ASP.NET Core (`src/Olomoc.Server`) : constr
 sous `/builder/` (la racine `/` y renvoie), tournois sous `/pairings/` (inscriptions,
 appariements, résultats, classement), avec leur API (`/api/tournaments`).
 
+Olomòc est un jeu d'Occicat Games : le contenu du jeu repris ici leur appartient et n'est pas
+sous la licence du code (voir [Licence](#licence)).
+
 ## Lancer
 
 Nécessite le SDK .NET 10.
@@ -128,7 +131,7 @@ Le référentiel est **neutre en langue** ; les textes vivent dans des paquets p
 - `src/Olomoc.Shared/wwwroot/img/cards/<id>.jpg` — images des cartes (recto), une par
   rouage et équipement/don, nommées par leur id : 1051 × 744 px, soit 300 ppp à la taille
   réelle (89 × 63 mm). Relevées sur bwaaaanegamesdb.fr et recompressées ; ce sont les
-  illustrations d'Occicat Games, réservées à un usage privé.
+  illustrations d'Occicat Games, utilisées avec leur permission (voir [Licence](#licence)).
 - `src/Olomoc.Shared/wwwroot/img/emblems/factions|ministries/<code>.png` — logos des
   factions (Référentiel de faction, septembre 2026) et emblèmes des Ministères (LDR p.25,
   disque central seulement : l'anneau texturé ne se lit pas en petit), un par code.
@@ -474,3 +477,21 @@ nom d'hôte entre Olomòc et B5T.
 des langues, tournois (classement, appariements, règles) ; référence `Olomoc.Shared` et lit
 ses fichiers statiques sur le disque ; hôte démarré en mémoire (`WebApplicationFactory`)
 pour les routes du site et l'API des tournois (dossier de données temporaire).
+
+## Licence
+
+**Code** : GNU GPL v2 (fichier `LICENSE`).
+
+**Contenu du jeu : © Occicat Games, utilisé avec permission, hors licence GPL.** Olomòc, ses
+noms, textes, illustrations, logos et pictogrammes appartiennent à Occicat Games ; la licence
+du code ne s'applique pas à eux et ne donne aucun droit de les réutiliser. Sont concernés :
+
+- `src/Olomoc.Shared/wwwroot/img/` — images des cartes, logos des factions, emblèmes des
+  Ministères, pictogrammes et icônes des caractéristiques ;
+- `src/Olomoc.Shared/wwwroot/i18n/*/cards.json` — noms et effets de jeu des cartes, noms des
+  Ministères et des factions ;
+- `src/Olomoc.Shared/wwwroot/data/` — référentiel des cartes et référentiel de faction ;
+- les noms des agendas et le vocabulaire du jeu repris dans `i18n/*/ui.json`.
+
+Pour réutiliser ce contenu ailleurs, demandez l'accord d'Occicat Games
+([occicat.com](https://www.occicat.com/)).
