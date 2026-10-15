@@ -1,0 +1,25 @@
+@* Logo d'une faction (référentiel de faction) ou emblème d'un Ministère (LDR p.25), teinté via
+   mask-image comme les pictogrammes, et comme eux identique dans toutes les langues. Décoratif à côté
+   du nom ; seul, Title le nomme. Rien pour un code absent du référentiel (faction importée inconnue). *@
+@inject CatalogService Catalog
+
+@if (Path is { } path)
+{
+    <span class="emblem @(Ministry is null ? "faction" : "ministry")" style="--emblem: url('@path')"
+          role="@(Title is null ? null : "img")" aria-hidden="@(Title is null ? "true" : null)"
+          aria-label="@Title" title="@Title"></span>
+}
+
+@code {
+    [Parameter] public string? Faction { get; set; }
+    [Parameter] public string? Ministry { get; set; }
+    [Parameter] public string? Title { get; set; }
+
+    public static string FactionPath(string code) => $"{Olomoc.Assets.Base}img/emblems/factions/{code}.png";
+    public static string MinistryPath(string code) => $"{Olomoc.Assets.Base}img/emblems/ministries/{code}.png";
+
+    private string? Path =>
+        Ministry is { Length: > 0 } m ? (Catalog.Catalog.Ministries.Any(x => x.Code == m) ? MinistryPath(m) : null)
+        : Faction is { Length: > 0 } f && Catalog.AllFactions.Any(x => x.Code == f) ? FactionPath(f)
+        : null;
+}

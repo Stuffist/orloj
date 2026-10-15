@@ -1,3 +1,4 @@
+using Olomoc.Components;
 using Olomoc.Models;
 using Olomoc.Services;
 using Xunit;
@@ -73,6 +74,18 @@ public class CardSheetTests
         // Format paysage 89 × 63 mm : 1051 × 744 px (en-tête JPEG, segment SOF).
         var (width, height) = JpegSize(Path.Combine(AppData.WwwRoot, "img", "cards", "E11.jpg"));
         Assert.Equal((1051, 744), (width, height));
+    }
+
+    [Fact]
+    public async Task Chaque_faction_et_chaque_Ministere_a_son_embleme()
+    {
+        var d = await AppData.GetAsync();
+        var paths = d.Catalog.AllFactions.Select(f => Emblem.FactionPath(f.Code))
+            .Concat(d.Catalog.Catalog.Ministries.Select(m => Emblem.MinistryPath(m.Code)))
+            .ToList();
+        Assert.Equal(16, paths.Count);
+        var missing = paths.Where(p => !File.Exists(Path.Combine(AppData.WwwRoot, p[Assets.Base.Length..]))).ToList();
+        Assert.Empty(missing);
     }
 
     private static (int Width, int Height) JpegSize(string path)

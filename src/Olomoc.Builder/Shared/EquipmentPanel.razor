@@ -14,22 +14,25 @@
 <div class="filters">
     <div class="field">
         <label for="equip-group">@L.Ui("equipment.group")</label>
-        <select id="equip-group" value="@_group" @onchange="e => _group = e.Value?.ToString() ?? string.Empty">
-            <option value="">@L.Ui("equipment.group.all")</option>
-            <optgroup label="@L.Ui("equipment.ministries")">
-                @foreach (var m in Catalog.Catalog.Ministries)
-                {
-                    <option value="@m.Code">@L.MinistryName(m.Code)</option>
-                }
-            </optgroup>
-            <optgroup label="@L.Ui("equipment.factions")">
-                <option value="@EquipmentBrowser.Factions">@L.Ui("equipment.factions.all")</option>
-                @foreach (var f in Catalog.AllFactions.Where(f => Catalog.Catalog.Equipment.Any(e => e.Faction == f.Code)))
-                {
-                    <option value="@(EquipmentBrowser.FactionPrefix + f.Code)">@L.FactionName(f.Code)</option>
-                }
-            </optgroup>
-        </select>
+        <div class="with-emblem">
+            <Emblem Ministry="@EquipmentBrowser.GroupMinistry(_group)" Faction="@EquipmentBrowser.GroupFaction(_group)" />
+            <select id="equip-group" class="emblem-select" value="@_group" @onchange="e => _group = e.Value?.ToString() ?? string.Empty">
+                <option value="">@L.Ui("equipment.group.all")</option>
+                <optgroup label="@L.Ui("equipment.ministries")">
+                    @foreach (var m in Catalog.Catalog.Ministries)
+                    {
+                        <option value="@m.Code"><Emblem Ministry="@m.Code" />@L.MinistryName(m.Code)</option>
+                    }
+                </optgroup>
+                <optgroup label="@L.Ui("equipment.factions")">
+                    <option value="@EquipmentBrowser.Factions">@L.Ui("equipment.factions.all")</option>
+                    @foreach (var f in Catalog.AllFactions.Where(f => Catalog.Catalog.Equipment.Any(e => e.Faction == f.Code)))
+                    {
+                        <option value="@(EquipmentBrowser.FactionPrefix + f.Code)"><Emblem Faction="@f.Code" />@L.FactionName(f.Code)</option>
+                    }
+                </optgroup>
+            </select>
+        </div>
     </div>
     <div class="field grow">
         <label for="equip-search">@L.Ui("filter.search")</label>
@@ -59,7 +62,7 @@
     <div class="equip-group">
         @if (_sort == EquipmentSort.Ministry)
         {
-            <h3>@EquipmentBrowser.GroupTitle(group.Key, L)</h3>
+            <h3><Emblem Ministry="@EquipmentBrowser.GroupMinistry(group.Key)" Faction="@EquipmentBrowser.GroupFaction(group.Key)" />@EquipmentBrowser.GroupTitle(group.Key, L)</h3>
         }
         <div class="equip-catalog">
             @foreach (var e in group.Items)
@@ -69,7 +72,7 @@
                     <div class="equip-entry-head">
                         <div>
                             <div class="cog-name">@Text(name)</div>
-                            <div class="cog-min">@L.EquipmentAffiliation(e)</div>
+                            <div class="cog-min emblem-name"><Emblem Ministry="@e.Ministry" Faction="@e.Faction" />@L.EquipmentAffiliation(e)</div>
                         </div>
                         <button class="btn small" @onclick="() => _shown = e" title="@L.Ui("equipment.showCard")">@L.Ui("equipment.card")</button>
                     </div>
@@ -93,7 +96,7 @@
 {
     <Sheet Title="@L.EquipmentName(shown).Text" OnClose="() => _shown = null">
         <img class="card-full" src="@CardSheet.ImagePath(shown.Id)" alt="@L.EquipmentName(shown).Text" />
-        <p class="cog-min">@L.EquipmentAffiliation(shown)</p>
+        <p class="cog-min emblem-name"><Emblem Ministry="@shown.Ministry" Faction="@shown.Faction" />@L.EquipmentAffiliation(shown)</p>
     </Sheet>
 }
 

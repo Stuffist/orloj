@@ -122,25 +122,31 @@ else
             <label>@L.Ui("filter.faction")</label>
             @* Factions où les rouages déjà choisis n'ont pas leur place : grisées. *@
             @{ var compatible = Catalog.CompatibleFactions(_cogs); }
-            <select value="@_faction" @onchange="OnFactionChanged">
-                <option value="">@L.Ui("filter.allFactions")</option>
-                @foreach (var f in Catalog.AllFactions)
-                {
-                    var possible = compatible.Contains(f.Code);
-                    <option value="@f.Code" disabled="@(!possible)" title="@(possible ? null : L.Ui("filter.faction.incompatible"))">@L.FactionName(f.Code)</option>
-                }
-            </select>
+            <div class="with-emblem">
+                <Emblem Faction="@_faction" />
+                <select class="emblem-select" value="@_faction" @onchange="OnFactionChanged">
+                    <option value="">@L.Ui("filter.allFactions")</option>
+                    @foreach (var f in Catalog.AllFactions)
+                    {
+                        var possible = compatible.Contains(f.Code);
+                        <option value="@f.Code" disabled="@(!possible)" title="@(possible ? null : L.Ui("filter.faction.incompatible"))"><Emblem Faction="@f.Code" />@L.FactionName(f.Code)</option>
+                    }
+                </select>
+            </div>
         </div>
 
         <div class="field">
             <label>@L.Ui("filter.ministry")</label>
-            <select value="@_ministryFilter" @onchange="e => Set(ref _ministryFilter, e)">
-                <option value="">@L.Ui("filter.allMinistries")</option>
-                @foreach (var m in Catalog.Catalog.Ministries)
-                {
-                    <option value="@m.Code">@L.MinistryName(m.Code)</option>
-                }
-            </select>
+            <div class="with-emblem">
+                <Emblem Ministry="@_ministryFilter" />
+                <select class="emblem-select" value="@_ministryFilter" @onchange="e => Set(ref _ministryFilter, e)">
+                    <option value="">@L.Ui("filter.allMinistries")</option>
+                    @foreach (var m in Catalog.Catalog.Ministries)
+                    {
+                        <option value="@m.Code"><Emblem Ministry="@m.Code" />@L.MinistryName(m.Code)</option>
+                    }
+                </select>
+            </div>
         </div>
 
         <div class="field grow">
@@ -205,7 +211,7 @@ else
                                 <button class="cog-option" @onclick="() => SelectCog(idx, c)">
                                     <span class="cog-name">@Text(L.CogName(c))</span>
                                     <span class="cog-title">@Text(L.CogTitle(c))</span>
-                                    <span class="cog-min">@string.Join(", ", c.Ministries.Select(m => L.MinistryName(m).Text))</span>
+                                    <span class="cog-min emblem-names">@foreach (var m in c.Ministries) { <span class="emblem-name"><Emblem Ministry="@m" />@L.MinistryName(m)</span> }</span>
                                     <StatLine Stats="c.Stats" Compact="true" />
                                     @if (via is not null)
                                     {
@@ -223,7 +229,7 @@ else
                         <div>
                             <div class="cog-name">@Text(L.CogName(cog))</div>
                             <div class="cog-title">@Text(L.CogTitle(cog))</div>
-                            <div class="cog-min">@string.Join(", ", cog.Ministries.Select(m => L.MinistryName(m).Text))</div>
+                            <div class="cog-min emblem-names">@foreach (var m in cog.Ministries) { <span class="emblem-name"><Emblem Ministry="@m" />@L.MinistryName(m)</span> }</div>
                         </div>
                         <StatLine Stats="cog.Stats" />
                         <div class="life-line">
@@ -309,7 +315,7 @@ else
                     <li class="saved-cabal">
                         <div class="saved-head">
                             <span class="cog-name">@cabal.Name</span>
-                            <span class="saved-meta">@(cabal.Faction is { } f ? FactionLabel(f) + " · " : null)@SavedDate(saved.SavedAt)</span>
+                            <span class="saved-meta">@if (cabal.Faction is { } f) { <span class="emblem-name"><Emblem Faction="@f.Code" />@FactionLabel(f)</span>@(" · ") }@SavedDate(saved.SavedAt)</span>
                         </div>
                         <ul class="saved-slots">
                             @foreach (var slot in cabal.Cogs.OrderByDescending(x => x.Rank))

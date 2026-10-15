@@ -129,6 +129,13 @@ Le référentiel est **neutre en langue** ; les textes vivent dans des paquets p
   rouage et équipement/don, nommées par leur id : 1051 × 744 px, soit 300 ppp à la taille
   réelle (89 × 63 mm). Relevées sur bwaaaanegamesdb.fr et recompressées ; ce sont les
   illustrations d'Occicat Games, réservées à un usage privé.
+- `src/Olomoc.Shared/wwwroot/img/emblems/factions|ministries/<code>.png` — logos des
+  factions (Référentiel de faction, septembre 2026) et emblèmes des Ministères (LDR p.25,
+  disque central seulement : l'anneau texturé ne se lit pas en petit), un par code.
+  Masques 96 × 96 px (blanc, la forme dans l'alpha) teintés en CSS, comme les
+  pictogrammes : logos à la couleur du texte, emblèmes en rouille. Extraits des PDF
+  d'Occicat (images intégrées ; rendu à 600 ppp pour les logos vectoriels de Dykovie
+  et de Maisel).
 
 Chaque fichier référence son schéma via `$schema` (validation et autocomplétion
 dans l'éditeur). Le dossier `schemas/` contient aussi des exemples minimaux
@@ -427,6 +434,7 @@ tests/Olomoc.Tests/   xUnit
 - `Services/CabalDraft.cs` — cabale en cours de composition, conservée en naviguant.
 - `Components/StatLine.razor`, `AbilityList.razor`, `GameEffect.razor`,
   `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre ;
+  `Emblem.razor` (logo de faction, emblème de Ministère) ;
   `TokenTrack.razor` (réserve de pions), `Sheet.razor` (fenêtre superposée).
 - `Components/HeaderTools.razor` — fin de l'en-tête des deux apps : lien vers l'autre app, langue.
 - `Tournaments/` — tournoi (`TournamentModels.cs`), classement (`Standings.cs`),

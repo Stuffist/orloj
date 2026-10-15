@@ -61,6 +61,14 @@ public static class EquipmentBrowser
         : key.StartsWith(FactionPrefix, StringComparison.Ordinal) ? l.FactionName(key[FactionPrefix.Length..]).Text
         : l.MinistryName(key).Text;
 
+    /// <summary>Ministère d'un groupe (son emblème), sinon null.</summary>
+    public static string? GroupMinistry(string key) =>
+        key == CogAffiliated || key.StartsWith(FactionPrefix, StringComparison.Ordinal) ? null : key;
+
+    /// <summary>Faction d'un groupe (son logo), sinon null.</summary>
+    public static string? GroupFaction(string key) =>
+        key.StartsWith(FactionPrefix, StringComparison.Ordinal) ? key[FactionPrefix.Length..] : null;
+
     private static bool InGroup(Equipment e, string? group) => group switch
     {
         null => true,

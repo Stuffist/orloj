@@ -28,7 +28,7 @@ else
                 <span class="play-name">@(s.Name ?? L.Ui("play.unnamed"))</span>
                 @if (s.Faction is { } f)
                 {
-                    <span class="play-faction">@L.FactionName(f)</span>
+                    <span class="play-faction emblem-name"><Emblem Faction="@f" />@L.FactionName(f)</span>
                 }
             </div>
         </div>

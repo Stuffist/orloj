@@ -1,8 +1,9 @@
-@* Faction d'un joueur et son alignement (Lumières / Ténèbres). *@
+@* Faction d'un joueur (logo et nom) et son alignement (Lumières / Ténèbres). *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 
 <span class="tn-faction">
+    <Emblem Faction="@Code" />
     @L.FactionName(Code)
     @if (Catalog.AlignmentOf(Code) is { } alignment)
     {
