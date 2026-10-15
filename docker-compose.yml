@@ -21,7 +21,11 @@ services:
     read_only: true
     tmpfs: [/tmp]
     environment:
-      DOMAIN: ${DOMAIN:-vps-24cf4978.vps.ovh.net}
+      DOMAIN: ${DOMAIN:-orloj.top}
+      # Autres noms, redirigés vers DOMAIN (même chemin, même port) ; tous dans le certificat.
+      DOMAIN_ALIASES: ${DOMAIN_ALIASES-www.orloj.top;vps-24cf4978.vps.ovh.net}
+      # Dossier du certificat dans /etc/letsencrypt/live/ (vide : DOMAIN).
+      CERT_NAME: ${CERT_NAME-vps-24cf4978.vps.ovh.net}
     ports:
       - "${OLOMOC_HTTPS_PORT:-8443}:443"
       # HTTP local au VPS uniquement (diagnostic) : curl http://127.0.0.1:8090/

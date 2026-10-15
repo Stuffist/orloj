@@ -55,6 +55,7 @@ app.Use((ctx, next) =>
     return next();
 });
 app.UseSecurityHeaders();
+app.UseCanonicalHost();                     // www.<domaine>, ancienne adresse → DOMAIN
 
 ClientApps.Map(app, "builder");
 ClientApps.Map(app, "pairings");

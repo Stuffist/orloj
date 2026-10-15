@@ -35,7 +35,8 @@ autre projet du VPS (B5T garde les ports 80/443). Il réutilise le certificat
 Let's Encrypt de l'hôte (`/etc/letsencrypt`, monté en lecture seule) : un certificat
 vaut pour le nom d'hôte, quel que soit le port.
 
-→ `https://vps-24cf4978.vps.ovh.net:8443/`
+→ `https://orloj.top:8443/` (`www.orloj.top` et l'ancienne adresse
+`vps-24cf4978.vps.ovh.net` y renvoient, même chemin)
 
 ```bash
 docker compose up -d --build
@@ -45,7 +46,9 @@ Réglages facultatifs (fichier `.env` à côté du `docker-compose.yml`) :
 
 | Variable            | Défaut                       | Rôle                                         |
 |---------------------|------------------------------|----------------------------------------------|
-| `DOMAIN`            | `vps-24cf4978.vps.ovh.net`   | nom d'hôte, et dossier du certificat (`live/<DOMAIN>/`) |
+| `DOMAIN`            | `orloj.top`                  | nom d'hôte du site                           |
+| `DOMAIN_ALIASES`    | `www.orloj.top;vps-24cf4978.vps.ovh.net` | autres noms acceptés, redirigés (308) vers `DOMAIN` ; vide : aucun |
+| `CERT_NAME`         | `vps-24cf4978.vps.ovh.net`   | dossier du certificat (`live/<CERT_NAME>/`) ; vide : `DOMAIN` |
 | `OLOMOC_HTTPS_PORT` | `8443`                       | port public HTTPS                            |
 | `OLOMOC_HTTP_PORT`  | `8090`                       | port HTTP de diagnostic, sur 127.0.0.1 seulement |
 | `CERT_ROOT`         | `/etc/letsencrypt`           | dossier Let's Encrypt de l'hôte (absent : auto-signé) |
@@ -54,7 +57,12 @@ Réglages facultatifs (fichier `.env` à côté du `docker-compose.yml`) :
 
 - **Pare-feu** : ouvrir le port HTTPS (`8443/tcp`) s'il y en a un (`ufw allow 8443/tcp`,
   pare-feu réseau OVH).
-- **Renouvellement du certificat** : rien à faire. L'hôte relit `live/<DOMAIN>/` toutes
+- **Certificat** : un seul certificat Let's Encrypt pour tous les noms (`DOMAIN` et
+  `DOMAIN_ALIASES`) ; certbot le range sous le nom de son premier domaine, d'où `CERT_NAME`.
+  Ici : `certbot certonly --standalone -d orloj.top -d www.orloj.top -d vps-24cf4978.vps.ovh.net`
+  a étendu le certificat existant `vps-24cf4978.vps.ovh.net` (port 80 libéré le temps de la
+  validation, comme le font les scripts `renewal-hooks/pre` et `post` au renouvellement).
+- **Renouvellement du certificat** : rien à faire. L'hôte relit `live/<CERT_NAME>/` toutes
   les 10 minutes et sert le nouveau certificat dès que certbot l'a renouvelé
   (`docker logs olomoc` le signale). L'ancien hook `nginx -s reload` n'a plus lieu d'être.
 - Un `http://…:8443` est renvoyé vers `https://…:8443` (même adresse, `301`).
@@ -437,9 +445,10 @@ tests/Olomoc.Tests/   xUnit
   `ServerCatalog.cs` (référentiel côté serveur), `TournamentPurge.cs` (90 jours sans modification, date passée ou absente).
 - `Hosting/ClientApps.cs` — une app WebAssembly par chemin (`StaticWebAssetBasePath`),
   routes de l'app renvoyées vers son `index.html`.
-- `Hosting/Tls.cs` — HTTPS du conteneur (variable `DOMAIN`) : certificat Let's Encrypt
-  relu à chaud, ou auto-signé ; `Hosting/PlainHttpRedirect.cs` — HTTP en clair reçu sur le
-  port HTTPS renvoyé vers `https://`.
+- `Hosting/Tls.cs` — HTTPS du conteneur (variables `DOMAIN`, `CERT_NAME`) : certificat
+  Let's Encrypt relu à chaud, ou auto-signé ; `Hosting/PlainHttpRedirect.cs` — HTTP en clair
+  reçu sur le port HTTPS renvoyé vers `https://` ; `Hosting/CanonicalHost.cs` — autres noms
+  (`DOMAIN_ALIASES`) renvoyés vers `DOMAIN`.
 
 **`tests/Olomoc.Tests`** — légalité, recherche, export, sauvegarde, mode partie, cohérence
 des langues, tournois (classement, appariements, règles) ; référence `Olomoc.Shared` et lit

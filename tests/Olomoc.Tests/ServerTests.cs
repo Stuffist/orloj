@@ -95,6 +95,32 @@ public class ServerTests(WebApplicationFactory<Program> factory) : IClassFixture
         Assert.Equal(status, (await server.CreateClient().SendAsync(request)).StatusCode);
     }
 
+    [Theory]
+    [InlineData("www.olomoc.test:8443", "/builder/play?x=1", "https://olomoc.test:8443/builder/play?x=1")]
+    [InlineData("ANCIEN.example", "/", "https://olomoc.test/")]
+    public async Task Autres_noms_rediriges_vers_le_domaine(string host, string path, string location)
+    {
+        using var server = factory.WithWebHostBuilder(b => b
+            .UseSetting("DOMAIN", "olomoc.test")
+            .UseSetting("DOMAIN_ALIASES", " www.olomoc.test ; ancien.example ;"));
+        var client = server.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        foreach (var method in new[] { HttpMethod.Get, HttpMethod.Post })
+        {
+            var request = new HttpRequestMessage(method, path);
+            request.Headers.Host = host;
+            var response = await client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.PermanentRedirect, response.StatusCode);
+            Assert.Equal(location, response.Headers.Location?.OriginalString);
+        }
+
+        foreach (var (other, status) in new[] { ("olomoc.test", HttpStatusCode.OK), ("localhost", HttpStatusCode.OK), ("autre.example", HttpStatusCode.BadRequest) })
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "/healthz");
+            request.Headers.Host = other;
+            Assert.Equal(status, (await client.SendAsync(request)).StatusCode);
+        }
+    }
+
     [Fact]
     public async Task Healthz() =>
         Assert.Equal("ok\n", await Client().GetStringAsync("/healthz"));

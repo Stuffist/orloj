@@ -7,7 +7,9 @@ namespace Olomoc.Server.Hosting;
 /// HTTPS du conteneur, servi directement par Kestrel. Actif quand la variable DOMAIN est
 /// définie (docker-compose) : HTTPS sur 443 (HTTP en clair reçu sur ce port : renvoyé vers
 /// https://), HTTP sur 80 (healthcheck, diagnostic local).
-/// Noms d'hôte acceptés (AllowedHosts, sauf réglage explicite) : le domaine, et localhost /
+/// Certificat : dossier live/&lt;CERT_NAME&gt;/ de Let's Encrypt (par défaut CERT_NAME = DOMAIN).
+/// Noms d'hôte acceptés (AllowedHosts, sauf réglage explicite) : le domaine, ses autres noms
+/// (DOMAIN_ALIASES, redirigés vers le domaine : <see cref="CanonicalHost"/>), et localhost /
 /// 127.0.0.1 pour le healthcheck et le diagnostic local ; les autres reçoivent une erreur 400.
 /// Sans DOMAIN (développement) : adresses habituelles (launchSettings, ASPNETCORE_URLS), tout hôte.
 /// </summary>
@@ -17,9 +19,12 @@ public static class Tls
     {
         var domain = builder.Configuration["DOMAIN"];
         if (string.IsNullOrWhiteSpace(domain)) return;
-        builder.Configuration["AllowedHosts"] ??= $"{domain};localhost;127.0.0.1";
+        domain = domain.Trim();
+        string[] names = [domain, .. CanonicalHost.Aliases(builder.Configuration)];
+        builder.Configuration["AllowedHosts"] ??= string.Join(';', [.. names, "localhost", "127.0.0.1"]);
 
-        var certificates = new CertificateSource(domain, $"/etc/letsencrypt/live/{domain}");
+        var certName = builder.Configuration["CERT_NAME"] is { Length: > 0 } name ? name.Trim() : domain;
+        var certificates = new CertificateSource(names, $"/etc/letsencrypt/live/{certName}");
         builder.WebHost.ConfigureKestrel(kestrel =>
         {
             kestrel.ListenAnyIP(80);
@@ -37,7 +42,7 @@ public static class Tls
 /// relu dès que certbot le renouvelle (contrôle toutes les 10 minutes, sans redémarrage) ;
 /// à défaut, un certificat auto-signé généré au démarrage (poste local : le navigateur avertit).
 /// </summary>
-public sealed class CertificateSource(string domain, string liveDirectory)
+public sealed class CertificateSource(IReadOnlyList<string> names, string liveDirectory)
 {
     private static readonly TimeSpan CheckInterval = TimeSpan.FromMinutes(10);
 
@@ -81,18 +86,18 @@ public sealed class CertificateSource(string domain, string liveDirectory)
         }
         if (_current is not null) return;     // on garde le certificat servi jusqu'ici
         Console.Error.WriteLine($"olomoc: aucun certificat dans {liveDirectory} : certificat auto-signé (usage local uniquement)");
-        _current = SelfSigned(domain);
+        _current = SelfSigned(names);
     }
 
-    private static X509Certificate2 SelfSigned(string domain)
+    private static X509Certificate2 SelfSigned(IReadOnlyList<string> names)
     {
         using var key = RSA.Create(2048);
-        var request = new CertificateRequest($"CN={domain}", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        var names = new SubjectAlternativeNameBuilder();
-        names.AddDnsName(domain);
-        names.AddDnsName("localhost");
-        names.AddIpAddress(System.Net.IPAddress.Loopback);
-        request.CertificateExtensions.Add(names.Build());
+        var request = new CertificateRequest($"CN={names[0]}", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var alternativeNames = new SubjectAlternativeNameBuilder();
+        foreach (var name in names) alternativeNames.AddDnsName(name);
+        alternativeNames.AddDnsName("localhost");
+        alternativeNames.AddIpAddress(System.Net.IPAddress.Loopback);
+        request.CertificateExtensions.Add(alternativeNames.Build());
         var now = DateTimeOffset.UtcNow;
         return Reimported(request.CreateSelfSigned(now.AddDays(-1), now.AddYears(1)));
     }
