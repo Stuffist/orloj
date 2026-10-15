@@ -1,0 +1,26 @@
+# Reverse proxy du VPS (Caddy) : seul à tenir les ports 80/443. Il obtient et renouvelle les
+# certificats Let's Encrypt de chaque nom ci-dessous (validation sur le port 80), redirige HTTP
+# vers HTTPS, puis transmet au conteneur voulu sur le réseau Docker « web » (X-Forwarded-For
+# et -Proto ajoutés ; WebSocket pris en charge).
+
+# Olomòc : constructeur et tournois.
+orloj.top {
+	reverse_proxy olomoc:8080
+}
+
+# B5T (Blazor Server : SignalR en WebSocket). X-Real-IP : comme l'ancien nginx de B5T.
+dauphine.orloj.top {
+	reverse_proxy b5tweb:8080 {
+		header_up X-Real-IP {remote_host}
+	}
+}
+
+# Autres noms d'Olomòc, et ses anciennes adresses en :8443 (liens déjà partagés).
+www.orloj.top, orloj.top:8443, www.orloj.top:8443, vps-24cf4978.vps.ovh.net:8443 {
+	redir https://orloj.top{uri} permanent
+}
+
+# Ancienne adresse de B5T.
+vps-24cf4978.vps.ovh.net {
+	redir https://dauphine.orloj.top{uri} permanent
+}

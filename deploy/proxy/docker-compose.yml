@@ -1,0 +1,30 @@
+# Reverse proxy du VPS : Caddy, ports 80/443 (et 8443 pour les anciennes adresses d'Olomòc).
+# Répartition par nom d'hôte et certificats : Caddyfile. Sur le VPS : /var/www/proxy/.
+#
+#   docker network create web                        (une fois par machine)
+#   docker compose up -d
+#   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile   (Caddyfile modifié)
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    container_name: caddy
+    restart: always
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"         # HTTP/3
+      - "8443:8443"           # anciennes adresses d'Olomòc : redirection
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificats et clés obtenus par Caddy : à conserver (sinon redemandés au démarrage).
+      - ./caddy-data:/data
+      - ./caddy-config:/config
+    networks: [web]
+
+networks:
+  web:
+    external: true

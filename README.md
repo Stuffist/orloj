@@ -21,69 +21,65 @@ Tests : `dotnet test` à la racine (solution `Olomoc.slnx`).
 ## Déploiement (Docker, VPS)
 
 Une seule image (`Dockerfile`, multi-étapes) : publication avec le SDK .NET, puis
-l'hôte `Olomoc.Server` sur le runtime ASP.NET (Alpine, ≈ 140 Mo). Il sert le
-constructeur (`/builder/`) et les tournois (`/pairings/`), fichiers `_framework`
-précompressés en Brotli/gzip, les fichiers communs (`/_content/Olomoc.Shared/`), l'API
-des tournois, redirige `/` vers `/builder/`, et répond à `/healthz`. Le HTTPS est
-assuré directement par Kestrel, sans nginx. Les tournois sont des fichiers JSON dans
-`/data` du conteneur, monté sur le dossier `./data` à côté du `docker-compose.yml` (créé
-au premier démarrage) : conservés par `down`/`up`, `--force-recreate` et `--build`, et
-sauvegardés en copiant ce dossier (`tar czf olomoc-data.tgz data`).
+l'hôte `Olomoc.Server` sur le runtime ASP.NET (Alpine, ≈ 140 Mo), en HTTP sur le port
+8080, sous un utilisateur sans privilèges (`app`, uid 1654). Il sert le constructeur
+(`/builder/`) et les tournois (`/pairings/`), fichiers `_framework` précompressés en
+Brotli/gzip, les fichiers communs (`/_content/Olomoc.Shared/`), l'API des tournois,
+redirige `/` vers `/builder/`, et répond à `/healthz`. Les tournois sont des fichiers JSON
+dans `/data` du conteneur, monté sur le dossier `./data` à côté du `docker-compose.yml` :
+conservés par `down`/`up`, `--force-recreate` et `--build`, et sauvegardés en copiant ce
+dossier (`tar czf olomoc-data.tgz data`).
 
-Le déploiement est **autonome** : Olomoc a son propre port HTTPS et ne dépend d'aucun
-autre projet du VPS (B5T garde les ports 80/443). Il réutilise le certificat
-Let's Encrypt de l'hôte (`/etc/letsencrypt`, monté en lecture seule) : un certificat
-vaut pour le nom d'hôte, quel que soit le port.
+→ `https://orloj.top/`
 
-→ `https://orloj.top:8443/` (`www.orloj.top` et l'ancienne adresse
-`vps-24cf4978.vps.ovh.net` y renvoient, même chemin)
+### Reverse proxy (`deploy/proxy`)
+
+Sur le VPS, un conteneur **Caddy** (`deploy/proxy/docker-compose.yml` et `Caddyfile`, copiés
+dans `/var/www/proxy/`) est seul à tenir les ports 80/443. Il obtient et renouvelle lui-même
+les certificats Let's Encrypt (validation sur le port 80 : ni certbot, ni arrêt d'un
+autre conteneur), redirige HTTP vers HTTPS et répartit par nom d'hôte, sur le réseau
+Docker `web` commun aux projets :
+
+| Nom                                   | Destination                                   |
+|---------------------------------------|-----------------------------------------------|
+| `orloj.top`                           | Olomòc (`olomoc:8080`)                        |
+| `dauphine.orloj.top`                  | B5T (`b5tweb:8080`)                           |
+| `www.orloj.top`, `…:8443` (anciennes adresses d'Olomòc) | redirection vers `https://orloj.top` |
+| `vps-24cf4978.vps.ovh.net` (ancienne adresse de B5T) | redirection vers `https://dauphine.orloj.top` |
+
+Olomòc n'ouvre aucun port public. Il lit l'adresse IP et le schéma du visiteur transmis par
+Caddy (`X-Forwarded-For` / `-Proto`, `ASPNETCORE_FORWARDEDHEADERS_ENABLED`) : limites de
+requêtes par visiteur, HSTS. Noms acceptés : `AllowedHosts` du `docker-compose.yml`.
+
+### Installation et mises à jour
+
+Une fois par machine : `docker network create web`. Dossier des tournois : il doit
+appartenir à l'utilisateur du conteneur (`sudo chown -R 1654:1654 data`).
 
 ```bash
-docker compose up -d --build
+docker compose up -d --build                     # depuis les sources
 ```
+
+Sans les sources sur le VPS, comme pour B5T : `docker compose build && docker compose push`
+sur le poste (image `stuffist/olomoc` sur Docker Hub), puis sur le VPS, avec le seul
+`docker-compose.yml` : `docker compose pull && docker compose up -d`. Proxy :
+`docker compose up -d` dans `/var/www/proxy/` ; après une modification du `Caddyfile`,
+`docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`.
 
 Réglages facultatifs (fichier `.env` à côté du `docker-compose.yml`) :
 
-| Variable            | Défaut                       | Rôle                                         |
-|---------------------|------------------------------|----------------------------------------------|
-| `DOMAIN`            | `orloj.top`                  | nom d'hôte du site                           |
-| `DOMAIN_ALIASES`    | `www.orloj.top;vps-24cf4978.vps.ovh.net` | autres noms acceptés, redirigés (308) vers `DOMAIN` ; vide : aucun |
-| `CERT_NAME`         | `vps-24cf4978.vps.ovh.net`   | dossier du certificat (`live/<CERT_NAME>/`) ; vide : `DOMAIN` |
-| `OLOMOC_HTTPS_PORT` | `8443`                       | port public HTTPS                            |
-| `OLOMOC_HTTP_PORT`  | `8090`                       | port HTTP de diagnostic, sur 127.0.0.1 seulement |
-| `CERT_ROOT`         | `/etc/letsencrypt`           | dossier Let's Encrypt de l'hôte (absent : auto-signé) |
+| Variable           | Défaut                          | Rôle                                         |
+|--------------------|---------------------------------|----------------------------------------------|
+| `OLOMOC_HOSTS`     | `orloj.top;localhost;127.0.0.1` | noms d'hôte acceptés (les autres : 400)      |
+| `OLOMOC_HTTP_PORT` | `8090`                          | port HTTP de diagnostic, sur 127.0.0.1 seulement |
 
-À prévoir sur le VPS :
+Diagnostic : `curl -I http://127.0.0.1:8090/healthz` ; état : `docker ps` (healthcheck
+`/healthz`) ; journaux : `docker logs olomoc`, `docker logs caddy`.
 
-- **Pare-feu** : ouvrir le port HTTPS (`8443/tcp`) s'il y en a un (`ufw allow 8443/tcp`,
-  pare-feu réseau OVH).
-- **Certificat** : un seul certificat Let's Encrypt pour tous les noms (`DOMAIN` et
-  `DOMAIN_ALIASES`) ; certbot le range sous le nom de son premier domaine, d'où `CERT_NAME`.
-  Ici : `certbot certonly --standalone -d orloj.top -d www.orloj.top -d vps-24cf4978.vps.ovh.net`
-  a étendu le certificat existant `vps-24cf4978.vps.ovh.net` (port 80 libéré le temps de la
-  validation, comme le font les scripts `renewal-hooks/pre` et `post` au renouvellement).
-- **Renouvellement du certificat** : rien à faire. L'hôte relit `live/<CERT_NAME>/` toutes
-  les 10 minutes et sert le nouveau certificat dès que certbot l'a renouvelé
-  (`docker logs olomoc` le signale). L'ancien hook `nginx -s reload` n'a plus lieu d'être.
-- Un `http://…:8443` est renvoyé vers `https://…:8443` (même adresse, `301`).
-  Diagnostic local : `curl -I http://127.0.0.1:8090/healthz` ; état : `docker ps`
-  (healthcheck `/healthz`).
-
-**Mises à jour** : `git pull && docker compose up -d --build`. Variante sans les
-sources sur le VPS, comme pour B5T : `docker compose build && docker compose push`
-sur le poste (image `stuffist/olomoc` sur Docker Hub), puis sur le VPS, avec le seul
-`docker-compose.yml` : `docker compose pull && docker compose up -d`.
-
-**En local (Docker Desktop)** : le même `docker compose up -d --build`. Sans
-certificat Let's Encrypt monté, le conteneur génère un certificat auto-signé au
-démarrage (`docker logs olomoc` le signale) :
-
-- `http://localhost:8090/` — sans avertissement (port HTTP de diagnostic) ;
-- `https://localhost:8443/` — le navigateur avertit (certificat auto-signé) : à accepter.
-
-Arrêt : `docker compose down`. Pour le développement courant, `dotnet run --project
-src/Olomoc.Server` reste plus rapide (pas de reconstruction d'image).
-
+**En local (Docker Desktop)** : `docker network create web`, puis le même
+`docker compose up -d --build` → `http://localhost:8090/`. Arrêt : `docker compose down`.
+Pour le développement courant, `dotnet run --project src/Olomoc.Server` reste plus rapide
+(pas de reconstruction d'image).
 ## Vocabulaire
 
 - **Tout ce qui est affiché** (interface, messages, noms et effets de jeu) suit le
@@ -445,10 +441,10 @@ tests/Olomoc.Tests/   xUnit
   `ServerCatalog.cs` (référentiel côté serveur), `TournamentPurge.cs` (90 jours sans modification, date passée ou absente).
 - `Hosting/ClientApps.cs` — une app WebAssembly par chemin (`StaticWebAssetBasePath`),
   routes de l'app renvoyées vers son `index.html`.
-- `Hosting/Tls.cs` — HTTPS du conteneur (variables `DOMAIN`, `CERT_NAME`) : certificat
-  Let's Encrypt relu à chaud, ou auto-signé ; `Hosting/PlainHttpRedirect.cs` — HTTP en clair
-  reçu sur le port HTTPS renvoyé vers `https://` ; `Hosting/CanonicalHost.cs` — autres noms
-  (`DOMAIN_ALIASES`) renvoyés vers `DOMAIN`.
+- `Hosting/SecurityHeaders.cs` — CSP, cadres interdits, Referrer-Policy, HSTS en HTTPS.
+
+**`deploy/proxy`** — reverse proxy du VPS (Caddy) : HTTPS et certificats, répartition par
+nom d'hôte entre Olomòc et B5T.
 
 **`tests/Olomoc.Tests`** — légalité, recherche, export, sauvegarde, mode partie, cohérence
 des langues, tournois (classement, appariements, règles) ; référence `Olomoc.Shared` et lit

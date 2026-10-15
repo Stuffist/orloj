@@ -4,7 +4,6 @@ using Olomoc.Server.Tournaments;
 using Olomoc.Tournaments;
 
 var builder = WebApplication.CreateBuilder(args);
-Tls.Configure(builder);                     // conteneur (DOMAIN défini) : HTTPS 443 + HTTP 80
 builder.WebHost.ConfigureKestrel(k =>
 {
     k.Limits.MaxRequestBodySize = 64 * 1024;    // une inscription pèse ~2 Ko
@@ -55,7 +54,6 @@ app.Use((ctx, next) =>
     return next();
 });
 app.UseSecurityHeaders();
-app.UseCanonicalHost();                     // www.<domaine>, ancienne adresse → DOMAIN
 
 ClientApps.Map(app, "builder");
 ClientApps.Map(app, "pairings");

@@ -1,8 +1,8 @@
-# Olomòc sur le VPS, de façon autonome : https://<DOMAIN>:<OLOMOC_HTTPS_PORT>/ (→ /builder/ ;
-# tournois sous /pairings/)
-# Indépendant des autres projets (B5T garde 80/443) ; réutilise le certificat Let's Encrypt
-# de l'hôte, monté en lecture seule. Réglages facultatifs dans un fichier .env à côté.
+# Olomòc sur le VPS : https://orloj.top/ (→ /builder/ ; tournois sous /pairings/), derrière le
+# reverse proxy Caddy (deploy/proxy), qui tient les ports 80/443 et les certificats. Le conteneur
+# n'ouvre aucun port public : Caddy le joint par le réseau Docker « web ».
 #
+#   docker network create web                        (une fois par machine)
 #   docker compose up -d --build                     (depuis les sources)
 #   docker compose pull && docker compose up -d      (image publiée sur Docker Hub)
 
@@ -12,27 +12,28 @@ services:
     build: .
     container_name: olomoc
     restart: always
-    # Durcissement : aucun privilège root superflu (capacités retirées, sauf l'ouverture des ports
-    # 80/443), pas d'élévation possible, système de fichiers en lecture seule hormis /data et /tmp.
-    # L'utilisateur reste root pour lire la clé privée de Let's Encrypt (réservée à root sur l'hôte).
+    # Durcissement : utilisateur sans privilèges (Dockerfile), aucune capacité, pas d'élévation
+    # possible, système de fichiers en lecture seule hormis /data et /tmp.
     cap_drop: [ALL]
-    cap_add: [NET_BIND_SERVICE]
     security_opt: ["no-new-privileges:true"]
     read_only: true
     tmpfs: [/tmp]
     environment:
-      DOMAIN: ${DOMAIN:-orloj.top}
-      # Autres noms, redirigés vers DOMAIN (même chemin, même port) ; tous dans le certificat.
-      DOMAIN_ALIASES: ${DOMAIN_ALIASES-www.orloj.top;vps-24cf4978.vps.ovh.net}
-      # Dossier du certificat dans /etc/letsencrypt/live/ (vide : DOMAIN).
-      CERT_NAME: ${CERT_NAME-vps-24cf4978.vps.ovh.net}
+      # Noms acceptés (les autres : erreur 400) ; localhost / 127.0.0.1 : healthcheck, diagnostic.
+      AllowedHosts: ${OLOMOC_HOSTS:-orloj.top;localhost;127.0.0.1}
+      # Adresse IP et schéma (https) du visiteur, transmis par Caddy (X-Forwarded-For / -Proto) :
+      # limites de requêtes par visiteur, HSTS. Le port 8080 n'est joignable que par le proxy.
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
     ports:
-      - "${OLOMOC_HTTPS_PORT:-8443}:443"
-      # HTTP local au VPS uniquement (diagnostic) : curl http://127.0.0.1:8090/
-      - "127.0.0.1:${OLOMOC_HTTP_PORT:-8090}:80"
+      # HTTP local au VPS uniquement (diagnostic) : curl http://127.0.0.1:8090/healthz
+      - "127.0.0.1:${OLOMOC_HTTP_PORT:-8090}:8080"
     volumes:
-      # Tout /etc/letsencrypt : live/ contient des liens vers archive/.
-      - ${CERT_ROOT:-/etc/letsencrypt}:/etc/letsencrypt:ro
       # Tournois : un fichier JSON par tournoi dans ./data, à côté de ce fichier (créé au premier
       # démarrage). Conservé par down/up/--force-recreate/--build ; à sauvegarder comme un dossier.
+      # Doit appartenir à l'utilisateur du conteneur : sudo chown -R 1654:1654 data
       - ./data:/data
+    networks: [web]
+
+networks:
+  web:
+    external: true

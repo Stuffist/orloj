@@ -9,8 +9,8 @@ namespace Olomoc.Server.Hosting;
 /// <item>pas d'affichage dans un cadre (frame-ancestors, X-Frame-Options) : pas de clic piégé
 /// sur la page d'administration ;</item>
 /// <item>pas de Referer : les liens sortants ne révèlent pas les pages consultées ;</item>
-/// <item>HSTS sur les réponses HTTPS : le navigateur ne repasse plus en HTTP pour cet hôte
-/// (sans danger pour l'autre site du VPS, déjà redirigé vers HTTPS).</item>
+/// <item>HSTS sur les réponses HTTPS : le navigateur ne repasse plus en HTTP pour cet hôte (derrière
+/// le reverse proxy, HTTPS reconnu par X-Forwarded-Proto).</item>
 /// </list>
 /// </summary>
 public static class SecurityHeaders

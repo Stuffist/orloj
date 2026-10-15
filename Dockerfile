@@ -1,8 +1,7 @@
 # Olomòc — site complet : constructeur (/builder/), tournois (/pairings/ et /api/tournaments),
 # servis par l'hôte ASP.NET Core (Olomoc.Server). Tournois enregistrés dans /data (volume).
-# Étape 1 : publication avec le SDK .NET ; étape 2 : runtime ASP.NET seul, HTTPS par Kestrel.
-#
-# Le domaine (certificat) est fourni au démarrage : variable d'environnement DOMAIN.
+# Étape 1 : publication avec le SDK .NET ; étape 2 : runtime ASP.NET seul, en HTTP sur 8080.
+# Le HTTPS est assuré par le reverse proxy (deploy/proxy : Caddy).
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
@@ -22,13 +21,13 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
 WORKDIR /app
 COPY --from=build /app .
 
-# Ports fixés par l'app (Hosting/Tls.cs) : 443 HTTPS, 80 HTTP (healthcheck, diagnostic local).
-# Utilisateur root : la clé privée de Let's Encrypt de l'hôte n'est lisible que par root. Ses
-# privilèges sont retirés par docker-compose.yml (cap_drop, no-new-privileges, read_only).
-ENV ASPNETCORE_HTTP_PORTS=
+# HTTP sur 8080 (ASPNETCORE_HTTP_PORTS de l'image), utilisateur « app » sans privilèges
+# (uid 1654) : le dossier ./data monté sur /data doit lui appartenir.
 ENV DATA_DIR=/data
+RUN mkdir /data && chown app /data
 VOLUME /data
-EXPOSE 443 80
+USER app
+EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget -q -O /dev/null http://127.0.0.1/healthz || exit 1
+  CMD wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1
 ENTRYPOINT ["dotnet", "Olomoc.Server.dll"]
