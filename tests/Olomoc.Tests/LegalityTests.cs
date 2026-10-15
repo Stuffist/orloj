@@ -125,6 +125,25 @@ public class LegalityTests
     }
 
     [Fact]
+    public async Task Factions_d_un_rouage_membre_ou_recrute_par_une_carte()
+    {
+        var d = await AppData.GetAsync();
+        string Show(string id) => string.Join(" ", d.Catalog.FactionsOf(d.Cog(id))
+            .Select(f => f.Member ? f.Faction : $"{f.Faction}<{d.L.ReferenceName(f.Via!)}>"));
+
+        // Rang 1 : ses trois factions, et Les Autres par la carte qui recrute son porteur.
+        Assert.Equal("OTHERS<Asservisseur mental> BLOCKHAUS DYKOVIAN MAISEL", Show("3R05"));
+        // Rouage de l'Axe : Les Autres, et la Ligue de Maisel par l'Harmonium.
+        Assert.Equal("OTHERS MAISEL<Harmonium>", Show("2R08"));
+        // Rang 3 : aucune carte ne le recrute hors de sa faction.
+        Assert.Equal("URKARAS", Show("1R16"));
+        // Toujours cohérent avec Fits.
+        foreach (var cog in d.Catalog.Catalog.Cogs)
+            Assert.Equal(d.Catalog.AllFactions.Where(f => d.Catalog.Fits(cog, f.Code)).Select(f => f.Code),
+                         d.Catalog.FactionsOf(cog).Select(f => f.Faction));
+    }
+
+    [Fact]
     public async Task Sans_faction_rouages_proposes_compatibles_avec_ceux_deja_choisis()
     {
         var d = await AppData.GetAsync();

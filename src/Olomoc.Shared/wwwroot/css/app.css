@@ -98,6 +98,21 @@ body {
 .cog-title { font-size: .82rem; color: var(--muted); }
 .cog-min { font-size: .72rem; color: var(--rust-soft); }
 .cog-via { font-size: .72rem; color: var(--muted); font-style: italic; }
+.cog-option-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
+.cog-option-factions { display: flex; gap: .3rem; flex: none; color: var(--muted); padding-top: .1rem; }
+.cog-option-factions .emblem { width: 1.1rem; height: 1.1rem; }
+
+/* Fiche du rouage : factions dont il est membre, puis celles où une carte permet de le recruter */
+.cog-factions {
+    display: grid; grid-template-columns: auto 1fr; column-gap: .7rem; row-gap: .3rem; align-items: start;
+    font-size: .8rem;
+}
+.cog-factions-label {
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted);
+    white-space: nowrap; padding-top: .25rem;
+}
+.cog-factions .emblem { width: 1.45em; height: 1.45em; }
+.cog-factions .via { color: var(--muted); }
 .empty { color: var(--muted); font-size: .85rem; font-style: italic; }
 
 .cog-card { display: flex; flex-direction: column; gap: .7rem; }

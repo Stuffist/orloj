@@ -119,6 +119,16 @@ public sealed class CatalogService
     public bool Fits(Cog cog, string faction) => IsMember(cog, faction) || RecruitVia(cog, faction) is not null;
 
     /// <summary>
+    /// Factions (dans l'ordre du référentiel) où le rouage a sa place : membre, ou recrutable
+    /// hors faction par une carte (<see cref="RecruitVia"/>).
+    /// </summary>
+    public List<FactionFit> FactionsOf(Cog cog) =>
+        AllFactions
+            .Select(f => new FactionFit(f.Code, IsMember(cog, f.Code), RecruitVia(cog, f.Code)))
+            .Where(f => f.Member || f.Via is not null)
+            .ToList();
+
+    /// <summary>
     /// Factions (dans l'ordre du référentiel) où chaque rouage choisi a sa place ; toutes si
     /// aucun ne l'est. Sert à proposer la faction après coup, sans défaire la composition.
     /// </summary>
@@ -310,6 +320,9 @@ public sealed class CatalogService
 }
 
 public sealed record LegalityResult(bool IsLegal, IReadOnlyList<LegalityIssue> Issues);
+
+/// <summary>Faction où un rouage a sa place : membre, ou recrutable via la carte <paramref name="Via"/>.</summary>
+public sealed record FactionFit(string Faction, bool Member, Equipment? Via);
 
 /// <summary>Cabale relue : faction, rouages et équipements/dons par emplacement, cartes introuvables.</summary>
 public sealed record ResolvedCabal(string? Faction, Cog?[] Cogs, Equipment?[] Equipment, IReadOnlyList<string> Missing);

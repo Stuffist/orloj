@@ -207,7 +207,9 @@ images des cartes. Conventions de transcription (pictogrammes : LDR p.20) :
     Coordination reste nécessaire.
 
   Les rouages hors faction ainsi recrutables apparaissent dans la liste avec la
-  mention « via … ».
+  mention « via … ». La fiche d'un rouage choisi donne ses factions (logo et nom),
+  puis celles où une carte permet de le recruter (« Via une carte ») ; dans la liste
+  de choix, les logos des factions dont il est membre.
 - **Medic Ruzicka** (« au début du premier cycle », `extraEquipment` dans le
   référentiel) : l'équipement supplémentaire de l'Intégrité se choisit en mode
   partie, pas dans la composition.

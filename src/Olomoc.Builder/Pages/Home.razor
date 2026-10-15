@@ -209,7 +209,16 @@ else
                             {
                                 var via = NullIfEmpty(_faction) is { } f ? Catalog.RecruitVia(c, f) : null;
                                 <button class="cog-option" @onclick="() => SelectCog(idx, c)">
-                                    <span class="cog-name">@Text(L.CogName(c))</span>
+                                    <span class="cog-option-head">
+                                        <span class="cog-name">@Text(L.CogName(c))</span>
+                                        @* Factions dont le rouage est membre (les recrutements par carte sont sur sa fiche). *@
+                                        <span class="cog-option-factions">
+                                            @foreach (var fit in Catalog.FactionsOf(c).Where(x => x.Member))
+                                            {
+                                                <Emblem Faction="@fit.Faction" Title="@L.FactionName(fit.Faction).Text" />
+                                            }
+                                        </span>
+                                    </span>
                                     <span class="cog-title">@Text(L.CogTitle(c))</span>
                                     <span class="cog-min emblem-names">@foreach (var m in c.Ministries) { <span class="emblem-name"><Emblem Ministry="@m" />@L.MinistryName(m)</span> }</span>
                                     <StatLine Stats="c.Stats" Compact="true" />
@@ -230,6 +239,26 @@ else
                             <div class="cog-name">@Text(L.CogName(cog))</div>
                             <div class="cog-title">@Text(L.CogTitle(cog))</div>
                             <div class="cog-min emblem-names">@foreach (var m in cog.Ministries) { <span class="emblem-name"><Emblem Ministry="@m" />@L.MinistryName(m)</span> }</div>
+                        </div>
+                        @{ var fits = Catalog.FactionsOf(cog); }
+                        <div class="cog-factions">
+                            <span class="cog-factions-label">@L.Ui("cog.factions")</span>
+                            <span class="emblem-names">
+                                @foreach (var fit in fits.Where(x => x.Member))
+                                {
+                                    <span class="emblem-name"><Emblem Faction="@fit.Faction" />@L.FactionName(fit.Faction)</span>
+                                }
+                            </span>
+                            @if (fits.Any(x => !x.Member))
+                            {
+                                <span class="cog-factions-label">@L.Ui("cog.factionsVia")</span>
+                                <span class="emblem-names">
+                                    @foreach (var fit in fits.Where(x => !x.Member))
+                                    {
+                                        <span class="emblem-name via"><Emblem Faction="@fit.Faction" />@L.Ui("cog.factionVia", L.FactionName(fit.Faction).Text, L.EquipmentName(fit.Via!).Text)</span>
+                                    }
+                                </span>
+                            }
                         </div>
                         <StatLine Stats="cog.Stats" />
                         <div class="life-line">
