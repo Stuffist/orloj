@@ -106,6 +106,41 @@ public class LegalityTests
     }
 
     [Fact]
+    public async Task Factions_compatibles_avec_les_rouages_deja_choisis()
+    {
+        var d = await AppData.GetAsync();
+        var all = d.Catalog.AllFactions.Select(f => f.Code).ToList();
+        Assert.Equal(all, d.Catalog.CompatibleFactions(new Olomoc.Models.Cog?[3]));
+
+        // Un rouage seul : ses factions, chacune l'accueillant ; un rouage propre à une faction.
+        var indra = d.Catalog.CompatibleFactions([null, null, d.Cog("1R16")]);
+        Assert.Equal(["URKARAS"], indra);
+        var petra = d.Catalog.CompatibleFactions([d.Cog("1R01")]);
+        Assert.Contains("MAISEL", petra);
+        Assert.All(petra, f => Assert.True(d.Catalog.Fits(d.Cog("1R01"), f)));
+
+        // Plusieurs rouages : l'intersection, dans l'ordre du référentiel.
+        var both = d.Catalog.CompatibleFactions([d.Cog("1R01"), d.Cog("1R12")]);
+        Assert.Equal(petra.Intersect(d.Catalog.CompatibleFactions([d.Cog("1R12")])), both);
+    }
+
+    [Fact]
+    public async Task Sans_faction_rouages_proposes_compatibles_avec_ceux_deja_choisis()
+    {
+        var d = await AppData.GetAsync();
+        var factions = d.Catalog.CompatibleFactions([d.Cog("1R01")]);
+        for (var rank = 2; rank <= 3; rank++)
+        {
+            var limited = d.Catalog.AvailableCogs(rank, null, null, CogQuery.Empty, factions);
+            Assert.NotEmpty(limited);
+            Assert.All(limited, c => Assert.Contains(factions, f => d.Catalog.Fits(c, f)));
+            Assert.True(limited.Count <= d.Catalog.AvailableCogs(rank, null, null, CogQuery.Empty).Count);
+        }
+        // Sans liste de factions : inchangé (tous les rouages du rang).
+        Assert.Equal(d.Catalog.Catalog.Cogs.Count(c => c.Rank == 3), d.Catalog.AvailableCogs(3, null, null, CogQuery.Empty).Count);
+    }
+
+    [Fact]
     public async Task Passe_droit_porte_ailleurs_elargit_les_equipements_proposes()
     {
         var d = await AppData.GetAsync();

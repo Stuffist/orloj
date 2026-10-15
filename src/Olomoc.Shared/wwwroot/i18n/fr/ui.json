@@ -8,6 +8,7 @@
   "common.choose": "— Choisir —",
   "common.untranslated": "Texte non traduit (version française)",
   "filter.faction": "Faction",
+  "filter.faction.incompatible": "Incompatible avec les rouages choisis : retirez-les pour choisir cette faction.",
   "filter.allFactions": "— Toutes —",
   "filter.ministry": "Ministère",
   "filter.allMinistries": "— Tous —",

@@ -120,11 +120,14 @@ else
     <section class="filters">
         <div class="field">
             <label>@L.Ui("filter.faction")</label>
+            @* Factions où les rouages déjà choisis n'ont pas leur place : grisées. *@
+            @{ var compatible = Catalog.CompatibleFactions(_cogs); }
             <select value="@_faction" @onchange="OnFactionChanged">
                 <option value="">@L.Ui("filter.allFactions")</option>
                 @foreach (var f in Catalog.AllFactions)
                 {
-                    <option value="@f.Code">@L.FactionName(f.Code)</option>
+                    var possible = compatible.Contains(f.Code);
+                    <option value="@f.Code" disabled="@(!possible)" title="@(possible ? null : L.Ui("filter.faction.incompatible"))">@L.FactionName(f.Code)</option>
                 }
             </select>
         </div>
@@ -188,7 +191,8 @@ else
                 @if (cog is null)
                 {
                     <div class="picker">
-                        @{ var options = Catalog.AvailableCogs(rank, NullIfEmpty(_faction), NullIfEmpty(_ministryFilter), _query); }
+                        @* Sans faction : seulement les rouages compatibles avec ceux déjà choisis. *@
+                        @{ var options = Catalog.AvailableCogs(rank, NullIfEmpty(_faction), NullIfEmpty(_ministryFilter), _query, Catalog.CompatibleFactions(_cogs)); }
                         @if (options.Count == 0)
                         {
                             <p class="empty">@L.Ui("picker.empty")</p>
@@ -378,8 +382,9 @@ else
     private void OnFactionChanged(ChangeEventArgs e)
     {
         _faction = e.Value?.ToString() ?? "";
-        // Un rouage ou un équipement/don peut devenir invalide hors de la nouvelle faction : on purge.
-        for (int i = 0; i < 3; i++) { _cogs[i] = null; _equipment[i] = null; }
+        // Seules les factions compatibles sont proposées : les rouages restent ; les cartes de
+        // l'ancienne faction, elles, peuvent ne plus être disponibles.
+        PruneEquipment();
         Recompute();
     }
 
@@ -405,6 +410,8 @@ else
     {
         _cogs[idx] = c;
         _equipment[idx] = null;             // les Ministères présents changent : on réévalue les équipements/dons
+        // Sans faction choisie, une seule encore possible : on la prend.
+        if (NullIfEmpty(_faction) is null && Catalog.CompatibleFactions(_cogs) is [var only]) _faction = only;
         PruneEquipment();
         Recompute();
     }

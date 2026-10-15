@@ -115,18 +115,34 @@ public sealed class CatalogService
     private IReadOnlyCollection<string> EffectiveMinistries(Cog cog, Equipment? equipment) =>
         equipment?.GrantsAllMinistries == true ? _allMinistries : cog.Ministries;
 
+    /// <summary>Le rouage a sa place dans une cabale de la faction : membre, ou recrutable par une carte.</summary>
+    public bool Fits(Cog cog, string faction) => IsMember(cog, faction) || RecruitVia(cog, faction) is not null;
+
+    /// <summary>
+    /// Factions (dans l'ordre du référentiel) où chaque rouage choisi a sa place ; toutes si
+    /// aucun ne l'est. Sert à proposer la faction après coup, sans défaire la composition.
+    /// </summary>
+    public List<string> CompatibleFactions(IReadOnlyList<Cog?> cogs) =>
+        AllFactions.Select(f => f.Code)
+            .Where(f => cogs.All(c => c is null || Fits(c, f)))
+            .ToList();
+
     /// <summary>
     /// Rouages recrutables pour un rang, filtrés par faction (si choisie), ministère et
     /// recherche (texte + conditions sur les caractéristiques, voir <see cref="CogQuery"/>).
     /// Avec une faction, inclut les rouages hors faction qu'une règle de composition
-    /// permettrait d'intégrer (voir <see cref="RecruitVia"/>).
+    /// permettrait d'intégrer (voir <see cref="RecruitVia"/>). Sans faction, <paramref name="factions"/>
+    /// (si donné) limite aux rouages qui ont leur place dans l'une d'elles.
     /// </summary>
-    public List<Cog> AvailableCogs(int rank, string? faction, string? ministryFilter, CogQuery query)
+    public List<Cog> AvailableCogs(int rank, string? faction, string? ministryFilter, CogQuery query,
+                                   IReadOnlyCollection<string>? factions = null)
     {
         IEnumerable<Cog> q = Catalog.Cogs.Where(c => c.Rank == rank);
 
         if (faction is not null)
-            q = q.Where(c => IsMember(c, faction) || RecruitVia(c, faction) is not null);
+            q = q.Where(c => Fits(c, faction));
+        else if (factions is not null)
+            q = q.Where(c => factions.Any(f => Fits(c, f)));
 
         if (!string.IsNullOrWhiteSpace(ministryFilter))
             q = q.Where(c => c.Ministries.Contains(ministryFilter));

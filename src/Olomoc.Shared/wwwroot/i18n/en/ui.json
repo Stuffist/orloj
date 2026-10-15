@@ -8,6 +8,7 @@
   "common.choose": "— Choose —",
   "common.untranslated": "Untranslated text (French version)",
   "filter.faction": "Faction",
+  "filter.faction.incompatible": "Incompatible with the chosen cogs: remove them to pick this faction.",
   "filter.allFactions": "— All —",
   "filter.ministry": "Ministry",
   "filter.allMinistries": "— All —",
