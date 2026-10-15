@@ -1,0 +1,102 @@
+@* Scénarios des rondes (organisateur), prévus à l'avance : agenda du recueil officiel, ou scénario
+   maison à nommer (« Autre ») ; tirage au sort des agendas pour les rondes pas encore appariées. *@
+@inject LocalizationService L
+
+<ol class="tn-scenarios">
+    @for (var i = 0; i < View.RoundCount; i++)
+    {
+        var index = i;
+        var row = _rows[index];
+        <li>
+            <label for="scenario-@(index + 1)" class="tn-table-number">@L.Ui("pairings.roundN", index + 1)</label>
+            <select id="scenario-@(index + 1)" value="@row.Id" disabled="@ReadOnly" @onchange="e => Choose(index, e.Value?.ToString())">
+                <option value="">@L.Ui("pairings.scenarios.none")</option>
+                @foreach (var id in Agendas.All)
+                {
+                    <option value="@id">@L.Ui($"agenda.{id}")</option>
+                }
+                <option value="@Agendas.Other">@L.Ui("agenda.OTHER")</option>
+            </select>
+            @if (row.Id == Agendas.Other)
+            {
+                <input type="text" maxlength="@TournamentRules.MaxNameLength" value="@row.Name" disabled="@ReadOnly"
+                       placeholder="@L.Ui("pairings.scenarios.otherName")" aria-label="@L.Ui("pairings.scenarios.otherName")"
+                       @oninput="e => Rename(index, e.Value?.ToString())" />
+            }
+        </li>
+    }
+</ol>
+@if (!ReadOnly)
+{
+    <div class="tn-actions">
+        <button class="btn" disabled="@(_busy || View.Rounds.Count >= View.RoundCount)" title="@L.Ui("pairings.scenarios.draw.title")" @onclick="Draw">
+            @L.Ui("pairings.scenarios.draw")
+        </button>
+        <button class="btn primary" disabled="@(_busy || !_dirty || !Complete)" @onclick="SaveAsync">@L.Ui("pairings.scenarios.save")</button>
+        @if (_dirty)
+        {
+            <span class="hint">@L.Ui("pairings.scenarios.unsaved")</span>
+        }
+    </div>
+}
+<Problems Items="_problems" />
+
+@code {
+    [Parameter, EditorRequired] public TournamentView View { get; set; } = default!;
+    /// <summary>Enregistrement : renvoie les problèmes (aucun si accepté).</summary>
+    [Parameter, EditorRequired] public Func<IReadOnlyList<Scenario?>, Task<IReadOnlyList<Problem>>> Save { get; set; } = default!;
+    [Parameter] public bool ReadOnly { get; set; }
+
+    private sealed record Row(string Id, string Name);
+
+    private List<Row> _rows = new();
+    private bool _dirty, _busy;
+    private IReadOnlyList<Problem>? _problems;
+
+    // Valeurs du serveur reprises tant que rien n'est en cours de modification (actualisation périodique).
+    protected override void OnParametersSet()
+    {
+        if (_dirty && _rows.Count == View.RoundCount) return;
+        _rows = Enumerable.Range(1, View.RoundCount)
+            .Select(n => View.ScenarioOf(n) is { } s ? new Row(s.Id, s.Name ?? "") : new Row("", ""))
+            .ToList();
+    }
+
+    // Scénario maison sans nom : pas encore enregistrable.
+    private bool Complete => _rows.All(r => r.Id != Agendas.Other || r.Name.Trim().Length > 0);
+
+    private void Choose(int index, string? id) => Edit(index, _rows[index] with { Id = id ?? "" });
+    private void Rename(int index, string? name) => Edit(index, _rows[index] with { Name = name ?? "" });
+
+    private void Edit(int index, Row row)
+    {
+        _rows[index] = row;
+        _dirty = true;
+        _problems = null;
+    }
+
+    private void Draw()
+    {
+        var drawn = Agendas.Draw(Current(), View.RoundCount, View.Rounds.Count, new Random());
+        for (var i = View.Rounds.Count; i < View.RoundCount; i++)
+            if (_rows[i].Id != Agendas.Other)
+                _rows[i] = drawn[i] is { } s ? new Row(s.Id, "") : new Row("", "");
+        _dirty = true;
+        _problems = null;
+    }
+
+    private List<Scenario?> Current() => _rows
+        .Select(r => r.Id.Length == 0 ? null : new Scenario(r.Id, r.Id == Agendas.Other ? r.Name.Trim() : null))
+        .ToList();
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+        try
+        {
+            _problems = await Save(Current());
+            if (_problems.Count == 0) _dirty = false;
+        }
+        finally { _busy = false; }
+    }
+}

@@ -41,7 +41,9 @@ public static class TournamentEndpoints
         write.MapPost("rounds/{round:int}/swap", (string code, int round, SwapRequest body, HttpContext ctx, TournamentStore store) =>
             Organizer(code, ctx, store, t => Done(TournamentRules.SwapPlayers(t, round, body.First, body.Second))));
         write.MapPut("rounds/{round:int}/tables/{table:int}", (string code, int round, int table, ResultRequest body, HttpContext ctx, TournamentStore store) =>
-            Organizer(code, ctx, store, t => Done(TournamentRules.SetResult(t, round, table, body.VpA, body.VpB, body.CabalA, body.CabalB), status: 400)));
+            Organizer(code, ctx, store, t => Done(TournamentRules.SetResult(t, round, table, body.VpA, body.VpB, body.CabalA, body.CabalB, body.First, body.End), status: 400)));
+        write.MapPut("scenarios", (string code, ScenariosRequest body, HttpContext ctx, TournamentStore store) =>
+            Organizer(code, ctx, store, t => Done(TournamentRules.SetScenarios(t, body.Scenarios), status: 400)));
         // Fin du tournoi : archive anonyme pour les statistiques (s'il est compté).
         write.MapPost("finish", (string code, HttpContext ctx, TournamentStore store, StatsArchive stats) =>
             Organizer(code, ctx, store, t =>
@@ -219,7 +221,7 @@ public static class TournamentEndpoints
         t.Code, t.Name, t.Date, t.RoundCount, t.CabalsPerPlayer, t.Pairing, t.AvoidSameAlignment, t.Phase,
         t.Players.Select(p => new PlayerView(p.Id, p.Name, p.Faction, p.Dropped,
             t.Phase != TournamentPhase.Registration || organizer || p == me ? p.Cabals : null)).ToList(),
-        t.Rounds, Standings.Compute(t), organizer, me?.Id, t.OrganizerPasswordHash.Length > 0, t.ExcludeFromStats);
+        t.Rounds, Standings.Compute(t), organizer, me?.Id, t.OrganizerPasswordHash.Length > 0, t.ExcludeFromStats, t.Scenarios);
 
     // Jeton du lien d'administration, ou d'une session ouverte par mot de passe.
     private static bool IsOrganizer(HttpContext ctx, Tournament t)

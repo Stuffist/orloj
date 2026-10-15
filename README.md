@@ -358,6 +358,17 @@ plus tard ne l'est **jamais** (contrôle quotidien).
   n'y est saisi. Les pages se mettent à jour toutes les 30 secondes.
 - **Cabale jouée** : avec deux cabales par joueur, l'orga indique à la saisie des PV laquelle
   chacun a jouée (« C1 » / « C2 » sous chaque nom ; le nom de la cabale en info-bulle).
+- **J1 et fin de partie** (facultatifs, pour les statistiques) : à la saisie des PV, « J1 » sous
+  le joueur qui a commencé, et la cause de la fin (Fiel, 4ᵉ cycle, PoliSec) ; affichés dans
+  les tables.
+- **Scénarios** (`Tournaments/Agendas.cs`) : l'orga prévoit à l'avance celui de chaque ronde,
+  parmi les 10 agendas du recueil officiel (Occicat, janvier 2026 ; version anglaise de
+  septembre 2026), ou « Autre » pour un scénario maison à nommer. Tirage au sort possible :
+  agendas officiels, sans répétition, pour les rondes pas encore appariées (scénarios maison
+  et rondes appariées gardés). Programme visible sur la page publique, scénario à côté du
+  titre de chaque ronde.
+- **Correction d'un appariement** : ⇄ sur deux joueurs de la ronde en cours (tables sans
+  résultat, exempt compris) les échange, après confirmation ; une revanche créée est signalée.
 - **Garde-fous** : 128 joueurs par tournoi, requêtes de 64 Ko au plus, 10 créations de
   tournoi par heure, 10 essais de mot de passe par quart d'heure et 120 écritures par
   minute par adresse IP (`RATE_CREATE_PER_HOUR`, `RATE_LOGINS_PER_15_MINUTES`,
@@ -374,7 +385,10 @@ plus tard ne l'est **jamais** (contrôle quotidien).
   faction qui contiennent le rouage (les deux cabales d'un joueur comptent) ;
 - **victoires par faction** et **par rouage de rang 3** de la cabale jouée : victoires / parties,
   chaque camp d'une partie comptant (affrontement de même faction : des deux côtés ; exempts
-  exclus), avec V/N/D et le nombre de parties ; estompé en dessous de 10 parties.
+  exclus), avec V/N/D et le nombre de parties ; estompé en dessous de 10 parties ;
+- sur les parties où l'orga les a notés : **victoires de J1**, **fins de partie** (Fiel, 4ᵉ cycle,
+  PoliSec), **scénarios joués** (avec les victoires de J1 par scénario ; scénarios maison
+  regroupés, sans leur nom).
 
 Pas de base de données : à la fin d'un tournoi, une **archive anonyme** (factions, cabales en ids,
 parties ; ni noms ni jetons) est écrite dans `data/stats/<code>.json`, que la purge des tournois

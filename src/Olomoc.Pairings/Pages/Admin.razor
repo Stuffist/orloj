@@ -89,10 +89,17 @@ else
         <p class="hint">@ControlHint(v)</p>
     </section>
 
+    @* Scénarios prévus des rondes, affichés aussi sur la page publique. *@
+    <section class="panel">
+        <h3>@L.Ui("pairings.scenarios.title")</h3>
+        <p class="tn-intro">@L.Ui("pairings.scenarios.intro")</p>
+        <ScenarioEditor View="v" Save="SaveScenariosAsync" ReadOnly="@(v.Phase == TournamentPhase.Finished)" />
+    </section>
+
     @if (last is not null)
     {
         <section class="panel">
-            <h3>@L.Ui("pairings.admin.results", last.Number, v.RoundCount)</h3>
+            <h3>@L.Ui("pairings.admin.results", last.Number, v.RoundCount)<ScenarioTag Scenario="v.ScenarioOf(last.Number)" /></h3>
             @{ var swapping = v.Phase == TournamentPhase.Started; }
             <ol class="tn-results">
                 @foreach (var table in last.Tables)
@@ -118,7 +125,7 @@ else
                     <summary>@L.Ui("pairings.admin.previousResults")</summary>
                     @foreach (var previous in v.Rounds.Take(v.Rounds.Count - 1).Reverse())
                     {
-                        <h4>@L.Ui("pairings.roundN", previous.Number)</h4>
+                        <h4>@L.Ui("pairings.roundN", previous.Number)<ScenarioTag Scenario="v.ScenarioOf(previous.Number)" /></h4>
                         <ol class="tn-results">
                             @foreach (var table in previous.Tables)
                             {
@@ -350,6 +357,18 @@ else
         if (!await ConfirmAsync(question)) return;
         await RunAsync(() => Api.SwapPlayersAsync(Code, round.Number, first, second, Token),
             _ => L.Ui("pairings.swap.done", v.Player(first)?.Name ?? "", v.Player(second)?.Name ?? ""));
+    }
+
+    private async Task<IReadOnlyList<Problem>> SaveScenariosAsync(IReadOnlyList<Scenario?> scenarios)
+    {
+        var result = await Api.SetScenariosAsync(Code, scenarios, Token);
+        if (result.Ok)
+        {
+            Toast(L.Ui("pairings.scenarios.saved"));
+            await RefreshAsync();
+            StateHasChanged();
+        }
+        return result.Problems;
     }
 
     private void DismissCreated() => Nav.NavigateTo($"t/{Code}/admin", replace: true);

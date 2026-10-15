@@ -33,8 +33,11 @@ public sealed class Tournament
     public List<string> OrganizerSessionHashes { get; set; } = new(); // jetons ouverts par mot de passe
     public List<Player> Players { get; set; } = new();
     public List<Round> Rounds { get; set; } = new();
+    /// <summary>Scénario prévu pour chaque ronde (index = n° de ronde − 1) ; null : pas encore choisi.</summary>
+    public List<Scenario?> Scenarios { get; set; } = new();
 
     public Player? PlayerById(string id) => Players.FirstOrDefault(p => p.Id == id);
+    public Scenario? ScenarioOf(int roundNumber) => Scenarios.ElementAtOrDefault(roundNumber - 1);
     public Round? LastRound => Rounds.Count == 0 ? null : Rounds[^1];
     public IEnumerable<Player> ActivePlayers => Players.Where(p => !p.Dropped);
 }
@@ -61,7 +64,8 @@ public sealed class Round
 
 /// <summary>
 /// Une table : PlayerA contre PlayerB (null : exempt, « bye »), PV de chacun une fois saisis, et
-/// la cabale que chacun a jouée (index dans ses cabales inscrites).
+/// la cabale que chacun a jouée (index dans ses cabales inscrites) ; pour les statistiques, si
+/// l'organisateur les a notés : qui était J1, et ce qui a mis fin à la partie.
 /// </summary>
 public sealed class Table
 {
@@ -72,6 +76,8 @@ public sealed class Table
     public int? VpB { get; set; }
     public int? CabalA { get; set; }                    // cabale jouée (index), pour les statistiques
     public int? CabalB { get; set; }
+    public TableSide? First { get; set; }               // J1
+    public GameEnd? End { get; set; }
 
     public bool IsBye => PlayerB is null;
     public bool HasResult => IsBye || (VpA.HasValue && VpB.HasValue);

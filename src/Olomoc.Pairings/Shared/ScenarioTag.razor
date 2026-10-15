@@ -1,0 +1,11 @@
+@* Scénario d'une ronde, à la suite de son titre (rien s'il n'est pas choisi). *@
+@inject LocalizationService L
+
+@if (Scenario is { } s)
+{
+    <span class="tn-scenario">@L.ScenarioName(s)</span>
+}
+
+@code {
+    [Parameter] public Scenario? Scenario { get; set; }
+}

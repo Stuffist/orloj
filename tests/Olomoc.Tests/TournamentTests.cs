@@ -383,6 +383,66 @@ public class TournamentTests
     }
 
     [Fact]
+    public void Scenarios_des_rondes_prevus_a_l_avance()
+    {
+        var t = NewTournament(PairingMode.Swiss, "L", "D");
+        t.RoundCount = 3;
+        Assert.Null(TournamentRules.SetScenarios(t, [new Scenario("SABOTAGE"), null, new Scenario(Agendas.Other, "  Le bal  ")]));
+        Assert.Equal("SABOTAGE", t.ScenarioOf(1)!.Id);
+        Assert.Null(t.ScenarioOf(2));
+        Assert.Equal(new Scenario(Agendas.Other, "Le bal"), t.ScenarioOf(3));              // nom nettoyé
+        Assert.Null(t.ScenarioOf(4));
+
+        Assert.Null(TournamentRules.SetScenarios(t, [new Scenario("VISITS", "ignoré"), null, null]));
+        Assert.Equal([new Scenario("VISITS")], t.Scenarios);                                 // nom d'un agenda ignoré, fin vide retirée
+
+        Assert.Equal("scenario", TournamentRules.SetScenarios(t, [new Scenario("INCONNU")])?.Key);
+        Assert.Equal("scenarioName", TournamentRules.SetScenarios(t, [new Scenario(Agendas.Other, " ")])?.Key);
+        Assert.Equal("scenarioCount", TournamentRules.SetScenarios(t, [null, null, null, new Scenario("VISITS")])?.Key);
+        Assert.Equal([new Scenario("VISITS")], t.Scenarios);                                 // refus : rien de changé
+
+        t.Phase = TournamentPhase.Finished;
+        Assert.Equal("finished", TournamentRules.SetScenarios(t, [])?.Key);
+    }
+
+    [Fact]
+    public void Tirage_des_scenarios_sans_repetition_ni_scenario_maison()
+    {
+        for (var seed = 0; seed < 50; seed++)
+        {
+            var all = Agendas.Draw([], 10, 0, new Random(seed));
+            Assert.Equal(Agendas.All.Order(), all.Select(s => s!.Id).Order());               // 10 rondes : chaque agenda une fois
+
+            // Rondes 1 et 2 déjà appariées : gardées, et leurs agendas exclus du tirage ; scénario
+            // maison de la ronde 4 gardé aussi ; agenda officiel de la ronde 5 retiré au sort.
+            Scenario?[] current = [new Scenario("SABOTAGE"), new Scenario(Agendas.Other, "Maison"), null, new Scenario(Agendas.Other, "Bal"), new Scenario("VISITS")];
+            var drawn = Agendas.Draw(current, 6, 2, new Random(seed));
+            Assert.Equal(6, drawn.Count);
+            Assert.Equal(current[0], drawn[0]);
+            Assert.Equal(current[1], drawn[1]);
+            Assert.Equal(current[3], drawn[3]);
+            var later = new[] { drawn[2], drawn[4], drawn[5] }.Select(s => s!.Id).ToList();
+            Assert.Equal(later.Distinct(), later);
+            Assert.All(later, id => Assert.Contains(id, Agendas.All));
+            Assert.DoesNotContain("SABOTAGE", later);
+        }
+    }
+
+    [Fact]
+    public void J1_et_fin_de_partie_notes_avec_le_resultat()
+    {
+        var t = NewTournament(PairingMode.Swiss, "L", "D");
+        Pair(t);
+        var table = t.Rounds[0].Tables[0];
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3, first: TableSide.B, end: GameEnd.PoliSec));
+        Assert.Equal((TableSide.B, GameEnd.PoliSec), (table.First, table.End));
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3));                                // facultatifs : retirés
+        Assert.Equal((null, null), (table.First, table.End));
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, null, null, first: TableSide.A, end: GameEnd.Bile));
+        Assert.Equal((null, null), (table.First, table.End));                                // résultat effacé : rien
+    }
+
+    [Fact]
     public void Lancer_exige_deux_joueurs()
     {
         var t = NewTournament(PairingMode.Swiss, "L");

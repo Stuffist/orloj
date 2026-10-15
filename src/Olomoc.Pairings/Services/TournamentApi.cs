@@ -46,6 +46,10 @@ public sealed class TournamentApi(HttpClient http)
     public Task<ApiResult<bool>> UndoRoundAsync(string code, string organizer) =>
         SendAsync<bool>(HttpMethod.Delete, $"{Root}/{code}/rounds/last", null, organizer);
 
+    /// <summary>Scénarios prévus des rondes.</summary>
+    public Task<ApiResult<bool>> SetScenariosAsync(string code, IReadOnlyList<Scenario?> scenarios, string organizer) =>
+        SendAsync<bool>(HttpMethod.Put, $"{Root}/{code}/scenarios", new ScenariosRequest(scenarios.ToList()), organizer);
+
     /// <summary>Échange deux joueurs de la ronde en cours (tables sans résultat).</summary>
     public Task<ApiResult<bool>> SwapPlayersAsync(string code, int round, string first, string second, string organizer) =>
         SendAsync<bool>(HttpMethod.Post, $"{Root}/{code}/rounds/{round}/swap", new SwapRequest(first, second), organizer);

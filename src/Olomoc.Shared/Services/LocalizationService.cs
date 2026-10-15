@@ -187,6 +187,9 @@ public sealed class LocalizationService
          e.IsCogAffiliated ? Ui("equipment.cogAffiliated") :
          MinistryName(e.Ministry!).Text);
 
+    /// <summary>Nom d'un scénario : agenda officiel dans la langue courante, ou nom du scénario maison.</summary>
+    public string ScenarioName(Olomoc.Tournaments.Scenario s) => s.IsOther ? s.Name ?? Ui("agenda.OTHER") : Ui($"agenda.{s.Id}");
+
     /// <summary>Message de légalité dans la langue courante.</summary>
     public string Describe(LegalityIssue issue) =>
         Ui($"legality.{issue.Key}", issue.Args.Select(a => (object)string.Join(", ", a.Values.Select(v => a.Kind switch

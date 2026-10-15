@@ -154,11 +154,37 @@ public static class TournamentRules
               .Select(r => (int?)r.Number).LastOrDefault();
 
     /// <summary>
+    /// Scénarios des rondes, prévus à l'avance (modifiables jusqu'à la fin du tournoi) : un par
+    /// ronde au plus, agenda officiel ou scénario maison nommé (<see cref="Agendas.Other"/>), ou
+    /// null (pas encore choisi).
+    /// </summary>
+    public static Problem? SetScenarios(Tournament t, IReadOnlyList<Scenario?>? scenarios)
+    {
+        if (t.Phase == TournamentPhase.Finished) return Problem.Of("finished");
+        scenarios ??= Array.Empty<Scenario?>();
+        if (scenarios.Count > t.RoundCount) return Problem.Of("scenarioCount", t.RoundCount.ToString());
+        var cleaned = new List<Scenario?>();
+        foreach (var s in scenarios)
+        {
+            if (s is null) { cleaned.Add(null); continue; }
+            if (!Agendas.IsKnown(s.Id)) return Problem.Of("scenario");
+            if (s.Id != Agendas.Other) { cleaned.Add(new Scenario(s.Id)); continue; }
+            var name = s.Name?.Trim() ?? "";
+            if (name.Length is 0 || name.Length > MaxNameLength) return Problem.Of("scenarioName", MaxNameLength.ToString());
+            cleaned.Add(new Scenario(Agendas.Other, name));
+        }
+        while (cleaned.Count > 0 && cleaned[^1] is null) cleaned.RemoveAt(cleaned.Count - 1);
+        t.Scenarios = cleaned;
+        return null;
+    }
+
+    /// <summary>
     /// PV d'une table (deux valeurs, ou aucune pour effacer le résultat) et cabales jouées : avec
     /// deux cabales par joueur, celle de chacun est exigée ; avec une seule, c'est la première.
+    /// Facultatifs, pour les statistiques : qui était J1, et la cause de la fin de partie.
     /// </summary>
     public static Problem? SetResult(Tournament t, int roundNumber, int tableNumber, int? vpA, int? vpB,
-        int? cabalA = null, int? cabalB = null)
+        int? cabalA = null, int? cabalB = null, TableSide? first = null, GameEnd? end = null)
     {
         if (t.Phase == TournamentPhase.Finished) return Problem.Of("finished");
         var table = t.Rounds.FirstOrDefault(r => r.Number == roundNumber)?.Tables.FirstOrDefault(x => x.Number == tableNumber);
@@ -172,6 +198,8 @@ public static class TournamentRules
         table.VpB = vpB;
         table.CabalA = vpA.HasValue ? (t.CabalsPerPlayer > 1 ? cabalA : 0) : null;
         table.CabalB = vpA.HasValue ? (t.CabalsPerPlayer > 1 ? cabalB : 0) : null;
+        table.First = vpA.HasValue ? first : null;
+        table.End = vpA.HasValue ? end : null;
         return null;
     }
 

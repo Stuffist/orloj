@@ -57,10 +57,28 @@ else
         </section>
     }
 
+    @* Programme : scénarios annoncés par l'organisateur. *@
+    @if (v.Scenarios is { Count: > 0 } scenarios && scenarios.Any(s => s is not null))
+    {
+        <section class="panel">
+            <h3>@L.Ui("pairings.scenarios.schedule")</h3>
+            <ol class="tn-schedule">
+                @for (var n = 1; n <= v.RoundCount; n++)
+                {
+                    var s = v.ScenarioOf(n);
+                    <li class="@(v.LastRound?.Number == n ? "current" : null)">
+                        <span class="tn-table-number">@L.Ui("pairings.roundN", n)</span>
+                        <span>@(s is null ? L.Ui("pairings.scenarios.tbd") : L.ScenarioName(s))</span>
+                    </li>
+                }
+            </ol>
+        </section>
+    }
+
     @if (v.LastRound is { } round)
     {
         <section class="panel">
-            <h3>@L.Ui("pairings.roundOf", round.Number, v.RoundCount)</h3>
+            <h3>@L.Ui("pairings.roundOf", round.Number, v.RoundCount)<ScenarioTag Scenario="v.ScenarioOf(round.Number)" /></h3>
             <RoundTables View="v" Round="round" />
             @if (v.Rounds.Count > 1)
             {
@@ -68,7 +86,7 @@ else
                     <summary>@L.Ui("pairings.previousRounds")</summary>
                     @foreach (var previous in v.Rounds.Take(v.Rounds.Count - 1).Reverse())
                     {
-                        <h4>@L.Ui("pairings.roundN", previous.Number)</h4>
+                        <h4>@L.Ui("pairings.roundN", previous.Number)<ScenarioTag Scenario="v.ScenarioOf(previous.Number)" /></h4>
                         <RoundTables View="v" Round="previous" />
                     }
                 </details>

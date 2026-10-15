@@ -1,4 +1,5 @@
-@* Tables d'une ronde (lecture) : adversaires, factions et résultat une fois saisi. *@
+@* Tables d'une ronde (lecture) : adversaires, factions et résultat une fois saisi (avec J1 et la
+   cause de la fin de partie, si l'organisateur les a notés). *@
 @inject LocalizationService L
 
 <ol class="tn-tables">
@@ -9,7 +10,7 @@
         <li class="tn-table @(table.Involves(View.MyPlayerId ?? "") ? "mine" : null)">
             <span class="tn-table-number">@L.Ui("pairings.tableN", table.Number)</span>
             <span class="tn-side">
-                <span class="tn-player-name">@a?.Name</span>
+                <span class="tn-player-name">@a?.Name@First(table, TableSide.A)</span>
                 @if (a is not null) { <FactionBadge Code="@a.Faction" /> }
                 @Played(a, table.CabalA)
             </span>
@@ -20,9 +21,15 @@
             }
             else
             {
-                <span class="tn-score">@(table.HasResult ? $"{table.VpA} – {table.VpB}" : L.Ui("pairings.versus"))</span>
+                <span class="tn-score">
+                    @(table.HasResult ? $"{table.VpA} – {table.VpB}" : L.Ui("pairings.versus"))
+                    @if (table.HasResult && table.End is { } end)
+                    {
+                        <span class="tn-end" title="@L.Ui("pairings.result.end.title")">@L.Ui($"pairings.end.{end}")</span>
+                    }
+                </span>
                 <span class="tn-side tn-right">
-                    <span class="tn-player-name">@b?.Name</span>
+                    <span class="tn-player-name">@First(table, TableSide.B)@b?.Name</span>
                     @if (b is not null) { <FactionBadge Code="@b.Faction" /> }
                     @Played(b, table.CabalB)
                 </span>
@@ -34,6 +41,10 @@
 @code {
     [Parameter, EditorRequired] public TournamentView View { get; set; } = default!;
     [Parameter, EditorRequired] public Round Round { get; set; } = default!;
+
+    private RenderFragment? First(Table table, TableSide side) => table.First == side
+        ? @<span class="tn-first-mark" title="@L.Ui("pairings.result.first.played")">@L.Ui("pairings.result.first")</span>
+        : null;
 
     // « Cabale 2 — Nom » si le joueur a joué une cabale connue parmi plusieurs.
     private RenderFragment? Played(PlayerView? player, int? cabal) => player is null || cabal is not { } i || View.CabalsPerPlayer < 2

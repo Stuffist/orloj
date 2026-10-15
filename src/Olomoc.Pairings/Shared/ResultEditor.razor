@@ -12,6 +12,10 @@
         {
             @CabalChoice(Table.PlayerA, _cabalA, i => Pick(ref _cabalA, i))
         }
+        @if (!Table.IsBye)
+        {
+            @FirstChoice(TableSide.A, Table.PlayerA)
+        }
     </span>
     @if (Table.IsBye)
     {
@@ -35,10 +39,20 @@
             {
                 @CabalChoice(Table.PlayerB!, _cabalB, i => Pick(ref _cabalB, i))
             }
+            @FirstChoice(TableSide.B, Table.PlayerB!)
         </span>
         <span class="tn-result-save">
             <button class="btn small" disabled="@(!CanSave)" @onclick="SaveAsync" title="@L.Ui("pairings.result.save")">@L.Ui("pairings.result.validate")</button>
             <span class="tn-result-state @StateClass" title="@StateTitle">@StateMark</span>
+        </span>
+        @* Facultatif, pour les statistiques : ce qui a mis fin à la partie. *@
+        <span class="tn-result-end" role="group" aria-label="@L.Ui("pairings.result.end.title")" title="@L.Ui("pairings.result.end.title")">
+            <span class="tn-result-end-label">@L.Ui("pairings.result.end")</span>
+            @foreach (var end in Enum.GetValues<GameEnd>())
+            {
+                <button type="button" class="@(_end == end ? "on" : null)" disabled="@ReadOnly" aria-pressed="@(_end == end ? "true" : "false")"
+                        @onclick="() => Toggle(ref _end, end)">@L.Ui($"pairings.end.{end}")</button>
+            }
         </span>
     }
 </li>
@@ -76,6 +90,19 @@
 
     private string _a = "", _b = "";
     private int? _cabalA, _cabalB;
+    private TableSide? _first;
+    private GameEnd? _end;
+
+    // J1 : un clic le désigne, un second le retire (facultatif).
+    private RenderFragment FirstChoice(TableSide side, string playerId) => @<button type="button" class="tn-first @(_first == side ? "on" : null)" disabled="@ReadOnly"
+            aria-pressed="@(_first == side ? "true" : "false")" title="@L.Ui("pairings.result.first.title", View.Player(playerId)?.Name ?? "")"
+            @onclick="() => Toggle(ref _first, side)">@L.Ui("pairings.result.first")</button>;
+
+    private void Toggle<T>(ref T? field, T value) where T : struct
+    {
+        field = Nullable.Equals(field, value) ? null : value;
+        Changed();
+    }
     private bool _dirty, _busy;
     private IReadOnlyList<Problem>? _problems;
 
@@ -103,6 +130,8 @@
         _b = Table.VpB?.ToString() ?? "";
         _cabalA = Table.CabalA;
         _cabalB = Table.CabalB;
+        _first = Table.First;
+        _end = Table.End;
     }
 
     private void Edit(ref string field, ChangeEventArgs e)
@@ -120,7 +149,8 @@
     private void Changed()
     {
         _dirty = _a != (Table.VpA?.ToString() ?? "") || _b != (Table.VpB?.ToString() ?? "")
-                 || (TwoCabals && (_cabalA != Table.CabalA || _cabalB != Table.CabalB));
+                 || (TwoCabals && (_cabalA != Table.CabalA || _cabalB != Table.CabalB))
+                 || _first != Table.First || _end != Table.End;
         _problems = null;
     }
 
@@ -139,7 +169,7 @@
         _busy = true;
         try
         {
-            _problems = await Save(RoundNumber, Table.Number, new ResultRequest(Parse(_a), Parse(_b), _cabalA, _cabalB));
+            _problems = await Save(RoundNumber, Table.Number, new ResultRequest(Parse(_a), Parse(_b), _cabalA, _cabalB, _first, _end));
             if (_problems.Count == 0) _dirty = false;
         }
         finally { _busy = false; }

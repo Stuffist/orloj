@@ -193,6 +193,33 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Scenarios_publics_J1_et_fin_de_partie()
+    {
+        var http = Server();
+        var (a, b) = await MaiselCabals();
+        var t = await Create(http);
+        var url = $"/api/tournaments/{t.Code}";
+        var scenarios = new ScenariosRequest([new Scenario("SABOTAGE"), new Scenario(Agendas.Other, "Le bal")]);
+        Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/scenarios", scenarios))).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/scenarios", scenarios, t.OrganizerToken))).StatusCode);
+        var bad = await http.SendAsync(Request(HttpMethod.Put, $"{url}/scenarios", new ScenariosRequest([new Scenario("INCONNU")]), t.OrganizerToken));
+        Assert.Equal("scenario", Assert.Single((await Read<ProblemList>(bad)).Problems).Key);
+
+        // Visibles de tous, dès les inscriptions.
+        var view = await View(http, t.Code);
+        Assert.Equal(new Scenario("SABOTAGE"), view.ScenarioOf(1));
+        Assert.Equal("Le bal", view.ScenarioOf(2)!.Name);
+
+        foreach (var name in new[] { "Ana", "Bo" }) await Register(http, t.Code, name, a, b);
+        await http.SendAsync(Request(HttpMethod.Post, $"{url}/start", organizer: t.OrganizerToken));
+        await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken));
+        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/rounds/1/tables/1",
+            new ResultRequest(9, 4, 0, 1, TableSide.B, GameEnd.FourthCycle), t.OrganizerToken))).StatusCode);
+        var table = (await View(http, t.Code)).Rounds[0].Tables[0];
+        Assert.Equal((TableSide.B, GameEnd.FourthCycle), (table.First, table.End));
+    }
+
+    [Fact]
     public async Task Joueur_modifie_ou_retire_seulement_sa_propre_inscription()
     {
         var http = Server();

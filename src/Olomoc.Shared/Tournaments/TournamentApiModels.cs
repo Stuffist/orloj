@@ -39,8 +39,15 @@ public sealed record RegistrationRequest(string Name, string Faction, List<Cabal
 /// <summary>Jeton joueur : pour modifier ou retirer son inscription tant qu'elles sont ouvertes.</summary>
 public sealed record PlayerRegistered(string PlayerId, string PlayerToken);
 
-/// <summary>PV de chacun et cabale jouée (index), exigée avec deux cabales par joueur.</summary>
-public sealed record ResultRequest(int? VpA, int? VpB, int? CabalA = null, int? CabalB = null);
+/// <summary>
+/// PV de chacun et cabale jouée (index), exigée avec deux cabales par joueur ; facultatifs : J1,
+/// cause de la fin de partie.
+/// </summary>
+public sealed record ResultRequest(int? VpA, int? VpB, int? CabalA = null, int? CabalB = null,
+    TableSide? First = null, GameEnd? End = null);
+
+/// <summary>Scénario de chaque ronde (index = n° de ronde − 1), null si pas encore choisi.</summary>
+public sealed record ScenariosRequest(List<Scenario?> Scenarios);
 
 public sealed record StatsRequest(bool Exclude);
 
@@ -66,9 +73,11 @@ public sealed record TournamentView(
     string Code, string Name, DateOnly? Date, int RoundCount, int CabalsPerPlayer,
     PairingMode Pairing, bool AvoidSameAlignment, TournamentPhase Phase,
     IReadOnlyList<PlayerView> Players, IReadOnlyList<Round> Rounds, IReadOnlyList<Standing> Standings,
-    bool IsOrganizer, string? MyPlayerId, bool HasPassword, bool ExcludeFromStats = false)
+    bool IsOrganizer, string? MyPlayerId, bool HasPassword, bool ExcludeFromStats = false,
+    IReadOnlyList<Scenario?>? Scenarios = null)
 {
     public PlayerView? Player(string? id) => Players.FirstOrDefault(p => p.Id == id);
+    public Scenario? ScenarioOf(int roundNumber) => Scenarios?.ElementAtOrDefault(roundNumber - 1);
     public Round? LastRound => Rounds.Count == 0 ? null : Rounds[^1];
 }
 

@@ -673,6 +673,33 @@ body {
 .tn-swap:disabled { opacity: .35; cursor: default; }
 .tn-swap-hint { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .tn-swap-hint.active { color: var(--rust-soft); font-weight: 600; }
+
+/* Saisie facultative (statistiques) : J1, cause de la fin de partie ; affichage dans les tables */
+.tn-first, .tn-result-end button {
+    padding: .1rem .45rem; font-size: .72rem; cursor: pointer;
+    background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 5px;
+}
+.tn-first { align-self: flex-start; margin-top: .2rem; }
+.tn-side.tn-right .tn-first { align-self: flex-end; }
+.tn-first.on, .tn-result-end button.on { background: var(--ok); border-color: var(--ok); color: #fff; }
+.tn-first:disabled, .tn-result-end button:disabled { cursor: default; }
+.tn-result-end { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
+.tn-result-end-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-right: .2rem; }
+.tn-first-mark {
+    display: inline-block; margin: 0 .35rem; padding: 0 .3rem; border-radius: 4px; vertical-align: 1px;
+    background: rgba(63, 166, 106, .15); color: var(--ok); font-size: .68rem; font-weight: 700;
+}
+.tn-end { display: block; font-size: .68rem; font-weight: 400; color: var(--muted); }
+
+/* Scénarios des rondes : saisie (organisateur), programme (page publique), titre de ronde */
+.tn-scenarios, .tn-schedule { list-style: none; margin: 0 0 .7rem; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
+.tn-scenarios li { display: grid; grid-template-columns: 4.2rem minmax(0, 16rem) minmax(0, 1fr); align-items: center; gap: .5rem; }
+.tn-schedule li { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr); align-items: baseline; gap: .5rem; }
+.tn-schedule li.current { font-weight: 700; }
+.tn-scenario {
+    display: inline-block; margin-left: .6rem; padding: .05rem .5rem; border-radius: 999px; vertical-align: 1px;
+    border: 1px solid var(--line); color: var(--rust-soft); font-size: .78rem; font-weight: 600;
+}
 @media (max-width: 600px) {
     .stat-row { grid-template-columns: minmax(0, 1fr) 3.2rem; }
     .stat-bar { grid-column: 1 / -1; grid-row: 2; }
@@ -693,7 +720,9 @@ body {
     .panel { padding: .8rem; }
     .app-nav a { padding: .3rem .5rem; font-size: .8rem; }
     .tn-table, .tn-result { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); row-gap: .2rem; }
-    .tn-table-number, .tn-result-save { grid-column: 1 / -1; }
+    .tn-table-number, .tn-result-save, .tn-result-end { grid-column: 1 / -1; }
+    .tn-scenarios li { grid-template-columns: 4.2rem minmax(0, 1fr); }
+    .tn-scenarios li input { grid-column: 2; }
     .tn-faction { font-size: .72rem; }
     .tn-head-side { align-items: flex-start; flex-direction: row; }
 }
