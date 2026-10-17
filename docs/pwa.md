@@ -1,4 +1,4 @@
-# Installer Olomòc comme une application (PWA)
+# Installer Orloj comme une application (PWA)
 
 Une **PWA** (Progressive Web App) est un site qu'on peut installer sur l'écran d'accueil d'un
 téléphone ou sur un ordinateur. Il s'ouvre alors en plein écran, sans barre d'adresse, comme une

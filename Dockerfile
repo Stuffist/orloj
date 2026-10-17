@@ -1,4 +1,4 @@
-# Olomòc — site complet : constructeur (/builder/), tournois (/pairings/ et /api/tournaments),
+# Orloj — site complet : constructeur (/builder/), tournois (/pairings/ et /api/tournaments),
 # servis par l'hôte ASP.NET Core (Olomoc.Server). Tournois enregistrés dans /data (volume).
 # Étape 1 : publication avec le SDK .NET ; étape 2 : runtime ASP.NET seul, en HTTP sur 8080.
 # Le HTTPS est assuré par le reverse proxy (deploy/proxy : Caddy).

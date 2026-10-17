@@ -3,7 +3,7 @@
 # vers HTTPS, puis transmet au conteneur voulu sur le réseau Docker « web » (X-Forwarded-For
 # et -Proto ajoutés ; WebSocket pris en charge).
 
-# Olomòc : constructeur et tournois.
+# Orloj : constructeur et tournois.
 orloj.top {
 	reverse_proxy olomoc:8080
 }
@@ -15,7 +15,7 @@ dauphine.orloj.top {
 	}
 }
 
-# Autres noms d'Olomòc, et ses anciennes adresses en :8443 (liens déjà partagés).
+# Autres noms d'Orloj, et ses anciennes adresses en :8443 (liens déjà partagés).
 www.orloj.top, orloj.top:8443, www.orloj.top:8443, vps-24cf4978.vps.ovh.net:8443 {
 	redir https://orloj.top{uri} permanent
 }

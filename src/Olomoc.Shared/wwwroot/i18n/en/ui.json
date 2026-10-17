@@ -1,6 +1,6 @@
 {
   "$schema": "../../../../../schemas/olomoc-ui.schema.json",
-  "app.title": "Olomòc — Cabal Builder",
+  "app.title": "Orloj — Cabal Builder",
   "app.subtitle": "Choose a faction, recruit three cogs (Rank 1, 2 and 3) and equip them.",
   "app.language": "Language",
   "app.loading": "Loading reference data…",
@@ -171,7 +171,7 @@
   "play.result.hunt": "+1 hunt",
   "nav.builder": "Builder",
   "nav.pairings": "Tournaments",
-  "pairings.title": "Olomòc — Tournaments",
+  "pairings.title": "Orloj — Tournaments",
   "pairings.subtitle": "Registrations, pairings, results and standings.",
   "pairings.home": "Tournaments home",
   "pairings.join.title": "Join a tournament",

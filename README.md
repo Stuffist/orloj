@@ -1,4 +1,4 @@
-# Olomòc — Constructeur de cabale et tournois (Blazor WebAssembly)
+# Orloj — Constructeur de cabale et tournois pour Olomòc (Blazor WebAssembly)
 
 Application cliente qui charge le référentiel depuis deux fichiers JSON statiques
 (`src/Olomoc.Shared/wwwroot/data/`) — pas de base de données — et compose une cabale légale.
@@ -45,12 +45,12 @@ Docker `web` commun aux projets :
 
 | Nom                                   | Destination                                   |
 |---------------------------------------|-----------------------------------------------|
-| `orloj.top`                           | Olomòc (`olomoc:8080`)                        |
+| `orloj.top`                           | Orloj (`olomoc:8080`)                         |
 | `dauphine.orloj.top`                  | B5T (`b5tweb:8080`)                           |
-| `www.orloj.top`, `…:8443` (anciennes adresses d'Olomòc) | redirection vers `https://orloj.top` |
+| `www.orloj.top`, `…:8443` (anciennes adresses d'Orloj) | redirection vers `https://orloj.top` |
 | `vps-24cf4978.vps.ovh.net` (ancienne adresse de B5T) | redirection vers `https://dauphine.orloj.top` |
 
-Olomòc n'ouvre aucun port public. Il lit l'adresse IP et le schéma du visiteur transmis par
+Orloj n'ouvre aucun port public. Il lit l'adresse IP et le schéma du visiteur transmis par
 Caddy (`X-Forwarded-For` / `-Proto`, `ASPNETCORE_FORWARDEDHEADERS_ENABLED`) : limites de
 requêtes par visiteur, HSTS. Noms acceptés : `AllowedHosts` du `docker-compose.yml`.
 
@@ -474,7 +474,7 @@ tests/Olomoc.Tests/   xUnit
   manque (jamais l'API) ; à la racine pour couvrir les deux apps et `/_content/` (voir `docs/pwa.md`).
 
 **`deploy/proxy`** — reverse proxy du VPS (Caddy) : HTTPS et certificats, répartition par
-nom d'hôte entre Olomòc et B5T.
+nom d'hôte entre Orloj et B5T.
 
 **`tests/Olomoc.Tests`** — légalité, recherche, export, sauvegarde, mode partie, cohérence
 des langues, tournois (classement, appariements, règles) ; référence `Olomoc.Shared` et lit

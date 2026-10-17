@@ -4,7 +4,7 @@
 @inject LocalizationService L
 @inject NavigationManager Nav
 
-<PageTitle>@(L.Loaded ? L.Ui("app.title") : "Olomòc")</PageTitle>
+<PageTitle>@(L.Loaded ? L.Ui("app.title") : "Orloj")</PageTitle>
 
 <div class="app-shell@(IsWindow ? " compact" : null)">
     <header class="app-header">
@@ -17,7 +17,7 @@
             }
             else
             {
-                <h1>Olomòc</h1>
+                <h1>Orloj</h1>
             }
         </div>
         <HeaderTools Current="@(Page == "equipment" ? "equipment" : "builder")" />

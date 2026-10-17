@@ -1,4 +1,4 @@
-# Olomòc sur le VPS : https://orloj.top/ (→ /builder/ ; tournois sous /pairings/), derrière le
+# Orloj sur le VPS : https://orloj.top/ (→ /builder/ ; tournois sous /pairings/), derrière le
 # reverse proxy Caddy (deploy/proxy), qui tient les ports 80/443 et les certificats. Le conteneur
 # n'ouvre aucun port public : Caddy le joint par le réseau Docker « web ».
 #
