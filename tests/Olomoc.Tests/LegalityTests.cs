@@ -210,6 +210,32 @@ public class LegalityTests
     }
 
     [Fact]
+    public async Task Rouage_hors_faction_echange_celui_qui_prend_sa_carte()
+    {
+        var (d, cogs) = await Cogs("3R07", null, "1R01");              // 3R07 : Axe, via Harmonium
+        Assert.Equal(new[] { 0 }, d.Catalog.CogConflict(1, d.Cog("2R08"), cogs, "MAISEL")?.Displaced);
+        Assert.Equal(new[] { 0 }, d.Catalog.CogConflict(1, d.Cog("2R08"), cogs, null)?.Displaced);   // sans faction
+        Assert.Null(d.Catalog.CogConflict(1, d.Cog("2R11"), cogs, "MAISEL"));                        // membre : rien à échanger
+    }
+
+    [Fact]
+    public async Task Carte_de_recrutement_equipee_d_office()
+    {
+        var d = await AppData.GetAsync();
+        var maisel = new Cog?[] { null, d.Cog("2R08"), d.Cog("1R01") };
+        Assert.Equal("Harmonium", d.L.ReferenceName(d.Catalog.RecruitCard(1, maisel, new Equipment?[3], "MAISEL")!));
+        // Déjà couvert par l'Harmonium que porte un autre rouage : rien à équiper.
+        Assert.Null(d.Catalog.RecruitCard(1, maisel, new Equipment?[] { null, null, d.Equipment("Harmonium") }, "MAISEL"));
+        Assert.Null(d.Catalog.RecruitCard(2, maisel, new Equipment?[3], "MAISEL"));                  // membre
+
+        var others = new Cog?[] { d.Cog("3R07"), d.Cog("2R02"), null };
+        Assert.Equal("Asservisseur mental", d.L.ReferenceName(d.Catalog.RecruitCard(1, others, new Equipment?[3], "OTHERS")!));
+        // Porté par un membre, qui n'en profite pas : proposé quand même (le choisir le déplace).
+        var onMember = new Equipment?[] { d.Equipment("Asservisseur mental"), null, null };
+        Assert.Equal("Asservisseur mental", d.L.ReferenceName(d.Catalog.RecruitCard(1, others, onMember, "OTHERS")!));
+    }
+
+    [Fact]
     public async Task Factions_compatibles_avec_les_rouages_pris_ensemble()
     {
         var (d, cogs) = await Cogs("3R07", "2R08", null);

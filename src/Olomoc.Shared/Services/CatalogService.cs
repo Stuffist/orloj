@@ -159,6 +159,68 @@ public sealed class CatalogService
     }
 
     /// <summary>
+    /// Échange qui permettrait au rouage de rejoindre la cabale quand <see cref="CanJoin"/> le
+    /// refuse : l'autre rouage à retirer (de préférence hors faction, celui dont il prendrait la
+    /// carte de recrutement). Null s'il peut la rejoindre sans échange ; aucun emplacement si
+    /// aucun retrait seul ne suffit.
+    /// </summary>
+    public Swap? CogConflict(int slot, Cog candidate, IReadOnlyList<Cog?> cogs, string? faction)
+    {
+        if (CanJoin(slot, candidate, cogs, faction)) return null;
+        IReadOnlyList<string> factions = faction is not null ? [faction] : AllFactions.Select(f => f.Code).ToList();
+        var with = cogs.ToArray();
+        with[slot] = candidate;
+        var displaced = Enumerable.Range(0, with.Length)
+            .Where(k => k != slot && with[k] is not null)
+            .OrderBy(k => faction is not null && IsMember(with[k]!, faction) ? 1 : 0)
+            .FirstOrDefault(k =>
+            {
+                var swapped = with.ToArray();
+                swapped[k] = null;
+                return factions.Any(f => RecruitmentFits(swapped, f));
+            }, -1);
+        return new("picker.swap", displaced < 0 ? [] : [displaced]);
+    }
+
+    /// <summary>
+    /// Carte à équiper d'office au rouage hors faction de l'emplacement <paramref name="slot"/>
+    /// pour le recruter (Harmonium, Asservisseur mental), s'il n'est pas déjà couvert par une
+    /// carte portée ; null sinon. Une carte portée ailleurs sans y couvrir personne (Asservisseur
+    /// sur un membre) est proposée aussi : la choisir la déplace (<see cref="EquipmentConflict"/>).
+    /// </summary>
+    public Equipment? RecruitCard(int slot, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment, string faction)
+    {
+        if (!_factionByCode.ContainsKey(faction) || cogs[slot] is not { } cog || IsMember(cog, faction)) return null;
+        var uncovered = UncoveredOutsiders(faction, cogs, equipment).Count;
+        if (uncovered == 0) return null;
+        var available = AvailableEquipment(slot, cogs, equipment, faction).Select(e => e.Id).ToHashSet();
+        return _recruitCards
+            .Where(e => available.Contains(e.Id) && Recruits(e, cog, faction))
+            .FirstOrDefault(e =>
+            {
+                var with = equipment.ToArray();
+                with[slot] = e;
+                return UncoveredOutsiders(faction, cogs, with).Count < uncovered;
+            });
+    }
+
+    /// <summary>
+    /// Emplacements des rouages hors faction qu'aucune règle de composition des cartes portées
+    /// ne couvre (chaque règle couvre un rouage ; Asservisseur mental : seulement son porteur).
+    /// </summary>
+    private List<int> UncoveredOutsiders(string faction, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
+    {
+        var slots = Enumerable.Range(0, cogs.Count).Where(i => cogs[i] is not null).ToList();
+        var outsiders = slots.Where(i => !IsMember(cogs[i]!, faction)).ToList();
+        var grants = slots.Where(j => equipment[j] is not null)
+            .SelectMany(j => equipment[j]!.BuildRules.Select(r => (Slot: j, Rule: r)))
+            .ToList();
+        return Unmatched(outsiders, grants, (i, grant) =>
+            (grant.Rule.Type != BuildRuleType.RECRUIT_WEARER || grant.Slot == i) &&
+            grant.Rule.CanRecruit(cogs[i]!, EffectiveMinistries(cogs[i]!, equipment[i])));
+    }
+
+    /// <summary>
     /// Chaque rouage hors faction peut-il être recruté par une carte distincte (chaque carte
     /// n'est prise qu'une fois) ? Cartes portées ou non : c'est ce que la composition permet encore.
     /// </summary>
@@ -235,7 +297,6 @@ public sealed class CatalogService
         var slots = Enumerable.Range(0, cogs.Count).Where(i => cogs[i] is not null).ToList();
         var picked = slots.Select(i => cogs[i]!).ToList();
         var pickedEquipment = equipment.Where(e => e is not null).Cast<Equipment>().ToList();
-        var ministries = slots.ToDictionary(i => i, i => EffectiveMinistries(cogs[i]!, equipment[i]));
 
         // Faction
         if (faction is null)
@@ -250,13 +311,7 @@ public sealed class CatalogService
         // composition distincte (Harmonium, Asservisseur mental…).
         if (faction is not null && _factionByCode.ContainsKey(faction))
         {
-            var outsiders = slots.Where(i => !IsMember(cogs[i]!, faction)).ToList();
-            var grants = slots.Where(j => equipment[j] is not null)
-                .SelectMany(j => equipment[j]!.BuildRules.Select(r => (Slot: j, Rule: r)))
-                .ToList();
-            var uncovered = Unmatched(outsiders, grants, (i, grant) =>
-                (grant.Rule.Type != BuildRuleType.RECRUIT_WEARER || grant.Slot == i) &&
-                grant.Rule.CanRecruit(cogs[i]!, ministries[i]));
+            var uncovered = UncoveredOutsiders(faction, cogs, equipment);
             if (uncovered.Count > 0)
                 issues.Add(new("outsideFaction", IssueArg.Faction(faction), IssueArg.Cogs(uncovered.Select(i => cogs[i]!.Id))));
         }
@@ -311,7 +366,7 @@ public sealed class CatalogService
     /// le motif et les emplacements qui perdraient leur carte ; null sans conflit. Un débordement
     /// qui existe déjà sans ce choix ne lui est pas imputé.
     /// </summary>
-    public EquipmentSwap? EquipmentConflict(int slot, Equipment candidate, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
+    public Swap? EquipmentConflict(int slot, Equipment candidate, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
     {
         var name = _l.ReferenceName(candidate);
         var same = Enumerable.Range(0, equipment.Count)
@@ -423,10 +478,11 @@ public sealed class CatalogService
 public sealed record LegalityResult(bool IsLegal, IReadOnlyList<LegalityIssue> Issues);
 
 /// <summary>
-/// Échange qui rendrait possible un choix d'équipement/don en conflit : clé du motif, et
-/// emplacements dont la carte serait retirée (vide si aucun retrait seul ne suffit).
+/// Échange qui rendrait possible un choix en conflit avec le reste de la cabale : clé du motif,
+/// et emplacements qui perdraient leur carte (équipement/don) ou leur rouage (vide si aucun
+/// retrait seul ne suffit).
 /// </summary>
-public sealed record EquipmentSwap(string Reason, IReadOnlyList<int> Displaced);
+public sealed record Swap(string Reason, IReadOnlyList<int> Displaced);
 
 /// <summary>Faction où un rouage a sa place : membre, ou recrutable via la carte <paramref name="Via"/>.</summary>
 public sealed record FactionFit(string Faction, bool Member, Equipment? Via);

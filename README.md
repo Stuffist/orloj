@@ -215,8 +215,13 @@ images des cartes. Conventions de transcription (pictogrammes : LDR p.20) :
   de choix, les logos des factions dont il est membre.
 - **Choix déjà pris** :
   - Rouage hors faction dont la carte de recrutement couvre déjà un autre rouage
-    (`CanJoin`) : grisé, avec son motif. La liste des factions grise celles où les rouages
-    choisis ne tiennent pas **ensemble** (deux rouages de l'Axe pour un seul Harmonium).
+    (`CanJoin`, `CogConflict`) : marqué 🔃 « remplace … ». Le choisir retire de la cabale
+    l'autre rouage (échange) ; grisé seulement si aucun retrait ne suffit. La liste des
+    factions grise celles où les rouages choisis ne tiennent pas **ensemble** (deux rouages
+    de l'Axe pour un seul Harmonium).
+  - Rouage hors faction choisi sans carte portée qui le couvre : sa carte de recrutement lui
+    est équipée d'office (`RecruitCard` : Harmonium, Asservisseur mental), et retirée au
+    rouage qui la portait sans en profiter ; une note le rappelle sous sa liste d'équipement.
   - Équipement/don déjà porté, ou d'un Ministère dont les rouages débloquent déjà chacun
     un équipement (`EquipmentConflict`) : marqué 🔃 dans la liste. Le choisir fait
     l'**échange** : la carte en conflit est retirée à l'autre rouage (infobulle, puis rappel

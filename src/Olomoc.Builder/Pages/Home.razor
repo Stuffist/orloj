@@ -208,9 +208,11 @@ else
                             @foreach (var c in options)
                             {
                                 var via = NullIfEmpty(_faction) is { } f ? Catalog.RecruitVia(c, f) : null;
-                                @* Hors faction, et sa carte de recrutement couvre déjà un autre rouage : grisé. *@
-                                var blocked = !Catalog.CanJoin(idx, c, _cogs, NullIfEmpty(_faction));
-                                <button class="cog-option" disabled="@blocked" @onclick="() => SelectCog(idx, c)">
+                                @* Hors faction, et sa carte de recrutement couvre déjà un autre rouage : marqué 🔃,
+                                   le choisir retire cet autre rouage (échange) ; grisé si aucun échange ne suffit. *@
+                                var swap = Catalog.CogConflict(idx, c, _cogs, NullIfEmpty(_faction));
+                                var blocked = swap is { Displaced.Count: 0 };
+                                <button class="cog-option@(swap is not null && !blocked ? " swap" : null)" disabled="@blocked" @onclick="() => SelectCog(idx, c)">
                                     <span class="cog-option-head">
                                         <span class="cog-name">@Text(L.CogName(c))</span>
                                         @* Factions dont le rouage est membre (les recrutements par carte sont sur sa fiche). *@
@@ -227,6 +229,11 @@ else
                                     @if (blocked)
                                     {
                                         <span class="cog-via">@(via is not null ? L.Ui("picker.recruitUsed", L.EquipmentName(via)) : L.Ui("picker.incompatible"))</span>
+                                    }
+                                    else if (swap is not null)
+                                    {
+                                        var replaced = string.Join(", ", swap.Displaced.Select(d => L.CogName(_cogs[d]!).Text));
+                                        <span class="cog-via">@(via is not null ? L.Ui("picker.swapVia", L.EquipmentName(via), replaced) : L.Ui("picker.swap", replaced))</span>
                                     }
                                     else if (via is not null)
                                     {
@@ -433,7 +440,7 @@ else
 
     // ‹ › : indice de la carte voisine (step = -1 ou +1) qui se choisit sans échange ; -1 s'il
     // n'y en a pas. Faire défiler ne retire jamais la carte d'un autre rouage.
-    private static int Neighbor(EquipmentSwap?[] conflicts, int position, int step)
+    private static int Neighbor(Swap?[] conflicts, int position, int step)
     {
         for (var k = position + step; k >= 0 && k < conflicts.Length; k += step)
             if (conflicts[k] is null) return k;
@@ -448,13 +455,13 @@ else
             : EquipmentBrowser.GroupTitle(key, L);
 
     // Infobulle d'une option 🔃 : ce que l'échange retirerait, et pourquoi.
-    private string SwapTitle(EquipmentSwap swap) =>
+    private string SwapTitle(Swap swap) =>
         swap.Displaced.Count == 0
             ? L.Ui("equipment.swap.none")
             : L.Ui(swap.Reason, SwapVictims(swap));
 
     // « Carte (Rouage) » de chaque emplacement qui perdrait sa carte.
-    private string SwapVictims(EquipmentSwap swap) =>
+    private string SwapVictims(Swap swap) =>
         string.Join(", ", swap.Displaced.Select(d => L.Ui("equipment.swapVictim", L.EquipmentName(_equipment[d]!).Text, L.CogName(_cogs[d]!).Text)));
 
     // Dernier échange fait par la liste d'un rouage : rappelé sous cette liste jusqu'au choix suivant.
@@ -489,12 +496,32 @@ else
 
     private void SelectCog(int idx, Cog c)
     {
+        // Rouage marqué 🔃 : l'autre rouage dont il prend la carte de recrutement est retiré (échange).
+        var notes = new List<string>();
+        if (Catalog.CogConflict(idx, c, _cogs, NullIfEmpty(_faction)) is { Displaced.Count: > 0 } swap)
+        {
+            notes.Add(L.Ui("picker.swapped", string.Join(", ", swap.Displaced.Select(d => L.CogName(_cogs[d]!).Text))));
+            foreach (var d in swap.Displaced)
+            {
+                _cogs[d] = null;
+                _equipment[d] = null;
+            }
+        }
         _cogs[idx] = c;
         _equipment[idx] = null;             // les Ministères présents changent : on réévalue les équipements/dons
-        _swapNote = null;
         // Sans faction choisie, une seule encore possible : on la prend.
         if (NullIfEmpty(_faction) is null && Catalog.CompatibleFactions(_cogs) is [var only]) _faction = only;
         PruneEquipment();
+        // Hors faction et pas encore couvert : la carte qui le recrute, équipée d'office (et retirée
+        // au rouage qui la portait sans en profiter, s'il y en a un).
+        _swapNote = null;
+        if (NullIfEmpty(_faction) is { } f && Catalog.RecruitCard(idx, _cogs, _equipment, f) is { } card)
+        {
+            SelectEquipment(idx, card);
+            notes.Add(L.Ui("picker.autoEquipped", L.EquipmentName(card).Text));
+            if (_swapNote is { } moved) notes.Add(moved.Text);
+        }
+        _swapNote = notes.Count > 0 ? (idx, string.Join(" ", notes)) : null;
         Recompute();
     }
 
