@@ -1,6 +1,6 @@
 {
   "$schema": "../../../../../schemas/olomoc-ui.schema.json",
-  "app.title": "Orloj — Constructeur de cabale",
+  "app.title": "Orloj — Constructeur de cabale pour Olomòc",
   "app.subtitle": "Choisissez une faction, recrutez trois rouages (rangs 1, 2 et 3) et équipez-les.",
   "app.language": "Langue",
   "app.loading": "Chargement du référentiel…",
@@ -171,7 +171,7 @@
   "play.result.hunt": "+1 traque",
   "nav.builder": "Constructeur",
   "nav.pairings": "Tournois",
-  "pairings.title": "Orloj — Tournois",
+  "pairings.title": "Orloj — Tournois d'Olomòc",
   "pairings.subtitle": "Inscriptions, appariements, résultats et classement.",
   "pairings.home": "Accueil des tournois",
   "pairings.join.title": "Rejoindre un tournoi",
