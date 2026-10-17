@@ -320,10 +320,14 @@ body {
 .card-sheet-card, .card-sheet-empty { position: absolute; display: block; }
 .card-sheet-card { object-fit: fill; }
 .card-sheet-empty { border: 1px dashed #c8c8c8; box-sizing: border-box; }
-.card-sheet { page: cards; }
+/* Impression : une seule page A4 paysage. Tout le document est sur la page « cards » (sinon ce
+   qui suit la planche peut ouvrir une page au format par défaut, portrait et vide), limité à
+   sa hauteur. */
+.card-sheet, html:has(.card-sheet) { page: cards; }
 @page cards { size: A4 landscape; margin: 0; }
 @media print {
     html, body { background: #fff !important; }
+    html:has(.card-sheet), html:has(.card-sheet) body { height: 210mm; margin: 0; overflow: hidden; }
     .app-header, .cards-toolbar, #blazor-error-ui { display: none !important; }
     .app-shell { max-width: none; margin: 0; padding: 0; }
     .card-sheet { width: 297mm; height: 210mm; aspect-ratio: auto; border-radius: 0; box-shadow: none; break-inside: avoid; }
