@@ -299,15 +299,18 @@ else
                             <div class="equip-stepper">
                                 <button class="step" disabled="@(previous < 0)" title="@L.Ui("equipment.previous")" aria-label="@L.Ui("equipment.previous")"
                                         @onclick="() => SelectEquipment(idx, available[previous])">‹</button>
+                                @* @key : les options gardent leur élément quand la liste s'allonge (nouveau rouage,
+                                   nouveaux Ministères) ; sans clé, Blazor réécrirait les options en place et la
+                                   sélection du navigateur resterait sur la même position, sur une autre carte. *@
                                 <select value="@current?.Id" @onchange="e => SelectEquipment(idx, e)">
                                     <option value="">@L.Ui("common.choose")</option>
                                     @foreach (var group in EquipmentBrowser.Grouped(available))
                                     {
-                                        <optgroup label="@GroupLabel(group.Key, idx)">
+                                        <optgroup @key="group.Key" label="@GroupLabel(group.Key, idx)">
                                             @foreach (var eq in group.Items)
                                             {
                                                 var conflict = conflictOf[eq.Id];
-                                                <option value="@eq.Id" title="@(conflict is null ? null : SwapTitle(conflict))">@(conflict is null ? null : "🔃 ")@L.EquipmentName(eq) · @L.EquipmentAffiliation(eq)</option>
+                                                <option @key="eq.Id" value="@eq.Id" title="@(conflict is null ? null : SwapTitle(conflict))">@(conflict is null ? null : "🔃 ")@L.EquipmentName(eq) · @L.EquipmentAffiliation(eq)</option>
                                             }
                                         </optgroup>
                                     }

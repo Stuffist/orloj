@@ -67,9 +67,10 @@
             <label for="extra-@Slot">@L.Ui("play.extra", L.AbilityName(Cog, 0))</label>
             <select id="extra-@Slot" value="@(S.ExtraEquipmentId ?? "")" @onchange="OnExtraChanged">
                 <option value="">@L.Ui("play.extra.none")</option>
+                @* @key : la sélection suit sa carte quand la liste change (cartes portées ailleurs). *@
                 @foreach (var e in ExtraOptions)
                 {
-                    <option value="@e.Id">@L.EquipmentName(e)</option>
+                    <option @key="e.Id" value="@e.Id">@L.EquipmentName(e)</option>
                 }
             </select>
         </div>
