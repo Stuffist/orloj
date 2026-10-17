@@ -1,0 +1,16 @@
+{
+  "id": "/",
+  "name": "Olomòc",
+  "short_name": "Olomòc",
+  "lang": "fr",
+  "start_url": "/builder/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#14181c",
+  "theme_color": "#14181c",
+  "icons": [
+    { "src": "img/app/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/app/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "img/app/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

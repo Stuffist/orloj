@@ -36,7 +36,21 @@ public class ServerTests(WebApplicationFactory<Program> factory) : IClassFixture
         var html = await response.Content.ReadAsStringAsync();
         Assert.Contains($"<base href=\"{baseHref}\" />", html);
         Assert.Contains("_framework/blazor.webassembly.js", html);
+        Assert.Contains($"<link rel=\"manifest\" href=\"{Assets.Base}manifest.webmanifest\" />", html);
         Assert.Equal("no-cache", response.Headers.CacheControl?.ToString());
+    }
+
+    // Application installable : manifeste commun aux deux apps, au type attendu par les navigateurs.
+    [Fact]
+    public async Task Manifeste()
+    {
+        var response = await Client().GetAsync(Assets.Base + "manifest.webmanifest");
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("application/manifest+json", response.Content.Headers.ContentType?.MediaType);
+        using var manifest = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("/builder/", manifest.RootElement.GetProperty("start_url").GetString());
+        foreach (var icon in manifest.RootElement.GetProperty("icons").EnumerateArray())
+            (await Client().GetAsync(Assets.Base + icon.GetProperty("src").GetString())).EnsureSuccessStatusCode();
     }
 
     [Theory]
@@ -50,6 +64,8 @@ public class ServerTests(WebApplicationFactory<Program> factory) : IClassFixture
     [InlineData(Assets.Base + "img/cards/E11.jpg")]
     [InlineData(Assets.Base + "img/emblems/factions/MAISEL.png")]
     [InlineData(Assets.Base + "img/emblems/ministries/AXIS.png")]
+    [InlineData(Assets.Base + "img/app/favicon-32.png")]
+    [InlineData(Assets.Base + "img/app/apple-touch-icon.png")]
     [InlineData("/builder/cards")]
     public async Task Fichiers_servis(string path) =>
         (await Client().GetAsync(path)).EnsureSuccessStatusCode();
