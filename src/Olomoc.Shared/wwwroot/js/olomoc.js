@@ -61,6 +61,21 @@ window.olomoc = {
         if (handler) document.removeEventListener("visibilitychange", handler);
         window.olomoc._handlers[id] = null;
     },
+
+    // Clé du localStorage modifiée par une autre fenêtre du site (cabale publiée par le
+    // constructeur) : appelle la méthode .NET indiquée avec la nouvelle valeur. Renvoie un
+    // identifiant pour offStorage.
+    onStorage(dotnetRef, key, method) {
+        const handler = e => { if (e.key === key) dotnetRef.invokeMethodAsync(method, e.newValue); };
+        window.addEventListener("storage", handler);
+        window.olomoc._handlers.push(handler);
+        return window.olomoc._handlers.length - 1;
+    },
+    offStorage(id) {
+        const handler = window.olomoc._handlers[id];
+        if (handler) window.removeEventListener("storage", handler);
+        window.olomoc._handlers[id] = null;
+    },
     _handlers: [],
 };
 

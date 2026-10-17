@@ -7,6 +7,44 @@ namespace Olomoc.Tests;
 public class EquipmentBrowserTests
 {
     [Fact]
+    public async Task Equipables_par_la_cabale()
+    {
+        var d = await AppData.GetAsync();
+        var none = new Olomoc.Models.Equipment?[3];
+        Assert.Null(d.Catalog.EquipableByCabal(new Olomoc.Models.Cog?[3], none, null));       // rien à comparer
+
+        // Faction seule : ses cartes.
+        var faction = d.Catalog.EquipableByCabal(new Olomoc.Models.Cog?[3], none, "MAISEL")!;
+        Assert.Contains(d.Equipment("Harmonium").Id, faction);
+        Assert.DoesNotContain(d.Equipment("Phéromones").Id, faction);
+
+        // Harmonie et Effort : leurs Ministères, la faction ; pas la Sécurité, l'Axe ni une autre faction.
+        var cogs = new Olomoc.Models.Cog?[] { d.Cog("3R06"), d.Cog("2R11"), null };
+        var equipable = d.Catalog.EquipableByCabal(cogs, none, "MAISEL")!;
+        foreach (var name in new[] { "Phéromones", "Ration", "Harmonium" }) Assert.Contains(d.Equipment(name).Id, equipable);
+        foreach (var name in new[] { "Lumen", "Carapace", "Asservisseur mental" }) Assert.DoesNotContain(d.Equipment(name).Id, equipable);
+
+        var groups = EquipmentBrowser.Browse(d.Catalog, d.L, null, "", EquipmentSort.Ministry, equipable);
+        Assert.Equal(equipable.Count, groups.Sum(g => g.Items.Count));
+        Assert.Equal(["EFFORT", "HARMONY"], groups.Select(g => g.Key).Where(k => EquipmentBrowser.GroupMinistry(k) is not null));
+    }
+
+    [Fact]
+    public async Task Cabale_partagee_avec_la_fenetre_du_catalogue()
+    {
+        var d = await AppData.GetAsync();
+        var cogs = new Olomoc.Models.Cog?[] { d.Cog("3R06"), null, d.Cog("1R01") };
+        var equipment = new Olomoc.Models.Equipment?[] { d.Equipment("Phéromones"), null, null };
+        var (faction, readCogs, readEquipment) = CabalDraft.Read(CabalDraft.Share("MAISEL", cogs, equipment), d.Catalog);
+        Assert.Equal("MAISEL", faction);
+        Assert.Equal(cogs.Select(c => c?.Id), readCogs.Select(c => c?.Id));
+        Assert.Equal(equipment.Select(e => e?.Id), readEquipment.Select(e => e?.Id));
+
+        Assert.Null(CabalDraft.Read(null, d.Catalog).Faction);                                // rien de publié
+        Assert.Null(CabalDraft.Read("|,,", d.Catalog).Faction);                               // cabale vide
+    }
+
+    [Fact]
     public async Task Par_ministere_ordre_du_referentiel_puis_factions()
     {
         var d = await AppData.GetAsync();

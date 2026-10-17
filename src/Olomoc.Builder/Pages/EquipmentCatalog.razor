@@ -1,11 +1,13 @@
 @page "/equipment"
 @namespace Olomoc.Builder.Pages
-@implements IDisposable
+@implements IAsyncDisposable
 @inject CatalogService Catalog
 @inject LocalizationService L
+@inject IJSRuntime JS
 
 @* Catalogue des équipements et dons seul : fenêtre détachée depuis le constructeur
-   (?window=true, en-tête compact), à garder à côté pendant le choix des rouages. *@
+   (?window=true, en-tête compact), à garder à côté pendant le choix des rouages. Elle suit la
+   cabale que le constructeur publie dans le localStorage (filtre « équipables seulement »). *@
 
 @if (!Catalog.Loaded || !L.Loaded)
 {
@@ -13,18 +15,50 @@
 }
 else
 {
-    <EquipmentPanel />
+    <EquipmentPanel CabalCogs="_cogs" CabalEquipment="_equipment" CabalFaction="@_faction" />
 }
 
 @code {
+    private string? _faction;
+    private Cog?[] _cogs = new Cog?[3];
+    private Equipment?[] _equipment = new Equipment?[3];
+    private DotNetObjectReference<EquipmentCatalog>? _self;
+    private int? _storageHandler;
+
     protected override async Task OnInitializedAsync()
     {
         L.Changed += OnLanguageChanged;
         await L.EnsureLoadedAsync();
         await Catalog.EnsureLoadedAsync();
+        try
+        {
+            ReadDraft(await JS.InvokeAsync<string?>("localStorage.getItem", CabalDraft.ShareKey));
+            _self = DotNetObjectReference.Create(this);
+            _storageHandler = await JS.InvokeAsync<int>("olomoc.onStorage", _self, CabalDraft.ShareKey, nameof(OnDraftChanged));
+        }
+        catch (JSException) { }            // stockage indisponible : catalogue sans filtre
     }
+
+    /// <summary>Le constructeur a changé la cabale (autre fenêtre).</summary>
+    [JSInvokable]
+    public void OnDraftChanged(string? value)
+    {
+        ReadDraft(value);
+        StateHasChanged();
+    }
+
+    private void ReadDraft(string? value) => (_faction, _cogs, _equipment) = CabalDraft.Read(value, Catalog);
 
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => L.Changed -= OnLanguageChanged;
+    public async ValueTask DisposeAsync()
+    {
+        L.Changed -= OnLanguageChanged;
+        if (_storageHandler is { } id)
+        {
+            try { await JS.InvokeVoidAsync("olomoc.offStorage", id); }
+            catch (JSDisconnectedException) { }
+        }
+        _self?.Dispose();
+    }
 }

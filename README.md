@@ -242,6 +242,16 @@ trigramme ou nom d'une stat, dans n'importe quelle langue (`tec`, `cbt`, `tir`,
 `esq`, `mel`, `rng`, `dod`, `combat`, `ranged`…), suivi de `>`, `<`, `>=`, `<=` ou
 `=` et d'un nombre, par exemple `kantor tir>4 esq<=3` ou `rng>4 dod<=3`.
 
+## Catalogue des équipements et dons
+
+Sous le constructeur, ou dans une fenêtre détachée (`/builder/equipment?window=true`) à
+garder à côté (`Shared/EquipmentPanel.razor`) : filtre par Ministère ou faction, recherche
+dans les noms et les effets, tri par Ministère ou par nom. **« Équipables seulement »** ne
+garde que ce qu'au moins un rouage de la cabale en cours peut porter (`EquipableByCabal` :
+faction, Ministères présents, cartes des rouages choisis). La fenêtre détachée est une autre
+instance de l'app : le constructeur y publie la cabale dans le localStorage
+(`CabalDraft.ShareKey`), et elle suit ses changements par l'événement `storage`.
+
 ## Export
 
 Sous le panneau de légalité, avec le nom de la cabale (facultatif pour l'export) ; copie dans le

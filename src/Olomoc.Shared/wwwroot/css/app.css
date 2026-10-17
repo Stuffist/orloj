@@ -431,6 +431,8 @@ body {
 .check { display: flex; align-items: center; gap: .45rem; font-size: .85rem; }
 .check input { width: 1.1rem; height: 1.1rem; accent-color: var(--rust); }
 .check.disabled { opacity: .45; }
+/* Case dans un champ de filtre : texte normal (pas celui des titres de champ), à la hauteur des autres contrôles. */
+.field label.check { min-height: 2.35rem; font-size: .9rem; text-transform: none; letter-spacing: normal; color: var(--ink); cursor: pointer; }
 .play-preview { margin: 0; font-size: .85rem; color: var(--muted); }
 
 .step {

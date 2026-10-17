@@ -42,11 +42,14 @@ public static class EquipmentBrowser
 
     /// <param name="group">Groupe à afficher seul (code de Ministère, <see cref="Factions"/>,
     /// <see cref="FactionPrefix"/> + code…), ou null pour tous.</param>
-    public static IReadOnlyList<EquipmentGroup> Browse(CatalogService catalog, LocalizationService l, string? group, string? search, EquipmentSort sort)
+    /// <param name="only">Ids à garder seuls (ce que la cabale peut équiper), ou null pour tous.</param>
+    public static IReadOnlyList<EquipmentGroup> Browse(CatalogService catalog, LocalizationService l, string? group, string? search, EquipmentSort sort,
+                                                       IReadOnlySet<string>? only = null)
     {
         var words = CogQuery.Fold(search ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var items = catalog.Catalog.Equipment
             .Where(e => InGroup(e, group))
+            .Where(e => only is null || only.Contains(e.Id))
             .Where(e => words.Length == 0 || words.All(CogQuery.Fold(l.SearchText(e)).Contains))
             .ToList();
 

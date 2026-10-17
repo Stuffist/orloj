@@ -3,11 +3,15 @@
 @inject CatalogService Catalog
 @inject LocalizationService L
 
-@* Catalogue des équipements et dons, indépendant de la cabale en cours : en bas du constructeur,
-   et seul dans la fenêtre détachée (page /equipment). Référentiel et textes déjà chargés. *@
+@* Catalogue des équipements et dons : en bas du constructeur, et seul dans la fenêtre détachée
+   (page /equipment). Tout le catalogue, ou seulement ce que la cabale en cours peut équiper
+   (case à cocher). Référentiel et textes déjà chargés. *@
 
 @{
-    var groups = EquipmentBrowser.Browse(Catalog, L, _group is "" ? null : _group, _search, _sort);
+    // Sans faction ni rouage, rien à quoi comparer : la case est désactivée.
+    var equipable = Catalog.EquipableByCabal(CabalCogs, CabalEquipment, CabalFaction);
+    var groups = EquipmentBrowser.Browse(Catalog, L, _group is "" ? null : _group, _search, _sort,
+                                         _onlyEquipable ? equipable : null);
     var count = groups.Sum(g => g.Items.Count);
 }
 
@@ -48,6 +52,14 @@
                         @onclick="() => _sort = sort">@L.Ui($"equipment.sort.{sort}")</button>
             }
         </div>
+    </div>
+    <div class="field">
+        <label>@L.Ui("equipment.cabal")</label>
+        <label class="check@(equipable is null ? " disabled" : null)" title="@L.Ui(equipable is null ? "equipment.onlyEquipable.empty" : "equipment.onlyEquipable.title")">
+            <input type="checkbox" checked="@(_onlyEquipable && equipable is not null)" disabled="@(equipable is null)"
+                   @onchange="e => _onlyEquipable = e.Value is true" />
+            @L.Ui("equipment.onlyEquipable")
+        </label>
     </div>
 </div>
 
@@ -105,8 +117,15 @@
     private string _search = "";
     private EquipmentSort _sort = EquipmentSort.Ministry;
     private Equipment? _shown;                     // carte affichée en grand
+    private bool _onlyEquipable;                   // seulement ce que la cabale peut équiper
 
-    // Sans paramètres, le composant ne se redessine pas avec la page : il suit lui-même la langue.
+    // Cabale en cours (index 0 => rang 1) : celle du constructeur, ou celle qu'il publie pour la
+    // fenêtre détachée. Vide : pas de filtre possible.
+    [Parameter] public IReadOnlyList<Cog?> CabalCogs { get; set; } = new Cog?[3];
+    [Parameter] public IReadOnlyList<Equipment?> CabalEquipment { get; set; } = new Equipment?[3];
+    [Parameter] public string? CabalFaction { get; set; }
+
+    // Le composant suit lui-même la langue (la page qui l'accueille ne se redessine pas forcément).
     protected override void OnInitialized() => L.Changed += OnLanguageChanged;
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
     public void Dispose() => L.Changed -= OnLanguageChanged;

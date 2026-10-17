@@ -290,6 +290,22 @@ public sealed class CatalogService
             .ToList();
     }
 
+    /// <summary>
+    /// Ids des équipements/dons qu'au moins un rouage de la cabale peut porter
+    /// (<see cref="AvailableEquipment"/>), et les cartes de la faction même sans rouage ; null si
+    /// la cabale n'a ni faction ni rouage (rien à quoi comparer).
+    /// </summary>
+    public IReadOnlySet<string>? EquipableByCabal(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment, string? faction)
+    {
+        if (faction is null && cogs.All(c => c is null)) return null;
+        return Enumerable.Range(0, cogs.Count)
+            .Where(i => cogs[i] is not null)
+            .SelectMany(i => AvailableEquipment(i, cogs, equipment, faction))
+            .Concat(Catalog.Equipment.Where(e => faction is not null && e.Faction == faction))
+            .Select(e => e.Id)
+            .ToHashSet();
+    }
+
     /// <summary>Contrôle complet de légalité d'une cabale (cogs[i] porte equipment[i]).</summary>
     public LegalityResult CheckLegality(string? faction, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
     {

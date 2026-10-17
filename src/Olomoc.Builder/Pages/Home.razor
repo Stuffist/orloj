@@ -353,7 +353,7 @@ else
         </div>
         @if (_equipShown)
         {
-            <EquipmentPanel />
+            <EquipmentPanel CabalCogs="_cogs" CabalEquipment="_equipment" CabalFaction="@NullIfEmpty(_faction)" />
         }
     </section>
 
@@ -574,7 +574,19 @@ else
         } while (changed);
     }
 
-    private void Recompute() => _legality = Catalog.CheckLegality(NullIfEmpty(_faction), _cogs, _equipment);
+    private void Recompute()
+    {
+        _legality = Catalog.CheckLegality(NullIfEmpty(_faction), _cogs, _equipment);
+        _ = ShareDraftAsync();
+    }
+
+    // Cabale publiée pour la fenêtre détachée du catalogue (filtre « équipables seulement »),
+    // qui la suit par l'événement storage. Stockage indisponible : la fenêtre n'a pas de filtre.
+    private async Task ShareDraftAsync()
+    {
+        try { await JS.InvokeVoidAsync("localStorage.setItem", CabalDraft.ShareKey, CabalDraft.Share(NullIfEmpty(_faction), _cogs, _equipment)); }
+        catch (JSException) { }
+    }
 
     // ---- Export ----
 
