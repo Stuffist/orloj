@@ -217,6 +217,7 @@ body {
 .equip-stepper select { flex: 1; }
 .equip-stepper .step { width: 2.2rem; height: 2.2rem; font-size: 1.3rem; }
 .equip-position { font-size: .72rem; color: var(--muted); text-align: center; }
+.swap-note { margin: .2rem 0 0; font-size: .75rem; color: var(--rust-soft); text-align: center; }
 
 .equipment-zone select {
     background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);

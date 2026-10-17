@@ -281,14 +281,14 @@ else
                                 // Rangés par Ministère / faction, puis par nom : la liste et ‹ › suivent cet ordre.
                                 var available = EquipmentBrowser.Ordered(Catalog.AvailableEquipment(idx, _cogs, _equipment, NullIfEmpty(_faction)), Catalog, L);
                                 var position = current is null ? -1 : available.FindIndex(e => e.Id == current.Id);
-                                // Déjà « pris » par le reste de la cabale (même carte, Ministère épuisé) : grisé,
-                                // avec le motif en infobulle ; jamais le choix en cours.
+                                // Déjà « pris » par le reste de la cabale (même carte, Ministère épuisé) : marqué 🔃,
+                                // le choisir retire la carte en conflit à l'autre rouage (échange, en infobulle).
                                 var conflicts = available.Select(e => e.Id == current?.Id ? null : Catalog.EquipmentConflict(idx, e, _cogs, _equipment)).ToArray();
                                 var conflictOf = available.Select((e, k) => (e.Id, Conflict: conflicts[k])).ToDictionary(x => x.Id, x => x.Conflict);
                                 var previous = Neighbor(conflicts, position, -1);
                                 var next = Neighbor(conflicts, position, +1);
                             }
-                            @* ‹ › choisit directement la carte voisine qui reste possible : son effet s'affiche aussitôt dessous. *@
+                            @* ‹ › choisit directement la carte voisine sans échange : son effet s'affiche aussitôt dessous. *@
                             <div class="equip-stepper">
                                 <button class="step" disabled="@(previous < 0)" title="@L.Ui("equipment.previous")" aria-label="@L.Ui("equipment.previous")"
                                         @onclick="() => SelectEquipment(idx, available[previous])">‹</button>
@@ -296,11 +296,11 @@ else
                                     <option value="">@L.Ui("common.choose")</option>
                                     @foreach (var group in EquipmentBrowser.Grouped(available))
                                     {
-                                        <optgroup label="@EquipmentBrowser.GroupTitle(group.Key, L)">
+                                        <optgroup label="@GroupLabel(group.Key, idx)">
                                             @foreach (var eq in group.Items)
                                             {
                                                 var conflict = conflictOf[eq.Id];
-                                                <option value="@eq.Id" disabled="@(conflict is not null)" title="@(conflict is null ? null : L.Ui(conflict))">@L.EquipmentName(eq) · @L.EquipmentAffiliation(eq)</option>
+                                                <option value="@eq.Id" title="@(conflict is null ? null : SwapTitle(conflict))">@(conflict is null ? null : "🔃 ")@L.EquipmentName(eq) · @L.EquipmentAffiliation(eq)</option>
                                             }
                                         </optgroup>
                                     }
@@ -311,6 +311,10 @@ else
                             @if (available.Count > 0)
                             {
                                 <span class="equip-position">@(position + 1) / @available.Count</span>
+                            }
+                            @if (_swapNote is { } note && note.Slot == idx)
+                            {
+                                <p class="swap-note">@note.Text</p>
                             }
                             @if (current is not null)
                             {
@@ -427,14 +431,34 @@ else
 
     private static int RankIndex(int rank) => rank - 1;
 
-    // ‹ › : indice de la carte voisine (step = -1 ou +1) dont le choix reste possible (sans motif
-    // de conflit) ; -1 s'il n'y en a pas.
-    private static int Neighbor(string?[] conflicts, int position, int step)
+    // ‹ › : indice de la carte voisine (step = -1 ou +1) qui se choisit sans échange ; -1 s'il
+    // n'y en a pas. Faire défiler ne retire jamais la carte d'un autre rouage.
+    private static int Neighbor(EquipmentSwap?[] conflicts, int position, int step)
     {
         for (var k = position + step; k >= 0 && k < conflicts.Length; k += step)
             if (conflicts[k] is null) return k;
         return -1;
     }
+
+    // Titre d'une catégorie de la liste d'équipement ; pour un Ministère, combien la cabale peut
+    // encore en prendre (la carte de ce rouage mise à part, puisqu'on la remplacerait).
+    private string GroupLabel(string key, int idx) =>
+        EquipmentBrowser.GroupMinistry(key) is { } m
+            ? $"{EquipmentBrowser.GroupTitle(key, L)} · {L.Ui("equipment.remaining", Catalog.MinistryRemaining(idx, m, _cogs, _equipment))}"
+            : EquipmentBrowser.GroupTitle(key, L);
+
+    // Infobulle d'une option 🔃 : ce que l'échange retirerait, et pourquoi.
+    private string SwapTitle(EquipmentSwap swap) =>
+        swap.Displaced.Count == 0
+            ? L.Ui("equipment.swap.none")
+            : L.Ui(swap.Reason, SwapVictims(swap));
+
+    // « Carte (Rouage) » de chaque emplacement qui perdrait sa carte.
+    private string SwapVictims(EquipmentSwap swap) =>
+        string.Join(", ", swap.Displaced.Select(d => L.Ui("equipment.swapVictim", L.EquipmentName(_equipment[d]!).Text, L.CogName(_cogs[d]!).Text)));
+
+    // Dernier échange fait par la liste d'un rouage : rappelé sous cette liste jusqu'au choix suivant.
+    private (int Slot, string Text)? _swapNote;
 
     private void OnFactionChanged(ChangeEventArgs e)
     {
@@ -467,6 +491,7 @@ else
     {
         _cogs[idx] = c;
         _equipment[idx] = null;             // les Ministères présents changent : on réévalue les équipements/dons
+        _swapNote = null;
         // Sans faction choisie, une seule encore possible : on la prend.
         if (NullIfEmpty(_faction) is null && Catalog.CompatibleFactions(_cogs) is [var only]) _faction = only;
         PruneEquipment();
@@ -477,6 +502,7 @@ else
     {
         _cogs[idx] = null;
         _equipment[idx] = null;
+        _swapNote = null;
         PruneEquipment();
         Recompute();
     }
@@ -489,6 +515,13 @@ else
 
     private void SelectEquipment(int idx, Equipment? eq)
     {
+        // Choix marqué 🔃 : la carte en conflit est retirée à l'autre rouage (échange).
+        _swapNote = null;
+        if (eq is not null && eq.Id != _equipment[idx]?.Id && Catalog.EquipmentConflict(idx, eq, _cogs, _equipment) is { Displaced.Count: > 0 } swap)
+        {
+            _swapNote = (idx, L.Ui("equipment.swapped", SwapVictims(swap)));
+            foreach (var d in swap.Displaced) _equipment[d] = null;
+        }
         _equipment[idx] = eq;
         PruneEquipment();                   // retirer un Passe-droit peut invalider les autres équipements/dons
         Recompute();

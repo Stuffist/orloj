@@ -293,7 +293,7 @@ public sealed class CatalogService
             {
                 // Ministère absent : signalé ici, et exclu du couplage (MinistryOverflow) pour ne
                 // pas le faire passer à tort pour une sur-souscription.
-                if (!slots.Any(j => CanUnlock(cogs, equipment, j, i)))
+                if (!slots.Any(j => CanUnlock(cogs, equipment, j, i, e.Ministry!)))
                     issues.Add(new("ministryAbsent", IssueArg.Equipment(e.Id), IssueArg.Ministry(e.Ministry!)));
             }
         }
@@ -305,45 +305,82 @@ public sealed class CatalogService
     }
 
     /// <summary>
-    /// Ce choix d'équipement/don pour l'emplacement <paramref name="slot"/> est-il déjà « pris »
-    /// par le reste de la cabale ? Renvoie la clé du motif (même carte portée par un autre rouage,
-    /// ou Ministère dont les rouages débloquent déjà chacun un équipement), null sinon. Un
-    /// débordement qui existe déjà sans ce choix ne lui est pas imputé.
+    /// Ce choix d'équipement/don pour l'emplacement <paramref name="slot"/> entre-t-il en conflit
+    /// avec le reste de la cabale (même carte portée par un autre rouage, ou Ministère dont les
+    /// rouages débloquent déjà chacun un équipement) ? Renvoie l'échange qui le rendrait possible :
+    /// le motif et les emplacements qui perdraient leur carte ; null sans conflit. Un débordement
+    /// qui existe déjà sans ce choix ne lui est pas imputé.
     /// </summary>
-    public string? EquipmentConflict(int slot, Equipment candidate, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
+    public EquipmentSwap? EquipmentConflict(int slot, Equipment candidate, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
     {
         var name = _l.ReferenceName(candidate);
-        if (equipment.Where((e, i) => i != slot && e is not null && _l.ReferenceName(e) == name).Any())
-            return "equipment.used.duplicate";
+        var same = Enumerable.Range(0, equipment.Count)
+            .Where(i => i != slot && equipment[i] is { } e && _l.ReferenceName(e) == name)
+            .ToList();
+        if (same.Count > 0) return new("equipment.swap.duplicate", same);
         if (!candidate.IsMinistryAffiliated) return null;
 
         var with = equipment.ToArray();
         with[slot] = candidate;
         var without = equipment.ToArray();
         without[slot] = null;
-        return MinistryOverflow(cogs, with) && !MinistryOverflow(cogs, without) ? "equipment.used.ministry" : null;
+        if (!MinistryOverflow(cogs, with) || MinistryOverflow(cogs, without)) return null;
+
+        // La carte de Ministère d'un autre rouage qu'il suffit de retirer, de préférence du même Ministère.
+        var displaced = Enumerable.Range(0, with.Length)
+            .Where(k => k != slot && with[k]?.IsMinistryAffiliated == true)
+            .OrderBy(k => with[k]!.Ministry == candidate.Ministry ? 0 : 1)
+            .FirstOrDefault(k =>
+            {
+                var swapped = with.ToArray();
+                swapped[k] = null;
+                return !MinistryOverflow(cogs, swapped);
+            }, -1);
+        return new("equipment.swap.ministry", displaced < 0 ? [] : [displaced]);
     }
 
     /// <summary>
-    /// Le rouage j peut-il rendre disponible l'équipement/don de Ministère porté en i ? Par sa carte,
-    /// ou par un Passe-droit — mais pas le Passe-droit qu'il porte lui-même.
+    /// Nombre d'équipements/dons de ce Ministère que la cabale peut encore prendre, la carte de
+    /// l'emplacement <paramref name="slot"/> mise à part (on la remplacerait) : ce que les rouages
+    /// qui débloquent ce Ministère n'ont pas déjà débloqué.
     /// </summary>
-    private bool CanUnlock(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment, int j, int i) =>
-        cogs[j]!.Ministries.Contains(equipment[i]!.Ministry!) ||
-        (j != i && EffectiveMinistries(cogs[j]!, equipment[j]).Contains(equipment[i]!.Ministry!));
+    public int MinistryRemaining(int slot, string ministry, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
+    {
+        var without = equipment.ToArray();
+        without[slot] = null;
+        var remaining = 0;
+        while (remaining < cogs.Count && !MinistryOverflow(cogs, without, Enumerable.Repeat((slot, ministry), remaining + 1)))
+            remaining++;
+        return remaining;
+    }
+
+    /// <summary>
+    /// Le rouage j peut-il rendre disponible un équipement/don de ce Ministère porté en
+    /// <paramref name="wearer"/> ? Par sa carte, ou par un Passe-droit — mais pas le Passe-droit
+    /// qu'il porte lui-même.
+    /// </summary>
+    private bool CanUnlock(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment, int j, int wearer, string ministry) =>
+        cogs[j]!.Ministries.Contains(ministry) ||
+        (j != wearer && EffectiveMinistries(cogs[j]!, equipment[j]).Contains(ministry));
 
     /// <summary>
     /// Chaque rouage ne rend disponible qu'un seul équipement/don de son Ministère d'affiliation :
-    /// les équipements de Ministère s'affectent à des rouages distincts. Vrai si c'est impossible.
-    /// Les équipements dont le Ministère est absent (ministryAbsent) n'entrent pas dans le compte.
+    /// les équipements de Ministère s'affectent à des rouages distincts. Vrai si c'est impossible,
+    /// avec en plus les cartes <paramref name="extra"/> (porteur, Ministère) s'il y en a. Les
+    /// équipements portés dont le Ministère est absent (ministryAbsent) n'entrent pas dans le compte.
     /// </summary>
-    private bool MinistryOverflow(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
+    private bool MinistryOverflow(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment,
+                                  IEnumerable<(int Wearer, string Ministry)>? extra = null)
     {
         var slots = Enumerable.Range(0, cogs.Count).Where(i => cogs[i] is not null).ToList();
-        var ministrySlots = slots
-            .Where(i => equipment[i]?.IsMinistryAffiliated == true && slots.Any(j => CanUnlock(cogs, equipment, j, i)))
+        bool Unlocks(int j, (int Wearer, string Ministry) need) => CanUnlock(cogs, equipment, j, need.Wearer, need.Ministry);
+        var needs = slots
+            .Where(i => equipment[i]?.IsMinistryAffiliated == true)
+            .Select(i => (Wearer: i, Ministry: equipment[i]!.Ministry!))
+            .Where(need => slots.Any(j => Unlocks(j, need)))
+            .Concat(extra ?? [])
             .ToList();
-        return Unmatched(ministrySlots, slots, (i, j) => CanUnlock(cogs, equipment, j, i)).Count > 0;
+        return Unmatched(needs, slots, (need, j) => Unlocks(j, need)).Count > 0;
     }
 
     /// <summary>Un id par groupe d'éléments portant le même nom.</summary>
@@ -384,6 +421,12 @@ public sealed class CatalogService
 }
 
 public sealed record LegalityResult(bool IsLegal, IReadOnlyList<LegalityIssue> Issues);
+
+/// <summary>
+/// Échange qui rendrait possible un choix d'équipement/don en conflit : clé du motif, et
+/// emplacements dont la carte serait retirée (vide si aucun retrait seul ne suffit).
+/// </summary>
+public sealed record EquipmentSwap(string Reason, IReadOnlyList<int> Displaced);
 
 /// <summary>Faction où un rouage a sa place : membre, ou recrutable via la carte <paramref name="Via"/>.</summary>
 public sealed record FactionFit(string Faction, bool Member, Equipment? Via);

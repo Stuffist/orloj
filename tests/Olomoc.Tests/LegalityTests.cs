@@ -219,21 +219,25 @@ public class LegalityTests
     }
 
     [Fact]
-    public async Task Equipement_deja_porte_grise()
+    public async Task Equipement_deja_porte_echange()
     {
         var (d, cogs) = await Cogs("3R06", "2R11", "1R01");
         var equipment = new Equipment?[] { d.Equipment("Phéromones"), null, null };
-        Assert.Equal("equipment.used.duplicate", d.Catalog.EquipmentConflict(1, d.Equipment("Phéromones"), cogs, equipment));
+        var swap = d.Catalog.EquipmentConflict(1, d.Equipment("Phéromones"), cogs, equipment);
+        Assert.Equal("equipment.swap.duplicate", swap?.Reason);
+        Assert.Equal(new[] { 0 }, swap!.Displaced);                                                 // retiré à Bohdan Gross
         Assert.Null(d.Catalog.EquipmentConflict(0, d.Equipment("Phéromones"), cogs, equipment));   // son propre emplacement
     }
 
     [Fact]
-    public async Task Ministere_deja_utilise_grise_ses_equipements()
+    public async Task Ministere_deja_utilise_echange_son_equipement()
     {
         // Un seul rouage de l'Harmonie, qui débloque déjà Phéromones.
         var (d, cogs) = await Cogs("3R06", "2R11", "1R01");
         var equipment = new Equipment?[] { d.Equipment("Phéromones"), null, null };
-        Assert.Equal("equipment.used.ministry", d.Catalog.EquipmentConflict(1, d.Equipment("Collier de dévotion"), cogs, equipment));
+        var swap = d.Catalog.EquipmentConflict(1, d.Equipment("Collier de dévotion"), cogs, equipment);
+        Assert.Equal("equipment.swap.ministry", swap?.Reason);
+        Assert.Equal(new[] { 0 }, swap!.Displaced);
         Assert.Null(d.Catalog.EquipmentConflict(1, d.Equipment("Ration"), cogs, equipment));      // Effort : le sien
     }
 
@@ -245,9 +249,22 @@ public class LegalityTests
         var collier = d.Equipment("Collier de dévotion");
         var sans = new Equipment?[] { d.Equipment("Phéromones"), null, null };
         var avec = new Equipment?[] { d.Equipment("Phéromones"), null, d.Equipment("Passe-droit du Census") };
-        Assert.Equal("equipment.used.ministry", d.Catalog.EquipmentConflict(1, collier, cogs, sans));
+        Assert.Equal("equipment.swap.ministry", d.Catalog.EquipmentConflict(1, collier, cogs, sans)?.Reason);
         Assert.Null(d.Catalog.EquipmentConflict(1, collier, cogs, avec));
         AssertLegal(d.Catalog.CheckLegality("MAISEL", cogs, new[] { avec[0], collier, avec[2] }));
+        Assert.Equal(0, d.Catalog.MinistryRemaining(1, "HARMONY", cogs, sans));
+        Assert.Equal(1, d.Catalog.MinistryRemaining(1, "HARMONY", cogs, avec));
+    }
+
+    [Fact]
+    public async Task Equipements_restants_par_Ministere()
+    {
+        var (d, cogs) = await Cogs("3R06", "2R11", "1R01");                // Harmonie, Effort, Sécurité
+        var equipment = new Equipment?[] { d.Equipment("Phéromones"), null, null };
+        Assert.Equal(0, d.Catalog.MinistryRemaining(1, "HARMONY", cogs, equipment));   // Bohdan Gross a déjà le sien
+        Assert.Equal(1, d.Catalog.MinistryRemaining(0, "HARMONY", cogs, equipment));   // le sien, qu'il remplacerait
+        Assert.Equal(1, d.Catalog.MinistryRemaining(1, "EFFORT", cogs, equipment));
+        Assert.Equal(0, d.Catalog.MinistryRemaining(1, "AXIS", cogs, equipment));      // aucun rouage de l'Axe
     }
 
     [Fact]
