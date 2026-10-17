@@ -53,6 +53,16 @@ public class ServerTests(WebApplicationFactory<Program> factory) : IClassFixture
             (await Client().GetAsync(Assets.Base + icon.GetProperty("src").GetString())).EnsureSuccessStatusCode();
     }
 
+    // Service worker à la racine du site : sa portée par défaut (« / ») couvre les deux apps et /_content/.
+    [Fact]
+    public async Task Service_worker_a_la_racine()
+    {
+        var response = await Client().GetAsync("/service-worker.js");
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("text/javascript", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("no-cache", response.Headers.CacheControl?.ToString());
+    }
+
     [Theory]
     [InlineData("/builder/_framework/blazor.webassembly.js")]
     [InlineData("/pairings/_framework/blazor.webassembly.js")]

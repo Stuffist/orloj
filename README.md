@@ -446,7 +446,8 @@ tests/Olomoc.Tests/   xUnit
   appariements (`Pairer.cs`), règles des phases et des inscriptions (`TournamentRules.cs`),
   échanges avec l'API (`TournamentApiModels.cs`).
 - `wwwroot/` — référentiel (`data/`), langues (`i18n/`), pictogrammes (`img/`), styles
-  (`css/app.css`), téléchargement de fichier (`js/olomoc.js`).
+  (`css/app.css`), téléchargement de fichier et enregistrement du service worker
+  (`js/olomoc.js`), application installable (`manifest.webmanifest`, icônes dans `img/app/`).
 
 **`src/Olomoc.Builder`**
 - `Pages/Home.razor` — constructeur : composition, légalité, sauvegarde et export, lancement d'une partie.
@@ -469,6 +470,8 @@ tests/Olomoc.Tests/   xUnit
 - `Hosting/ClientApps.cs` — une app WebAssembly par chemin (`StaticWebAssetBasePath`),
   routes de l'app renvoyées vers son `index.html`.
 - `Hosting/SecurityHeaders.cs` — CSP, cadres interdits, Referrer-Policy, HSTS en HTTPS.
+- `wwwroot/service-worker.js` — hors connexion : réseau d'abord, copie en cache si le réseau
+  manque (jamais l'API) ; à la racine pour couvrir les deux apps et `/_content/` (voir `docs/pwa.md`).
 
 **`deploy/proxy`** — reverse proxy du VPS (Caddy) : HTTPS et certificats, répartition par
 nom d'hôte entre Olomòc et B5T.

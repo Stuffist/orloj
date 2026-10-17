@@ -63,3 +63,19 @@ window.olomoc = {
     },
     _handlers: [],
 };
+
+// Application utilisable hors connexion : service worker du site (/service-worker.js, portée « / »).
+if ("serviceWorker" in navigator) {
+    performance.setResourceTimingBufferSize(1000);      // tous les fichiers de Blazor (des centaines en Debug)
+    navigator.serviceWorker.register("/service-worker.js", { scope: "/" }).catch(() => { });
+
+    // Page et fichiers chargés jusqu'ici, à garder en cache s'ils n'y sont pas déjà : ceux de la
+    // première visite, chargés avant que le service worker ne prenne la main.
+    const sendLoaded = () => navigator.serviceWorker.controller?.postMessage({
+        type: "loaded",
+        page: location.href,
+        files: performance.getEntriesByType("resource").map(e => e.name),
+    });
+    navigator.serviceWorker.addEventListener("controllerchange", sendLoaded);
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") sendLoaded(); });
+}
