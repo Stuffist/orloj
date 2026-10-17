@@ -30,6 +30,7 @@ public sealed class CatalogService
     private Dictionary<string, Faction> _factionByCode = new();
     private Dictionary<string, HashSet<string>> _membersByFaction = new();
     private List<string> _allMinistries = new();
+    private List<Equipment> _recruitCards = new();      // cartes qui recrutent hors faction (Harmonium, Asservisseur mental)
 
     public CatalogService(HttpClient http, LocalizationService l)
     {
@@ -48,6 +49,9 @@ public sealed class CatalogService
         _factionByCode = FactionReference.Factions.ToDictionary(f => f.Code);
         _membersByFaction = FactionReference.Factions.ToDictionary(f => f.Code, f => f.CogIds.ToHashSet());
         _allMinistries = Catalog.Ministries.Select(m => m.Code).ToList();
+        _recruitCards = Catalog.Equipment
+            .Where(e => e.BuildRules.Any(r => r.Type is BuildRuleType.RECRUIT_WEARER or BuildRuleType.RECRUIT_MINISTRY))
+            .ToList();
         Loaded = true;
     }
 
@@ -129,13 +133,45 @@ public sealed class CatalogService
             .ToList();
 
     /// <summary>
-    /// Factions (dans l'ordre du référentiel) où chaque rouage choisi a sa place ; toutes si
-    /// aucun ne l'est. Sert à proposer la faction après coup, sans défaire la composition.
+    /// Factions (dans l'ordre du référentiel) où les rouages choisis ont leur place ensemble
+    /// (<see cref="RecruitmentFits"/>) ; toutes si aucun ne l'est. Sert à proposer la faction
+    /// après coup, sans défaire la composition.
     /// </summary>
     public List<string> CompatibleFactions(IReadOnlyList<Cog?> cogs) =>
         AllFactions.Select(f => f.Code)
-            .Where(f => cogs.All(c => c is null || Fits(c, f)))
+            .Where(f => RecruitmentFits(cogs, f))
             .ToList();
+
+    /// <summary>
+    /// Le rouage peut-il rejoindre la cabale à l'emplacement <paramref name="slot"/> ? Non s'il
+    /// est hors faction et que les cartes qui pourraient le recruter couvrent déjà les autres
+    /// rouages hors faction (dans la faction choisie, ou dans aucune si elle ne l'est pas). Une
+    /// composition déjà impossible sans lui ne le fait pas refuser.
+    /// </summary>
+    public bool CanJoin(int slot, Cog candidate, IReadOnlyList<Cog?> cogs, string? faction)
+    {
+        IReadOnlyList<string> factions = faction is not null ? [faction] : AllFactions.Select(f => f.Code).ToList();
+        var with = cogs.ToArray();
+        with[slot] = candidate;
+        var without = cogs.ToArray();
+        without[slot] = null;
+        return factions.Any(f => RecruitmentFits(with, f)) || !factions.Any(f => RecruitmentFits(without, f));
+    }
+
+    /// <summary>
+    /// Chaque rouage hors faction peut-il être recruté par une carte distincte (chaque carte
+    /// n'est prise qu'une fois) ? Cartes portées ou non : c'est ce que la composition permet encore.
+    /// </summary>
+    private bool RecruitmentFits(IReadOnlyList<Cog?> cogs, string faction)
+    {
+        var outsiders = cogs.Where(c => c is not null && !IsMember(c, faction)).Cast<Cog>().ToList();
+        return outsiders.Count == 0 || Unmatched(outsiders, _recruitCards, (c, e) => Recruits(e, c, faction)).Count == 0;
+    }
+
+    /// <summary>La carte permettrait-elle d'intégrer ce rouage hors faction à une cabale de la faction ?</summary>
+    private static bool Recruits(Equipment e, Cog cog, string faction) =>
+        (e.Faction == faction || e.IsMinistryAffiliated || e.CogId == cog.Id) &&
+        e.BuildRules.Any(r => r.CanRecruit(cog, cog.Ministries));
 
     /// <summary>
     /// Rouages recrutables pour un rang, filtrés par faction (si choisie), ministère et
@@ -167,10 +203,7 @@ public sealed class CatalogService
     /// de la faction ; null s'il en est membre ou si aucune carte ne le permet.
     /// </summary>
     public Equipment? RecruitVia(Cog cog, string faction) =>
-        IsMember(cog, faction) ? null :
-        Catalog.Equipment.FirstOrDefault(e =>
-            (e.Faction == faction || e.IsMinistryAffiliated || e.CogId == cog.Id) &&
-            e.BuildRules.Any(r => r.CanRecruit(cog, cog.Ministries)));
+        IsMember(cog, faction) ? null : _recruitCards.FirstOrDefault(e => Recruits(e, cog, faction));
 
     /// <summary>
     /// Équipements/dons proposables pour le rouage de l'emplacement <paramref name="slot"/>,
@@ -239,14 +272,7 @@ public sealed class CatalogService
         if (picked.Count == 3 && pickedEquipment.Count < 3)
             issues.Add(new("unequipped"));
 
-        // Le rouage j peut-il rendre disponible l'équipement/don de Ministère porté en i ? Par sa carte,
-        // ou par un Passe-droit — mais pas le Passe-droit qu'il porte lui-même.
-        bool CanUnlock(int j, int i) =>
-            cogs[j]!.Ministries.Contains(equipment[i]!.Ministry!) ||
-            (j != i && ministries[j].Contains(equipment[i]!.Ministry!));
-
-        // Affiliation de chaque équipement + collecte des équipements ministère
-        var ministrySlots = new List<int>();
+        // Affiliation de chaque équipement
         foreach (var i in slots)
         {
             var e = equipment[i];
@@ -265,21 +291,59 @@ public sealed class CatalogService
             }
             else if (e.IsMinistryAffiliated)
             {
-                // Ministère absent : signalé ici, et exclu du couplage pour ne pas
-                // le faire passer à tort pour une sur-souscription.
-                if (slots.Any(j => CanUnlock(j, i)))
-                    ministrySlots.Add(i);
-                else
+                // Ministère absent : signalé ici, et exclu du couplage (MinistryOverflow) pour ne
+                // pas le faire passer à tort pour une sur-souscription.
+                if (!slots.Any(j => CanUnlock(cogs, equipment, j, i)))
                     issues.Add(new("ministryAbsent", IssueArg.Equipment(e.Id), IssueArg.Ministry(e.Ministry!)));
             }
         }
 
-        // Chaque rouage ne rend disponible qu'un seul équipement/don de son Ministère
-        // d'affiliation : les équipements de Ministère s'affectent à des rouages distincts.
-        if (Unmatched(ministrySlots, slots, (i, j) => CanUnlock(j, i)).Count > 0)
+        if (MinistryOverflow(cogs, equipment))
             issues.Add(new("ministryOverflow"));
 
         return new LegalityResult(issues.Count == 0 && picked.Count == 3 && pickedEquipment.Count == 3, issues);
+    }
+
+    /// <summary>
+    /// Ce choix d'équipement/don pour l'emplacement <paramref name="slot"/> est-il déjà « pris »
+    /// par le reste de la cabale ? Renvoie la clé du motif (même carte portée par un autre rouage,
+    /// ou Ministère dont les rouages débloquent déjà chacun un équipement), null sinon. Un
+    /// débordement qui existe déjà sans ce choix ne lui est pas imputé.
+    /// </summary>
+    public string? EquipmentConflict(int slot, Equipment candidate, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
+    {
+        var name = _l.ReferenceName(candidate);
+        if (equipment.Where((e, i) => i != slot && e is not null && _l.ReferenceName(e) == name).Any())
+            return "equipment.used.duplicate";
+        if (!candidate.IsMinistryAffiliated) return null;
+
+        var with = equipment.ToArray();
+        with[slot] = candidate;
+        var without = equipment.ToArray();
+        without[slot] = null;
+        return MinistryOverflow(cogs, with) && !MinistryOverflow(cogs, without) ? "equipment.used.ministry" : null;
+    }
+
+    /// <summary>
+    /// Le rouage j peut-il rendre disponible l'équipement/don de Ministère porté en i ? Par sa carte,
+    /// ou par un Passe-droit — mais pas le Passe-droit qu'il porte lui-même.
+    /// </summary>
+    private bool CanUnlock(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment, int j, int i) =>
+        cogs[j]!.Ministries.Contains(equipment[i]!.Ministry!) ||
+        (j != i && EffectiveMinistries(cogs[j]!, equipment[j]).Contains(equipment[i]!.Ministry!));
+
+    /// <summary>
+    /// Chaque rouage ne rend disponible qu'un seul équipement/don de son Ministère d'affiliation :
+    /// les équipements de Ministère s'affectent à des rouages distincts. Vrai si c'est impossible.
+    /// Les équipements dont le Ministère est absent (ministryAbsent) n'entrent pas dans le compte.
+    /// </summary>
+    private bool MinistryOverflow(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
+    {
+        var slots = Enumerable.Range(0, cogs.Count).Where(i => cogs[i] is not null).ToList();
+        var ministrySlots = slots
+            .Where(i => equipment[i]?.IsMinistryAffiliated == true && slots.Any(j => CanUnlock(cogs, equipment, j, i)))
+            .ToList();
+        return Unmatched(ministrySlots, slots, (i, j) => CanUnlock(cogs, equipment, j, i)).Count > 0;
     }
 
     /// <summary>Un id par groupe d'éléments portant le même nom.</summary>

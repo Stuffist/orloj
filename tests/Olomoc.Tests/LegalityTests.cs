@@ -169,6 +169,87 @@ public class LegalityTests
         Assert.DoesNotContain(d.Catalog.AvailableEquipment(2, cogs, equipment, "MAISEL"), e => e.Ministry == "FRINGE");
     }
 
+    // ---- Choix grisés : déjà « pris » par le reste de la cabale ----
+
+    private static async Task<(AppData D, Cog?[] Cogs)> Cogs(params string?[] ids)
+    {
+        var d = await AppData.GetAsync();
+        return (d, ids.Select(id => id is null ? null : (Cog?)d.Cog(id)).ToArray());
+    }
+
+    [Fact]
+    public async Task Harmonium_deja_utilise_grise_un_autre_rouage_de_l_Axe()
+    {
+        var (d, cogs) = await Cogs("3R07", null, null);                // Axe, hors faction : via Harmonium
+        Assert.False(d.Catalog.CanJoin(1, d.Cog("2R08"), cogs, "MAISEL"));
+        Assert.True(d.Catalog.CanJoin(1, d.Cog("2R11"), cogs, "MAISEL"));   // membre de Maisel
+        Assert.True(d.Catalog.CanJoin(0, d.Cog("3R07"), cogs, "MAISEL"));   // le remplacer par lui-même
+    }
+
+    [Fact]
+    public async Task Sans_faction_grise_ce_qu_aucune_faction_ne_couvre_ensemble()
+    {
+        var (d, cogs) = await Cogs("3R07", null, "1R01");              // possible pour Maisel seulement
+        Assert.False(d.Catalog.CanJoin(1, d.Cog("2R08"), cogs, null));
+        Assert.True(d.Catalog.CanJoin(1, d.Cog("2R11"), cogs, null));
+    }
+
+    [Fact]
+    public async Task Asservisseur_deja_utilise_grise_un_autre_rouage_hors_faction()
+    {
+        var (d, cogs) = await Cogs(null, "2R02", null);                // hors faction pour Others
+        Assert.False(d.Catalog.CanJoin(0, d.Cog("3R05"), cogs, "OTHERS"));
+        Assert.True(d.Catalog.CanJoin(0, d.Cog("3R07"), cogs, "OTHERS"));
+    }
+
+    [Fact]
+    public async Task Cabale_deja_impossible_ne_grise_pas_tout()
+    {
+        var (d, cogs) = await Cogs("3R07", "2R08", null);              // deux rouages de l'Axe, un seul Harmonium
+        Assert.True(d.Catalog.CanJoin(2, d.Cog("1R01"), cogs, "MAISEL"));
+    }
+
+    [Fact]
+    public async Task Factions_compatibles_avec_les_rouages_pris_ensemble()
+    {
+        var (d, cogs) = await Cogs("3R07", "2R08", null);
+        var factions = d.Catalog.CompatibleFactions(cogs);
+        Assert.DoesNotContain("MAISEL", factions);
+        Assert.Contains("OTHERS", factions);
+    }
+
+    [Fact]
+    public async Task Equipement_deja_porte_grise()
+    {
+        var (d, cogs) = await Cogs("3R06", "2R11", "1R01");
+        var equipment = new Equipment?[] { d.Equipment("Phéromones"), null, null };
+        Assert.Equal("equipment.used.duplicate", d.Catalog.EquipmentConflict(1, d.Equipment("Phéromones"), cogs, equipment));
+        Assert.Null(d.Catalog.EquipmentConflict(0, d.Equipment("Phéromones"), cogs, equipment));   // son propre emplacement
+    }
+
+    [Fact]
+    public async Task Ministere_deja_utilise_grise_ses_equipements()
+    {
+        // Un seul rouage de l'Harmonie, qui débloque déjà Phéromones.
+        var (d, cogs) = await Cogs("3R06", "2R11", "1R01");
+        var equipment = new Equipment?[] { d.Equipment("Phéromones"), null, null };
+        Assert.Equal("equipment.used.ministry", d.Catalog.EquipmentConflict(1, d.Equipment("Collier de dévotion"), cogs, equipment));
+        Assert.Null(d.Catalog.EquipmentConflict(1, d.Equipment("Ration"), cogs, equipment));      // Effort : le sien
+    }
+
+    [Fact]
+    public async Task Passe_droit_porte_ailleurs_debloque_un_Ministere_de_plus()
+    {
+        // 1R01 porte le Passe-droit (débloqué par la Coordination de 2R04) : il peut débloquer l'Harmonie.
+        var (d, cogs) = await Cogs("3R06", "2R04", "1R01");
+        var collier = d.Equipment("Collier de dévotion");
+        var sans = new Equipment?[] { d.Equipment("Phéromones"), null, null };
+        var avec = new Equipment?[] { d.Equipment("Phéromones"), null, d.Equipment("Passe-droit du Census") };
+        Assert.Equal("equipment.used.ministry", d.Catalog.EquipmentConflict(1, collier, cogs, sans));
+        Assert.Null(d.Catalog.EquipmentConflict(1, collier, cogs, avec));
+        AssertLegal(d.Catalog.CheckLegality("MAISEL", cogs, new[] { avec[0], collier, avec[2] }));
+    }
+
     [Fact]
     public async Task Les_messages_se_traduisent_avec_les_noms_de_la_langue()
     {

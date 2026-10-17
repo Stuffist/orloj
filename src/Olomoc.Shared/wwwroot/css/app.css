@@ -94,6 +94,8 @@ body {
     padding: .5rem .6rem; cursor: pointer; color: var(--ink);
 }
 .cog-option:hover { border-color: var(--rust-soft); }
+.cog-option:disabled { opacity: .45; cursor: default; }
+.cog-option:disabled:hover { border-color: var(--line); }
 .cog-name { font-weight: 600; }
 .cog-title { font-size: .82rem; color: var(--muted); }
 .cog-min { font-size: .72rem; color: var(--rust-soft); }

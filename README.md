@@ -213,6 +213,13 @@ images des cartes. Conventions de transcription (pictogrammes : LDR p.20) :
   mention « via … ». La fiche d'un rouage choisi donne ses factions (logo et nom),
   puis celles où une carte permet de le recruter (« Via une carte ») ; dans la liste
   de choix, les logos des factions dont il est membre.
+- **Choix grisés** : ce qui rendrait la cabale illégale à cause des autres choix reste
+  visible mais grisé, avec son motif. Rouage hors faction dont la carte de recrutement
+  couvre déjà un autre rouage (`CanJoin`) ; équipement/don déjà porté, ou d'un Ministère
+  dont les rouages débloquent déjà chacun un équipement (`EquipmentConflict`, infobulle) ;
+  les flèches ‹ › les sautent. La liste des factions grise celles où les rouages choisis
+  ne tiennent pas **ensemble** (deux rouages de l'Axe pour un seul Harmonium). Un choix
+  n'est pas grisé si la cabale est déjà illégale sans lui.
 - **Medic Ruzicka** (« au début du premier cycle », `extraEquipment` dans le
   référentiel) : l'équipement supplémentaire de l'Intégrité se choisit en mode
   partie, pas dans la composition.
