@@ -274,8 +274,9 @@ reflète la composition en cours, même incomplète (un avertissement le signale
 
 - **Cartes (PDF / PNG)** — planche des cartes de la cabale, ouverte dans un nouvel onglet
   (`/builder/cards?c=3R05.E11,2R04,1R01.E38&name=…` : la cabale passe dans l'adresse, le
-  lien se partage). Une page A4 paysage, cartes à taille réelle (89 × 63 mm) centrées : rang
-  1 à 3 de gauche à droite, chaque rouage au-dessus de son équipement/don, 4 mm entre les
+  lien se partage ; `c` donne les rangs 1, 2, 3). Une page A4 paysage, cartes à taille réelle
+  (89 × 63 mm) centrées : rang 3 à 1 de gauche à droite comme dans le constructeur, chaque
+  rouage au-dessus de son équipement/don, 4 mm entre les
   rouages, 1,5 mm entre un rouage et son équipement (`Services/CardSheet.cs`).
   « Imprimer / PDF » passe par l'impression du navigateur (« Enregistrer au format PDF »,
   échelle 100 %) ; « Télécharger PNG » produit la même page en 2339 × 1654 px (200 ppp).

@@ -46,7 +46,12 @@ public class CardSheetTests
 
         var cells = CardSheet.Cells(readCogs, readEquipment);
         Assert.Equal(5, cells.Count);                                               // un équipement absent
-        Assert.Equal(("3R05", 0, 0), (cells[0].Id, cells[0].Column, cells[0].Row)); // rang 1 à gauche, en haut
+        // Comme le constructeur : rang 3 à gauche, rang 1 à droite ; rouage en haut, équipement dessous.
+        Assert.Equal(("1R01", 0, 0), (cells[0].Id, cells[0].Column, cells[0].Row));
+        Assert.Equal((equipment[2]!.Id, 0, 1), (cells[1].Id, cells[1].Column, cells[1].Row));
+        Assert.Equal(("2R04", 1, 0), (cells[2].Id, cells[2].Column, cells[2].Row));
+        Assert.Equal(("3R05", 2, 0), (cells[3].Id, cells[3].Column, cells[3].Row));
+        Assert.Equal(("E11", 2, 1), (cells[4].Id, cells[4].Column, cells[4].Row));
     }
 
     [Theory]
