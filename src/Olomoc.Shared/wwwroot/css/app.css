@@ -407,6 +407,7 @@ body {
 .play-cog.ooa { opacity: .6; border-style: dashed; }
 .play-cog-head { display: flex; align-items: center; gap: .55rem; }
 .play-cog-names { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.play-cog .stat-line.compact { margin-top: 0; }
 .status-badge {
     flex: none; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
     padding: .15rem .5rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted);

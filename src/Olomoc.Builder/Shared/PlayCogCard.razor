@@ -1,4 +1,4 @@
-@* Mode partie : un rouage de la cabale. Ligne de vie (blessures, soins, correction au toucher),
+@* Mode partie : un rouage de la cabale. Caractéristiques, ligne de vie (blessures, soins, correction au toucher),
    Noirceur, pions d'action, état sonné, capacités à coût ou limitées par partie. Toute
    modification passe par la GameSession (règles + annulation), puis OnChanged (sauvegarde,
    compte rendu en notification). Les fenêtres et notifications se superposent à la page :
@@ -15,6 +15,8 @@
         </div>
         <span class="status-badge @StatusClass">@L.Ui($"play.status.{StatusClass}")</span>
     </header>
+
+    <StatLine Stats="Cog.Stats" Compact="true" />
 
     <div class="play-hp">
         <div class="life-line play">
