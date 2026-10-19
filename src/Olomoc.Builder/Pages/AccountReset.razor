@@ -1,0 +1,90 @@
+@page "/account/reset"
+@namespace Olomoc.Builder.Pages
+@using Olomoc.Accounts
+@implements IDisposable
+@inject AccountService Accounts
+@inject LocalizationService L
+@inject NavigationManager Nav
+
+@* Lien « mot de passe oublié » reçu par e-mail (/builder/account/reset#user=…&token=…) :
+   nouveau mot de passe (deux fois), puis connexion sur cet appareil ; les autres sessions sont
+   fermées. Le jeton est retiré de l'adresse dès sa lecture. *@
+
+<section class="panel account-panel">
+    <h2>@(L.Loaded ? L.Ui("account.resetPage.title") : "…")</h2>
+    @if (!L.Loaded)
+    {
+    }
+    else if (_user is null || _token is null)
+    {
+        <p class="account-msg error" role="alert">@L.Ui("account.link.invalid")</p>
+        <p><a class="btn" href="account">@L.Ui("account.title")</a></p>
+    }
+    else if (_done)
+    {
+        <p class="account-msg ok" role="status">@L.Ui("account.resetPage.done")</p>
+        <p><a class="btn" href="account">@L.Ui("account.title")</a></p>
+    }
+    else
+    {
+        <form class="account-form" @onsubmit="SaveAsync" @onsubmit:preventDefault="true">
+            <div class="field">
+                <label for="reset-new">@L.Ui("account.password.new")</label>
+                <input id="reset-new" type="password" autocomplete="new-password" maxlength="@AccountRules.MaxPassword"
+                       @bind="_password" @bind:event="oninput" aria-describedby="reset-new-hint" />
+                <span id="reset-new-hint" class="hint">@L.Ui("account.password.hint", AccountRules.MinPassword)</span>
+            </div>
+            <div class="field">
+                <label for="reset-repeat">@L.Ui("account.password.repeat")</label>
+                <input id="reset-repeat" type="password" autocomplete="new-password" maxlength="@AccountRules.MaxPassword"
+                       @bind="_repeat" @bind:event="oninput" />
+            </div>
+            @if (_repeat.Length >= _password.Length && _repeat.Length > 0 && _repeat != _password)
+            {
+                <p class="account-msg error" role="alert">@L.Ui("account.password.mismatch")</p>
+            }
+            else if (_error is { } error)
+            {
+                <p class="account-msg error" role="alert">@error</p>
+            }
+            <div class="account-actions">
+                <button class="btn primary" type="submit"
+                        disabled="@(_busy || !AccountRules.IsValidPassword(_password) || _repeat != _password)">@L.Ui("account.resetPage.submit")</button>
+            </div>
+        </form>
+    }
+</section>
+
+@code {
+    private string? _user, _token, _error;
+    private string _password = "", _repeat = "";
+    private bool _busy, _done;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        var link = AccountUi.Fragment(Nav.Uri);
+        link.TryGetValue("user", out _user);
+        link.TryGetValue("token", out _token);
+        if (_token is not null) Nav.NavigateTo("account/reset", replace: true);
+        await L.EnsureLoadedAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_user is null || _token is null) return;
+        _busy = true;
+        _error = null;
+        try
+        {
+            var reset = await Accounts.ResetPasswordAsync(new ResetPasswordRequest(_user, _token, _password));
+            if (reset.Ok) _done = true;
+            else _error = L.Describe(reset.Problems);
+        }
+        finally { _busy = false; }
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnChanged;
+}

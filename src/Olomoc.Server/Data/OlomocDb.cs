@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -6,17 +8,22 @@ namespace Olomoc.Server.Data;
 
 /// <summary>
 /// Base du site : un seul fichier SQLite (DATA_DIR/olomoc.db). Schéma par migrations EF Core
-/// (dossier Migrations), appliquées au démarrage.
+/// (dossier Migrations), appliquées au démarrage. Comptes (tables AspNet* d'ASP.NET Core
+/// Identity) et clés de chiffrement des cookies de session (DataProtectionKeys : une session
+/// survit à un redémarrage ou à un redéploiement).
 /// </summary>
-public sealed class OlomocDb(DbContextOptions<OlomocDb> options) : DbContext(options)
+public sealed class OlomocDb(DbContextOptions<OlomocDb> options) : IdentityDbContext<OlomocUser>(options), IDataProtectionKeyContext
 {
     public const string FileName = "olomoc.db";
 
     /// <summary>Documents JSON rangés par sorte et par code (tournois, archives de statistiques).</summary>
     public DbSet<StoredDocumentRow> Documents => Set<StoredDocumentRow>();
 
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
     protected override void OnModelCreating(ModelBuilder model)
     {
+        base.OnModelCreating(model);        // tables d'Identity
         var doc = model.Entity<StoredDocumentRow>();
         doc.ToTable("Documents");
         doc.HasKey(d => new { d.Kind, d.Code });

@@ -24,6 +24,17 @@ services:
       # Adresse IP et schéma (https) du visiteur, transmis par Caddy (X-Forwarded-For / -Proto) :
       # limites de requêtes par visiteur, HSTS. Le port 8080 n'est joignable que par le proxy.
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      # Comptes : admins (pseudos de comptes existants, séparés par « ; », relus au démarrage).
+      OLOMOC_ADMINS: ${OLOMOC_ADMINS:-}
+      # E-mails (confirmation, mot de passe oublié) par un relais SMTP (Brevo…) ; sans SMTP_HOST,
+      # écrits dans ./data/mail. Identifiants dans .env, à côté de ce fichier, jamais ici.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-Orloj <noreply@orloj.top>}
+      # E-mail de contrôle tous les 60 jours (garde la clé SMTP active) ; vide : aucun.
+      MAIL_CHECK_TO: ${MAIL_CHECK_TO:-}
     ports:
       # HTTP local au VPS uniquement (diagnostic) : curl http://127.0.0.1:8090/healthz
       - "127.0.0.1:${OLOMOC_HTTP_PORT:-8090}:8080"

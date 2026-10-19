@@ -36,3 +36,5 @@ Thumbs.db
 App_Data/
 # Tournois du conteneur (dossier monté par docker-compose.yml), pas le référentiel
 /data/
+# Réglages et secrets du conteneur (copiés à la main sur le VPS)
+.env

@@ -76,12 +76,19 @@ sur le poste (image `stuffist/olomoc` sur Docker Hub), puis sur le VPS, avec le 
 `docker compose up -d` dans `/var/www/proxy/` ; après une modification du `Caddyfile`,
 `docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`.
 
-Réglages facultatifs (fichier `.env` à côté du `docker-compose.yml`) :
+Réglages (fichier `.env` à côté du `docker-compose.yml`, **non versionné** : il contient les
+identifiants SMTP) :
 
 | Variable           | Défaut                          | Rôle                                         |
 |--------------------|---------------------------------|----------------------------------------------|
 | `OLOMOC_HOSTS`     | `orloj.top;localhost;127.0.0.1` | noms d'hôte acceptés (les autres : 400)      |
 | `OLOMOC_HTTP_PORT` | `8090`                          | port HTTP de diagnostic, sur 127.0.0.1 seulement |
+| `OLOMOC_ADMINS`    | (aucun)                         | pseudos des admins, séparés par `;` (comptes existants, relu au démarrage) |
+| `SMTP_HOST`        | (aucun)                         | relais SMTP des e-mails (Brevo…) ; sans lui, e-mails écrits dans `data/mail` |
+| `SMTP_PORT`        | `587`                           | port du relais (STARTTLS ; 465 : TLS)        |
+| `SMTP_USER`, `SMTP_PASSWORD` | (aucun)               | identifiants du relais (secrets : dans `.env` seulement) |
+| `MAIL_FROM`        | `Orloj <noreply@orloj.top>`     | expéditeur des e-mails                       |
+| `MAIL_CHECK_TO`    | (aucun)                         | e-mail de contrôle tous les 60 jours (garde la clé SMTP active) |
 
 Diagnostic : `curl -I http://127.0.0.1:8090/healthz` ; état : `docker ps` (healthcheck
 `/healthz`) ; journaux : `docker logs olomoc`, `docker logs caddy`.
@@ -352,6 +359,36 @@ superposée et leur compte rendu s'affiche en notification, avec un bouton
 « Annuler » : les boutons des cartes ne bougent jamais. Cycle, Fiel, traque et points
 de victoire sont dans la barre du haut (fixée à l'écran, sauf sur téléphone).
 
+## Comptes
+
+Facultatifs : sans compte, tout marche comme avant, sur l'appareil. `/builder/account` (lien
+« Se connecter » de l'en-tête, le pseudo une fois connecté, dans toutes les apps) :
+
+- **Création** : pseudo (3 à 24 caractères : lettres sans accent, chiffres, `-`, `_` ; unique
+  sans tenir compte de la casse), e-mail, mot de passe (8 caractères au moins, sans règle de
+  composition). Connexion par pseudo ou par e-mail ; session d'au moins 3 mois par appareil
+  (cookie `olomoc_session` : HttpOnly, SameSite=Strict, Secure en HTTPS), renouvelée pour 3 mois à une visite passé la moitié.
+- **E-mail** : ne sert qu'à récupérer le compte. Lien de confirmation (2 jours) à l'inscription
+  et à chaque changement d'adresse ; **mot de passe oublié** seulement pour une adresse confirmée
+  (lien d'une heure, à usage unique ; même réponse que le compte existe ou non). Au plus 3
+  e-mails par heure et par compte. Liens vers `/builder/account/confirm` et `/reset`, compte et
+  jeton dans l'ancre (retirés de l'adresse dès leur lecture).
+- **Sécurité** : ASP.NET Core Identity (PBKDF2, verrouillage 15 minutes après 5 échecs).
+  Changer de mot de passe, le réinitialiser ou « Déconnecter les autres appareils » ferme les
+  autres sessions (tampon de sécurité relu chaque minute). Clés de chiffrement des cookies dans
+  la base : un redéploiement ne déconnecte personne.
+- **Admins** (`OLOMOC_ADMINS`) : mot de passe temporaire pour un joueur sans e-mail confirmé.
+  Créer son compte d'abord, puis l'ajouter à la liste et redémarrer : seuls des comptes
+  existants deviennent admins.
+- **Suppression** du compte (mot de passe redemandé) et page **Données personnelles**
+  (`/builder/privacy`).
+
+Mise en service des e-mails, une fois : compte chez un relais SMTP (Brevo : gratuit jusqu'à 300
+e-mails par jour), enregistrements DNS SPF, DKIM et DMARC de `orloj.top` (donnés par le relais),
+puis `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` dans le `.env` du VPS. Brevo désactive une clé
+SMTP restée 90 jours sans servir : `MAIL_CHECK_TO` (ton adresse) envoie un court e-mail de contrôle
+tous les 60 jours, qui la garde active et montre que l'envoi marche.
+
 ## Tournois
 
 `/pairings/` : l'organisateur crée un tournoi (nom, date, nombre de rondes, 1 ou 2 cabales
@@ -483,7 +520,9 @@ tests/Olomoc.Tests/   xUnit
   `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre ;
   `Emblem.razor` (logo de faction, emblème de Ministère) ;
   `TokenTrack.razor` (réserve de pions), `Sheet.razor` (fenêtre superposée).
-- `Components/HeaderTools.razor` — fin de l'en-tête des deux apps : lien vers l'autre app, langue.
+- `Components/HeaderTools.razor` — fin de l'en-tête des apps : liens vers les autres apps, compte, langue.
+- `Accounts/AccountApiModels.cs` (règles et échanges de l'API des comptes), `Services/AccountService.cs`
+  (session commune aux apps).
 - `Tournaments/` — tournoi (`TournamentModels.cs`), classement (`Standings.cs`),
   appariements (`Pairer.cs`), règles des phases et des inscriptions (`TournamentRules.cs`),
   échanges avec l'API (`TournamentApiModels.cs`).
@@ -494,6 +533,8 @@ tests/Olomoc.Tests/   xUnit
 **`src/Olomoc.Builder`**
 - `Pages/Home.razor` — constructeur : composition, légalité, sauvegarde et export, lancement d'une partie.
 - `Pages/Play.razor`, `Shared/PlayCogCard.razor` — mode partie.
+- `Pages/Account.razor`, `AccountConfirm.razor`, `AccountReset.razor`, `Privacy.razor` — compte,
+  liens reçus par e-mail, données personnelles.
 
 **`src/Olomoc.Pairings`**
 - `Pages/Index.razor` — créer un tournoi, en rejoindre un, « Mes tournois » (localStorage).
@@ -509,8 +550,11 @@ tests/Olomoc.Tests/   xUnit
 - `Tournaments/TournamentEndpoints.cs` — API `/api/tournaments` (droits par jeton) ;
   `TournamentStore.cs` (un document par tournoi, verrou par tournoi), `StatsArchive.cs`,
   `ServerCatalog.cs` (référentiel côté serveur), `TournamentPurge.cs` (90 jours sans modification, date passée ou absente).
+- `Accounts/AccountEndpoints.cs` — API `/api/account` (Identity, cookie de session), rôle
+  admin (`AdminRoles`) ; `Mail.cs` (relais SMTP par MailKit, ou fichiers ; file d'envoi),
+  `AccountMails.cs` (textes des e-mails).
 - `Data/OlomocDb.cs` — base SQLite (EF Core) : table `Documents` (sorte, code, dates,
-  JSON) ; schéma par migrations (`Data/Migrations`, appliquées au démarrage ; nouvelle
+  JSON), comptes (tables d'Identity), clés des cookies ; schéma par migrations (`Data/Migrations`, appliquées au démarrage ; nouvelle
   migration : `dotnet dotnet-ef migrations add <Nom> --project src/Olomoc.Server
   --output-dir Data/Migrations`). `JsonImport.cs` (reprise des anciens fichiers),
   `DbBackup.cs` (copie quotidienne, `VACUUM INTO`).
@@ -528,7 +572,8 @@ nom d'hôte entre Orloj et B5T.
 **`tests/Olomoc.Tests`** — légalité, recherche, export, sauvegarde, mode partie, cohérence
 des langues, tournois (classement, appariements, règles) ; référence `Olomoc.Shared` et lit
 ses fichiers statiques sur le disque ; hôte démarré en mémoire (`WebApplicationFactory`)
-pour les routes du site et l'API des tournois (dossier de données temporaire).
+pour les routes du site, l'API des tournois et celle des comptes (dossier de données
+temporaire, e-mails écrits sur le disque).
 
 ## Licence
 

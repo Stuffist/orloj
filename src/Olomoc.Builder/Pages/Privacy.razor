@@ -1,0 +1,33 @@
+@page "/privacy"
+@namespace Olomoc.Builder.Pages
+@implements IDisposable
+@inject LocalizationService L
+
+@* Données personnelles (RGPD) : ce que le site garde, pourquoi, combien de temps. *@
+
+<section class="panel account-panel privacy">
+    @if (L.Loaded)
+    {
+        <h2>@L.Ui("privacy.title")</h2>
+        @foreach (var key in Paragraphs)
+        {
+            <p>@L.Ui(key)</p>
+        }
+        <p><a class="btn" href="account">@L.Ui("account.title")</a></p>
+    }
+</section>
+
+@code {
+    private static readonly string[] Paragraphs =
+        ["privacy.device", "privacy.account", "privacy.email", "privacy.tournaments", "privacy.delete"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        await L.EnsureLoadedAsync();
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnChanged;
+}

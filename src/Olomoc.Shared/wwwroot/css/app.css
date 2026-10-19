@@ -557,6 +557,31 @@ body {
 }
 .app-nav a:hover { border-color: var(--rust-soft); }
 
+/* Compte (/builder/account, liens reçus par e-mail, données personnelles) */
+.app-nav a.account-link { border-color: var(--rust); }
+.app-nav a.account-link.current { background: var(--panel-2); }
+.account-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 1rem; }
+@media (min-width: 760px) { .account-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.account-panel h2, .account-panel h3 { overflow-wrap: anywhere; }
+.account-form { display: flex; flex-direction: column; gap: .8rem; }
+.account-form .field { min-width: 0; }
+.account-panel .hint { margin: 0 0 .6rem; }
+.account-form .hint, .account-actions .hint { margin: 0; }
+.account-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
+.account-msg { margin: 0 0 .8rem; padding: .35rem .7rem; font-size: .88rem; border-left: 3px solid var(--line); background: var(--panel-2); border-radius: 0 6px 6px 0; overflow-wrap: anywhere; }
+.account-form .account-msg { margin: 0; }
+.account-msg.ok { border-left-color: var(--ok); }
+.account-msg.error { border-left-color: var(--rust-soft); }
+.account-email { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; margin: 0 0 .6rem; overflow-wrap: anywhere; }
+.account-badge { font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; border: 1px solid currentColor; border-radius: 999px; padding: 0 .5rem; }
+.account-badge.ok { color: var(--ok); }
+.account-badge.todo { color: var(--rust-soft); }
+.link-button {
+    background: none; border: 0; padding: 0; font: inherit; font-size: .85rem;
+    color: var(--rust-soft); text-decoration: underline; cursor: pointer;
+}
+.privacy p { max-width: 72ch; }
+
 /* ---- Catalogue des équipements et dons (bas du constructeur, fenêtre détachée /builder/equipment) ---- */
 .equip-section { margin-top: 1.5rem; }
 .equip-section-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .8rem; }

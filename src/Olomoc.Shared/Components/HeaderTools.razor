@@ -1,6 +1,9 @@
-@* Fin de l'en-tête commun aux apps : liens vers les autres pages (constructeur, tournois) et
-   choix de la langue. Le catalogue des équipements s'ouvre depuis le constructeur (bouton). Les apps ont la même origine : la langue choisie vaut pour les deux. *@
+@* Fin de l'en-tête commun aux apps : liens vers les autres pages (constructeur, tournois),
+   compte (« Se connecter », ou le pseudo) et choix de la langue. Le catalogue des équipements
+   s'ouvre depuis le constructeur (bouton). Les apps ont la même origine : la langue choisie et
+   la session valent pour toutes. *@
 @inject LocalizationService L
+@inject AccountService Accounts
 @implements IDisposable
 
 @if (L.Loaded)
@@ -13,6 +16,12 @@
         @if (Current != "pairings")
         {
             <a href="/pairings/">@L.Ui("nav.pairings")</a>
+        }
+        @if (Accounts.Loaded)
+        {
+            <a href="/builder/account" class="account-link @(Current == "account" ? "current" : null)"
+               aria-current="@(Current == "account" ? "page" : null)"
+               title="@(Accounts.Current is null ? null : L.Ui("account.title"))">@(Accounts.Current?.UserName ?? L.Ui("account.signIn"))</a>
         }
     </nav>
     @if (L.Languages.Count > 1)
@@ -30,12 +39,14 @@
 }
 
 @code {
-    /// <summary>Page affichée : « builder », « equipment » (catalogue du constructeur) ou « pairings ».</summary>
+    /// <summary>Page affichée : « builder », « equipment » (catalogue du constructeur), « account » ou « pairings ».</summary>
     [Parameter, EditorRequired] public string Current { get; set; } = "";
 
     protected override async Task OnInitializedAsync()
     {
         L.Changed += OnChanged;
+        Accounts.Changed += OnChanged;
+        _ = Accounts.EnsureLoadedAsync();     // lien du compte affiché dès que la session est connue
         await L.EnsureLoadedAsync();          // affiché dès que les langues sont chargées
     }
 
@@ -43,5 +54,9 @@
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => L.Changed -= OnChanged;
+    public void Dispose()
+    {
+        L.Changed -= OnChanged;
+        Accounts.Changed -= OnChanged;
+    }
 }

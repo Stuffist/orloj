@@ -13,14 +13,14 @@
             @if (L.Loaded)
             {
                 <h1>@L.Ui("app.title")</h1>
-                <p class="subtitle">@L.Ui(Page switch { "play" => "play.subtitle", "equipment" => "equipment.subtitle", _ => "app.subtitle" })</p>
+                <p class="subtitle">@L.Ui(Page switch { "play" => "play.subtitle", "equipment" => "equipment.subtitle", "account" or "privacy" => "account.subtitle", _ => "app.subtitle" })</p>
             }
             else
             {
                 <h1>Orloj</h1>
             }
         </div>
-        <HeaderTools Current="@(Page == "equipment" ? "equipment" : "builder")" />
+        <HeaderTools Current="@(Page switch { "equipment" => "equipment", "account" or "privacy" => "account", _ => "builder" })" />
     </header>
     <main>@Body</main>
 </div>

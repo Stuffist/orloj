@@ -1,0 +1,51 @@
+@page "/account/confirm"
+@namespace Olomoc.Builder.Pages
+@using Olomoc.Accounts
+@implements IDisposable
+@inject AccountService Accounts
+@inject LocalizationService L
+@inject NavigationManager Nav
+
+@* Lien de confirmation reçu par e-mail (/builder/account/confirm#user=…&token=…) : marche
+   aussi sur un appareil sans session. Le jeton est retiré de l'adresse dès sa lecture. *@
+
+<section class="panel account-panel">
+    <h2>@(L.Loaded ? L.Ui("account.confirmPage.title") : "…")</h2>
+    @if (L.Loaded)
+    {
+        @if (_result is null)
+        {
+            <p class="loading">@L.Ui("account.confirmPage.pending")</p>
+        }
+        else
+        {
+            <p class="account-msg @(_result.Ok ? "ok" : "error")" role="@(_result.Ok ? "status" : "alert")">@_result.Text</p>
+        }
+        <p><a class="btn" href="account">@L.Ui("account.title")</a></p>
+    }
+</section>
+
+@code {
+    private AccountStatus? _result;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        var link = AccountUi.Fragment(Nav.Uri);
+        if (link.ContainsKey("token")) Nav.NavigateTo("account/confirm", replace: true);
+        await L.EnsureLoadedAsync();
+        await Accounts.EnsureLoadedAsync();
+
+        if (!link.TryGetValue("user", out var user) || !link.TryGetValue("token", out var token))
+        {
+            _result = new(L.Ui("account.link.invalid"), false);
+            return;
+        }
+        var confirmed = await Accounts.ConfirmEmailAsync(new ConfirmEmailRequest(user, token));
+        _result = confirmed.Ok ? new(L.Ui("account.confirmPage.done"), true) : new(L.Describe(confirmed.Problems), false);
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnChanged;
+}

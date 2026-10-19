@@ -1,0 +1,327 @@
+@page "/account"
+@namespace Olomoc.Builder.Pages
+@using Olomoc.Accounts
+@implements IDisposable
+@inject AccountService Accounts
+@inject LocalizationService L
+
+@* Compte : connexion, création, mot de passe oublié ; une fois connecté, e-mail (confirmation),
+   mot de passe, autres appareils, suppression, et l'outil des admins. Compte facultatif. *@
+
+@if (!L.Loaded || !Accounts.Loaded)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("account.loading") : "…")</p>
+}
+else if (Accounts.Current is not { } me)
+{
+    @if (_done is { } done)
+    {
+        <p class="account-msg ok" role="status">@done</p>
+    }
+    <div class="account-grid">
+        <section class="panel account-panel">
+            @if (!_forgotOpen)
+            {
+                <h2>@L.Ui("account.login.title")</h2>
+                <form class="account-form" @onsubmit="LoginAsync" @onsubmit:preventDefault="true">
+                    <div class="field">
+                        <label for="login-name">@L.Ui("account.login.name")</label>
+                        <input id="login-name" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="254"
+                               @bind="_loginName" @bind:event="oninput" />
+                    </div>
+                    <div class="field">
+                        <label for="login-password">@L.Ui("account.password")</label>
+                        <input id="login-password" type="password" autocomplete="current-password" maxlength="@AccountRules.MaxPassword"
+                               @bind="_loginPassword" @bind:event="oninput" />
+                    </div>
+                    @Status("login")
+                    <div class="account-actions">
+                        <button class="btn primary" type="submit" disabled="@(_busy || _loginName.Trim().Length == 0 || _loginPassword.Length == 0)">@L.Ui("account.login.submit")</button>
+                        <button class="link-button" type="button" @onclick="OpenForgot">@L.Ui("account.forgot.open")</button>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <h2>@L.Ui("account.forgot.title")</h2>
+                <form class="account-form" @onsubmit="ForgotAsync" @onsubmit:preventDefault="true">
+                    <p class="hint">@L.Ui("account.forgot.help")</p>
+                    <div class="field">
+                        <label for="forgot-name">@L.Ui("account.login.name")</label>
+                        <input id="forgot-name" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="254"
+                               @bind="_forgotName" @bind:event="oninput" />
+                    </div>
+                    @Status("forgot")
+                    <div class="account-actions">
+                        <button class="btn primary" type="submit" disabled="@(_busy || _forgotName.Trim().Length == 0)">@L.Ui("account.forgot.submit")</button>
+                        <button class="link-button" type="button" @onclick="CloseForgot">@L.Ui("account.forgot.back")</button>
+                    </div>
+                </form>
+            }
+        </section>
+
+        <section class="panel account-panel">
+            <h2>@L.Ui("account.register.title")</h2>
+            <form class="account-form" @onsubmit="RegisterAsync" @onsubmit:preventDefault="true">
+                <p class="hint">@L.Ui("account.register.optional")</p>
+                <div class="field">
+                    <label for="register-name">@L.Ui("account.userName")</label>
+                    <input id="register-name" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="@AccountRules.MaxUserName"
+                           @bind="_registerName" @bind:event="oninput" aria-describedby="register-name-hint" />
+                    <span id="register-name-hint" class="hint">@L.Ui("account.userName.hint", AccountRules.MinUserName, AccountRules.MaxUserName)</span>
+                </div>
+                <div class="field">
+                    <label for="register-email">@L.Ui("account.email")</label>
+                    <input id="register-email" type="email" autocomplete="email" maxlength="@AccountRules.MaxEmail"
+                           @bind="_registerEmail" @bind:event="oninput" aria-describedby="register-email-hint" />
+                    <span id="register-email-hint" class="hint">@L.Ui("account.email.hint")</span>
+                </div>
+                <div class="field">
+                    <label for="register-password">@L.Ui("account.password")</label>
+                    <input id="register-password" type="password" autocomplete="new-password" maxlength="@AccountRules.MaxPassword"
+                           @bind="_registerPassword" @bind:event="oninput" aria-describedby="register-password-hint" />
+                    <span id="register-password-hint" class="hint">@L.Ui("account.password.hint", AccountRules.MinPassword)</span>
+                </div>
+                @Status("register")
+                <div class="account-actions">
+                    <button class="btn primary" type="submit" disabled="@(_busy || !CanRegister)">@L.Ui("account.register.submit")</button>
+                    <a class="hint" href="privacy">@L.Ui("privacy.title")</a>
+                </div>
+            </form>
+        </section>
+    </div>
+}
+else
+{
+    @if (_done is { } done)
+    {
+        <p class="account-msg ok" role="status">@done</p>
+    }
+    <section class="panel account-panel">
+        <h2>@me.UserName</h2>
+        <p class="account-email">
+            <span>@me.Email</span>
+            <span class="account-badge @(me.EmailConfirmed ? "ok" : "todo")">@L.Ui(me.EmailConfirmed ? "account.emailConfirmed" : "account.emailUnconfirmed")</span>
+        </p>
+        @if (!me.EmailConfirmed)
+        {
+            <p class="hint">@L.Ui("account.confirm.help")</p>
+        }
+        @Status("confirm")
+        <div class="account-actions">
+            @if (!me.EmailConfirmed)
+            {
+                <button class="btn" type="button" disabled="@_busy" @onclick="ResendAsync">@L.Ui("account.confirm.resend")</button>
+            }
+            <button class="btn" type="button" disabled="@_busy" @onclick="LogoutAsync">@L.Ui("account.logout")</button>
+        </div>
+    </section>
+
+    <div class="account-grid">
+        <section class="panel account-panel">
+            <h3>@L.Ui("account.password.title")</h3>
+            <form class="account-form" @onsubmit="ChangePasswordAsync" @onsubmit:preventDefault="true">
+                @* Pseudo caché : les gestionnaires de mots de passe savent quel compte mettre à jour. *@
+                <input class="sr-only" type="text" autocomplete="username" value="@me.UserName" readonly tabindex="-1" aria-hidden="true" />
+                <div class="field">
+                    <label for="password-current">@L.Ui("account.password.current")</label>
+                    <input id="password-current" type="password" autocomplete="current-password" maxlength="@AccountRules.MaxPassword"
+                           @bind="_currentPassword" @bind:event="oninput" />
+                </div>
+                <div class="field">
+                    <label for="password-new">@L.Ui("account.password.new")</label>
+                    <input id="password-new" type="password" autocomplete="new-password" maxlength="@AccountRules.MaxPassword"
+                           @bind="_newPassword" @bind:event="oninput" aria-describedby="password-new-hint" />
+                    <span id="password-new-hint" class="hint">@L.Ui("account.password.hint", AccountRules.MinPassword)</span>
+                </div>
+                @Status("password")
+                <div class="account-actions">
+                    <button class="btn primary" type="submit"
+                            disabled="@(_busy || _currentPassword.Length == 0 || !AccountRules.IsValidPassword(_newPassword))">@L.Ui("account.password.submit")</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="panel account-panel">
+            <h3>@L.Ui("account.email.title")</h3>
+            <form class="account-form" @onsubmit="ChangeEmailAsync" @onsubmit:preventDefault="true">
+                <div class="field">
+                    <label for="email-new">@L.Ui("account.email.new")</label>
+                    <input id="email-new" type="email" autocomplete="email" maxlength="@AccountRules.MaxEmail"
+                           @bind="_newEmail" @bind:event="oninput" />
+                </div>
+                <div class="field">
+                    <label for="email-password">@L.Ui("account.password")</label>
+                    <input id="email-password" type="password" autocomplete="current-password" maxlength="@AccountRules.MaxPassword"
+                           @bind="_emailPassword" @bind:event="oninput" />
+                </div>
+                @Status("email")
+                <div class="account-actions">
+                    <button class="btn primary" type="submit"
+                            disabled="@(_busy || !AccountRules.IsValidEmail(_newEmail.Trim()) || _emailPassword.Length == 0)">@L.Ui("account.email.submit")</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <section class="panel account-panel">
+        <h3>@L.Ui("account.sessions.title")</h3>
+        <p class="hint">@L.Ui("account.sessions.help")</p>
+        @Status("sessions")
+        <div class="account-actions">
+            <button class="btn" type="button" disabled="@_busy" @onclick="LogoutOthersAsync">@L.Ui("account.sessions.submit")</button>
+        </div>
+    </section>
+
+    @if (me.IsAdmin)
+    {
+        <section class="panel account-panel">
+            <h3>@L.Ui("account.admin.title")</h3>
+            <form class="account-form" @onsubmit="AdminResetAsync" @onsubmit:preventDefault="true">
+                <p class="hint">@L.Ui("account.admin.help")</p>
+                <div class="field">
+                    <label for="admin-name">@L.Ui("account.userName")</label>
+                    <input id="admin-name" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="@AccountRules.MaxUserName"
+                           @bind="_adminName" @bind:event="oninput" />
+                </div>
+                @Status("admin")
+                <div class="account-actions">
+                    <button class="btn" type="submit" disabled="@(_busy || !AccountRules.IsValidUserName(_adminName.Trim()))">@L.Ui("account.admin.submit")</button>
+                </div>
+            </form>
+        </section>
+    }
+
+    <section class="panel account-panel tn-danger">
+        <h3>@L.Ui("account.delete.title")</h3>
+        <form class="account-form" @onsubmit="DeleteAsync" @onsubmit:preventDefault="true">
+            <p class="hint">@L.Ui("account.delete.help")</p>
+            <input class="sr-only" type="text" autocomplete="username" value="@me.UserName" readonly tabindex="-1" aria-hidden="true" />
+            <div class="field">
+                <label for="delete-password">@L.Ui("account.password")</label>
+                <input id="delete-password" type="password" autocomplete="current-password" maxlength="@AccountRules.MaxPassword"
+                       @bind="_deletePassword" @bind:event="oninput" />
+            </div>
+            @Status("delete")
+            <div class="account-actions">
+                <button class="btn danger" type="submit" disabled="@(_busy || _deletePassword.Length == 0)">@L.Ui("account.delete.submit")</button>
+            </div>
+        </form>
+    </section>
+
+    <p class="hint"><a href="privacy">@L.Ui("privacy.title")</a></p>
+}
+
+@code {
+    private bool _busy, _forgotOpen;
+    private string? _done;          // message en tête de page (compte créé, supprimé…)
+    private readonly Dictionary<string, AccountStatus> _status = new();
+    private string _loginName = "", _loginPassword = "", _forgotName = "";
+    private string _registerName = "", _registerEmail = "", _registerPassword = "";
+    private string _currentPassword = "", _newPassword = "", _newEmail = "", _emailPassword = "";
+    private string _adminName = "", _deletePassword = "";
+
+    private bool CanRegister => AccountRules.IsValidUserName(_registerName.Trim()) && AccountRules.IsValidEmail(_registerEmail.Trim())
+                                && AccountRules.IsValidPassword(_registerPassword);
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        Accounts.Changed += OnChanged;
+        await Task.WhenAll(L.EnsureLoadedAsync(), Accounts.EnsureLoadedAsync());
+    }
+
+    private RenderFragment? Status(string form) => _status.TryGetValue(form, out var s)
+        ? @<p class="account-msg @(s.Ok ? "ok" : "error")" role="@(s.Ok ? "status" : "alert")">@s.Text</p>
+        : null;
+
+    // Appel à l'API : formulaires désactivés pendant l'appel, compte rendu sous le formulaire.
+    private async Task Run<T>(string form, Func<Task<AccountResult<T>>> call, Func<T?, string?> success)
+    {
+        _busy = true;
+        _status.Remove(form);
+        _done = null;
+        try
+        {
+            var result = await call();
+            if (!result.Ok) _status[form] = new(L.Describe(result.Problems), false);
+            else if (success(result.Value) is { } text) _status[form] = new(text, true);
+        }
+        finally { _busy = false; }
+    }
+
+    private void OpenForgot()
+    {
+        _forgotOpen = true;
+        _forgotName = _loginName;
+    }
+
+    private void CloseForgot()
+    {
+        _forgotOpen = false;
+        _status.Remove("forgot");
+    }
+
+    private Task LoginAsync() => Run("login", () => Accounts.LoginAsync(new LoginRequest(_loginName.Trim(), _loginPassword)), _ =>
+    {
+        _loginPassword = "";
+        return null;
+    });
+
+    private Task ForgotAsync() => Run("forgot", () => Accounts.ForgotPasswordAsync(new ForgotPasswordRequest(_forgotName.Trim(), L.Current)),
+        _ => L.Ui("account.forgot.sent"));
+
+    private Task RegisterAsync() => Run("register",
+        () => Accounts.RegisterAsync(new RegisterRequest(_registerName.Trim(), _registerEmail.Trim(), _registerPassword, L.Current)), account =>
+        {
+            _registerPassword = "";
+            _done = L.Ui("account.registered", account?.Email ?? "");
+            return null;
+        });
+
+    private Task ResendAsync() => Run("confirm", () => Accounts.SendConfirmationAsync(L.Current),
+        _ => L.Ui("account.confirm.sent", Accounts.Current?.Email ?? ""));
+
+    private async Task LogoutAsync()
+    {
+        _busy = true;
+        try { await Accounts.LogoutAsync(); }
+        finally { _busy = false; }
+        _status.Clear();
+    }
+
+    private Task ChangePasswordAsync() => Run("password",
+        () => Accounts.ChangePasswordAsync(new ChangePasswordRequest(_currentPassword, _newPassword)), _ =>
+        {
+            _currentPassword = _newPassword = "";
+            return L.Ui("account.password.changed");
+        });
+
+    private Task ChangeEmailAsync() => Run("email",
+        () => Accounts.ChangeEmailAsync(new ChangeEmailRequest(_newEmail.Trim(), _emailPassword, L.Current)), account =>
+        {
+            _newEmail = _emailPassword = "";
+            return L.Ui("account.email.changed", account?.Email ?? "");
+        });
+
+    private Task LogoutOthersAsync() => Run("sessions", Accounts.LogoutOthersAsync, _ => L.Ui("account.sessions.done"));
+
+    private Task AdminResetAsync() => Run("admin", () => Accounts.AdminResetPasswordAsync(_adminName), temporary =>
+        L.Ui("account.admin.done", _adminName.Trim(), temporary?.Password ?? ""));
+
+    private Task DeleteAsync() => Run("delete", () => Accounts.DeleteAsync(new DeleteAccountRequest(_deletePassword)), _ =>
+    {
+        _deletePassword = "";
+        _status.Clear();
+        _done = L.Ui("account.deleted");
+        return null;
+    });
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        L.Changed -= OnChanged;
+        Accounts.Changed -= OnChanged;
+    }
+}
