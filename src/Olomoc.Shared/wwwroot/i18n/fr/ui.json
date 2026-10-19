@@ -322,6 +322,13 @@
   "pairings.admin.reinstated": "{0} est de nouveau apparié.",
   "pairings.admin.remove": "Retirer",
   "pairings.admin.remove.confirm": "Retirer l’inscription de {0} ?",
+  "pairings.admin.addPlayer": "Ajouter un joueur",
+  "pairings.admin.addPlayer.help": "Pour inscrire vous-même un joueur : ses listes collées (texte ou JSON), prises dans « Mes cabales » de cet appareil ou composées dans le constructeur.",
+  "pairings.admin.addPlayer.submit": "Ajouter",
+  "pairings.admin.playerName": "Nom du joueur",
+  "pairings.admin.editPlayer": "Inscription de {0}",
+  "pairings.admin.added": "{0} : inscription enregistrée.",
+  "pairings.admin.edited": "{0} : inscription modifiée.",
   "pairings.admin.share": "Partage",
   "pairings.admin.publicLink": "Lien public (inscriptions, appariements, classement)",
   "pairings.admin.adminLink": "Lien d’administration",
@@ -454,5 +461,5 @@
   "pairings.end.Bile": "Fiel",
   "pairings.end.FourthCycle": "4ᵉ cycle",
   "pairings.end.PoliSec": "PoliSec",
-  "pairings.problem.cabalPlayed": "Indiquez la cabale jouée par chacun des deux joueurs."
+  "pairings.problem.cabalPlayed": "Cette cabale jouée n’existe pas dans ce tournoi."
 }

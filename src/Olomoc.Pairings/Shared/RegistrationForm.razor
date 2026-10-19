@@ -1,4 +1,5 @@
-@* Inscription (ou modification) : nom, faction, et les cabales demandées par le tournoi. *@
+@* Inscription (ou modification) : nom, faction, et les cabales demandées par le tournoi. Par le
+   joueur (page publique) ou par l'organisateur (administration). *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 @inject CabalLibrary Library
@@ -8,7 +9,7 @@
 <form class="tn-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault="true">
     <div class="tn-fields">
         <div class="field grow">
-            <label for="player-name">@L.Ui("pairings.register.name")</label>
+            <label for="player-name">@L.Ui(ByOrganizer ? "pairings.admin.playerName" : "pairings.register.name")</label>
             <input id="player-name" type="text" maxlength="@TournamentRules.MaxNameLength" value="@_name"
                    @oninput="e => _name = e.Value?.ToString() ?? string.Empty" autocomplete="nickname" />
         </div>
@@ -34,7 +35,7 @@
     <Problems Items="_problems" />
     <div class="tn-actions">
         <button class="btn primary" type="submit" disabled="@(_busy || !Complete)">
-            @L.Ui(Existing is null ? "pairings.register.submit" : "pairings.register.save")
+            @L.Ui(Existing is not null ? "pairings.register.save" : ByOrganizer ? "pairings.admin.addPlayer.submit" : "pairings.register.submit")
         </button>
         @if (OnCancel.HasDelegate)
         {
@@ -50,6 +51,8 @@
     /// <summary>Envoi : renvoie les problèmes (aucun si l'inscription est acceptée).</summary>
     [Parameter, EditorRequired] public Func<RegistrationRequest, Task<IReadOnlyList<Problem>>> Submit { get; set; } = default!;
     [Parameter] public EventCallback OnCancel { get; set; }
+    /// <summary>Saisie par l'organisateur : « Nom du joueur » et « Ajouter » au lieu de « Votre nom » et « S'inscrire ».</summary>
+    [Parameter] public bool ByOrganizer { get; set; }
 
     private string _name = "";
     private string _faction = "";

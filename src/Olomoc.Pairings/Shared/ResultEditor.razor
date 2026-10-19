@@ -1,5 +1,5 @@
 @* Saisie des PV d'une table (organisateur), et de la cabale jouée par chacun quand le tournoi en
-   demande deux (pour les statistiques). Mise en page fixe : les champs et les boutons ne bougent
+   demande deux (facultative, pour les statistiques). Mise en page fixe : les champs et les boutons ne bougent
    pas ; l'état (enregistré, modifié, erreur) occupe une case de largeur constante. *@
 @inject LocalizationService L
 
@@ -10,7 +10,7 @@
         @SwapButton(Table.PlayerA)
         @if (!Table.IsBye && TwoCabals)
         {
-            @CabalChoice(Table.PlayerA, _cabalA, i => Pick(ref _cabalA, i))
+            @CabalChoice(Table.PlayerA, _cabalA, i => Toggle(ref _cabalA, i))
         }
         @if (!Table.IsBye)
         {
@@ -37,7 +37,7 @@
             @SwapButton(Table.PlayerB!)
             @if (TwoCabals)
             {
-                @CabalChoice(Table.PlayerB!, _cabalB, i => Pick(ref _cabalB, i))
+                @CabalChoice(Table.PlayerB!, _cabalB, i => Toggle(ref _cabalB, i))
             }
             @FirstChoice(TableSide.B, Table.PlayerB!)
         </span>
@@ -140,12 +140,6 @@
         Changed();
     }
 
-    private void Pick(ref int? field, int index)
-    {
-        field = index;
-        Changed();
-    }
-
     private void Changed()
     {
         _dirty = _a != (Table.VpA?.ToString() ?? "") || _b != (Table.VpB?.ToString() ?? "")
@@ -156,12 +150,10 @@
 
     private static int? Parse(string s) => int.TryParse(s, out var n) ? n : null;
 
-    // Deux valeurs (ou aucune, pour effacer), différentes de ce qui est enregistré ; avec deux
-    // cabales par joueur, la cabale jouée par chacun.
+    // Deux valeurs (ou aucune, pour effacer), différentes de ce qui est enregistré.
     private bool CanSave => !ReadOnly && _dirty && !_busy && (_a.Length == 0) == (_b.Length == 0)
                             && (_a.Length == 0 || (Parse(_a) is >= 0 and <= TournamentRules.MaxVictoryPoints
-                                                   && Parse(_b) is >= 0 and <= TournamentRules.MaxVictoryPoints
-                                                   && (!TwoCabals || (_cabalA.HasValue && _cabalB.HasValue))));
+                                                   && Parse(_b) is >= 0 and <= TournamentRules.MaxVictoryPoints));
 
     private async Task SaveAsync()
     {

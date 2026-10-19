@@ -601,6 +601,9 @@ body {
 .tn-form { display: flex; flex-direction: column; gap: .9rem; }
 .tn-fields { display: flex; flex-wrap: wrap; gap: .8rem 1rem; }
 .tn-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.tn-add-player { margin-bottom: .8rem; }
+.tn-admin-register:focus { outline: none; }
+.tn-admin-register h4 { margin: 0 0 .3rem; }
 .tn-actions .btn { min-height: 2.4rem; }
 .tn-modes { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem; margin: 0; display: flex; flex-direction: column; gap: .5rem; }
 .tn-modes legend { font-size: .72rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); padding: 0 .3rem; }

@@ -84,6 +84,51 @@ public class TournamentTests
     }
 
     [Fact]
+    public void Abandons_en_fin_de_classement_classes_entre_eux()
+    {
+        // p0 et p2 abandonnent avec plus de points que p1 et p3 : ils passent derrière, p0 devant p2.
+        var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D", "L");
+        t.Rounds.Add(new Round
+        {
+            Number = 1,
+            Tables =
+            {
+                new Table { Number = 1, PlayerA = "p0", PlayerB = "p1", VpA = 12, VpB = 2 },
+                new Table { Number = 2, PlayerA = "p2", PlayerB = "p3", VpA = 9, VpB = 5 },
+                new Table { Number = 3, PlayerA = "p4", PlayerB = null },
+            },
+        });
+        t.Players[0].Dropped = true;
+        t.Players[2].Dropped = true;
+        var s = Standings.Compute(t);
+
+        Assert.Equal(new[] { "p4", "p3", "p1", "p0", "p2" }, s.Select(x => x.PlayerId));
+        Assert.Equal(new[] { 1, 2, 3, 4, 5 }, s.Select(x => x.Rank));
+        Assert.Equal(new[] { 3, 0, 0, 3, 3 }, s.Select(x => x.Points));      // les points restent affichés
+    }
+
+    [Fact]
+    public void Abandon_a_egalite_avec_un_joueur_en_lice_n_a_pas_son_rang()
+    {
+        var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D");
+        t.Rounds.Add(new Round
+        {
+            Number = 1,
+            Tables =
+            {
+                new Table { Number = 1, PlayerA = "p0", PlayerB = "p1", VpA = 8, VpB = 8 },
+                new Table { Number = 2, PlayerA = "p2", PlayerB = "p3", VpA = 8, VpB = 8 },
+            },
+        });
+        t.Players[1].Dropped = true;
+        t.Players[3].Dropped = true;
+        var s = Standings.Compute(t);
+
+        Assert.Equal(new[] { "p0", "p2", "p1", "p3" }, s.Select(x => x.PlayerId));
+        Assert.Equal(new[] { 1, 1, 3, 3 }, s.Select(x => x.Rank));          // égalités : entre en lice, entre abandons
+    }
+
+    [Fact]
     public void Exempt_vaut_une_victoire_au_Fiel_7_0()
     {
         // Victoire 6-2 (+4) contre exempt (+7) : l'exempt passe devant au départage.
@@ -295,14 +340,17 @@ public class TournamentTests
     }
 
     [Fact]
-    public void Cabale_jouee_exigee_avec_deux_cabales()
+    public void Cabale_jouee_facultative_avec_deux_cabales()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D");
         t.CabalsPerPlayer = 2;
         Pair(t);
-        Assert.Equal("cabalPlayed", TournamentRules.SetResult(t, 1, 1, 7, 3)?.Key);
-        Assert.Equal("cabalPlayed", TournamentRules.SetResult(t, 1, 1, 7, 3, 0, null)?.Key);
         Assert.Equal("cabalPlayed", TournamentRules.SetResult(t, 1, 1, 7, 3, 0, 2)?.Key);     // hors bornes
+        Assert.Equal("cabalPlayed", TournamentRules.SetResult(t, 1, 1, 7, 3, -1, null)?.Key);
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3));                                // inconnues
+        Assert.Equal((null, null), (t.Rounds[0].Tables[0].CabalA, t.Rounds[0].Tables[0].CabalB));
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3, null, 1));                       // une seule connue
+        Assert.Equal((null, 1), (t.Rounds[0].Tables[0].CabalA, t.Rounds[0].Tables[0].CabalB));
         Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3, 1, 0));
         Assert.Equal((1, 0), (t.Rounds[0].Tables[0].CabalA, t.Rounds[0].Tables[0].CabalB));
         Assert.Null(TournamentRules.SetResult(t, 1, 1, null, null, 1, 0));                    // effacer : cabales aussi

@@ -179,9 +179,9 @@ public static class TournamentRules
     }
 
     /// <summary>
-    /// PV d'une table (deux valeurs, ou aucune pour effacer le résultat) et cabales jouées : avec
-    /// deux cabales par joueur, celle de chacun est exigée ; avec une seule, c'est la première.
-    /// Facultatifs, pour les statistiques : qui était J1, et la cause de la fin de partie.
+    /// PV d'une table (deux valeurs, ou aucune pour effacer le résultat). Facultatifs, pour les
+    /// statistiques : la cabale jouée par chacun (avec une seule cabale par joueur, c'est la
+    /// première ; avec deux, celle indiquée, ou inconnue), qui était J1, et la cause de la fin de partie.
     /// </summary>
     public static Problem? SetResult(Tournament t, int roundNumber, int tableNumber, int? vpA, int? vpB,
         int? cabalA = null, int? cabalB = null, TableSide? first = null, GameEnd? end = null)
@@ -191,8 +191,7 @@ public static class TournamentRules
         if (table is null || table.IsBye) return Problem.Of("unknownTable");
         if (vpA.HasValue != vpB.HasValue || vpA is < 0 or > MaxVictoryPoints || vpB is < 0 or > MaxVictoryPoints)
             return Problem.Of("victoryPoints", MaxVictoryPoints.ToString());
-        if (vpA.HasValue && t.CabalsPerPlayer > 1
-            && (cabalA is not { } a || cabalB is not { } b || a < 0 || b < 0 || a >= t.CabalsPerPlayer || b >= t.CabalsPerPlayer))
+        if (vpA.HasValue && t.CabalsPerPlayer > 1 && (cabalA is < 0 || cabalA >= t.CabalsPerPlayer || cabalB is < 0 || cabalB >= t.CabalsPerPlayer))
             return Problem.Of("cabalPlayed");
         table.VpA = vpA;
         table.VpB = vpB;

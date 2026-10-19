@@ -379,7 +379,10 @@ plus tard ne l'est **jamais** (contrôle quotidien).
   commune et légalité vérifiées dans le navigateur, puis par le serveur avec les mêmes
   règles que le constructeur. Chacun peut modifier ou retirer son inscription (jeton
   joueur, gardé sur son appareil) tant qu'elles sont ouvertes. Les listes des autres
-  restent masquées jusqu'à la clôture, qui les révèle à tous.
+  restent masquées jusqu'à la clôture, qui les révèle à tous. L'organisateur peut aussi
+  **inscrire lui-même** un joueur (joueur sans téléphone, listes reçues à l'avance), avec le
+  même formulaire depuis l'administration, et modifier ou retirer toute inscription ; le
+  jeton d'un joueur qu'il inscrit n'est pas gardé, son appareil reste celui de l'organisateur.
 - **Appariements** (`Tournaments/Pairer.cs`), entre les joueurs actifs (hors abandons) :
   - *Ronde suisse* : ronde 1 au hasard, puis par classement, chacun contre le plus
     proche en points (1 c. 2, 3 c. 4…) ; option : à points égaux, préférer l'alignement
@@ -393,11 +396,15 @@ plus tard ne l'est **jamais** (contrôle quotidien).
   Autres, Blockhaus Devet, Ligue de Maisel.
 - **Résultats et classement** (feuille de ronde officielle) : l'organisateur saisit les
   PV de chaque table ; points de tournoi 3/1/0 (exempt : victoire au Fiel 7-0, soit 3 points, +7), classement par
-  points, puis différence de PV cumulée, puis PV marqués. La ronde suivante s'apparie
+  points, puis différence de PV cumulée, puis PV marqués. Les joueurs qui ont abandonné
+  passent en fin de classement, derrière tous ceux encore en lice, et sont classés entre eux
+  selon les mêmes critères. La ronde suivante s'apparie
   quand la précédente est complète ; la dernière ronde s'annule tant qu'aucun résultat
   n'y est saisi. Les pages se mettent à jour toutes les 30 secondes.
-- **Cabale jouée** : avec deux cabales par joueur, l'orga indique à la saisie des PV laquelle
-  chacun a jouée (« C1 » / « C2 » sous chaque nom ; le nom de la cabale en info-bulle).
+- **Cabale jouée** (facultative, pour les statistiques) : avec deux cabales par joueur, l'orga
+  peut indiquer à la saisie des PV laquelle chacun a jouée (« C1 » / « C2 » sous chaque nom,
+  un second clic retire le choix ; le nom de la cabale en info-bulle). Inconnue, la partie
+  compte pour les victoires par faction, pas pour celles par rouage de rang 3.
 - **J1 et fin de partie** (facultatifs, pour les statistiques) : à la saisie des PV, « J1 » sous
   le joueur qui a commencé, et la cause de la fin (Fiel, 4ᵉ cycle, PoliSec) ; affichés dans
   les tables.

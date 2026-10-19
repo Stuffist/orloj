@@ -322,6 +322,13 @@
   "pairings.admin.reinstated": "{0} is paired again.",
   "pairings.admin.remove": "Remove",
   "pairings.admin.remove.confirm": "Remove {0}’s registration?",
+  "pairings.admin.addPlayer": "Add a player",
+  "pairings.admin.addPlayer.help": "To register a player yourself: paste their lists (text or JSON), pick them from “My cabals” on this device, or build them in the list builder.",
+  "pairings.admin.addPlayer.submit": "Add",
+  "pairings.admin.playerName": "Player name",
+  "pairings.admin.editPlayer": "{0}’s registration",
+  "pairings.admin.added": "{0}: registration saved.",
+  "pairings.admin.edited": "{0}: registration updated.",
   "pairings.admin.share": "Sharing",
   "pairings.admin.publicLink": "Public link (registration, pairings, standings)",
   "pairings.admin.adminLink": "Admin link",
@@ -454,5 +461,5 @@
   "pairings.end.Bile": "Bile",
   "pairings.end.FourthCycle": "4th cycle",
   "pairings.end.PoliSec": "PoliSec",
-  "pairings.problem.cabalPlayed": "Enter the cabal played by each of the two players."
+  "pairings.problem.cabalPlayed": "This played cabal does not exist in this tournament."
 }

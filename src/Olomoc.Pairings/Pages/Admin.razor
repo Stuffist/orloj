@@ -144,20 +144,42 @@ else
 
     <section class="panel">
         <h3>@L.Ui("pairings.players", v.Players.Count)</h3>
-        <PlayerList View="v">
-            <Actions Context="p">
-                @if (v.Phase == TournamentPhase.Registration)
-                {
-                    <button class="btn small danger" disabled="@_busy" @onclick="() => RemoveAsync(p)">@L.Ui("pairings.admin.remove")</button>
-                }
-                else if (v.Phase == TournamentPhase.Started)
-                {
-                    <button class="btn small" disabled="@_busy" @onclick="() => SetDroppedAsync(p, !p.Dropped)">
-                        @L.Ui(p.Dropped ? "pairings.admin.reinstate" : "pairings.admin.drop")
-                    </button>
-                }
-            </Actions>
-        </PlayerList>
+        @* Inscription saisie par l'organisateur (joueur sans appareil, liste reçue à part) : le
+           formulaire remplace la liste le temps de la saisie. *@
+        @if (_playerForm is { } form && v.Phase == TournamentPhase.Registration)
+        {
+            <div class="tn-admin-register" @ref="_playerFormBox" tabindex="-1">
+                <h4>@(form.Player is { } edited ? L.Ui("pairings.admin.editPlayer", edited.Name) : L.Ui("pairings.admin.addPlayer"))</h4>
+                <p class="tn-intro">@L.Ui("pairings.admin.addPlayer.help")</p>
+                <RegistrationForm @key="form" CabalCount="v.CabalsPerPlayer" TournamentCode="@v.Code" Existing="form.Player"
+                                  Submit="SubmitPlayerAsync" ByOrganizer="true"
+                                  OnCancel="() => _playerForm = null" />
+            </div>
+        }
+        else
+        {
+            @if (v.Phase == TournamentPhase.Registration)
+            {
+                <div class="tn-actions tn-add-player">
+                    <button class="btn" disabled="@_busy" @onclick="() => OpenPlayerForm(null)">+ @L.Ui("pairings.admin.addPlayer")</button>
+                </div>
+            }
+            <PlayerList View="v">
+                <Actions Context="p">
+                    @if (v.Phase == TournamentPhase.Registration)
+                    {
+                        <button class="btn small" disabled="@_busy" @onclick="() => OpenPlayerForm(p)">@L.Ui("pairings.register.edit")</button>
+                        <button class="btn small danger" disabled="@_busy" @onclick="() => RemoveAsync(p)">@L.Ui("pairings.admin.remove")</button>
+                    }
+                    else if (v.Phase == TournamentPhase.Started)
+                    {
+                        <button class="btn small" disabled="@_busy" @onclick="() => SetDroppedAsync(p, !p.Dropped)">
+                            @L.Ui(p.Dropped ? "pairings.admin.reinstate" : "pairings.admin.drop")
+                        </button>
+                    }
+                </Actions>
+            </PlayerList>
+        }
     </section>
 
     <section class="panel">
@@ -312,6 +334,52 @@ else
     {
         if (!await ConfirmAsync(L.Ui("pairings.admin.remove.confirm", p.Name))) return;
         await RunAsync(() => Api.UnregisterAsync(Code, p.Id, Token, null));
+    }
+
+    // ---- Inscriptions saisies par l'organisateur ----
+
+    private sealed class PlayerForm(PlayerView? player)
+    {
+        public PlayerView? Player => player;    // null : nouveau joueur
+    }
+
+    private PlayerForm? _playerForm;
+    private ElementReference _playerFormBox;
+    private bool _focusPlayerForm;
+
+    private void OpenPlayerForm(PlayerView? player)
+    {
+        _playerForm = new PlayerForm(player);
+        _focusPlayerForm = true;
+    }
+
+    // Formulaire ouvert depuis le bas de la liste : amené à l'écran.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusPlayerForm || _playerForm is null) return;
+        _focusPlayerForm = false;
+        await _playerFormBox.FocusAsync();
+    }
+
+    private async Task<IReadOnlyList<Problem>> SubmitPlayerAsync(RegistrationRequest request)
+    {
+        var edited = _playerForm?.Player;
+        if (edited is not null)
+        {
+            var updated = await Api.UpdateRegistrationAsync(Code, edited.Id, request, Token, null);
+            if (!updated.Ok) return updated.Problems;
+        }
+        else
+        {
+            // Jeton du joueur non gardé : cet appareil reste celui de l'organisateur.
+            var registered = await Api.RegisterAsync(Code, request);
+            if (!registered.Ok) return registered.Problems;
+        }
+        _playerForm = null;
+        Toast(L.Ui(edited is null ? "pairings.admin.added" : "pairings.admin.edited", request.Name));
+        await RefreshAsync();
+        StateHasChanged();                  // envoi depuis le formulaire (composant enfant) : la liste revient
+        return Array.Empty<Problem>();
     }
 
     private Task SetDroppedAsync(PlayerView p, bool dropped) =>
