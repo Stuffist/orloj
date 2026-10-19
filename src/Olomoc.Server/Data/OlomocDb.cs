@@ -9,8 +9,8 @@ namespace Olomoc.Server.Data;
 /// <summary>
 /// Base du site : un seul fichier SQLite (DATA_DIR/olomoc.db). Schéma par migrations EF Core
 /// (dossier Migrations), appliquées au démarrage. Comptes (tables AspNet* d'ASP.NET Core
-/// Identity) et clés de chiffrement des cookies de session (DataProtectionKeys : une session
-/// survit à un redémarrage ou à un redéploiement).
+/// Identity), leurs cabales (SavedCabals) et clés de chiffrement des cookies de session
+/// (DataProtectionKeys : une session survit à un redémarrage ou à un redéploiement).
 /// </summary>
 public sealed class OlomocDb(DbContextOptions<OlomocDb> options) : IdentityDbContext<OlomocUser>(options), IDataProtectionKeyContext
 {
@@ -21,6 +21,9 @@ public sealed class OlomocDb(DbContextOptions<OlomocDb> options) : IdentityDbCon
 
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
+    /// <summary>Cabales des comptes (et suppressions, pour les autres appareils).</summary>
+    public DbSet<SavedCabalRow> SavedCabals => Set<SavedCabalRow>();
+
     protected override void OnModelCreating(ModelBuilder model)
     {
         base.OnModelCreating(model);        // tables d'Identity
@@ -30,6 +33,13 @@ public sealed class OlomocDb(DbContextOptions<OlomocDb> options) : IdentityDbCon
         doc.Property(d => d.Kind).HasMaxLength(16);
         doc.Property(d => d.Code).HasMaxLength(16);
         doc.HasIndex(d => new { d.Kind, d.UpdatedAt });     // purge des inactifs
+
+        var cabal = model.Entity<SavedCabalRow>();
+        cabal.ToTable("SavedCabals");
+        cabal.Property(c => c.Name).HasMaxLength(Olomoc.Accounts.CabalSyncRules.MaxNameLength);
+        cabal.Property(c => c.NormalizedName).HasMaxLength(Olomoc.Accounts.CabalSyncRules.MaxNameLength);
+        cabal.HasIndex(c => new { c.UserId, c.NormalizedName }).IsUnique();
+        cabal.HasOne<OlomocUser>().WithMany().HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Cascade);   // compte supprimé : ses cabales aussi
     }
 
     public static string ConnectionString(string dataDirectory) =>
@@ -61,6 +71,22 @@ public sealed class StoredDocumentRow
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string Json { get; set; } = "";
+}
+
+/// <summary>
+/// Cabale d'un compte, sous son nom (unique par compte, sans tenir compte de la casse) : JSON de
+/// l'export, date de sauvegarde (UTC). Supprimée : <see cref="Deleted"/>, sans contenu, gardée
+/// pour que les autres appareils l'apprennent.
+/// </summary>
+public sealed class SavedCabalRow
+{
+    public int Id { get; set; }
+    public string UserId { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string NormalizedName { get; set; } = "";
+    public DateTime SavedAt { get; set; }
+    public bool Deleted { get; set; }
+    public string? Json { get; set; }
 }
 
 /// <summary>Pour « dotnet ef migrations add » : la base est créée à part, sans démarrer le site.</summary>

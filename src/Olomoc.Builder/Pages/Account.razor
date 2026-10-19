@@ -3,10 +3,12 @@
 @using Olomoc.Accounts
 @implements IDisposable
 @inject AccountService Accounts
+@inject CabalLibrary Library
 @inject LocalizationService L
 
-@* Compte : connexion, création, mot de passe oublié ; une fois connecté, e-mail (confirmation),
-   mot de passe, autres appareils, suppression, et l'outil des admins. Compte facultatif. *@
+@* Compte : connexion, création, mot de passe oublié ; une fois connecté, cabales du compte,
+   e-mail (confirmation), mot de passe, autres appareils, suppression, et l'outil des admins.
+   Compte facultatif. *@
 
 @if (!L.Loaded || !Accounts.Loaded)
 {
@@ -97,8 +99,13 @@ else
     {
         <p class="account-msg ok" role="status">@done</p>
     }
+    @if (_cabalsMessage is { } uploaded)
+    {
+        <p class="account-msg ok" role="status">@uploaded</p>
+    }
     <section class="panel account-panel">
         <h2>@me.UserName</h2>
+        <p class="account-cabals">@L.Ui("account.cabals.count", Library.Cabals.Count)</p>
         <p class="account-email">
             <span>@me.Email</span>
             <span class="account-badge @(me.EmailConfirmed ? "ok" : "todo")">@L.Ui(me.EmailConfirmed ? "account.emailConfirmed" : "account.emailUnconfirmed")</span>
@@ -215,6 +222,8 @@ else
 @code {
     private bool _busy, _forgotOpen;
     private string? _done;          // message en tête de page (compte créé, supprimé…)
+    private string? _cabalsMessage; // cabales de cet appareil envoyées au compte
+    private readonly DateTimeOffset _openedAt = DateTimeOffset.Now;
     private readonly Dictionary<string, AccountStatus> _status = new();
     private string _loginName = "", _loginPassword = "", _forgotName = "";
     private string _registerName = "", _registerEmail = "", _registerPassword = "";
@@ -228,7 +237,8 @@ else
     {
         L.Changed += OnChanged;
         Accounts.Changed += OnChanged;
-        await Task.WhenAll(L.EnsureLoadedAsync(), Accounts.EnsureLoadedAsync());
+        Library.Changed += OnLibraryChanged;
+        await Task.WhenAll(L.EnsureLoadedAsync(), Accounts.EnsureLoadedAsync(), Library.EnsureLoadedAsync());
     }
 
     private RenderFragment? Status(string form) => _status.TryGetValue(form, out var s)
@@ -319,9 +329,18 @@ else
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
+    // Première connexion de cet appareil : ses cabales viennent de partir dans le compte.
+    private void OnLibraryChanged()
+    {
+        if (Library.LastSync is { FirstSync: true, Uploaded: > 0 } sync && sync.At >= _openedAt && sync.User == Accounts.Current?.UserName)
+            _cabalsMessage = L.Ui("account.cabals.uploaded", sync.Uploaded);
+        OnChanged();
+    }
+
     public void Dispose()
     {
         L.Changed -= OnChanged;
         Accounts.Changed -= OnChanged;
+        Library.Changed -= OnLibraryChanged;
     }
 }

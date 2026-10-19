@@ -42,6 +42,7 @@ public static class AccountEndpoints
         mine.MapPost("email", ChangeEmail).RequireRateLimiting(MailPolicy);
         mine.MapPost("confirm/send", SendConfirmation).RequireRateLimiting(MailPolicy);
         mine.MapPost("delete", Delete).RequireRateLimiting(TournamentEndpoints.LoginPolicy);
+        mine.MapPost("cabals/sync", CabalSyncEndpoint.Sync).RequireRateLimiting(TournamentEndpoints.WritePolicy);
 
         // Admin : mot de passe temporaire pour un compte dont l'e-mail ne permet pas la récupération.
         app.MapPost("/api/admin/accounts/{userName}/reset-password", AdminReset)

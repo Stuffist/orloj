@@ -11,12 +11,24 @@ public sealed record AccountResult<T>(T? Value, IReadOnlyList<Problem> Problems)
     public bool Ok => Problems.Count == 0;
 }
 
+/// <summary>Compte vu par la bibliothèque de cabales : qui est connecté, et l'envoi des changements.</summary>
+public interface ICabalCloud
+{
+    /// <summary>Pseudo du compte connecté (session vérifiée une fois), ou null.</summary>
+    Task<string?> CurrentUserAsync();
+
+    /// <summary>Connexion, déconnexion, changement de compte.</summary>
+    event Action? Changed;
+
+    Task<AccountResult<CabalSyncResult>> SyncCabalsAsync(IReadOnlyList<CabalChange> changes);
+}
+
 /// <summary>
 /// Compte de la session (/api/account, même origine : le cookie de session part avec chaque
 /// appel). Commun aux apps : connecté dans le constructeur, connecté dans les tournois. Compte
 /// facultatif : sans lui, tout marche comme avant.
 /// </summary>
-public sealed class AccountService(HttpClient http)
+public sealed class AccountService(HttpClient http) : ICabalCloud
 {
     private const string Root = "/api/account";
 
@@ -80,6 +92,15 @@ public sealed class AccountService(HttpClient http)
         if (result.Ok) Set(null);
         return result;
     }
+
+    public async Task<string?> CurrentUserAsync()
+    {
+        await EnsureLoadedAsync();
+        return Current?.UserName;
+    }
+
+    public Task<AccountResult<CabalSyncResult>> SyncCabalsAsync(IReadOnlyList<CabalChange> changes) =>
+        SendAsync<CabalSyncResult>(HttpMethod.Post, "cabals/sync", new CabalSyncRequest(changes));
 
     /// <summary>Admin : mot de passe temporaire pour un autre compte.</summary>
     public Task<AccountResult<TemporaryPassword>> AdminResetPasswordAsync(string userName) =>

@@ -10,6 +10,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddScoped<LocalizationService>();
 builder.Services.AddScoped<AccountService>();           // session commune aux apps (cookie)
+builder.Services.AddScoped<ICabalCloud>(sp => sp.GetRequiredService<AccountService>());   // cabales du compte
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<CabalLibrary>();          // « Mes cabales » du constructeur (même origine)
 builder.Services.AddScoped<CabalExporter>();

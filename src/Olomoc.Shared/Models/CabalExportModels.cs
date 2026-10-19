@@ -22,5 +22,8 @@ public sealed record CabalExport(
     public const int CurrentVersion = 1;
 }
 
-/// <summary>Cabale sauvegardée sur l'appareil (CabalLibrary) et sa date de sauvegarde.</summary>
-public sealed record SavedCabal(DateTimeOffset SavedAt, CabalExport Cabal);
+/// <summary>
+/// Cabale sauvegardée (CabalLibrary) et sa date de sauvegarde. <see cref="Pending"/> : pas encore
+/// envoyée au compte (sauvegardée hors connexion, ou sans compte).
+/// </summary>
+public sealed record SavedCabal(DateTimeOffset SavedAt, CabalExport Cabal, bool Pending = false);

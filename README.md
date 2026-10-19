@@ -320,6 +320,22 @@ Charger par-dessus une composition non sauvegardée demande confirmation. Les ca
 sont retrouvées par leurs ids, chaque rouage à l'emplacement de son rang ; une carte
 absente du référentiel actuel est écartée et signalée sous le nom enregistré.
 
+**Avec un compte**, les mêmes cabales sur tous les appareils (`CabalLibrary`,
+`POST /api/account/cabals/sync`) :
+
+- chaque appareil garde sa copie (`olomoc.cabals`) : tout marche hors connexion ;
+- connecté, chaque sauvegarde ou suppression part aussitôt ; sans réseau, elle attend le
+  prochain chargement (« N changements pas encore envoyés » dans « Mes cabales ») ;
+- à nom égal (sans tenir compte de la casse), **le plus récent l'emporte**, suppression
+  comprise : le compte garde la trace des suppressions, une vieille copie ne les annule pas ;
+- **première connexion** d'un appareil : ses cabales partent dans le compte (« N cabales de
+  cet appareil ajoutées à votre compte ») ; un **autre compte** ensuite sur le même appareil :
+  seules les cabales faites ici hors compte le suivent, les autres laissent la place aux siennes
+  (`olomoc.cabals.account` : compte de la copie) ;
+- déconnecté, la copie reste sur l'appareil ;
+- 200 cabales au plus par compte (au-delà, la cabale reste sur l'appareil, signalée) ; envoi
+  par paquets de 10 ; supprimer le compte efface ses cabales.
+
 ## Mode partie
 
 Depuis le constructeur, « Lancer une partie » ouvre `/play` avec la cabale en cours
@@ -380,6 +396,7 @@ Facultatifs : sans compte, tout marche comme avant, sur l'appareil. `/builder/ac
 - **Admins** (`OLOMOC_ADMINS`) : mot de passe temporaire pour un joueur sans e-mail confirmé.
   Créer son compte d'abord, puis l'ajouter à la liste et redémarrer : seuls des comptes
   existants deviennent admins.
+- **Cabales** : les mêmes sur tous les appareils (voir « Cabales sauvegardées »).
 - **Suppression** du compte (mot de passe redemandé) et page **Données personnelles**
   (`/builder/privacy`).
 
@@ -512,7 +529,8 @@ tests/Olomoc.Tests/   xUnit
   `AvailableEquipment`, `RecruitVia`, `CheckLegality` (dont le couplage biparti).
 - `Services/CogQuery.cs` — analyse de la recherche (mots + conditions sur les stats).
 - `Services/CabalExporter.cs` — exports texte (format bwaaaanegamesdb.fr) et JSON, relecture du JSON.
-- `Services/CabalLibrary.cs` — cabales sauvegardées dans le navigateur ; `CatalogService.Resolve` les relit.
+- `Services/CabalLibrary.cs` — cabales sauvegardées dans le navigateur, synchronisées avec le compte
+  (`Accounts/CabalSyncModels.cs`) ; `CatalogService.Resolve` les relit.
 - `Models/GameModels.cs`, `Services/GameSession.cs`, `Services/GameStore.cs` — mode
   partie : état sauvegardable, règles et annulation, sauvegarde dans le navigateur.
 - `Services/CabalDraft.cs` — cabale en cours de composition, conservée en naviguant.
@@ -551,10 +569,10 @@ tests/Olomoc.Tests/   xUnit
   `TournamentStore.cs` (un document par tournoi, verrou par tournoi), `StatsArchive.cs`,
   `ServerCatalog.cs` (référentiel côté serveur), `TournamentPurge.cs` (90 jours sans modification, date passée ou absente).
 - `Accounts/AccountEndpoints.cs` — API `/api/account` (Identity, cookie de session), rôle
-  admin (`AdminRoles`) ; `Mail.cs` (relais SMTP par MailKit, ou fichiers ; file d'envoi),
+  admin (`AdminRoles`) ; `CabalSyncEndpoint.cs` (cabales du compte) ; `Mail.cs` (relais SMTP par MailKit, ou fichiers ; file d'envoi),
   `AccountMails.cs` (textes des e-mails).
 - `Data/OlomocDb.cs` — base SQLite (EF Core) : table `Documents` (sorte, code, dates,
-  JSON), comptes (tables d'Identity), clés des cookies ; schéma par migrations (`Data/Migrations`, appliquées au démarrage ; nouvelle
+  JSON), comptes (tables d'Identity), cabales des comptes (`SavedCabals`), clés des cookies ; schéma par migrations (`Data/Migrations`, appliquées au démarrage ; nouvelle
   migration : `dotnet dotnet-ef migrations add <Nom> --project src/Olomoc.Server
   --output-dir Data/Migrations`). `JsonImport.cs` (reprise des anciens fichiers),
   `DbBackup.cs` (copie quotidienne, `VACUUM INTO`).

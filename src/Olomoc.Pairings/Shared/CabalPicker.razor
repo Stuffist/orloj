@@ -1,11 +1,12 @@
 @* Choix d'une cabale à inscrire : parmi « Mes cabales » (sauvegardées par le constructeur sur
-   cet appareil), composée dans le constructeur (« Composer… », nouvel onglet), ou collée (export
+   cet appareil, ou dans le compte), composée dans le constructeur (« Composer… », nouvel onglet), ou collée (export
    texte ou JSON). Légalité vérifiée aussitôt, avec les règles du constructeur (le serveur la
    revérifie à l'inscription). *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 @inject CabalLibrary Library
 @inject CabalImport Import
+@implements IDisposable
 
 <div class="tn-picker">
     <div class="tn-picker-head">
@@ -93,7 +94,15 @@
     private ImportResult? _result;
     private string? _pasteFaction;           // faction choisie dans la fenêtre (texte sans faction)
 
-    protected override Task OnInitializedAsync() => Library.EnsureLoadedAsync();
+    protected override Task OnInitializedAsync()
+    {
+        Library.Changed += OnLibraryChanged;           // cabales du compte arrivées après l'affichage
+        return Library.EnsureLoadedAsync();
+    }
+
+    private void OnLibraryChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Library.Changed -= OnLibraryChanged;
 
     // Sauvegarde choisie : celle dont le contenu est la cabale affichée (même après relecture).
     private string SelectedSaved

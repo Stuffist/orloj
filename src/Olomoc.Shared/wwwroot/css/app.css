@@ -581,6 +581,9 @@ body {
     color: var(--rust-soft); text-decoration: underline; cursor: pointer;
 }
 .privacy p { max-width: 72ch; }
+.account-cabals { margin: -.3rem 0 .6rem; color: var(--muted); font-size: .9rem; }
+.library-account { margin: 0 0 .8rem; }
+.library-account a { color: var(--rust-soft); }
 
 /* ---- Catalogue des équipements et dons (bas du constructeur, fenêtre détachée /builder/equipment) ---- */
 .equip-section { margin-top: 1.5rem; }

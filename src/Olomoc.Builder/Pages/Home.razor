@@ -9,6 +9,7 @@
 @inject GameStore Games
 @inject NavigationManager Nav
 @inject CabalLibrary Library
+@inject AccountService Accounts
 @using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
 
@@ -360,6 +361,25 @@ else
     @if (_libraryOpen)
     {
         <Sheet Title="@L.Ui("library.title")" OnClose="() => _libraryOpen = false">
+            @* Compte : mêmes cabales sur tous les appareils ; sans compte : celles de cet appareil. *@
+            <p class="hint library-account">
+                @if (Accounts.Current is { } me)
+                {
+                    @L.Ui("library.account", me.UserName)
+                    @if (Library.PendingCount > 0)
+                    {
+                        @(" " + L.Ui("library.pending", Library.PendingCount))
+                    }
+                }
+                else
+                {
+                    @(L.Ui("library.device") + " ")<a href="account">@L.Ui("library.signIn")</a>
+                }
+            </p>
+            @if (Library.LastSync?.Problems.Where(p => p.Key is "cabalLimit" or "cabalInvalid").ToList() is { Count: > 0 } refused)
+            {
+                <p class="export-warning">@L.Describe(refused)</p>
+            }
             @if (Library.Cabals.Count == 0)
             {
                 <p class="empty">@L.Ui("library.empty")</p>
@@ -420,6 +440,8 @@ else
     protected override async Task OnInitializedAsync()
     {
         L.Changed += OnLanguageChanged;
+        Library.Changed += OnLanguageChanged;          // cabales du compte arrivées, autre compte…
+        Accounts.Changed += OnLanguageChanged;
         await L.EnsureLoadedAsync();
         await Catalog.EnsureLoadedAsync();
         await Games.EnsureLoadedAsync();
@@ -434,10 +456,15 @@ else
     [SupplyParameterFromQuery(Name = "tournament")] public string? Tournament { get; set; }
     [SupplyParameterFromQuery(Name = "faction")] public string? FactionParam { get; set; }
 
-    // Les textes se résolvent au rendu : un changement de langue ne demande qu'un re-rendu.
+    // Les textes se résolvent au rendu : un changement de langue (ou des cabales du compte) ne demande qu'un re-rendu.
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => L.Changed -= OnLanguageChanged;
+    public void Dispose()
+    {
+        L.Changed -= OnLanguageChanged;
+        Library.Changed -= OnLanguageChanged;
+        Accounts.Changed -= OnLanguageChanged;
+    }
 
     private static int RankIndex(int rank) => rank - 1;
 
