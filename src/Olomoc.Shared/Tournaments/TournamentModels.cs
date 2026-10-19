@@ -2,8 +2,9 @@ using Olomoc.Models;
 
 namespace Olomoc.Tournaments;
 
-// Tournoi tel qu'il est enregistré par le serveur (un fichier JSON par tournoi). Les joueurs
-// sont désignés par leur Id ; les secrets (jetons) ne sont conservés que sous forme de hash.
+// Tournoi tel qu'il est enregistré par le serveur (un document JSON par tournoi, dans la base).
+// Les joueurs sont désignés par leur Id ; les secrets (jetons) ne sont conservés que sous forme
+// de hash.
 // Feuille de ronde officielle : une faction et deux cabales par joueur, points de tournoi
 // 0/1/3, différence de PV cumulée.
 
@@ -12,7 +13,7 @@ public enum PairingMode { Swiss, Alignment }
 /// <summary>Inscriptions ouvertes → tournoi lancé (inscriptions closes, listes révélées) → terminé.</summary>
 public enum TournamentPhase { Registration, Started, Finished }
 
-public sealed class Tournament
+public sealed class Tournament : IStoredDocument
 {
     public const int CurrentVersion = 1;
 

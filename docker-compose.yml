@@ -28,8 +28,9 @@ services:
       # HTTP local au VPS uniquement (diagnostic) : curl http://127.0.0.1:8090/healthz
       - "127.0.0.1:${OLOMOC_HTTP_PORT:-8090}:8080"
     volumes:
-      # Tournois : un fichier JSON par tournoi dans ./data, à côté de ce fichier (créé au premier
-      # démarrage). Conservé par down/up/--force-recreate/--build ; à sauvegarder comme un dossier.
+      # Données : base SQLite ./data/olomoc.db, à côté de ce fichier (créée au premier démarrage),
+      # et sa copie quotidienne cohérente dans ./data/backups (7 gardées). Conservé par
+      # down/up/--force-recreate/--build ; à sauvegarder comme un dossier.
       # Doit appartenir à l'utilisateur du conteneur : sudo chown -R 1654:1654 data
       - ./data:/data
     networks: [web]

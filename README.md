@@ -17,7 +17,7 @@ Nécessite le SDK .NET 10.
 dotnet run --project src/Olomoc.Server
 ```
 
-Puis ouvrir `http://localhost:55772/` (renvoie vers `/builder/`).
+Puis ouvrir `http://localhost:5180/` (renvoie vers `/builder/`).
 
 Tests : `dotnet test` à la racine (solution `Olomoc.slnx`).
 
@@ -28,10 +28,17 @@ l'hôte `Olomoc.Server` sur le runtime ASP.NET (Alpine, ≈ 140 Mo), en HTTP sur
 8080, sous un utilisateur sans privilèges (`app`, uid 1654). Il sert le constructeur
 (`/builder/`) et les tournois (`/pairings/`), fichiers `_framework` précompressés en
 Brotli/gzip, les fichiers communs (`/_content/Olomoc.Shared/`), l'API des tournois,
-redirige `/` vers `/builder/`, et répond à `/healthz`. Les tournois sont des fichiers JSON
-dans `/data` du conteneur, monté sur le dossier `./data` à côté du `docker-compose.yml` :
-conservés par `down`/`up`, `--force-recreate` et `--build`, et sauvegardés en copiant ce
-dossier (`tar czf olomoc-data.tgz data`).
+redirige `/` vers `/builder/`, et répond à `/healthz`. Les données (tournois, statistiques)
+sont dans une base **SQLite**, `/data/olomoc.db` du conteneur, monté sur le dossier `./data`
+à côté du `docker-compose.yml` : conservées par `down`/`up`, `--force-recreate` et
+`--build`. Le serveur en fait chaque jour une copie cohérente dans `data/backups/` (les 7
+dernières sont gardées) ; c'est le dossier à sauvegarder (`tar czf olomoc-data.tgz data`).
+Copier `olomoc.db` lui-même pendant que le serveur tourne ne donne pas une copie sûre.
+
+Passage aux versions avec base : au premier démarrage, les anciens fichiers
+`data/tournaments/*.json` et `data/stats/*.json` sont importés dans la base, puis leurs
+dossiers renommés `tournaments.imported` et `stats.imported` (gardés tels quels, jamais
+réimportés ; un fichier illisible y reste, signalé dans le journal du conteneur).
 
 → `https://orloj.top/`
 
@@ -349,8 +356,8 @@ de victoire sont dans la barre du haut (fixée à l'écran, sauf sur téléphone
 
 `/pairings/` : l'organisateur crée un tournoi (nom, date, nombre de rondes, 1 ou 2 cabales
 par joueur, mode d'appariement) et reçoit un **code** à 6 caractères à donner aux joueurs,
-ainsi qu'un **lien d'administration**. Pas de compte ni de base de données : un fichier
-JSON par tournoi sur le serveur ; jetons et mot de passe ne sont conservés que hachés.
+ainsi qu'un **lien d'administration**. Pas de compte : chaque tournoi est un document JSON
+dans la base du serveur ; jetons et mot de passe ne sont conservés que hachés.
 L'organisateur peut **supprimer** son tournoi (en bas de l'administration, en retapant le
 code). Sinon, un tournoi est supprimé automatiquement après 90 jours sans
 modification, si sa date est passée ou s'il n'en a pas ; un tournoi daté d'aujourd'hui ou
@@ -437,9 +444,9 @@ plus tard ne l'est **jamais** (contrôle quotidien).
   PoliSec), **scénarios joués** (avec les victoires de J1 par scénario ; scénarios maison
   regroupés, sans leur nom).
 
-Pas de base de données : à la fin d'un tournoi, une **archive anonyme** (factions, cabales en ids,
-parties ; ni noms ni jetons) est écrite dans `data/stats/<code>.json`, que la purge des tournois
-ne touche pas : les statistiques couvrent tout l'historique. Elles sont calculées en mémoire
+À la fin d'un tournoi, une **archive anonyme** (factions, cabales en ids, parties ; ni noms
+ni jetons) est enregistrée dans la base (document « stats » du code du tournoi), que la purge
+des tournois ne touche pas : les statistiques couvrent tout l'historique. Elles sont calculées en mémoire
 (`Tournaments/Stats/TournamentStats.cs`) et recalculées à chaque archive ajoutée ou retirée
 (`GET /api/stats`). Supprimer un tournoi, ou l'exclure, retire son archive ; au démarrage, un
 tournoi terminé sans archive en reçoit une.
@@ -500,8 +507,15 @@ tests/Olomoc.Tests/   xUnit
 - `Program.cs` — en-têtes (`Cache-Control: no-cache`, `nosniff`), `/` → `/builder/`,
   `/healthz`, limites de débit et de taille des requêtes.
 - `Tournaments/TournamentEndpoints.cs` — API `/api/tournaments` (droits par jeton) ;
-  `TournamentStore.cs` (fichiers JSON, verrou par tournoi, écriture atomique),
+  `TournamentStore.cs` (un document par tournoi, verrou par tournoi), `StatsArchive.cs`,
   `ServerCatalog.cs` (référentiel côté serveur), `TournamentPurge.cs` (90 jours sans modification, date passée ou absente).
+- `Data/OlomocDb.cs` — base SQLite (EF Core) : table `Documents` (sorte, code, dates,
+  JSON) ; schéma par migrations (`Data/Migrations`, appliquées au démarrage ; nouvelle
+  migration : `dotnet dotnet-ef migrations add <Nom> --project src/Olomoc.Server
+  --output-dir Data/Migrations`). `JsonImport.cs` (reprise des anciens fichiers),
+  `DbBackup.cs` (copie quotidienne, `VACUUM INTO`).
+- `Hosting/DocumentStore.cs` — documents JSON sous un code public de 6 caractères (création,
+  modification et suppression sous verrou, purge des inactifs).
 - `Hosting/ClientApps.cs` — une app WebAssembly par chemin (`StaticWebAssetBasePath`),
   routes de l'app renvoyées vers son `index.html`.
 - `Hosting/SecurityHeaders.cs` — CSP, cadres interdits, Referrer-Policy, HSTS en HTTPS.

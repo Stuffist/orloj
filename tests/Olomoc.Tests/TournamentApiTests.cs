@@ -2,7 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Olomoc.Models;
+using Olomoc.Server.Data;
+using Olomoc.Server.Tournaments;
 using Olomoc.Services;
 using Olomoc.Tournaments;
 using Xunit;
@@ -18,7 +21,7 @@ public sealed class TournamentApiTests : IDisposable
     public void Dispose()
     {
         _servers.ForEach(s => s.Dispose());
-        if (Directory.Exists(_data)) Directory.Delete(_data, recursive: true);
+        TestDb.Delete(_data);
     }
 
     private HttpClient Server(int createPerHour = 1000, int readsPerMinute = 1000)
@@ -340,7 +343,7 @@ public sealed class TournamentApiTests : IDisposable
         Assert.Equal(("MAISEL", 100.0), (stats.Factions[0].Key, stats.Factions[0].Percent));
         Assert.Equal((2, 1, 0), (stats.FactionWins[0].Games, stats.FactionWins[0].Wins, stats.FactionWins[0].Draws));
         Assert.Equal(2, stats.Rank3Wins.Sum(r => r.Games));                       // cabales jouées connues
-        Assert.True(File.Exists(Path.Combine(_data, "stats", t.Code + ".json")));
+        Assert.True(await Archived(t.Code));
 
         // Exclu puis réinclus par l'orga ; puis supprimé : l'archive suit.
         Assert.Equal(HttpStatusCode.Forbidden, (await http.PutAsJsonAsync($"{url}/stats", new StatsRequest(true), TournamentJson.Options)).StatusCode);
@@ -366,11 +369,59 @@ public sealed class TournamentApiTests : IDisposable
     {
         var first = Server();
         var (t, _) = await FinishedTournament(first);
-        File.Delete(Path.Combine(_data, "stats", t.Code + ".json"));
+        using (var db = (await TestDb.OpenAsync(_data)).CreateDbContext())
+            db.Documents.Where(d => d.Kind == StatsArchive.Kind && d.Code == t.Code).ExecuteDelete();
+        Assert.False(await Archived(t.Code));
 
         var second = Server();
         Assert.Equal(1, (await Stats(second)).Tournaments);
-        Assert.True(File.Exists(Path.Combine(_data, "stats", t.Code + ".json")));
+        Assert.True(await Archived(t.Code));
+    }
+
+    private async Task<bool> Archived(string code) =>
+        (await TestDb.OpenAsync(_data)).Find(StatsArchive.Kind, code) is not null;
+
+    [Fact]
+    public async Task Anciens_fichiers_json_importes_au_demarrage()
+    {
+        // Données d'avant la base : un dossier par sorte, un fichier par document.
+        var first = Server();
+        var (t, url) = await FinishedTournament(first);
+        var before = (await View(first, t.Code), await Stats(first));
+        var db = await TestDb.OpenAsync(_data);
+        var old = Path.Combine(Path.GetTempPath(), "olomoc-tests-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            foreach (var (folder, kind) in JsonImport.Folders)
+            {
+                Directory.CreateDirectory(Path.Combine(old, folder));
+                File.WriteAllText(Path.Combine(old, folder, t.Code + ".json"), db.Find(kind, t.Code)!.Json);
+            }
+            File.WriteAllText(Path.Combine(old, "tournaments", "ZZZZZZ.json"), "{ illisible");
+
+            using var server = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("DATA_DIR", old));
+            var http = server.CreateClient();
+            var after = (await View(http, t.Code), await Stats(http));
+            Assert.Equal(System.Text.Json.JsonSerializer.Serialize(before, TournamentJson.Options),
+                         System.Text.Json.JsonSerializer.Serialize(after, TournamentJson.Options));
+            Assert.Equal(TournamentPhase.Finished, after.Item1.Phase);
+
+            // Dossiers renommés, gardés comme sauvegarde ; le fichier illisible y reste.
+            Assert.False(Directory.Exists(Path.Combine(old, "tournaments")));
+            Assert.True(File.Exists(Path.Combine(old, "tournaments.imported", "ZZZZZZ.json")));
+            Assert.True(File.Exists(Path.Combine(old, "stats.imported", t.Code + ".json")));
+            var imported = await TestDb.OpenAsync(old);
+            Assert.Equal(db.Find(TournamentStore.Kind, t.Code)!.CreatedAt, imported.Find(TournamentStore.Kind, t.Code)!.CreatedAt);
+            Assert.Null(imported.Find(TournamentStore.Kind, "ZZZZZZ"));
+
+            // Pas de second import : un dossier recréé n'écrase pas ce qui est en base.
+            Directory.CreateDirectory(Path.Combine(old, "tournaments"));
+            File.WriteAllText(Path.Combine(old, "tournaments", t.Code + ".json"), "{\"name\":\"Écrasé\"}");
+            using var again = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("DATA_DIR", old));
+            Assert.Equal(before.Item1.Name, (await View(again.CreateClient(), t.Code)).Name);
+            Assert.True(Directory.GetDirectories(old, "tournaments.imported-*").Length == 1);
+        }
+        finally { TestDb.Delete(old); }
     }
 
     [Fact]

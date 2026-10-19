@@ -7,7 +7,7 @@ using Xunit;
 namespace Olomoc.Tests;
 
 /// <summary>Hôte du site, démarré en mémoire : redirections, apps sous leur chemin, fichiers communs.</summary>
-public class ServerTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
 {
     private HttpClient Client() => factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
@@ -154,4 +154,18 @@ public class ServerTests(WebApplicationFactory<Program> factory) : IClassFixture
     [Fact]
     public async Task Healthz() =>
         Assert.Equal("ok\n", await Client().GetStringAsync("/healthz"));
+}
+
+/// <summary>Site démarré en mémoire sur un dossier de données temporaire (pas celui du développement).</summary>
+public sealed class TempDataServer : WebApplicationFactory<Program>
+{
+    private readonly string _data = Path.Combine(Path.GetTempPath(), "olomoc-server-" + Guid.NewGuid().ToString("N"));
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder) => builder.UseSetting("DATA_DIR", _data);
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        TestDb.Delete(_data);
+    }
 }

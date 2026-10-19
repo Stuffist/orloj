@@ -1,5 +1,5 @@
 # Orloj — site complet : constructeur (/builder/), tournois (/pairings/ et /api/tournaments),
-# servis par l'hôte ASP.NET Core (Olomoc.Server). Tournois enregistrés dans /data (volume).
+# servis par l'hôte ASP.NET Core (Olomoc.Server). Base SQLite dans /data (volume).
 # Étape 1 : publication avec le SDK .NET ; étape 2 : runtime ASP.NET seul, en HTTP sur 8080.
 # Le HTTPS est assuré par le reverse proxy (deploy/proxy : Caddy).
 
@@ -15,6 +15,10 @@ RUN dotnet restore src/Olomoc.Server/Olomoc.Server.csproj
 
 COPY src/ src/
 RUN dotnet publish src/Olomoc.Server/Olomoc.Server.csproj -c Release -o /app --no-restore
+# SQLite : bibliothèque native livrée pour une vingtaine de plateformes ; seule celle d'Alpine
+# (musl) sert dans l'image finale.
+RUN find /app/runtimes -name "*e_sqlite3*" ! -path "*/linux-musl-*" -delete \
+ && find /app/runtimes -type d -empty -delete
 
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final

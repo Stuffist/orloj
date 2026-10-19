@@ -1,4 +1,6 @@
 using System.Threading.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Olomoc.Server.Data;
 using Olomoc.Server.Hosting;
 using Olomoc.Server.Tournaments;
 using Olomoc.Tournaments;
@@ -10,10 +12,14 @@ builder.WebHost.ConfigureKestrel(k =>
     k.AddServerHeader = false;                  // pas de « Server: Kestrel »
 });
 
-// Tournois : fichiers JSON dans DATA_DIR (/data dans le conteneur, monté sur ./data).
+// Données : base SQLite DATA_DIR/olomoc.db (/data dans le conteneur, monté sur ./data), avec ses
+// sauvegardes quotidiennes (DATA_DIR/backups).
 var dataDirectory = builder.Configuration["DATA_DIR"] ?? Path.Combine(builder.Environment.ContentRootPath, "App_Data");
-builder.Services.AddSingleton(new TournamentStore(Path.Combine(dataDirectory, "tournaments")));
-builder.Services.AddSingleton(new StatsArchive(Path.Combine(dataDirectory, "stats")));    // jamais purgées
+Directory.CreateDirectory(dataDirectory);
+builder.Services.AddDbContextFactory<OlomocDb>(o => OlomocDb.Configure(o, dataDirectory));
+builder.Services.AddSingleton(sp => new TournamentStore(sp.GetRequiredService<IDbContextFactory<OlomocDb>>()));
+builder.Services.AddSingleton<StatsArchive>();    // jamais purgées
+builder.Services.AddHostedService(sp => new DbBackup(dataDirectory, sp.GetRequiredService<ILogger<DbBackup>>()));
 builder.Services.AddSingleton<ServerCatalog>();
 builder.Services.AddHostedService<TournamentPurge>();
 builder.Services.ConfigureHttpJsonOptions(o => TournamentJson.Configure(o.SerializerOptions));
@@ -40,6 +46,11 @@ builder.Services.AddRateLimiter(o =>
 });
 
 var app = builder.Build();
+
+// Schéma à jour, puis reprise des anciens fichiers JSON (une seule fois).
+var dbFactory = app.Services.GetRequiredService<IDbContextFactory<OlomocDb>>();
+await OlomocDb.MigrateAsync(dbFactory);
+await JsonImport.RunAsync(dbFactory, dataDirectory, app.Logger);
 
 // Tournois terminés avant les statistiques (ou dont l'archive manque) : archivés au démarrage.
 await app.Services.GetRequiredService<StatsArchive>().BackfillAsync(app.Services.GetRequiredService<TournamentStore>());
