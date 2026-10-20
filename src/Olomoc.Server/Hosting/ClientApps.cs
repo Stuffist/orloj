@@ -1,29 +1,36 @@
 namespace Olomoc.Server.Hosting;
 
 /// <summary>
-/// Apps Blazor WebAssembly servies chacune sous son chemin (/builder/…), d'après le modèle
-/// « plusieurs apps hébergées » d'ASP.NET Core : chaque app publie ses fichiers sous ce
-/// chemin (StaticWebAssetBasePath) et son index.html porte le &lt;base href&gt; correspondant.
+/// Le site dans le navigateur : une seule app Blazor WebAssembly (Olomoc.Web), servie à la racine
+/// (_framework/…, index.html), dont les pages vivent sous deux sections : le constructeur
+/// (/builder/…) et les tournois (/pairings/…). Toute adresse d'une section sans fichier
+/// correspondant renvoie index.html : le routeur Blazor prend le relais, sans rechargement d'une
+/// section à l'autre.
 /// </summary>
 public static class ClientApps
 {
-    public static void Map(WebApplication app, string name)
+    public static readonly string[] Sections = ["builder", "pairings"];
+
+    public static void Map(WebApplication app)
     {
-        var prefix = "/" + name;
-        app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase), client =>
+        // « /builder » sans barre finale : redirigé vers « /builder/ », adresse canonique de la section.
+        app.Use((ctx, next) =>
         {
-            // « /builder » sans barre finale : l'app résout ses liens par rapport à « /builder/ ».
-            client.Use((ctx, next) =>
+            foreach (var section in Sections)
             {
-                if (!ctx.Request.Path.Equals(prefix, StringComparison.OrdinalIgnoreCase)) return next();
-                ctx.Response.Redirect(prefix + "/" + ctx.Request.QueryString);
+                if (!ctx.Request.Path.Equals("/" + section, StringComparison.OrdinalIgnoreCase)) continue;
+                ctx.Response.Redirect($"/{section}/{ctx.Request.QueryString}");
                 return Task.CompletedTask;
-            });
-            client.UseBlazorFrameworkFiles(prefix);     // _framework, fichiers précompressés compris
-            client.UseStaticFiles();
-            client.UseRouting();
-            // Routes de l'app (pas de fichier correspondant) : index.html, le routeur Blazor prend le relais.
-            client.UseEndpoints(e => e.MapFallbackToFile($"{name}/{{*path:nonfile}}", $"{name}/index.html"));
+            }
+            return next();
         });
+        app.UseBlazorFrameworkFiles();                  // _framework, fichiers précompressés compris
+    }
+
+    /// <summary>Routes de l'app (pas de fichier correspondant) : index.html.</summary>
+    public static void MapFallbacks(WebApplication app)
+    {
+        foreach (var section in Sections)
+            app.MapFallbackToFile($"{section}/{{*path:nonfile}}", "index.html");
     }
 }

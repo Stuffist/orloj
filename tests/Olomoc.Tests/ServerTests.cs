@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Hôte du site, démarré en mémoire : redirections, apps sous leur chemin, fichiers communs.</summary>
+/// <summary>Hôte du site, démarré en mémoire : redirections, app et ses sections, fichiers communs.</summary>
 public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
 {
     private HttpClient Client() => factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
@@ -23,24 +23,27 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
         Assert.Equal(location, response.Headers.Location?.OriginalString);
     }
 
+    // Une seule app : chaque route des sections renvoie la même index.html (base « / »),
+    // le routeur Blazor prend le relais, sans rechargement d'une section à l'autre.
     [Theory]
-    [InlineData("/builder/", "/builder/")]
-    [InlineData("/builder/play", "/builder/")]          // route de l'app : index.html, le routeur Blazor prend le relais
-    [InlineData("/builder/equipment", "/builder/")]
-    [InlineData("/pairings/", "/pairings/")]
-    [InlineData("/pairings/t/ABCDEF/admin", "/pairings/")]
-    public async Task Apps_sous_leur_chemin(string path, string baseHref)
+    [InlineData("/builder/")]
+    [InlineData("/builder/play")]
+    [InlineData("/builder/equipment")]
+    [InlineData("/pairings/")]
+    [InlineData("/pairings/stats")]
+    [InlineData("/pairings/t/ABCDEF/admin")]
+    public async Task Sections_de_l_app(string path)
     {
         var response = await Client().GetAsync(path);
         response.EnsureSuccessStatusCode();
         var html = await response.Content.ReadAsStringAsync();
-        Assert.Contains($"<base href=\"{baseHref}\" />", html);
+        Assert.Contains("<base href=\"/\" />", html);
         Assert.Contains("_framework/blazor.webassembly.js", html);
         Assert.Contains($"<link rel=\"manifest\" href=\"{Assets.Base}manifest.webmanifest\" />", html);
         Assert.Equal("no-cache", response.Headers.CacheControl?.ToString());
     }
 
-    // Application installable : manifeste commun aux deux apps, au type attendu par les navigateurs.
+    // Application installable : manifeste du site, au type attendu par les navigateurs.
     [Fact]
     public async Task Manifeste()
     {
@@ -53,7 +56,7 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
             (await Client().GetAsync(Assets.Base + icon.GetProperty("src").GetString())).EnsureSuccessStatusCode();
     }
 
-    // Service worker à la racine du site : sa portée par défaut (« / ») couvre les deux apps et /_content/.
+    // Service worker à la racine du site : sa portée par défaut (« / ») couvre l'app et /_content/.
     [Fact]
     public async Task Service_worker_a_la_racine()
     {
@@ -64,8 +67,7 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
     }
 
     [Theory]
-    [InlineData("/builder/_framework/blazor.webassembly.js")]
-    [InlineData("/pairings/_framework/blazor.webassembly.js")]
+    [InlineData("/_framework/blazor.webassembly.js")]
     [InlineData(Assets.Base + "js/olomoc.js")]
     [InlineData(Assets.Base + "data/olomoc-catalog.json")]
     [InlineData(Assets.Base + "i18n/fr/ui.json")]

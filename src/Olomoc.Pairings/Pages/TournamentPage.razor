@@ -1,4 +1,4 @@
-@page "/t/{Code}"
+@page "/pairings/t/{Code}"
 @inherits TournamentPageBase
 
 @if (!Ready)
@@ -9,7 +9,7 @@ else if (View is not { } v)
 {
     <section class="panel">
         <Problems Items="LoadProblems" />
-        <a class="btn" href="">@L.Ui("pairings.home")</a>
+        <a class="btn" href="pairings/">@L.Ui("pairings.home")</a>
     </section>
 }
 else
@@ -22,7 +22,7 @@ else
         </span>
         @if (v.IsOrganizer)
         {
-            <a class="btn small primary" href="t/@v.Code/admin">@L.Ui("pairings.admin.open")</a>
+            <a class="btn small primary" href="pairings/t/@v.Code/admin">@L.Ui("pairings.admin.open")</a>
         }
     </TournamentHeader>
 

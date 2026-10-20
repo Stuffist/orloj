@@ -1,4 +1,4 @@
-@page "/account/confirm"
+@page "/builder/account/confirm"
 @namespace Olomoc.Builder.Pages
 @using Olomoc.Accounts
 @implements IDisposable
@@ -21,7 +21,7 @@
         {
             <p class="account-msg @(_result.Ok ? "ok" : "error")" role="@(_result.Ok ? "status" : "alert")">@_result.Text</p>
         }
-        <p><a class="btn" href="account">@L.Ui("account.title")</a></p>
+        <p><a class="btn" href="builder/account">@L.Ui("account.title")</a></p>
     }
 </section>
 
@@ -32,7 +32,7 @@
     {
         L.Changed += OnChanged;
         var link = AccountUi.Fragment(Nav.Uri);
-        if (link.ContainsKey("token")) Nav.NavigateTo("account/confirm", replace: true);
+        if (link.ContainsKey("token")) Nav.NavigateTo("builder/account/confirm", replace: true);
         await L.EnsureLoadedAsync();
         await Accounts.EnsureLoadedAsync();
 

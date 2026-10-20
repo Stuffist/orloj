@@ -1,4 +1,4 @@
-@page "/"
+@page "/builder"
 @namespace Olomoc.Builder.Pages
 @implements IDisposable
 @inject CatalogService Catalog
@@ -43,7 +43,7 @@ else
         </button>
         @if (Games.Session is { } game)
         {
-            <a class="btn" href="play">@L.Ui("play.launch.resumeShort", Math.Min(game.State.Cycle, GameSession.Cycles))</a>
+            <a class="btn" href="builder/play">@L.Ui("play.launch.resumeShort", Math.Min(game.State.Cycle, GameSession.Cycles))</a>
         }
         @if (_loadNotice is not null)
         {
@@ -373,7 +373,7 @@ else
                 }
                 else
                 {
-                    @(L.Ui("library.device") + " ")<a href="account">@L.Ui("library.signIn")</a>
+                    @(L.Ui("library.device") + " ")<a href="builder/account">@L.Ui("library.signIn")</a>
                 }
             </p>
             @if (Library.LastSync?.Problems.Where(p => p.Key is "cabalLimit" or "cabalInvalid").ToList() is { Count: > 0 } refused)
@@ -626,7 +626,7 @@ else
         : Exporter.ToText(_cabalName, _cogs, _equipment);
 
     // Planche des cartes (impression / PDF / PNG), dans un nouvel onglet : la cabale passe dans l'adresse.
-    private string CardsLink => $"cards?c={Uri.EscapeDataString(CardSheet.Encode(_cogs, _equipment))}"
+    private string CardsLink => $"builder/cards?c={Uri.EscapeDataString(CardSheet.Encode(_cogs, _equipment))}"
         + (string.IsNullOrWhiteSpace(_cabalName) ? "" : $"&name={Uri.EscapeDataString(_cabalName.Trim())}");
 
     private string DataUri(string content) =>
@@ -732,7 +732,7 @@ else
     // par le navigateur : il reste affiché dans la page.
     private async Task DetachEquipmentAsync()
     {
-        if (await JS.InvokeAsync<bool>("olomoc.openWindow", "equipment?window=true", "olomoc-equipment"))
+        if (await JS.InvokeAsync<bool>("olomoc.openWindow", "builder/equipment?window=true", "olomoc-equipment"))
             _equipShown = false;
     }
 
@@ -742,7 +742,7 @@ else
     {
         if (Games.Session is not null && !await JS.InvokeAsync<bool>("confirm", L.Ui("play.launch.replace"))) return;
         await Games.StartAsync(GameSession.NewGame(_cabalName, NullIfEmpty(_faction), _cogs, _equipment));
-        Nav.NavigateTo("play");
+        Nav.NavigateTo("builder/play");
     }
 
     private static string? NullIfEmpty(string s) => string.IsNullOrWhiteSpace(s) ? null : s;

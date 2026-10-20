@@ -1,4 +1,4 @@
-@page "/cards"
+@page "/builder/cards"
 @namespace Olomoc.Builder.Pages
 @implements IDisposable
 @inject CatalogService Catalog
@@ -26,7 +26,7 @@ else
             <button class="btn" disabled="@(cells.Count == 0 || _rendering)" @onclick="DownloadPngAsync">
                 @L.Ui(_rendering ? "cards.rendering" : "cards.png")
             </button>
-            <a class="btn" href="">@L.Ui("cards.back")</a>
+            <a class="btn" href="builder/">@L.Ui("cards.back")</a>
         </div>
     </section>
 

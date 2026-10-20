@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <!-- Hôte du site : sert les apps Blazor WebAssembly (constructeur sous /builder/, tournois
-       sous /pairings/) et l'API des tournois (/api/tournaments). Seul processus du conteneur,
+  <!-- Hôte du site : sert l'app Blazor WebAssembly (Olomoc.Web : constructeur sous
+       /builder/, tournois sous /pairings/) et l'API des tournois (/api/tournaments). Seul processus du conteneur,
        HTTPS compris. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -25,8 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Olomoc.Builder\Olomoc.Builder.csproj" />
-    <ProjectReference Include="..\Olomoc.Pairings\Olomoc.Pairings.csproj" />
+    <ProjectReference Include="..\Olomoc.Web\Olomoc.Web.csproj" />
   </ItemGroup>
 
 </Project>

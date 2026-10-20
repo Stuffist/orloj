@@ -1,4 +1,4 @@
-@page "/stats"
+@page "/pairings/stats"
 @using Olomoc.Tournaments.Stats
 @implements IDisposable
 @inject LocalizationService L
@@ -17,7 +17,7 @@ else if (_stats is not { } s)
 {
     <section class="panel">
         <Problems Items="_problems" />
-        <a class="btn" href="">@L.Ui("pairings.home")</a>
+        <a class="btn" href="pairings/">@L.Ui("pairings.home")</a>
     </section>
 }
 else

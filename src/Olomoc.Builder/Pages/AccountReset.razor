@@ -1,4 +1,4 @@
-@page "/account/reset"
+@page "/builder/account/reset"
 @namespace Olomoc.Builder.Pages
 @using Olomoc.Accounts
 @implements IDisposable
@@ -18,12 +18,12 @@
     else if (_user is null || _token is null)
     {
         <p class="account-msg error" role="alert">@L.Ui("account.link.invalid")</p>
-        <p><a class="btn" href="account">@L.Ui("account.title")</a></p>
+        <p><a class="btn" href="builder/account">@L.Ui("account.title")</a></p>
     }
     else if (_done)
     {
         <p class="account-msg ok" role="status">@L.Ui("account.resetPage.done")</p>
-        <p><a class="btn" href="account">@L.Ui("account.title")</a></p>
+        <p><a class="btn" href="builder/account">@L.Ui("account.title")</a></p>
     }
     else
     {
@@ -66,7 +66,7 @@
         var link = AccountUi.Fragment(Nav.Uri);
         link.TryGetValue("user", out _user);
         link.TryGetValue("token", out _token);
-        if (_token is not null) Nav.NavigateTo("account/reset", replace: true);
+        if (_token is not null) Nav.NavigateTo("builder/account/reset", replace: true);
         await L.EnsureLoadedAsync();
     }
 

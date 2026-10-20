@@ -1,4 +1,4 @@
-@page "/"
+@page "/pairings"
 @inject LocalizationService L
 @inject CatalogService Catalog
 @inject TournamentApi Api
@@ -13,8 +13,6 @@
 }
 else
 {
-    <p class="tn-home-links"><a href="stats">@L.Ui("pairings.stats.open")</a></p>
-
     <section class="panel tn-join">
         <h2>@L.Ui("pairings.join.title")</h2>
         <form class="tn-inline" @onsubmit="Join" @onsubmit:preventDefault="true">
@@ -33,7 +31,7 @@ else
                 @foreach (var t in Mine.All)
                 {
                     <li>
-                        <a class="tn-mine-name" href="t/@t.Code">@(t.Name.Length > 0 ? t.Name : t.Code)</a>
+                        <a class="tn-mine-name" href="pairings/t/@t.Code">@(t.Name.Length > 0 ? t.Name : t.Code)</a>
                         <span class="tn-code-small">@t.Code</span>
                         @if (t.OrganizerToken is not null)
                         {
@@ -46,7 +44,7 @@ else
                         <span class="tn-mine-actions">
                             @if (t.OrganizerToken is not null)
                             {
-                                <a class="btn small" href="t/@t.Code/admin">@L.Ui("pairings.admin.open")</a>
+                                <a class="btn small" href="pairings/t/@t.Code/admin">@L.Ui("pairings.admin.open")</a>
                             }
                             <button class="btn small danger" @onclick="() => ForgetAsync(t)">@L.Ui("pairings.mine.forget")</button>
                         </span>
@@ -153,7 +151,7 @@ else
     private void OnDateChanged(ChangeEventArgs e) =>
         _date = DateOnly.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : null;
 
-    private void Join() => Nav.NavigateTo($"t/{_joinCode.Trim().ToUpperInvariant()}");
+    private void Join() => Nav.NavigateTo($"pairings/t/{_joinCode.Trim().ToUpperInvariant()}");
 
     private async Task CreateAsync()
     {
@@ -169,7 +167,7 @@ else
                 return;
             }
             await Mine.RememberAsync(created.Code, _name.Trim(), organizerToken: created.OrganizerToken);
-            Nav.NavigateTo($"t/{created.Code}/admin?created=true");    // encadré « Gardez ce lien »
+            Nav.NavigateTo($"pairings/t/{created.Code}/admin?created=true");    // encadré « Gardez ce lien »
         }
         finally { _busy = false; }
     }

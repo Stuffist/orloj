@@ -1,4 +1,4 @@
-@page "/play"
+@page "/builder/play"
 @namespace Olomoc.Builder.Pages
 @implements IDisposable
 @inject CatalogService Catalog
@@ -15,7 +15,7 @@ else if (Games.Session is not { } game)
 {
     <section class="play-empty">
         <p class="empty">@L.Ui("play.none")</p>
-        <a class="btn" href="">@L.Ui("play.toBuilder")</a>
+        <a class="btn" href="builder/">@L.Ui("play.toBuilder")</a>
     </section>
 }
 else
@@ -23,7 +23,7 @@ else
     var s = game.State;
     <section class="play-bar">
         <div class="play-ident">
-            <a class="play-back" href="" title="@L.Ui("play.toBuilder")">←</a>
+            <a class="play-back" href="builder/" title="@L.Ui("play.toBuilder")">←</a>
             <div class="play-names">
                 <span class="play-name">@(s.Name ?? L.Ui("play.unnamed"))</span>
                 @if (s.Faction is { } f)
@@ -193,6 +193,6 @@ else
     {
         if (!await JS.InvokeAsync<bool>("confirm", L.Ui("play.abandon.confirm"))) return;
         await Games.ClearAsync();
-        Nav.NavigateTo("");
+        Nav.NavigateTo("builder/");
     }
 }

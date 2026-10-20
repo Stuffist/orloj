@@ -19,6 +19,9 @@ public sealed class GameStore
 
     public GameSession? Session { get; private set; }
 
+    /// <summary>Partie lue, lancée ou terminée (menu : « partie en cours »).</summary>
+    public event Action? Changed;
+
     public Task EnsureLoadedAsync() => _loading ??= LoadAsync();
 
     private async Task LoadAsync()
@@ -29,12 +32,14 @@ public sealed class GameStore
             if (state is not null) Session = new GameSession(state);
         }
         catch (JSException) { /* stockage indisponible : pas de partie à reprendre */ }
+        Changed?.Invoke();
     }
 
     public async Task StartAsync(GameState state)
     {
         Session = new GameSession(state);
         await SaveAsync();
+        Changed?.Invoke();
     }
 
     public async Task SaveAsync()
@@ -49,5 +54,6 @@ public sealed class GameStore
         Session = null;
         try { await _js.InvokeVoidAsync("localStorage.removeItem", StorageKey); }
         catch (JSException) { }
+        Changed?.Invoke();
     }
 }

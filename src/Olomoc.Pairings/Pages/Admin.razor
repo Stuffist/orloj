@@ -1,4 +1,4 @@
-@page "/t/{Code}/admin"
+@page "/pairings/t/{Code}/admin"
 @inherits TournamentPageBase
 
 @if (!Ready)
@@ -9,7 +9,7 @@ else if (View is not { } v)
 {
     <section class="panel">
         <Problems Items="LoadProblems" />
-        <a class="btn" href="">@L.Ui("pairings.home")</a>
+        <a class="btn" href="pairings/">@L.Ui("pairings.home")</a>
     </section>
 }
 else if (!v.IsOrganizer)
@@ -32,14 +32,14 @@ else if (!v.IsOrganizer)
         {
             <p class="export-warning">@L.Ui("pairings.admin.denied")</p>
         }
-        <a class="btn" href="t/@v.Code">@L.Ui("pairings.admin.publicPage")</a>
+        <a class="btn" href="pairings/t/@v.Code">@L.Ui("pairings.admin.publicPage")</a>
     </section>
 }
 else
 {
     var last = v.LastRound;
     <TournamentHeader View="v" Settings="@Settings(v)" Date="@DateLabel(v.Date)">
-        <a class="btn small" href="t/@v.Code">@L.Ui("pairings.admin.publicPage")</a>
+        <a class="btn small" href="pairings/t/@v.Code">@L.Ui("pairings.admin.publicPage")</a>
     </TournamentHeader>
 
     @* Juste après la création : le lien d'administration, à garder (seule clé sans mot de passe). *@
@@ -235,7 +235,7 @@ else
             <input type="checkbox" checked="@v.ExcludeFromStats" disabled="@_busy" @onchange="e => SetExcludeFromStatsAsync(e.Value is true)" />
             <span>@L.Ui("pairings.stats.exclude")</span>
         </label>
-        <p class="hint">@L.Ui("pairings.admin.stats.help") <a href="stats">@L.Ui("pairings.stats.open")</a></p>
+        <p class="hint">@L.Ui("pairings.admin.stats.help") <a href="pairings/stats">@L.Ui("pairings.stats.open")</a></p>
     </section>
 
     @* À part, loin du pilotage : suppression définitive, confirmée en retapant le code. *@
@@ -275,7 +275,7 @@ else
         var fragment = new Uri(Nav.Uri).Fragment;
         if (fragment.Length <= 1) return;
         await Mine.RememberAsync(Code, Entry?.Name ?? "", organizerToken: Uri.UnescapeDataString(fragment[1..]));
-        Nav.NavigateTo($"t/{Code}/admin", replace: true);
+        Nav.NavigateTo($"pairings/t/{Code}/admin", replace: true);
     }
 
     private static bool CanPair(TournamentView v) =>
@@ -439,7 +439,7 @@ else
         return result.Problems;
     }
 
-    private void DismissCreated() => Nav.NavigateTo($"t/{Code}/admin", replace: true);
+    private void DismissCreated() => Nav.NavigateTo($"pairings/t/{Code}/admin", replace: true);
 
     // Appareil sans jeton : le mot de passe en ouvre un, gardé sur cet appareil.
     private async Task LoginAsync()
@@ -491,7 +491,7 @@ else
                 return;
             }
             await Mine.ForgetAsync(Code);
-            Nav.NavigateTo("");
+            Nav.NavigateTo("pairings/");
         }
         finally { _busy = false; }
     }

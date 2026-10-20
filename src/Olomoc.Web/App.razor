@@ -1,0 +1,23 @@
+@namespace Olomoc.Web
+
+@* Une seule app pour tout le site : pages du constructeur (/builder/…) et des tournois
+   (/pairings/…) ; la navigation de l'une à l'autre se fait sans rechargement. *@
+<Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="@Pages">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p role="alert">Page introuvable. / Page not found.</p>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code {
+    private static readonly System.Reflection.Assembly[] Pages =
+    [
+        typeof(Olomoc.Builder.Pages.Home).Assembly,
+        typeof(Olomoc.Pairings.Pages.Index).Assembly,
+    ];
+}

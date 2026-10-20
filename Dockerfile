@@ -1,4 +1,4 @@
-# Orloj — site complet : constructeur (/builder/), tournois (/pairings/ et /api/tournaments),
+# Orloj — site complet : app du navigateur (constructeur /builder/, tournois /pairings/), API,
 # servis par l'hôte ASP.NET Core (Olomoc.Server). Base SQLite dans /data (volume).
 # Étape 1 : publication avec le SDK .NET ; étape 2 : runtime ASP.NET seul, en HTTP sur 8080.
 # Le HTTPS est assuré par le reverse proxy (deploy/proxy : Caddy).
@@ -10,6 +10,7 @@ WORKDIR /src
 COPY src/Olomoc.Shared/Olomoc.Shared.csproj src/Olomoc.Shared/
 COPY src/Olomoc.Builder/Olomoc.Builder.csproj src/Olomoc.Builder/
 COPY src/Olomoc.Pairings/Olomoc.Pairings.csproj src/Olomoc.Pairings/
+COPY src/Olomoc.Web/Olomoc.Web.csproj src/Olomoc.Web/
 COPY src/Olomoc.Server/Olomoc.Server.csproj src/Olomoc.Server/
 RUN dotnet restore src/Olomoc.Server/Olomoc.Server.csproj
 

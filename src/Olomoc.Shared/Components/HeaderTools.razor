@@ -1,52 +1,24 @@
-@* Fin de l'en-tête commun aux apps : liens vers les autres pages (constructeur, tournois),
-   compte (« Se connecter », ou le pseudo) et choix de la langue. Le catalogue des équipements
-   s'ouvre depuis le constructeur (bouton). Les apps ont la même origine : la langue choisie et
-   la session valent pour toutes. *@
+@* Fin de l'en-tête : choix de la langue, valable pour tout le site. Le menu est dans AppNav. *@
 @inject LocalizationService L
-@inject AccountService Accounts
 @implements IDisposable
 
-@if (L.Loaded)
+@if (L.Loaded && L.Languages.Count > 1)
 {
-    <nav class="app-nav">
-        @if (Current != "builder")
-        {
-            <a href="/builder/">@L.Ui("nav.builder")</a>
-        }
-        @if (Current != "pairings")
-        {
-            <a href="/pairings/">@L.Ui("nav.pairings")</a>
-        }
-        @if (Accounts.Loaded)
-        {
-            <a href="/builder/account" class="account-link @(Current == "account" ? "current" : null)"
-               aria-current="@(Current == "account" ? "page" : null)"
-               title="@(Accounts.Current is null ? null : L.Ui("account.title"))">@(Accounts.Current?.UserName ?? L.Ui("account.signIn"))</a>
-        }
-    </nav>
-    @if (L.Languages.Count > 1)
-    {
-        <label class="lang-switch">
-            <span class="sr-only">@L.Ui("app.language")</span>
-            <select value="@L.Current" @onchange="OnLanguageChanged" title="@L.Ui("app.language")">
-                @foreach (var lang in L.Languages)
-                {
-                    <option value="@lang.Code">@lang.Name</option>
-                }
-            </select>
-        </label>
-    }
+    <label class="lang-switch">
+        <span class="sr-only">@L.Ui("app.language")</span>
+        <select value="@L.Current" @onchange="OnLanguageChanged" title="@L.Ui("app.language")">
+            @foreach (var lang in L.Languages)
+            {
+                <option value="@lang.Code">@lang.Name</option>
+            }
+        </select>
+    </label>
 }
 
 @code {
-    /// <summary>Page affichée : « builder », « equipment » (catalogue du constructeur), « account » ou « pairings ».</summary>
-    [Parameter, EditorRequired] public string Current { get; set; } = "";
-
     protected override async Task OnInitializedAsync()
     {
         L.Changed += OnChanged;
-        Accounts.Changed += OnChanged;
-        _ = Accounts.EnsureLoadedAsync();     // lien du compte affiché dès que la session est connue
         await L.EnsureLoadedAsync();          // affiché dès que les langues sont chargées
     }
 
@@ -54,9 +26,5 @@
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose()
-    {
-        L.Changed -= OnChanged;
-        Accounts.Changed -= OnChanged;
-    }
+    public void Dispose() => L.Changed -= OnChanged;
 }

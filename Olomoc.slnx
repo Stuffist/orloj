@@ -3,6 +3,7 @@
     <Project Path="src/Olomoc.Shared/Olomoc.Shared.csproj" />
     <Project Path="src/Olomoc.Builder/Olomoc.Builder.csproj" />
     <Project Path="src/Olomoc.Pairings/Olomoc.Pairings.csproj" />
+    <Project Path="src/Olomoc.Web/Olomoc.Web.csproj" />
     <Project Path="src/Olomoc.Server/Olomoc.Server.csproj" />
   </Folder>
   <Folder Name="/tests/">

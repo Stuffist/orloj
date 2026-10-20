@@ -1,4 +1,4 @@
-@page "/account"
+@page "/builder/account"
 @namespace Olomoc.Builder.Pages
 @using Olomoc.Accounts
 @implements IDisposable
@@ -88,7 +88,7 @@ else if (Accounts.Current is not { } me)
                 @Status("register")
                 <div class="account-actions">
                     <button class="btn primary" type="submit" disabled="@(_busy || !CanRegister)">@L.Ui("account.register.submit")</button>
-                    <a class="hint" href="privacy">@L.Ui("privacy.title")</a>
+                    <a class="hint" href="builder/privacy">@L.Ui("privacy.title")</a>
                 </div>
             </form>
         </section>
@@ -186,7 +186,7 @@ else
         <section class="panel account-panel">
             <h3>@L.Ui("account.editor.title")</h3>
             <p class="hint">@L.Ui("account.editor.help")</p>
-            <p><a class="btn" href="admin">@L.Ui("account.admin.catalog")</a></p>
+            <p><a class="btn" href="builder/admin">@L.Ui("account.admin.catalog")</a></p>
         </section>
     }
 
@@ -227,7 +227,7 @@ else
         </form>
     </section>
 
-    <p class="hint"><a href="privacy">@L.Ui("privacy.title")</a></p>
+    <p class="hint"><a href="builder/privacy">@L.Ui("privacy.title")</a></p>
 }
 
 @code {

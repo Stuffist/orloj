@@ -1,4 +1,4 @@
-@page "/admin"
+@page "/builder/admin"
 @namespace Olomoc.Builder.Pages
 @using Olomoc.Tournaments
 @implements IDisposable
@@ -21,7 +21,7 @@ else if (Accounts.Current is not { CanEdit: true })
     <section class="panel account-panel">
         <h2>@L.Ui("admin.title")</h2>
         <p>@L.Ui("admin.restricted")</p>
-        <p><a class="btn" href="account">@L.Ui("account.title")</a></p>
+        <p><a class="btn" href="builder/account">@L.Ui("account.title")</a></p>
     </section>
 }
 else if (_loadError is { } loadError)

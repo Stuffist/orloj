@@ -415,7 +415,7 @@ de victoire sont dans la barre du haut (fixée à l'écran, sauf sur téléphone
 ## Comptes
 
 Facultatifs : sans compte, tout marche comme avant, sur l'appareil. `/builder/account` (lien
-« Se connecter » de l'en-tête, le pseudo une fois connecté, dans toutes les apps) :
+« Se connecter » du menu, le pseudo une fois connecté, partout sur le site) :
 
 - **Création** : pseudo (3 à 24 caractères : lettres sans accent, chiffres, `-`, `_` ; unique
   sans tenir compte de la casse), e-mail, mot de passe (8 caractères au moins, sans règle de
@@ -556,9 +556,12 @@ tournoi terminé sans archive en reçoit une.
 Olomoc.slnx
 src/Olomoc.Shared/    bibliothèque Razor commune : modèles, règles, composants des cartes,
                       fichiers statiques servis sous /_content/Olomoc.Shared/ (Assets.Base)
-src/Olomoc.Builder/   app Blazor WebAssembly du constructeur et du mode partie (/builder/)
-src/Olomoc.Pairings/  app Blazor WebAssembly des tournois (/pairings/)
-src/Olomoc.Server/    hôte ASP.NET Core : apps, fichiers communs, API des tournois, HTTPS
+src/Olomoc.Web/       app Blazor WebAssembly du site (servie à la racine) : routeur, démarrage,
+                      layout ; réunit les deux bibliothèques de pages ci-dessous, sans
+                      rechargement de l'une à l'autre
+src/Olomoc.Builder/   pages du constructeur, du mode partie, du compte et de l'éditeur (/builder/…)
+src/Olomoc.Pairings/  pages des tournois et des statistiques (/pairings/…)
+src/Olomoc.Server/    hôte ASP.NET Core : app, fichiers communs, API, HTTPS
 tests/Olomoc.Tests/   xUnit
 ```
 
@@ -583,9 +586,11 @@ tests/Olomoc.Tests/   xUnit
   `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre ;
   `Emblem.razor` (logo de faction, emblème de Ministère) ;
   `TokenTrack.razor` (réserve de pions), `Sheet.razor` (fenêtre superposée).
-- `Components/HeaderTools.razor` — fin de l'en-tête des apps : liens vers les autres apps, compte, langue.
+- `Components/AppNav.razor` — menu du site : onglets sous l'en-tête (ordinateur), barre fixée en bas
+  (téléphone) ; constructeur, partie (point si une partie est en cours), tournois, statistiques,
+  éditeur (éditeurs et admins), compte. `Components/HeaderTools.razor` — choix de la langue.
 - `Accounts/AccountApiModels.cs` (règles et échanges de l'API des comptes), `Services/AccountService.cs`
-  (session commune aux apps).
+  (session du site).
 - `Tournaments/` — tournoi (`TournamentModels.cs`), classement (`Standings.cs`),
   appariements (`Pairer.cs`), règles des phases et des inscriptions (`TournamentRules.cs`),
   échanges avec l'API (`TournamentApiModels.cs`).
@@ -593,7 +598,11 @@ tests/Olomoc.Tests/   xUnit
   (`css/app.css`), téléchargement de fichier et enregistrement du service worker
   (`js/olomoc.js`), application installable (`manifest.webmanifest`, icônes dans `img/app/`).
 
-**`src/Olomoc.Builder`**
+**`src/Olomoc.Web`**
+- `App.razor` (routeur : pages de Builder et Pairings), `Program.cs` (services),
+  `Layout/MainLayout.razor` (en-tête de la section, langue, menu), `wwwroot/index.html` (`<base href="/">`).
+
+**`src/Olomoc.Builder`** (bibliothèque Razor, routes `/builder/…`)
 - `Pages/Home.razor` — constructeur : composition, légalité, sauvegarde et export, lancement d'une partie.
 - `Pages/Play.razor`, `Shared/PlayCogCard.razor` — mode partie.
 - `Pages/AdminCatalog.razor`, `Shared/CogEditor.razor`, `EquipmentEditor.razor`, `AbilitiesEditor.razor`,
@@ -602,7 +611,7 @@ tests/Olomoc.Tests/   xUnit
 - `Pages/Account.razor`, `AccountConfirm.razor`, `AccountReset.razor`, `Privacy.razor` — compte,
   liens reçus par e-mail, données personnelles.
 
-**`src/Olomoc.Pairings`**
+**`src/Olomoc.Pairings`** (bibliothèque Razor, routes `/pairings/…`)
 - `Pages/Index.razor` — créer un tournoi, en rejoindre un, « Mes tournois » (localStorage).
 - `Pages/TournamentPage.razor` — page publique : inscription, ronde, classement, joueurs.
 - `Pages/Admin.razor`, `Shared/ResultEditor.razor` — administration : clôture, rondes,
@@ -630,11 +639,11 @@ tests/Olomoc.Tests/   xUnit
   `DbBackup.cs` (copie quotidienne, `VACUUM INTO`).
 - `Hosting/DocumentStore.cs` — documents JSON sous un code public de 6 caractères (création,
   modification et suppression sous verrou, purge des inactifs).
-- `Hosting/ClientApps.cs` — une app WebAssembly par chemin (`StaticWebAssetBasePath`),
-  routes de l'app renvoyées vers son `index.html`.
+- `Hosting/ClientApps.cs` — l'app WebAssembly à la racine (`_framework/`) ; routes des sections
+  `/builder/…` et `/pairings/…` renvoyées vers `index.html`.
 - `Hosting/SecurityHeaders.cs` — CSP, cadres interdits, Referrer-Policy, HSTS en HTTPS.
 - `wwwroot/service-worker.js` — hors connexion : réseau d'abord, copie en cache si le réseau
-  manque (jamais l'API) ; à la racine pour couvrir les deux apps et `/_content/` (voir `docs/pwa.md`).
+  manque (jamais l'API) ; à la racine pour couvrir l'app et `/_content/` (voir `docs/pwa.md`).
 
 **`deploy/proxy`** — reverse proxy du VPS (Caddy) : HTTPS et certificats, répartition par
 nom d'hôte entre Orloj et B5T.

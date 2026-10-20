@@ -1,13 +1,17 @@
-<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <!-- Constructeur de cabales, mode partie, compte et éditeur du référentiel : pages sous
+       /builder/…, réunies avec les tournois dans l'app Olomoc.Web. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Olomoc.Builder</RootNamespace>
-    <!-- Servi par Olomoc.Server sous /builder/ (voir le <base href> de wwwroot/index.html). -->
-    <StaticWebAssetBasePath>builder</StaticWebAssetBasePath>
   </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.13" />

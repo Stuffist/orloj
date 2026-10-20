@@ -1,11 +1,11 @@
-// Service worker du site (portée « / » : les deux apps et les fichiers communs de /_content/) :
+// Service worker du site (portée « / » : l'app, ses sections /builder/ et /pairings/, et /_content/) :
 // l'app reste utilisable hors connexion. Réseau d'abord : en ligne, tout vient du serveur comme
 // sans service worker (un redéploiement est vu aussitôt) ; la copie gardée en cache ne sert que
 // si le réseau manque, ou tarde à répondre. Enregistré par olomoc.js.
 
 const CACHE = "olomoc";
 const NETWORK_TIMEOUT_MS = 4000;            // réseau trop lent (salle de jeu mal couverte) : copie en cache
-const APPS = ["builder", "pairings"];
+const SECTIONS = ["builder", "pairings"];
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", event => event.waitUntil(self.clients.claim()));
@@ -21,10 +21,10 @@ self.addEventListener("fetch", event => {
 // données vivantes, jetons d'organisateur).
 const cacheable = url => url.protocol === location.protocol && url.origin === location.origin && !url.pathname.startsWith("/api/");
 
-// Toutes les routes d'une app renvoient son index.html : une seule copie, sous la racine de l'app.
+// Toutes les routes des sections renvoient le même index.html : une seule copie.
 function cacheKey(url, page) {
-    const app = url.pathname.split("/")[1];
-    return page && APPS.includes(app) ? `${url.origin}/${app}/` : url.href;
+    const section = url.pathname.split("/")[1];
+    return page && SECTIONS.includes(section) ? `${url.origin}/index.html` : url.href;
 }
 
 async function networkFirst(event, key) {

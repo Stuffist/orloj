@@ -73,7 +73,7 @@ public abstract class TournamentPageBase : ComponentBase, IDisposable
         catch (OperationCanceledException) { /* page quittée */ }
     }
 
-    protected string PublicLink => $"{Nav.BaseUri}t/{View?.Code ?? Code}";
+    protected string PublicLink => $"{Nav.BaseUri}pairings/t/{View?.Code ?? Code}";
 
     protected async Task CopyAsync(string text)
     {

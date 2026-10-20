@@ -137,9 +137,8 @@ app.Use((ctx, next) =>
 });
 app.UseSecurityHeaders();
 
-ClientApps.Map(app, "builder");
-ClientApps.Map(app, "pairings");
-app.UseStaticFiles();                       // fichiers communs : /_content/Olomoc.Shared/…
+ClientApps.Map(app);                        // app du navigateur : /_framework, sections /builder et /pairings
+app.UseStaticFiles();                       // index.html, fichiers communs : /_content/Olomoc.Shared/…
 app.UseRateLimiter();
 app.UseAuthentication();                    // après les fichiers : seule l'API lit la session
 app.UseAuthorization();
@@ -149,6 +148,7 @@ app.MapAccounts();
 app.MapCatalog();                           // avant les fichiers statiques : référentiel fusionné
 app.MapGet("/", () => Results.Redirect("/builder/"));
 app.MapGet("/healthz", () => "ok\n");
+ClientApps.MapFallbacks(app);               // routes de l'app : index.html
 
 app.Run();
 

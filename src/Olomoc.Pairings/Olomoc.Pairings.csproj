@@ -1,13 +1,17 @@
-<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
+  <!-- Tournois (appariements, classements, statistiques) : pages sous /pairings/…, réunies
+       avec le constructeur dans l'app Olomoc.Web. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Olomoc.Pairings</RootNamespace>
-    <!-- Servi par Olomoc.Server sous /pairings/ (voir le <base href> de wwwroot/index.html). -->
-    <StaticWebAssetBasePath>pairings</StaticWebAssetBasePath>
   </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.13" />

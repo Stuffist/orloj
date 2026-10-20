@@ -24,8 +24,8 @@ Deux niveaux, tous deux faits sur la branche `pwa` (un commit chacun) :
 - `src/Olomoc.Shared/wwwroot/manifest.webmanifest` : **une seule app** pour tout le site
   (`scope: "/"`), qui s'ouvre sur le constructeur (`start_url: "/builder/"`), en plein écran
   (`display: "standalone"`), aux couleurs du fond du site (`#14181c`). Le constructeur et les
-  tournois se renvoient l'un à l'autre (`HeaderTools.razor`, `Home.razor`, `CabalPicker.razor`) :
-  avec deux apps séparées, chaque passage de l'une à l'autre sortirait de l'app.
+  tournois sont d'ailleurs une seule app Blazor (`Olomoc.Web`) : on passe de l'un à l'autre par
+  le menu (`AppNav.razor`), sans rechargement.
 - `src/Olomoc.Shared/wwwroot/img/app/` : icônes **provisoires**, dessinées d'après la marque de
   l'en-tête (`.mark` de `app.css` : anneaux rouille sur fond sombre). 192 et 512 px, une version
   « maskable » (dessin réduit pour qu'Android puisse la découper en rond), `apple-touch-icon`
@@ -51,7 +51,7 @@ Résultat :
 
 Un service worker ne contrôle que les adresses situées sous son propre dossier. Les données, les
 traductions et les images sont servies sous `/_content/Olomoc.Shared/`, en dehors de `/builder/`.
-Placé à la racine, il couvre les deux apps et ces fichiers, sans en-tête particulier.
+Placé à la racine, il couvre l'app (`/_framework/`, `/builder/…`, `/pairings/…`) et ces fichiers, sans en-tête particulier.
 
 ### Réseau d'abord
 
@@ -60,8 +60,8 @@ Placé à la racine, il couvre les deux apps et ces fichiers, sans en-tête part
   bandeau « nouvelle version ». Chaque réponse est copiée en cache au passage.
 - **Hors ligne**, ou si le serveur ne répond pas en 4 secondes (réseau faible dans une salle),
   c'est la copie en cache qui sert.
-- Toutes les routes d'une app (`/builder/play`, `/builder/equipment`…) sont servies par la même
-  copie de son `index.html`. Une route jamais visitée marche donc aussi hors ligne.
+- Toutes les routes des sections (`/builder/play`, `/pairings/stats`…) sont servies par la même
+  copie de `index.html`. Une route jamais visitée marche donc aussi hors ligne.
 - **L'API (`/api/…`) n'est jamais mise en cache** : données de tournoi vivantes, jetons
   d'organisateur. Hors ligne, la partie Tournois affiche son interface mais pas ses données.
 

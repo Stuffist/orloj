@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <!-- Le site dans le navigateur : une seule app Blazor WebAssembly, servie à la racine par
+       Olomoc.Server. Elle réunit le constructeur (/builder/…) et les tournois (/pairings/…),
+       bibliothèques de pages : on passe de l'un à l'autre sans rechargement. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Olomoc.Web</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Olomoc.Shared\Olomoc.Shared.csproj" />
+    <ProjectReference Include="..\Olomoc.Builder\Olomoc.Builder.csproj" />
+    <ProjectReference Include="..\Olomoc.Pairings\Olomoc.Pairings.csproj" />
+  </ItemGroup>
+
+</Project>
