@@ -172,6 +172,7 @@ public static class OnlineRules
         next.Name = s.State.Name;
         next.Faction = s.State.Faction;
         next.Cycle = g.Cycle;
+        foreach (var cog in next.Cogs) cog.Normalize();     // un booléen par PV (ancien format : nombre de PV cochés)
         Remember(s);
         s.State = next;
         s.StateRevision++;
@@ -204,7 +205,7 @@ public static class OnlineRules
             }
             else if (was.ExtraEquipmentId is not null && g.Cycle != 1) return invalid;
             if (!now.LifeLine.SequenceEqual(GameSession.LifeLineOf(cog, main, extra))) return invalid;
-            if (now.Marked < 0 || now.Marked > now.LifeLine.Count
+            if (now.Checked.Count > now.LifeLine.Count || now.LegacyMarked is < 0 || now.LegacyMarked > now.LifeLine.Count
                 || now.Darkness is < 0 or > GameSession.MaxDarkness
                 || now.Actions is < 0 or > GameSession.ActionsPerCycle
                 || now.Uses.Count > 50 || now.Uses.Any(u => u.Key.Length > 64 || u.Value is < 0 or > 20)) return invalid;

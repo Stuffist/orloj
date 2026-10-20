@@ -198,6 +198,7 @@ public class OnlineRulesTests
         Assert.Equal("onlineState", Key(Send(n => n.Cogs[1].LifeLine.Add(HealthPointType.S))));
         Assert.Equal("onlineState", Key(Send(n => n.Cogs[1].Darkness = 4)));
         Assert.Equal("onlineState", Key(Send(n => n.Cogs[1].Actions = 5)));
+        Assert.Equal("onlineState", Key(Send(n => n.Cogs[1].Checked = n.Cogs[1].LifeLine.Select(_ => true).Append(true).ToList())));   // plus de cases que de PV
         Assert.Equal("onlineState", Key(Send(n => n.Bile = 4)));
         Assert.Equal("onlineState", Key(Send(n => n.Cogs[0].ExtraEquipmentId = "E02")));
 
