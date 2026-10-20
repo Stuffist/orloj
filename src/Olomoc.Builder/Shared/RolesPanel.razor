@@ -1,0 +1,99 @@
+@* Admins : rôle des comptes (joueur, éditeur, admin). Sans recherche, les éditeurs et les admins ;
+   avec, les comptes dont le pseudo la contient. Son propre rôle ne se change pas. *@
+@using Olomoc.Accounts
+@inject AccountService Accounts
+@inject LocalizationService L
+
+<section class="panel account-panel">
+    <h3>@L.Ui("account.roles.title")</h3>
+    <p class="hint">@L.Ui("account.roles.help")</p>
+    <form class="account-form" @onsubmit="SearchAsync" @onsubmit:preventDefault="true">
+        <div class="field">
+            <label for="roles-search">@L.Ui("account.roles.search")</label>
+            <input id="roles-search" type="search" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="@AccountRules.MaxUserName"
+                   @bind="_search" @bind:event="oninput" />
+        </div>
+        <div class="account-actions">
+            <button class="btn" type="submit" disabled="@_busy">@L.Ui("account.roles.searchSubmit")</button>
+        </div>
+    </form>
+    @if (_status is { } status)
+    {
+        <p class="account-msg @(status.Ok ? "ok" : "error")" role="@(status.Ok ? "status" : "alert")">@status.Text</p>
+    }
+    @if (_accounts is { } accounts)
+    {
+        <p class="account-roles-heading">@L.Ui(_shown.Length == 0 ? "account.roles.staff" : "account.roles.found", _shown)</p>
+        @if (accounts.Count == 0)
+        {
+            <p class="hint">@L.Ui("account.roles.none")</p>
+        }
+        else
+        {
+            <ul class="account-roles">
+                @foreach (var account in accounts)
+                {
+                    var self = string.Equals(account.UserName, Accounts.Current?.UserName, StringComparison.OrdinalIgnoreCase);
+                    <li @key="(account.UserName, _version)">
+                        <span class="account-role-name">@account.UserName@if (self) { <span class="hint"> (@L.Ui("account.roles.you"))</span> }</span>
+                        <select aria-label="@L.Ui("account.roles.of", account.UserName)" disabled="@(self || _busy)"
+                                value="@account.Role" @onchange="e => SetAsync(account, e)">
+                            @foreach (var role in Enum.GetValues<AccountRole>())
+                            {
+                                <option value="@role">@L.Ui($"account.role.{role}")</option>
+                            }
+                        </select>
+                    </li>
+                }
+            </ul>
+        }
+    }
+</section>
+
+@code {
+    private bool _busy;
+    private string _search = "", _shown = "";
+    private int _version;       // lignes recréées à chaque lecture : rôle refusé, liste rétablie
+    private List<AccountSummary>? _accounts;
+    private (string Text, bool Ok)? _status;
+
+    protected override Task OnInitializedAsync() => LoadAsync("");
+
+    private Task SearchAsync()
+    {
+        _status = null;
+        return LoadAsync(_search.Trim());
+    }
+
+    private async Task LoadAsync(string search)
+    {
+        _busy = true;
+        try
+        {
+            var result = await Accounts.ListAccountsAsync(search);
+            if (result.Ok)
+            {
+                _accounts = result.Value ?? [];
+                _shown = search;
+                _version++;
+            }
+            else _status = (L.Describe(result.Problems), false);
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task SetAsync(AccountSummary account, ChangeEventArgs e)
+    {
+        if (!Enum.TryParse<AccountRole>(e.Value?.ToString(), out var role) || role == account.Role) return;
+        _busy = true;
+        try
+        {
+            var result = await Accounts.SetRoleAsync(account.UserName, role);
+            _status = result.Ok
+                ? (L.Ui("account.roles.done", account.UserName, L.Ui($"account.role.{role}")), true)
+                : (L.Describe(result.Problems), false);
+        }
+        finally { _busy = false; }
+        await LoadAsync(_shown);     // liste affichée relue (rôle enregistré, ou rétabli après un refus)
+    }
+}

@@ -83,7 +83,7 @@
                 <article class="equip-entry">
                     <div class="equip-entry-head">
                         <div>
-                            <div class="cog-name">@Text(name)</div>
+                            <div class="cog-name">@Text(name)@if (!e.Published) { <span class="draft-badge">@L.Ui("admin.draft")</span> }</div>
                             <div class="cog-min emblem-name"><Emblem Ministry="@e.Ministry" Faction="@e.Faction" />@L.EquipmentAffiliation(e)</div>
                         </div>
                         <button class="btn small" @onclick="() => _shown = e" title="@L.Ui("equipment.showCard")">@L.Ui("equipment.card")</button>

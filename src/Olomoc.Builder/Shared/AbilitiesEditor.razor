@@ -1,0 +1,87 @@
+@* Éditeur du référentiel : capacités d'un rouage ou d'une carte (moment, coûts, fréquences) et,
+   dans chaque langue, leur nom et leur effet de jeu. Les textes suivent leur capacité. *@
+@inject LocalizationService L
+
+<fieldset class="admin-abilities">
+    <legend>@L.Ui("admin.abilities")</legend>
+    @for (var i = 0; i < Abilities.Count; i++)
+    {
+        var ability = Abilities[i];
+        var n = i + 1;
+        <div class="admin-ability">
+            <div class="admin-row">
+                <strong>@L.Ui("admin.abilityN", n)</strong>
+                <label class="field">
+                    <span>@L.Ui("admin.timing")</span>
+                    <select @bind="ability.Timing">
+                        @foreach (var t in Enum.GetValues<Timing>())
+                        {
+                            <option value="@t">@L.Ui($"admin.timing.{t}")</option>
+                        }
+                    </select>
+                </label>
+                <label class="field small">
+                    <span>@L.Ui("admin.actionCost")</span>
+                    <input type="number" min="0" max="10" @bind="ability.ActionCost" />
+                </label>
+                <label class="field small">
+                    <span>@L.Ui("admin.darknessCost")</span>
+                    <input type="number" min="0" max="10" @bind="ability.DarknessCost" />
+                </label>
+                <button type="button" class="btn small danger" @onclick="() => Abilities.Remove(ability)">@L.Ui("admin.remove")</button>
+            </div>
+            <div class="admin-row">
+                <span class="hint">@L.Ui("admin.frequencies")</span>
+                @foreach (var f in ability.Frequencies)
+                {
+                    <span class="admin-frequency">
+                        <input type="number" min="1" max="10" @bind="f.Count" aria-label="@L.Ui("admin.frequencyCount")" />
+                        <select @bind="f.Per" aria-label="@L.Ui("admin.frequencyPer")">
+                            @foreach (var per in CatalogEditRules.FrequencyPeriods)
+                            {
+                                <option value="@per">@L.Ui($"admin.per.{per}")</option>
+                            }
+                        </select>
+                        <button type="button" class="link-button" @onclick="() => ability.Frequencies.Remove(f)" title="@L.Ui("admin.remove")">✕</button>
+                    </span>
+                }
+                @if (ability.Frequencies.Count < CatalogEditRules.MaxFrequencies)
+                {
+                    <button type="button" class="link-button" @onclick="() => ability.Frequencies.Add(new())">@L.Ui("admin.addFrequency")</button>
+                }
+                @if (ability.Frequencies.Count == 0)
+                {
+                    <span class="hint">@L.Ui("admin.unlimited")</span>
+                }
+            </div>
+            <div class="admin-languages">
+                @foreach (var language in Languages)
+                {
+                    var text = ability.Texts.TryGetValue(language, out var t) ? t : ability.Texts[language] = new();
+                    <div class="admin-language">
+                        <span class="admin-language-name">@LanguageName(language)</span>
+                        <label class="field">
+                            <span>@L.Ui("admin.abilityName")</span>
+                            <input @bind="text.Name" maxlength="@CatalogEditRules.MaxText" />
+                        </label>
+                        <label class="field">
+                            <span>@L.Ui("admin.gameEffect")</span>
+                            <textarea rows="3" @bind="text.Effect" maxlength="@CatalogEditRules.MaxText"></textarea>
+                        </label>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    @if (Abilities.Count < CatalogEditRules.MaxAbilities)
+    {
+        <button type="button" class="btn small" @onclick="() => Abilities.Add(AbilityDraft.New(Languages))">@L.Ui("admin.addAbility")</button>
+    }
+</fieldset>
+
+@code {
+    [Parameter, EditorRequired] public List<AbilityDraft> Abilities { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<string> Languages { get; set; } = default!;
+
+    private string LanguageName(string code) => L.Languages.FirstOrDefault(l => l.Code == code)?.Name ?? code;
+}

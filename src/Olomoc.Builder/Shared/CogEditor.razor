@@ -1,0 +1,121 @@
+@* Éditeur du référentiel : un rouage (identifiant à la création seulement), ses factions, et ses
+   textes dans chaque langue. *@
+@inject LocalizationService L
+
+<div class="admin-form">
+    <div class="admin-row">
+        <label class="field">
+            <span>@L.Ui("admin.id")</span>
+            <input @bind="Draft.Id" disabled="@(!Draft.IsNew)" maxlength="16" spellcheck="false" autocapitalize="characters" />
+        </label>
+        <label class="field small">
+            <span>@L.Ui("admin.rank")</span>
+            <select @bind="Draft.Rank">
+                @for (var r = 1; r <= 3; r++)
+                {
+                    <option value="@r">@r</option>
+                }
+            </select>
+        </label>
+        <label class="field small">
+            <span>@L.Ui("admin.baseSize")</span>
+            <input type="number" min="20" max="80" @bind="Draft.BaseSize" placeholder="—" />
+        </label>
+        <label class="field">
+            <span>@L.Ui("admin.set")</span>
+            <input @bind="Draft.Set" maxlength="40" />
+        </label>
+        <label class="field check admin-published">
+            <input type="checkbox" @bind="Draft.Published" /> @L.Ui("admin.published")
+        </label>
+    </div>
+
+    <fieldset class="admin-choices">
+        <legend>@L.Ui("admin.ministries")</legend>
+        @foreach (var m in Ministries)
+        {
+            <label class="check"><input type="checkbox" checked="@Draft.Ministries.Contains(m)" @onchange="e => Toggle(Draft.Ministries, m, e)" /><Emblem Ministry="@m" />@L.MinistryName(m)</label>
+        }
+    </fieldset>
+    <fieldset class="admin-choices">
+        <legend>@L.Ui("admin.factions")</legend>
+        @foreach (var f in Factions)
+        {
+            <label class="check"><input type="checkbox" checked="@Draft.Factions.Contains(f)" @onchange="e => Toggle(Draft.Factions, f, e)" /><Emblem Faction="@f" />@L.FactionName(f)</label>
+        }
+        <span class="hint">@L.Ui("admin.factions.hint")</span>
+    </fieldset>
+
+    <div class="admin-row">
+        <label class="field small"><span>@L.StatName(StatKind.Tech)</span><input type="number" min="0" max="20" @bind="Draft.Tech" /></label>
+        <label class="field small"><span>@L.StatName(StatKind.Melee)</span><input type="number" min="0" max="20" @bind="Draft.Melee" /></label>
+        <label class="field small"><span>@L.StatName(StatKind.Ranged)</span><input type="number" min="0" max="20" @bind="Draft.Ranged" /></label>
+        <label class="field small"><span>@L.StatName(StatKind.Dodge)</span><input type="number" min="0" max="20" @bind="Draft.Dodge" /></label>
+    </div>
+    <label class="field">
+        <span>@L.Ui("admin.lifeLine")</span>
+        <input @bind="Draft.LifeLine" @bind:event="oninput" spellcheck="false" autocapitalize="characters" class="admin-lifeline" />
+        <span class="hint @(LifeLineText.Parse(Draft.LifeLine) is null ? "admin-invalid" : null)">@L.Ui("admin.lifeLine.hint", LifeLineText.Parse(Draft.LifeLine)?.Count ?? 0)</span>
+    </label>
+
+    <div class="admin-row">
+        <label class="field">
+            <span>@L.Ui("admin.extraEquipment")</span>
+            <select @bind="Draft.ExtraMinistry">
+                <option value="">—</option>
+                @foreach (var m in Ministries)
+                {
+                    <option value="@m">@L.MinistryName(m)</option>
+                }
+            </select>
+        </label>
+        @if (Draft.ExtraMinistry.Length > 0)
+        {
+            <label class="field">
+                <span>@L.Ui("admin.kind")</span>
+                <select @bind="Draft.ExtraKind">
+                    @foreach (var k in Enum.GetValues<EquipmentKind>())
+                    {
+                        <option value="@k">@L.Ui($"admin.kind.{k}")</option>
+                    }
+                </select>
+            </label>
+        }
+        <label class="field">
+            <span>@L.Ui("admin.artFront")</span>
+            <input @bind="Draft.ArtFront" maxlength="80" spellcheck="false" placeholder="@($"{(Draft.Id.Length > 0 ? Draft.Id : "1R01")}_recto.jpg")" />
+        </label>
+    </div>
+
+    <div class="admin-languages">
+        @foreach (var language in Languages)
+        {
+            var text = Draft.Texts.TryGetValue(language, out var t) ? t : Draft.Texts[language] = new();
+            <div class="admin-language">
+                <span class="admin-language-name">@LanguageName(language)@(language == LocalizationService.ReferenceLanguage ? " *" : null)</span>
+                <label class="field"><span>@L.Ui("admin.name")</span><input @bind="text.Name" maxlength="@CatalogEditRules.MaxText" /></label>
+                <label class="field"><span>@L.Ui("admin.cogTitle")</span><input @bind="text.Title" maxlength="@CatalogEditRules.MaxText" /></label>
+                <label class="field"><span>@L.Ui("admin.instinct")</span><input @bind="text.Instinct" maxlength="@CatalogEditRules.MaxText" /></label>
+            </div>
+        }
+    </div>
+
+    <AbilitiesEditor Abilities="Draft.Abilities" Languages="Languages" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CogDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public AdminCatalogApi Api { get; set; } = default!;
+
+    private IReadOnlyList<string> Languages => Api.Status.Languages;
+    private IEnumerable<string> Ministries => Api.Catalog.Ministries.Select(m => m.Code);
+    private IEnumerable<string> Factions => Api.Factions.Factions.Select(f => f.Code);
+
+    private static void Toggle(HashSet<string> set, string value, ChangeEventArgs e)
+    {
+        if (e.Value is true) set.Add(value);
+        else set.Remove(value);
+    }
+
+    private string LanguageName(string code) => L.Languages.FirstOrDefault(l => l.Code == code)?.Name ?? code;
+}

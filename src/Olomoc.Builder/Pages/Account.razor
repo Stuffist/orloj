@@ -7,7 +7,8 @@
 @inject LocalizationService L
 
 @* Compte : connexion, création, mot de passe oublié ; une fois connecté, cabales du compte,
-   e-mail (confirmation), mot de passe, autres appareils, suppression, et l'outil des admins.
+   e-mail (confirmation), mot de passe, autres appareils, suppression ; l'éditeur du référentiel
+   (éditeurs et admins), les rôles des comptes et le mot de passe temporaire (admins).
    Compte facultatif. *@
 
 @if (!L.Loaded || !Accounts.Loaded)
@@ -104,7 +105,7 @@ else
         <p class="account-msg ok" role="status">@uploaded</p>
     }
     <section class="panel account-panel">
-        <h2>@me.UserName</h2>
+        <h2>@me.UserName@if (me.Role != AccountRole.User) { <span class="account-badge role">@L.Ui($"account.role.{me.Role}")</span> }</h2>
         <p class="account-cabals">@L.Ui("account.cabals.count", Library.Cabals.Count)</p>
         <p class="account-email">
             <span>@me.Email</span>
@@ -180,8 +181,18 @@ else
         </div>
     </section>
 
+    @if (me.CanEdit)
+    {
+        <section class="panel account-panel">
+            <h3>@L.Ui("account.editor.title")</h3>
+            <p class="hint">@L.Ui("account.editor.help")</p>
+            <p><a class="btn" href="admin">@L.Ui("account.admin.catalog")</a></p>
+        </section>
+    }
+
     @if (me.IsAdmin)
     {
+        <RolesPanel />
         <section class="panel account-panel">
             <h3>@L.Ui("account.admin.title")</h3>
             <form class="account-form" @onsubmit="AdminResetAsync" @onsubmit:preventDefault="true">

@@ -18,11 +18,13 @@ namespace Olomoc.Server.Accounts;
 public static class AccountEndpoints
 {
     public const string CreatePolicy = "account-create", MailPolicy = "account-mail";
-    public const string AdminRole = "Admin";
     public const string ConfirmTokenProvider = "EmailConfirmation";
 
     /// <summary>E-mails envoyés au plus par heure et par compte (confirmation, mot de passe oublié).</summary>
     public const int MailsPerHour = 3;
+
+    /// <summary>Comptes listés au plus par recherche (rôles).</summary>
+    public const int MaxListed = 50;
 
     public static void MapAccounts(this WebApplication app)
     {
@@ -44,9 +46,11 @@ public static class AccountEndpoints
         mine.MapPost("delete", Delete).RequireRateLimiting(TournamentEndpoints.LoginPolicy);
         mine.MapPost("cabals/sync", CabalSyncEndpoint.Sync).RequireRateLimiting(TournamentEndpoints.WritePolicy);
 
-        // Admin : mot de passe temporaire pour un compte dont l'e-mail ne permet pas la récupération.
-        app.MapPost("/api/admin/accounts/{userName}/reset-password", AdminReset)
-            .RequireAuthorization().RequireRateLimiting(TournamentEndpoints.WritePolicy);
+        // Admin : rôles des comptes ; mot de passe temporaire pour un compte dont l'e-mail ne permet pas la récupération.
+        var admin = app.MapGroup("/api/admin/accounts").RequireAuthorization().AddEndpointFilter(Roles.Require(AccountRole.Admin));
+        admin.MapGet("", ListAccounts).RequireRateLimiting(TournamentEndpoints.ReadPolicy);
+        admin.MapPut("{userName}/role", SetRole).RequireRateLimiting(TournamentEndpoints.WritePolicy);
+        admin.MapPost("{userName}/reset-password", AdminReset).RequireRateLimiting(TournamentEndpoints.WritePolicy);
     }
 
     // ---- Sans compte ----
@@ -192,23 +196,58 @@ public static class AccountEndpoints
 
     // ---- Admin ----
 
-    private static Task<IResult> AdminReset(string userName, HttpContext ctx, UserManager<OlomocUser> users) =>
+    /// <summary>
+    /// Comptes dont le pseudo contient <paramref name="search"/> ; sans recherche, les éditeurs et
+    /// les admins. Admins d'abord, puis par pseudo ; jamais l'e-mail.
+    /// </summary>
+    private static async Task<IResult> ListAccounts(string? search, OlomocDb db, UserManager<OlomocUser> users)
+    {
+        var roles = await db.UserRoles.Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name }).ToListAsync();
+        var roleOf = roles.GroupBy(r => r.UserId).ToDictionary(g => g.Key,
+            g => g.Any(r => r.Name == Roles.Admin) ? AccountRole.Admin : AccountRole.Editor);
+        var query = db.Users.AsNoTracking();
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            var staff = roleOf.Keys.ToList();
+            query = query.Where(u => staff.Contains(u.Id));
+        }
+        else
+        {
+            var normalized = users.NormalizeName(search.Trim());
+            query = query.Where(u => u.NormalizedUserName!.Contains(normalized));
+        }
+        var found = await query.OrderBy(u => u.NormalizedUserName).Take(MaxListed).Select(u => new { u.Id, u.UserName }).ToListAsync();
+        var list = found.Select(u => new AccountSummary(u.UserName ?? "", roleOf.GetValueOrDefault(u.Id, AccountRole.User)))
+            .OrderByDescending(a => a.Role).ThenBy(a => a.UserName, StringComparer.OrdinalIgnoreCase).ToList();
+        return Results.Json(list, TournamentJson.Options);
+    }
+
+    /// <summary>Rôle d'un autre compte (jamais le sien : un admin reste toujours admin, il y en a donc toujours un).</summary>
+    private static Task<IResult> SetRole(string userName, RoleRequest body, HttpContext ctx, UserManager<OlomocUser> users) =>
         WithUser(ctx, users, async admin =>
         {
-            if (!await users.IsInRoleAsync(admin, AdminRole)) return Fail("forbidden", 403);
+            if (!Enum.IsDefined(body.Role)) return Fail("role", 400);
             if (await users.FindByNameAsync(userName) is not { } user) return Fail("unknownUser", 404);
-            var password = TemporaryPasswordText();
-            var reset = await users.ResetPasswordAsync(user, await users.GeneratePasswordResetTokenAsync(user), password);
-            if (!reset.Succeeded) return Problems(Describe(reset), 500);
-            await users.SetLockoutEndDateAsync(user, null);
-            await users.ResetAccessFailedCountAsync(user);
-            return Results.Json(new TemporaryPassword(password), TournamentJson.Options);
+            if (user.Id == admin.Id) return Fail("ownRole", 400);
+            await Roles.SetAsync(users, user, body.Role);
+            return Results.Json(new AccountSummary(user.UserName ?? "", body.Role), TournamentJson.Options);
         });
+
+    private static async Task<IResult> AdminReset(string userName, UserManager<OlomocUser> users)
+    {
+        if (await users.FindByNameAsync(userName) is not { } user) return Fail("unknownUser", 404);
+        var password = TemporaryPasswordText();
+        var reset = await users.ResetPasswordAsync(user, await users.GeneratePasswordResetTokenAsync(user), password);
+        if (!reset.Succeeded) return Problems(Describe(reset), 500);
+        await users.SetLockoutEndDateAsync(user, null);
+        await users.ResetAccessFailedCountAsync(user);
+        return Results.Json(new TemporaryPassword(password), TournamentJson.Options);
+    }
 
     // ---- Outils ----
 
     public static async Task<AccountView> View(OlomocUser user, UserManager<OlomocUser> users) =>
-        new(user.UserName ?? "", user.Email ?? "", user.EmailConfirmed, await users.IsInRoleAsync(user, AdminRole));
+        new(user.UserName ?? "", user.Email ?? "", user.EmailConfirmed, await Roles.OfAsync(users, user));
 
     // Compte de la session ; supprimé entre-temps : session fermée (401).
     private static async Task<IResult> WithUser(HttpContext ctx, UserManager<OlomocUser> users, Func<OlomocUser, Task<IResult>> action) =>
@@ -288,29 +327,3 @@ public sealed class EmailConfirmationTokenProviderOptions : DataProtectionTokenP
 public sealed class EmailConfirmationTokenProvider(IDataProtectionProvider protection,
     IOptions<EmailConfirmationTokenProviderOptions> options, ILogger<DataProtectorTokenProvider<OlomocUser>> log)
     : DataProtectorTokenProvider<OlomocUser>(protection, options, log);
-
-/// <summary>
-/// Au démarrage : rôle Admin des comptes listés dans OLOMOC_ADMINS (pseudos séparés par « ; »),
-/// retiré aux autres. Seuls des comptes existants le reçoivent : on crée son compte, puis on
-/// l'ajoute à la liste (personne ne peut devenir admin en prenant un pseudo le premier).
-/// </summary>
-public static class AdminRoles
-{
-    public static async Task SyncAsync(IServiceProvider services, string? setting, ILogger log)
-    {
-        using var scope = services.CreateScope();
-        var roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-        var users = scope.ServiceProvider.GetRequiredService<UserManager<OlomocUser>>();
-        if (!await roles.RoleExistsAsync(AccountEndpoints.AdminRole)) await roles.CreateAsync(new IdentityRole(AccountEndpoints.AdminRole));
-
-        var wanted = (setting ?? "").Split(';', ',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Select(n => users.NormalizeName(n)).ToHashSet();
-        foreach (var user in await users.GetUsersInRoleAsync(AccountEndpoints.AdminRole))
-            if (!wanted.Contains(user.NormalizedUserName!)) await users.RemoveFromRoleAsync(user, AccountEndpoints.AdminRole);
-        foreach (var name in wanted)
-        {
-            if (await users.FindByNameAsync(name) is not { } user) log.LogWarning("Admin {Name} : aucun compte de ce nom.", name);
-            else if (!await users.IsInRoleAsync(user, AccountEndpoints.AdminRole)) await users.AddToRoleAsync(user, AccountEndpoints.AdminRole);
-        }
-    }
-}

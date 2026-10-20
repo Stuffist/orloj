@@ -58,6 +58,8 @@ public sealed class Cog
     public ExtraEquipmentRule? ExtraEquipment { get; init; }    // carte supplémentaire au début de la partie
     public Art? Art { get; init; }
     public string? Set { get; init; }
+    /// <summary>true : publié ; absent ou false : brouillon, visible des seuls admins.</summary>
+    public bool Published { get; init; }
 }
 
 /// <summary>Carte supplémentaire qu'un rouage peut porter dès le début du premier cycle (Medic Ruzicka).</summary>
@@ -82,6 +84,8 @@ public sealed class Equipment
     public Art? Art { get; init; }
     public string? Set { get; init; }
     public List<BuildRule> BuildRules { get; init; } = new();
+    /// <summary>true : publié ; absent ou false : brouillon, visible des seuls admins.</summary>
+    public bool Published { get; init; }
 
     [JsonIgnore] public bool IsFactionAffiliated  => Faction  is not null;
     [JsonIgnore] public bool IsMinistryAffiliated => Ministry is not null;

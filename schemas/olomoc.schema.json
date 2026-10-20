@@ -287,6 +287,10 @@
         "set": {
           "type": "string",
           "description": "Boîte / extension d'origine."
+        },
+        "published": {
+          "type": "boolean",
+          "description": "true : publiée, visible de tous. Absent ou false : brouillon (éditeur des admins), invisible des visiteurs."
         }
       }
     },
@@ -470,6 +474,10 @@
         },
         "set": {
           "type": "string"
+        },
+        "published": {
+          "type": "boolean",
+          "description": "true : publiée, visible de tous. Absent ou false : brouillon (éditeur des admins), invisible des visiteurs."
         },
         "buildRules": {
           "type": "array",

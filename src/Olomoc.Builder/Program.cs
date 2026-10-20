@@ -15,5 +15,6 @@ builder.Services.AddScoped<CabalExporter>();
 builder.Services.AddScoped<CabalDraft>();
 builder.Services.AddScoped<GameStore>();
 builder.Services.AddScoped<CabalLibrary>();
+builder.Services.AddScoped<Olomoc.Builder.Shared.AdminCatalogApi>();   // éditeur du référentiel (éditeurs et admins)
 
 await builder.Build().RunAsync();

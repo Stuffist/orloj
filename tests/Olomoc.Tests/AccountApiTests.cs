@@ -88,7 +88,7 @@ public sealed partial class AccountApiTests : IDisposable
 
         var registered = await Register(http, "Bohdan");
         Assert.Equal(HttpStatusCode.OK, registered.StatusCode);
-        Assert.Equal(new AccountView("Bohdan", "bohdan@example.org", false, false), await Me(http));
+        Assert.Equal(new AccountView("Bohdan", "bohdan@example.org", false, AccountRole.User), await Me(http));
 
         Assert.Equal(HttpStatusCode.NoContent, (await Post(http, "/api/account/logout")).StatusCode);
         Assert.Null(await Me(http));
@@ -248,7 +248,7 @@ public sealed partial class AccountApiTests : IDisposable
         Assert.Equal(["emailTaken"], await Keys(await Post(http, "/api/account/email", new ChangeEmailRequest("autre@example.org", "motdepasse", "fr"))));
 
         var changed = await Post(http, "/api/account/email", new ChangeEmailRequest("neuf@example.org", "motdepasse", "fr"));
-        Assert.Equal(new AccountView("Bohdan", "neuf@example.org", false, false), await changed.Content.ReadFromJsonAsync<AccountView>(TournamentJson.Options));
+        Assert.Equal(new AccountView("Bohdan", "neuf@example.org", false, AccountRole.User), await changed.Content.ReadFromJsonAsync<AccountView>(TournamentJson.Options));
         var (_, _, newToken) = await MailLink("neuf@example.org", 1);
         await Post(http, "/api/account/confirm", new ConfirmEmailRequest(user, newToken));
         Assert.True((await Me(http))!.EmailConfirmed);
@@ -307,11 +307,71 @@ public sealed partial class AccountApiTests : IDisposable
         Assert.Null(await Me(bobAgain));                                  // sessions de Bob fermées
         Assert.Equal(HttpStatusCode.OK, (await Login(bobAgain, "Bob", temporary)).StatusCode);
 
-        // Retiré de la liste : plus admin au redémarrage suivant.
+        // Retiré de la liste : toujours admin (le rôle est dans la base ; la variable ne fait que le donner).
         var third = Server(admins: "");
         var rootLast = third.CreateClient();
         await Login(rootLast, "Root");
-        Assert.False((await Me(rootLast))!.IsAdmin);
+        Assert.True((await Me(rootLast))!.IsAdmin);
+    }
+
+    private static Task<HttpResponseMessage> SetRole(HttpClient http, string userName, AccountRole role) =>
+        http.PutAsync($"/api/admin/accounts/{userName}/role", JsonContent.Create(new RoleRequest(role), options: TournamentJson.Options));
+
+    private static async Task<AccountSummary[]> Accounts(HttpClient http, string search = "") =>
+        (await http.GetFromJsonAsync<AccountSummary[]>($"/api/admin/accounts?search={search}", TournamentJson.Options))!;
+
+    [Fact]
+    public async Task Roles_en_base_joueur_editeur_admin()
+    {
+        var first = Server();
+        foreach (var name in new[] { "Root", "Bob", "Carla", "Carlos" }) await Register(first.CreateClient(), name);
+        var server = Server(admins: "Root");
+        async Task<HttpClient> As(string name)
+        {
+            var http = server.CreateClient();
+            (await Login(http, name)).EnsureSuccessStatusCode();
+            return http;
+        }
+        var (root, bob, carla) = (await As("Root"), await As("Bob"), await As("Carla"));
+        Assert.Equal(AccountRole.Admin, (await Me(root))!.Role);
+        Assert.Equal(AccountRole.User, (await Me(bob))!.Role);
+
+        // Joueur : ni rôles, ni éditeur du référentiel.
+        Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/admin/accounts")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await SetRole(bob, "Bob", AccountRole.Admin)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/admin/catalog/status")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await server.CreateClient().GetAsync("/api/admin/accounts")).StatusCode);
+
+        // Liste : sans recherche, l'équipe ; avec, les pseudos qui la contiennent (sans tenir compte de la casse).
+        Assert.Equal([new AccountSummary("Root", AccountRole.Admin)], await Accounts(root));
+        Assert.Equal(["Carla", "Carlos"], (await Accounts(root, "carl")).Select(a => a.UserName));
+
+        // Éditeur : éditeur du référentiel, tout de suite (session en cours), mais pas les rôles.
+        Assert.Equal(HttpStatusCode.OK, (await SetRole(root, "bob", AccountRole.Editor)).StatusCode);
+        Assert.Equal(AccountRole.Editor, (await Me(bob))!.Role);
+        Assert.Equal(HttpStatusCode.OK, (await bob.GetAsync("/api/admin/catalog/status")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/admin/accounts")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await SetRole(bob, "Carla", AccountRole.Editor)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await bob.PostAsync("/api/admin/accounts/Carla/reset-password", null)).StatusCode);
+
+        // Admin : jamais son propre rôle ; celui des autres admins, si.
+        Assert.Equal(["ownRole"], await Keys(await SetRole(root, "Root", AccountRole.User)));
+        Assert.Equal(["unknownUser"], await Keys(await SetRole(root, "Personne", AccountRole.Editor)));
+        Assert.Equal(HttpStatusCode.OK, (await SetRole(root, "Carla", AccountRole.Admin)).StatusCode);
+        Assert.Equal([new AccountSummary("Carla", AccountRole.Admin), new AccountSummary("Root", AccountRole.Admin),
+            new AccountSummary("Bob", AccountRole.Editor)], await Accounts(carla));
+        Assert.Equal(HttpStatusCode.OK, (await SetRole(carla, "Root", AccountRole.Editor)).StatusCode);
+        Assert.Equal(AccountRole.Editor, (await Me(root))!.Role);
+        Assert.Equal(HttpStatusCode.Forbidden, (await root.GetAsync("/api/admin/accounts")).StatusCode);
+
+        // Rôles gardés au redémarrage, sans variable (Root n'y est plus : reste éditeur).
+        var again = Server(admins: "");
+        var bobAgain = again.CreateClient();
+        await Login(bobAgain, "Bob");
+        Assert.Equal(AccountRole.Editor, (await Me(bobAgain))!.Role);
+        var rootAgain = again.CreateClient();
+        await Login(rootAgain, "Root");
+        Assert.Equal(AccountRole.Editor, (await Me(rootAgain))!.Role);
     }
 
     [Fact]

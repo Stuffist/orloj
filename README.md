@@ -19,6 +19,14 @@ dotnet run --project src/Olomoc.Server
 
 Puis ouvrir `http://localhost:5180/` (renvoie vers `/builder/`).
 
+**Devenir admin en local** : créer son compte (« Mon compte »), arrêter le serveur, puis le
+relancer une fois avec son pseudo dans `OLOMOC_ADMINS` ; le rôle est alors dans la base
+(`data/olomoc.db`), la variable n'est plus utile :
+
+```powershell
+$env:OLOMOC_ADMINS = "MonPseudo"; dotnet run --project src/Olomoc.Server
+```
+
 Tests : `dotnet test` à la racine (solution `Olomoc.slnx`).
 
 ## Déploiement (Docker, VPS)
@@ -83,7 +91,7 @@ identifiants SMTP) :
 |--------------------|---------------------------------|----------------------------------------------|
 | `OLOMOC_HOSTS`     | `orloj.top;localhost;127.0.0.1` | noms d'hôte acceptés (les autres : 400)      |
 | `OLOMOC_HTTP_PORT` | `8090`                          | port HTTP de diagnostic, sur 127.0.0.1 seulement |
-| `OLOMOC_ADMINS`    | (aucun)                         | pseudos des admins, séparés par `;` (comptes existants, relu au démarrage) |
+| `OLOMOC_ADMINS`    | (aucun)                         | pseudos à faire admins au démarrage, séparés par `;` (comptes existants ; premier admin ou secours, jamais retiré) |
 | `SMTP_HOST`        | (aucun)                         | relais SMTP des e-mails (Brevo…) ; sans lui, e-mails écrits dans `data/mail` |
 | `SMTP_PORT`        | `587`                           | port du relais (STARTTLS ; 465 : TLS)        |
 | `SMTP_USER`, `SMTP_PASSWORD` | (aucun)               | identifiants du relais (secrets : dans `.env` seulement) |
@@ -179,6 +187,35 @@ images des cartes. Conventions de transcription (pictogrammes : LDR p.20) :
 - Fréquences : couronne N → `{count: N, per: PLANNING_PHASE}`, pentagone N →
   `{count: N, per: CYCLE}`, cercle N → `{count: N, per: GAME}` (cumulables).
 - `baseSize` est imprimée au verso des cartes, absent du relevé : elle reste vide.
+
+### Éditeur du référentiel (éditeurs et admins)
+
+`/builder/admin` (lien dans « Mon compte », section « Référentiel des cartes ») : rouages, équipements et dons,
+factions, avec leurs textes dans chaque langue de `languages.json` (nom obligatoire en français ;
+les autres langues se replient dessus).
+
+- **Rouages** : rang, Ministères, **factions** (référentiel de faction), caractéristiques, ligne
+  de vie (lettres S, R, T), socle, carte supplémentaire, image, capacités (moment, coûts,
+  fréquences ; nom et effet par langue), nom, titre, instinct.
+- **Équipements et dons** : type, affiliation exclusive (Ministère, faction ou rouage), points de
+  vie ajoutés, règles de composition, image, capacités, nom.
+- **Factions** : alignement, nom et description par langue.
+- **Publication** : seule une entrée `"published": true` est publiée. Sans ce champ (ou à
+  `false`), c'est un brouillon, servi aux seuls éditeurs et admins (marqué « brouillon » dans le
+  constructeur), retiré pour les autres avec ses textes et sa place dans les factions, et refusé
+  aux inscriptions de tournoi. Une entrée nouvelle est donc un brouillon tant qu'elle n'est pas
+  publiée ; une PR qui ajoute une carte visible de tous met `"published": true`.
+- **Stockage** : les fichiers du dépôt restent la base (PR bienvenues) ; les modifications faites
+  dans l'éditeur sont des JSON au même format, avec les seules entrées modifiées ou créées, dans
+  `data/catalog/` (`data/olomoc-catalog.json`, `data/olomoc-factions.json`,
+  `i18n/<langue>/cards.json`), fusionnés par id ou code avec ceux du dépôt. Les fichiers du
+  référentiel sont servis aux mêmes adresses (`/_content/Olomoc.Shared/…`), fusionnés.
+- **Export** : onglet « Exporter », zip des fichiers complets aux chemins du dépôt, à dézipper à sa
+  racine puis commiter. Au démarrage suivant, les modifications devenues identiques au dépôt sont
+  retirées de `data/catalog/` ; « Revenir à la version du dépôt » annule celles d'une entrée
+  (une entrée nouvelle est alors supprimée).
+- Les identifiants ne changent jamais (les cabales sauvegardées y font référence) ; les images
+  (`img/cards/`) restent à ajouter au dépôt.
 
 ## Multilingue
 
@@ -393,9 +430,17 @@ Facultatifs : sans compte, tout marche comme avant, sur l'appareil. `/builder/ac
   Changer de mot de passe, le réinitialiser ou « Déconnecter les autres appareils » ferme les
   autres sessions (tampon de sécurité relu chaque minute). Clés de chiffrement des cookies dans
   la base : un redéploiement ne déconnecte personne.
-- **Admins** (`OLOMOC_ADMINS`) : mot de passe temporaire pour un joueur sans e-mail confirmé.
-  Créer son compte d'abord, puis l'ajouter à la liste et redémarrer : seuls des comptes
-  existants deviennent admins.
+- **Rôles**, enregistrés dans la base (rôles d'Identity) :
+  - **joueur** (par défaut) : tout le site, sauf l'éditeur ;
+  - **éditeur** : en plus, l'éditeur du référentiel (et ses brouillons) ;
+  - **admin** : tout, dont les rôles des autres comptes (« Mon compte », « Admin : rôles des
+    comptes » : recherche par pseudo, jamais l'e-mail) et un mot de passe temporaire pour un
+    joueur sans e-mail confirmé. Un admin ne change jamais son propre rôle : il en reste toujours
+    un. Un changement de rôle vaut tout de suite pour l'API, dans la minute pour les brouillons
+    servis.
+  - **Premier admin** : créer son compte, puis redémarrer avec son pseudo dans `OLOMOC_ADMINS`
+    (seuls des comptes existants le reçoivent). La variable donne le rôle à chaque démarrage
+    sans jamais le retirer : à vider ensuite, ou à garder comme secours.
 - **Cabales** : les mêmes sur tous les appareils (voir « Cabales sauvegardées »).
 - **Suppression** du compte (mot de passe redemandé) et page **Données personnelles**
   (`/builder/privacy`).
@@ -551,6 +596,9 @@ tests/Olomoc.Tests/   xUnit
 **`src/Olomoc.Builder`**
 - `Pages/Home.razor` — constructeur : composition, légalité, sauvegarde et export, lancement d'une partie.
 - `Pages/Play.razor`, `Shared/PlayCogCard.razor` — mode partie.
+- `Pages/AdminCatalog.razor`, `Shared/CogEditor.razor`, `EquipmentEditor.razor`, `AbilitiesEditor.razor`,
+  `CatalogDrafts.cs`, `AdminCatalogApi.cs` — éditeur du référentiel (éditeurs et admins) ;
+  `Shared/RolesPanel.razor` — rôles des comptes (admins).
 - `Pages/Account.razor`, `AccountConfirm.razor`, `AccountReset.razor`, `Privacy.razor` — compte,
   liens reçus par e-mail, données personnelles.
 
@@ -568,9 +616,13 @@ tests/Olomoc.Tests/   xUnit
 - `Tournaments/TournamentEndpoints.cs` — API `/api/tournaments` (droits par jeton) ;
   `TournamentStore.cs` (un document par tournoi, verrou par tournoi), `StatsArchive.cs`,
   `ServerCatalog.cs` (référentiel côté serveur), `TournamentPurge.cs` (90 jours sans modification, date passée ou absente).
-- `Accounts/AccountEndpoints.cs` — API `/api/account` (Identity, cookie de session), rôle
-  admin (`AdminRoles`) ; `CabalSyncEndpoint.cs` (cabales du compte) ; `Mail.cs` (relais SMTP par MailKit, ou fichiers ; file d'envoi),
+- `Accounts/AccountEndpoints.cs` — API `/api/account` (Identity, cookie de session) et
+  `/api/admin/accounts` (rôles, mot de passe temporaire) ; `Roles.cs` (joueur, éditeur, admin ;
+  filtre des API, `OLOMOC_ADMINS`) ; `CabalSyncEndpoint.cs` (cabales du compte) ; `Mail.cs` (relais SMTP par MailKit, ou fichiers ; file d'envoi),
   `AccountMails.cs` (textes des e-mails).
+- `CardCatalog/CatalogStore.cs` — référentiel servi : fichiers du dépôt + modifications de l'éditeur
+  (`DATA_DIR/catalog`), brouillons cachés aux visiteurs, export ; `CatalogEndpoints.cs` (fichiers
+  servis, API `/api/admin/catalog`).
 - `Data/OlomocDb.cs` — base SQLite (EF Core) : table `Documents` (sorte, code, dates,
   JSON), comptes (tables d'Identity), cabales des comptes (`SavedCabals`), clés des cookies ; schéma par migrations (`Data/Migrations`, appliquées au démarrage ; nouvelle
   migration : `dotnet dotnet-ef migrations add <Nom> --project src/Olomoc.Server

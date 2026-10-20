@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace Olomoc.Accounts;
@@ -28,8 +29,25 @@ public static partial class AccountRules
     private static partial Regex EmailPattern();
 }
 
+/// <summary>
+/// Rôle d'un compte, enregistré dans la base : joueur (sans rôle), éditeur (éditeur du
+/// référentiel), admin (tout, dont les rôles des autres comptes, jamais le sien).
+/// </summary>
+public enum AccountRole { User, Editor, Admin }
+
 /// <summary>Compte connecté, tel que le voit son propriétaire.</summary>
-public sealed record AccountView(string UserName, string Email, bool EmailConfirmed, bool IsAdmin);
+public sealed record AccountView(string UserName, string Email, bool EmailConfirmed, AccountRole Role)
+{
+    [JsonIgnore] public bool IsAdmin => Role == AccountRole.Admin;
+
+    /// <summary>Éditeur du référentiel : éditeurs et admins.</summary>
+    [JsonIgnore] public bool CanEdit => Role >= AccountRole.Editor;
+}
+
+/// <summary>Compte vu par un admin (rôles) : pseudo et rôle, jamais l'e-mail.</summary>
+public sealed record AccountSummary(string UserName, AccountRole Role);
+
+public sealed record RoleRequest(AccountRole Role);
 
 /// <summary>Langue du site au moment de la demande : celle des e-mails envoyés.</summary>
 public sealed record RegisterRequest(string UserName, string Email, string Password, string? Language);

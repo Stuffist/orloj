@@ -215,7 +215,7 @@ else
                                 var blocked = swap is { Displaced.Count: 0 };
                                 <button class="cog-option@(swap is not null && !blocked ? " swap" : null)" disabled="@blocked" @onclick="() => SelectCog(idx, c)">
                                     <span class="cog-option-head">
-                                        <span class="cog-name">@Text(L.CogName(c))</span>
+                                        <span class="cog-name">@Text(L.CogName(c))@DraftBadge(c.Published)</span>
                                         @* Factions dont le rouage est membre (les recrutements par carte sont sur sa fiche). *@
                                         <span class="cog-option-factions">
                                             @foreach (var fit in Catalog.FactionsOf(c).Where(x => x.Member))
@@ -250,7 +250,7 @@ else
                     var current = _equipment[idx];
                     <div class="cog-card">
                         <div>
-                            <div class="cog-name">@Text(L.CogName(cog))</div>
+                            <div class="cog-name">@Text(L.CogName(cog))@DraftBadge(cog.Published)</div>
                             <div class="cog-title">@Text(L.CogTitle(cog))</div>
                             <div class="cog-min emblem-names">@foreach (var m in cog.Ministries) { <span class="emblem-name"><Emblem Ministry="@m" />@L.MinistryName(m)</span> }</div>
                         </div>
@@ -709,6 +709,9 @@ else
         _importError = cabal is null;
         if (cabal is not null) await LoadAsync(cabal);
     }
+
+    // Brouillon de l'éditeur du référentiel : servi aux seuls admins, signalé.
+    private RenderFragment? DraftBadge(bool published) => published ? null : @<span class="draft-badge">@L.Ui("admin.draft")</span>;
 
     // Noms dans la langue courante si la carte existe encore, sinon tels qu'enregistrés.
     private string CogLabel(IdName cog) => Catalog.CogById(cog.Id) is { } c ? L.CogName(c).Text : cog.Name;

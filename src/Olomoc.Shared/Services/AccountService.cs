@@ -102,6 +102,14 @@ public sealed class AccountService(HttpClient http) : ICabalCloud
     public Task<AccountResult<CabalSyncResult>> SyncCabalsAsync(IReadOnlyList<CabalChange> changes) =>
         SendAsync<CabalSyncResult>(HttpMethod.Post, "cabals/sync", new CabalSyncRequest(changes));
 
+    /// <summary>Admin : comptes dont le pseudo contient la recherche ; sans recherche, les éditeurs et les admins.</summary>
+    public Task<AccountResult<List<AccountSummary>>> ListAccountsAsync(string search) =>
+        SendAsync<List<AccountSummary>>(HttpMethod.Get, $"/api/admin/accounts?search={Uri.EscapeDataString(search.Trim())}", null);
+
+    /// <summary>Admin : rôle d'un autre compte.</summary>
+    public Task<AccountResult<AccountSummary>> SetRoleAsync(string userName, AccountRole role) =>
+        SendAsync<AccountSummary>(HttpMethod.Put, $"/api/admin/accounts/{Uri.EscapeDataString(userName)}/role", new RoleRequest(role));
+
     /// <summary>Admin : mot de passe temporaire pour un autre compte.</summary>
     public Task<AccountResult<TemporaryPassword>> AdminResetPasswordAsync(string userName) =>
         SendAsync<TemporaryPassword>(HttpMethod.Post, $"/api/admin/accounts/{Uri.EscapeDataString(userName.Trim())}/reset-password", null);

@@ -72,7 +72,8 @@
       ],
       "art": {
         "front": "1R01_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "1R03",
@@ -115,7 +116,8 @@
       ],
       "art": {
         "front": "1R03_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "1R09",
@@ -152,7 +154,8 @@
       ],
       "art": {
         "front": "1R09_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "1R12",
@@ -189,7 +192,8 @@
       ],
       "art": {
         "front": "1R12_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "1R16",
@@ -226,7 +230,8 @@
       ],
       "art": {
         "front": "1R16_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "1R19",
@@ -263,7 +268,8 @@
       ],
       "art": {
         "front": "1R19_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "1R22",
@@ -300,7 +306,8 @@
       ],
       "art": {
         "front": "1R22_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "1R23",
@@ -337,7 +344,8 @@
       ],
       "art": {
         "front": "1R23_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "1R26",
@@ -380,7 +388,8 @@
       ],
       "art": {
         "front": "1R26_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "1R29",
@@ -423,7 +432,8 @@
       ],
       "art": {
         "front": "1R29_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "2R02",
@@ -466,7 +476,8 @@
       ],
       "art": {
         "front": "2R02_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "2R04",
@@ -503,7 +514,8 @@
       ],
       "art": {
         "front": "2R04_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "2R08",
@@ -540,7 +552,8 @@
       ],
       "art": {
         "front": "2R08_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "2R11",
@@ -583,7 +596,8 @@
       ],
       "art": {
         "front": "2R11_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "2R15",
@@ -620,7 +634,8 @@
       ],
       "art": {
         "front": "2R15_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "2R18",
@@ -657,7 +672,8 @@
       ],
       "art": {
         "front": "2R18_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "2R21",
@@ -700,7 +716,8 @@
       ],
       "art": {
         "front": "2R21_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "2R25",
@@ -743,7 +760,8 @@
       ],
       "art": {
         "front": "2R25_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "2R28",
@@ -786,7 +804,8 @@
       ],
       "art": {
         "front": "2R28_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "3R05",
@@ -829,7 +848,8 @@
       ],
       "art": {
         "front": "3R05_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "3R06",
@@ -866,7 +886,8 @@
       ],
       "art": {
         "front": "3R06_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "3R07",
@@ -909,7 +930,8 @@
       ],
       "art": {
         "front": "3R07_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "3R10",
@@ -952,7 +974,8 @@
       ],
       "art": {
         "front": "3R10_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "3R14",
@@ -995,7 +1018,8 @@
       ],
       "art": {
         "front": "3R14_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "3R17",
@@ -1038,7 +1062,8 @@
       ],
       "art": {
         "front": "3R17_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "3R20",
@@ -1075,7 +1100,8 @@
       ],
       "art": {
         "front": "3R20_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "3R24",
@@ -1112,7 +1138,8 @@
       ],
       "art": {
         "front": "3R24_recto.jpg"
-      }
+      },
+      "published": true
     },
     {
       "id": "3R27",
@@ -1153,7 +1180,8 @@
       },
       "art": {
         "front": "3R27_recto.jpg"
-      }
+      },
+      "published": true
     }
   ],
   "equipment": [
@@ -1175,7 +1203,8 @@
       "art": {
         "front": "D01.jpg"
       },
-      "set": "2024"
+      "set": "2024",
+      "published": true
     },
     {
       "id": "D02",
@@ -1197,7 +1226,8 @@
       "art": {
         "front": "D02.jpg"
       },
-      "set": "2024"
+      "set": "2024",
+      "published": true
     },
     {
       "id": "D03",
@@ -1219,7 +1249,8 @@
       "art": {
         "front": "D03.jpg"
       },
-      "set": "2024"
+      "set": "2024",
+      "published": true
     },
     {
       "id": "D04",
@@ -1241,7 +1272,8 @@
       "art": {
         "front": "D04.jpg"
       },
-      "set": "2024"
+      "set": "2024",
+      "published": true
     },
     {
       "id": "D05",
@@ -1263,7 +1295,8 @@
       "art": {
         "front": "D05.jpg"
       },
-      "set": "2024"
+      "set": "2024",
+      "published": true
     },
     {
       "id": "D06",
@@ -1285,7 +1318,8 @@
       "art": {
         "front": "D06.jpg"
       },
-      "set": "2024"
+      "set": "2024",
+      "published": true
     },
     {
       "id": "D07",
@@ -1301,7 +1335,8 @@
       "art": {
         "front": "D07.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "D08",
@@ -1323,7 +1358,8 @@
       "art": {
         "front": "D08.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E01",
@@ -1345,7 +1381,8 @@
       "art": {
         "front": "1_E01.jpg"
       },
-      "set": "2024"
+      "set": "2024",
+      "published": true
     },
     {
       "id": "E02",
@@ -1367,7 +1404,8 @@
       "art": {
         "front": "2_E02.jpg"
       },
-      "set": "2026 (V2)"
+      "set": "2026 (V2)",
+      "published": true
     },
     {
       "id": "E03",
@@ -1383,7 +1421,8 @@
       "art": {
         "front": "2_E03.jpg"
       },
-      "set": "2024"
+      "set": "2024",
+      "published": true
     },
     {
       "id": "E04",
@@ -1405,7 +1444,8 @@
       "art": {
         "front": "3_E04.jpg"
       },
-      "set": "2026 (V2)"
+      "set": "2026 (V2)",
+      "published": true
     },
     {
       "id": "E05",
@@ -1421,7 +1461,8 @@
       "art": {
         "front": "3_E05.jpg"
       },
-      "set": "2026 (V3)"
+      "set": "2026 (V3)",
+      "published": true
     },
     {
       "id": "E06",
@@ -1437,7 +1478,8 @@
       "art": {
         "front": "4_E06.jpg"
       },
-      "set": "2024"
+      "set": "2024",
+      "published": true
     },
     {
       "id": "E07",
@@ -1459,7 +1501,8 @@
       "art": {
         "front": "4_E07.jpg"
       },
-      "set": "2026 (V2)"
+      "set": "2026 (V2)",
+      "published": true
     },
     {
       "id": "E08",
@@ -1475,7 +1518,8 @@
       "art": {
         "front": "5_E08.jpg"
       },
-      "set": "2024"
+      "set": "2024",
+      "published": true
     },
     {
       "id": "E09",
@@ -1497,7 +1541,8 @@
       "art": {
         "front": "5_E09.jpg"
       },
-      "set": "2024 (V2)"
+      "set": "2024 (V2)",
+      "published": true
     },
     {
       "id": "E10",
@@ -1519,7 +1564,8 @@
       "art": {
         "front": "1_E10.jpg"
       },
-      "set": "2024"
+      "set": "2024",
+      "published": true
     },
     {
       "id": "E11",
@@ -1545,7 +1591,8 @@
             2
           ]
         }
-      ]
+      ],
+      "published": true
     },
     {
       "id": "E12",
@@ -1567,7 +1614,8 @@
       "art": {
         "front": "91_E12.jpg"
       },
-      "set": "2024"
+      "set": "2024",
+      "published": true
     },
     {
       "id": "E13",
@@ -1592,7 +1640,8 @@
             2
           ]
         }
-      ]
+      ],
+      "published": true
     },
     {
       "id": "E14",
@@ -1614,7 +1663,8 @@
       "art": {
         "front": "4_E14.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E15",
@@ -1640,7 +1690,8 @@
       "art": {
         "front": "4_E15.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E16",
@@ -1662,7 +1713,8 @@
       "art": {
         "front": "6_E16.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E17",
@@ -1678,7 +1730,8 @@
       "art": {
         "front": "6_E17.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E18",
@@ -1700,7 +1753,8 @@
       "art": {
         "front": "7_E18.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E19",
@@ -1722,7 +1776,8 @@
       "art": {
         "front": "7_E19.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E20",
@@ -1738,7 +1793,8 @@
       "art": {
         "front": "4_E20.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E21",
@@ -1760,7 +1816,8 @@
       "art": {
         "front": "2_E21.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E22",
@@ -1782,7 +1839,8 @@
       "art": {
         "front": "6_E22.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E23",
@@ -1804,7 +1862,8 @@
       "art": {
         "front": "93_E23.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E24",
@@ -1820,7 +1879,8 @@
       "art": {
         "front": "93_E24.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E25",
@@ -1842,7 +1902,8 @@
       "art": {
         "front": "93_E25.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E26",
@@ -1868,7 +1929,8 @@
       "art": {
         "front": "8_E26.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E27",
@@ -1894,7 +1956,8 @@
       "art": {
         "front": "8_E27.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E28",
@@ -1916,7 +1979,8 @@
       "art": {
         "front": "3_E28.jpg"
       },
-      "set": "2025"
+      "set": "2025",
+      "published": true
     },
     {
       "id": "E29",
@@ -1937,7 +2001,8 @@
         {
           "type": "ALL_MINISTRIES"
         }
-      ]
+      ],
+      "published": true
     },
     {
       "id": "E30",
@@ -1959,7 +2024,8 @@
       "art": {
         "front": "94_E30.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E31",
@@ -1981,7 +2047,8 @@
       "art": {
         "front": "94_E31.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E32",
@@ -1997,7 +2064,8 @@
       "art": {
         "front": "2_E32.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E33",
@@ -2019,7 +2087,8 @@
       "art": {
         "front": "2_E33.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E34",
@@ -2035,7 +2104,8 @@
       "art": {
         "front": "8_E34.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E35",
@@ -2051,7 +2121,8 @@
       "art": {
         "front": "95_E35.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E36",
@@ -2073,7 +2144,8 @@
       "art": {
         "front": "95_E36.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E37",
@@ -2089,7 +2161,8 @@
       "art": {
         "front": "95_E37.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E38",
@@ -2111,7 +2184,8 @@
       "art": {
         "front": "1_E38.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E39",
@@ -2133,7 +2207,8 @@
       "art": {
         "front": "7_E39.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E40",
@@ -2149,7 +2224,8 @@
       "art": {
         "front": "96_E40.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E41",
@@ -2171,7 +2247,8 @@
       "art": {
         "front": "96_E41.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E42",
@@ -2193,7 +2270,8 @@
       "art": {
         "front": "5_E42.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E43",
@@ -2215,7 +2293,8 @@
       "art": {
         "front": "5_E43.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E44",
@@ -2237,7 +2316,8 @@
       "art": {
         "front": "6_E44.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     },
     {
       "id": "E45",
@@ -2259,7 +2339,8 @@
       "art": {
         "front": "6_E45.jpg"
       },
-      "set": "2026"
+      "set": "2026",
+      "published": true
     }
   ]
 }

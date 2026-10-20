@@ -576,6 +576,12 @@ body {
 .account-badge { font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; border: 1px solid currentColor; border-radius: 999px; padding: 0 .5rem; }
 .account-badge.ok { color: var(--ok); }
 .account-badge.todo { color: var(--rust-soft); }
+.account-badge.role { color: var(--rust-soft); margin-left: .5rem; vertical-align: middle; font-weight: 600; }
+.account-roles-heading { margin: .4rem 0; font-size: .85rem; color: var(--muted); }
+.account-roles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
+.account-roles li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .3rem .8rem; padding: .3rem 0; border-bottom: 1px solid var(--line); }
+.account-role-name { overflow-wrap: anywhere; min-width: 0; }
+.account-roles select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: .35rem .5rem; font-size: .9rem; }
 .link-button {
     background: none; border: 0; padding: 0; font: inherit; font-size: .85rem;
     color: var(--rust-soft); text-decoration: underline; cursor: pointer;
@@ -584,6 +590,64 @@ body {
 .account-cabals { margin: -.3rem 0 .6rem; color: var(--muted); font-size: .9rem; }
 .library-account { margin: 0 0 .8rem; }
 .library-account a { color: var(--rust-soft); }
+
+/* Éditeur du référentiel (/builder/admin, admins) */
+.draft-badge, .admin-badge {
+    display: inline-block; margin-left: .4rem; padding: 0 .45rem; border-radius: 999px; border: 1px dashed var(--rust-soft);
+    color: var(--rust-soft); font-size: .68rem; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; vertical-align: middle;
+}
+.admin-badge { border-style: solid; }
+.admin-badge.new { color: var(--ok); border-color: var(--ok); }
+.admin-badge.modified { color: var(--muted); border-color: var(--line); }
+.admin-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.admin-tabs button {
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px;
+    padding: .45rem .8rem; font: inherit; font-size: .9rem; cursor: pointer;
+}
+.admin-tabs button.on { border-color: var(--rust); background: var(--panel-2); }
+.admin-message { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem 1rem; }
+.admin-toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: .8rem; }
+.admin-toolbar input[type=search] {
+    flex: 1; min-width: 12rem; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: .45rem .6rem; font-size: .95rem;
+}
+.admin-list { list-style: none; margin: 0; padding: 0; }
+.admin-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4rem 1rem; padding: .5rem 0; border-top: 1px solid var(--line); }
+.admin-item-name { min-width: 0; overflow-wrap: anywhere; }
+.admin-item-actions { display: flex; gap: .4rem; }
+.admin-editor h2, .admin-editor h3 { overflow-wrap: anywhere; }
+.admin-form { display: flex; flex-direction: column; gap: .9rem; }
+.admin-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .6rem 1rem; }
+.admin-form .field, .admin-editor .field { min-width: 0; }
+.admin-form .field > span:first-child, .admin-editor .field > span:first-child {
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted);
+}
+.admin-form .field.small input, .admin-form .field.small select { width: 5.5rem; }
+.admin-form textarea, .admin-editor textarea, .admin-editor .field input, .admin-editor .field select, .admin-row > select {
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px;
+    padding: .45rem .6rem; font: inherit; font-size: .92rem;
+}
+.admin-form textarea, .admin-editor textarea { width: 100%; resize: vertical; }
+.admin-form input:disabled { opacity: .6; }
+.admin-published { flex-direction: row; align-items: center; gap: .4rem; }
+.admin-lifeline { font-family: ui-monospace, Consolas, monospace; letter-spacing: 3px; }
+.admin-invalid { color: var(--rust-soft); }
+.admin-form fieldset, .admin-editor fieldset { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem .8rem; margin: 0; min-width: 0; }
+.admin-form legend { padding: 0 .3rem; font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.admin-choices { display: flex; flex-wrap: wrap; gap: .3rem 1rem; }
+.admin-choices label.check, .admin-rules label.check { display: inline-flex; align-items: center; gap: .35rem; font-size: .9rem; cursor: pointer; }
+.admin-choices .hint { flex-basis: 100%; }
+.admin-languages { display: grid; grid-template-columns: minmax(0, 1fr); gap: .8rem; }
+@media (min-width: 760px) { .admin-languages { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.admin-language { display: flex; flex-direction: column; gap: .5rem; padding: .6rem .7rem; border-left: 3px solid var(--line); background: var(--bg); border-radius: 0 6px 6px 0; }
+.admin-language input { width: 100%; }
+.admin-language-name { font-size: .78rem; font-weight: 600; color: var(--rust-soft); text-transform: uppercase; letter-spacing: .5px; }
+.admin-abilities { display: flex; flex-direction: column; gap: .8rem; }
+.admin-ability { display: flex; flex-direction: column; gap: .6rem; padding-bottom: .8rem; border-bottom: 1px dashed var(--line); }
+.admin-frequency { display: inline-flex; align-items: center; gap: .3rem; }
+.admin-frequency input { width: 3.5rem; }
+.admin-actions { margin-top: .8rem; }
+.admin-changes { margin: 0; padding-left: 1.2rem; font-size: .9rem; }
 
 /* ---- Catalogue des équipements et dons (bas du constructeur, fenêtre détachée /builder/equipment) ---- */
 .equip-section { margin-top: 1.5rem; }

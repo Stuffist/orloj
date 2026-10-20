@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Olomoc.Accounts;
 using Olomoc.Server.Accounts;
+using Olomoc.Server.CardCatalog;
 using Olomoc.Server.Data;
 using Olomoc.Server.Hosting;
 using Olomoc.Server.Tournaments;
@@ -24,6 +25,9 @@ builder.Services.AddDbContextFactory<OlomocDb>(o => OlomocDb.Configure(o, dataDi
 builder.Services.AddSingleton(sp => new TournamentStore(sp.GetRequiredService<IDbContextFactory<OlomocDb>>()));
 builder.Services.AddSingleton<StatsArchive>();    // jamais purgées
 builder.Services.AddHostedService(sp => new DbBackup(dataDirectory, sp.GetRequiredService<ILogger<DbBackup>>()));
+// Référentiel : fichiers du dépôt, plus les modifications des admins (DATA_DIR/catalog).
+builder.Services.AddSingleton(sp => new CatalogStore(sp.GetRequiredService<IWebHostEnvironment>().WebRootFileProvider,
+    Path.Combine(dataDirectory, "catalog"), sp.GetRequiredService<ILogger<CatalogStore>>()));
 builder.Services.AddSingleton<ServerCatalog>();
 builder.Services.AddHostedService<TournamentPurge>();
 builder.Services.ConfigureHttpJsonOptions(o => TournamentJson.Configure(o.SerializerOptions));
@@ -114,7 +118,8 @@ var app = builder.Build();
 var dbFactory = app.Services.GetRequiredService<IDbContextFactory<OlomocDb>>();
 await OlomocDb.MigrateAsync(dbFactory);
 await JsonImport.RunAsync(dbFactory, dataDirectory, app.Logger);
-await AdminRoles.SyncAsync(app.Services, app.Configuration["OLOMOC_ADMINS"], app.Logger);
+await Olomoc.Server.Accounts.Roles.SeedAsync(app.Services, app.Configuration["OLOMOC_ADMINS"], app.Logger);
+await app.Services.GetRequiredService<CatalogStore>().InitializeAsync();
 if (mailSettings.Host is null)
     app.Logger.LogWarning("SMTP_HOST non défini : e-mails écrits dans {Directory} au lieu d'être envoyés.", Path.Combine(dataDirectory, "mail"));
 
@@ -141,6 +146,7 @@ app.UseAuthorization();
 
 app.MapTournaments();
 app.MapAccounts();
+app.MapCatalog();                           // avant les fichiers statiques : référentiel fusionné
 app.MapGet("/", () => Results.Redirect("/builder/"));
 app.MapGet("/healthz", () => "ok\n");
 

@@ -1,0 +1,155 @@
+@* Éditeur du référentiel : un équipement ou un don (identifiant à la création seulement), son
+   affiliation exclusive, ses règles de composition, et ses textes dans chaque langue. *@
+@inject LocalizationService L
+
+<div class="admin-form">
+    <div class="admin-row">
+        <label class="field">
+            <span>@L.Ui("admin.id")</span>
+            <input @bind="Draft.Id" disabled="@(!Draft.IsNew)" maxlength="16" spellcheck="false" autocapitalize="characters" />
+        </label>
+        <label class="field">
+            <span>@L.Ui("admin.kind")</span>
+            <select @bind="Draft.Kind">
+                @foreach (var k in Enum.GetValues<EquipmentKind>())
+                {
+                    <option value="@k">@L.Ui($"admin.kind.{k}")</option>
+                }
+            </select>
+        </label>
+        <label class="field">
+            <span>@L.Ui("admin.set")</span>
+            <input @bind="Draft.Set" maxlength="40" />
+        </label>
+        <label class="field check admin-published">
+            <input type="checkbox" @bind="Draft.Published" /> @L.Ui("admin.published")
+        </label>
+    </div>
+
+    <div class="admin-row">
+        <label class="field">
+            <span>@L.Ui("admin.affiliation")</span>
+            <select value="@Draft.Affiliation" @onchange="OnAffiliationChanged">
+                @foreach (var a in Enum.GetValues<AffiliationKind>())
+                {
+                    <option value="@a">@L.Ui($"admin.affiliation.{a}")</option>
+                }
+            </select>
+        </label>
+        @if (Draft.Affiliation != AffiliationKind.None)
+        {
+            <label class="field grow">
+                <span>@L.Ui($"admin.affiliation.{Draft.Affiliation}")</span>
+                <select @bind="Draft.AffiliationValue">
+                    <option value="">—</option>
+                    @foreach (var (value, name) in AffiliationChoices)
+                    {
+                        <option value="@value">@name</option>
+                    }
+                </select>
+            </label>
+        }
+    </div>
+
+    <div class="admin-row">
+        <label class="field">
+            <span>@L.Ui("admin.lifeLinePrefix")</span>
+            <input @bind="Draft.LifeLinePrefix" @bind:event="oninput" spellcheck="false" autocapitalize="characters" class="admin-lifeline" />
+            <span class="hint @(LifeLineText.Parse(Draft.LifeLinePrefix) is null ? "admin-invalid" : null)">@L.Ui("admin.lifeLinePrefix.hint")</span>
+        </label>
+        <label class="field">
+            <span>@L.Ui("admin.artFront")</span>
+            <input @bind="Draft.ArtFront" maxlength="80" spellcheck="false" placeholder="@($"{(Draft.Id.Length > 0 ? Draft.Id : "E01")}.jpg")" />
+        </label>
+    </div>
+
+    <fieldset class="admin-rules">
+        <legend>@L.Ui("admin.buildRules")</legend>
+        @foreach (var rule in Draft.BuildRules)
+        {
+            <div class="admin-row">
+                <select @bind="rule.Type" aria-label="@L.Ui("admin.buildRules")">
+                    @foreach (var t in Enum.GetValues<BuildRuleType>())
+                    {
+                        <option value="@t">@L.Ui($"admin.rule.{t}")</option>
+                    }
+                </select>
+                @if (rule.Type != BuildRuleType.ALL_MINISTRIES)
+                {
+                    <span class="hint">@L.Ui("admin.ranks")</span>
+                    @for (var r = 1; r <= 3; r++)
+                    {
+                        var rank = r;
+                        <label class="check"><input type="checkbox" checked="@rule.Ranks.Contains(rank)" @onchange="e => ToggleRank(rule, rank, e)" /> @rank</label>
+                    }
+                }
+                @if (rule.Type == BuildRuleType.RECRUIT_MINISTRY)
+                {
+                    <select @bind="rule.Ministry" aria-label="@L.Ui("admin.ministries")">
+                        <option value="">—</option>
+                        @foreach (var m in Api.Catalog.Ministries)
+                        {
+                            <option value="@m.Code">@L.MinistryName(m.Code)</option>
+                        }
+                    </select>
+                }
+                <button type="button" class="link-button" @onclick="() => Draft.BuildRules.Remove(rule)">@L.Ui("admin.remove")</button>
+            </div>
+        }
+        @if (Draft.BuildRules.Count < CatalogEditRules.MaxBuildRules)
+        {
+            <button type="button" class="btn small" @onclick="() => Draft.BuildRules.Add(new())">@L.Ui("admin.addRule")</button>
+        }
+        <span class="hint">@L.Ui("admin.buildRules.hint")</span>
+    </fieldset>
+
+    <div class="admin-languages">
+        @foreach (var language in Languages)
+        {
+            if (!Draft.Names.ContainsKey(language)) Draft.Names[language] = "";
+            var lang = language;
+            <div class="admin-language">
+                <span class="admin-language-name">@LanguageName(language)@(language == LocalizationService.ReferenceLanguage ? " *" : null)</span>
+                <label class="field">
+                    <span>@L.Ui("admin.name")</span>
+                    <input value="@Draft.Names[lang]" @onchange="e => Draft.Names[lang] = e.Value?.ToString() ?? string.Empty" maxlength="@CatalogEditRules.MaxText" />
+                </label>
+            </div>
+        }
+    </div>
+
+    <AbilitiesEditor Abilities="Draft.Abilities" Languages="Languages" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EquipmentDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public AdminCatalogApi Api { get; set; } = default!;
+
+    private IReadOnlyList<string> Languages => Api.Status.Languages;
+
+    private IEnumerable<(string Value, string Name)> AffiliationChoices => Draft.Affiliation switch
+    {
+        AffiliationKind.Ministry => Api.Catalog.Ministries.Select(m => (m.Code, L.MinistryName(m.Code).Text)),
+        AffiliationKind.Faction => Api.Factions.Factions.Select(f => (f.Code, L.FactionName(f.Code).Text)),
+        AffiliationKind.Cog => Api.Catalog.Cogs.Select(c => (c.Id, $"{CogName(c.Id)} ({c.Id})")).OrderBy(x => x.Item2),
+        _ => [],
+    };
+
+    private string CogName(string id) =>
+        Api.Texts.GetValueOrDefault(L.Current)?.Cogs.GetValueOrDefault(id)?.Name
+        ?? Api.Texts.GetValueOrDefault(LocalizationService.ReferenceLanguage)?.Cogs.GetValueOrDefault(id)?.Name ?? id;
+
+    private void OnAffiliationChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<AffiliationKind>(e.Value?.ToString(), out var kind)) Draft.Affiliation = kind;
+        Draft.AffiliationValue = "";
+    }
+
+    private static void ToggleRank(BuildRuleDraft rule, int rank, ChangeEventArgs e)
+    {
+        if (e.Value is true) rule.Ranks.Add(rank);
+        else rule.Ranks.Remove(rank);
+    }
+
+    private string LanguageName(string code) => L.Languages.FirstOrDefault(l => l.Code == code)?.Name ?? code;
+}

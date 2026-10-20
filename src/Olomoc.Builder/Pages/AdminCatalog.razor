@@ -1,0 +1,359 @@
+@page "/admin"
+@namespace Olomoc.Builder.Pages
+@using Olomoc.Tournaments
+@implements IDisposable
+@inject AccountService Accounts
+@inject AdminCatalogApi Api
+@inject LocalizationService L
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+@* Éditeur du référentiel (éditeurs et admins) : rouages, équipements et dons, factions ; textes dans chaque
+   langue ; publication (une nouvelle entrée est un brouillon, visible des seuls admins) ; export
+   des fichiers JSON complets, à recommiter dans le dépôt. *@
+
+@if (!L.Loaded || !Accounts.Loaded)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("account.loading") : "…")</p>
+}
+else if (Accounts.Current is not { CanEdit: true })
+{
+    <section class="panel account-panel">
+        <h2>@L.Ui("admin.title")</h2>
+        <p>@L.Ui("admin.restricted")</p>
+        <p><a class="btn" href="account">@L.Ui("account.title")</a></p>
+    </section>
+}
+else if (_loadError is { } loadError)
+{
+    <p class="account-msg error" role="alert">@loadError</p>
+}
+else if (!_loaded)
+{
+    <p class="loading">@L.Ui("admin.loading")</p>
+}
+else
+{
+    <div class="admin-tabs" role="tablist">
+        @foreach (var (tab, label) in Tabs)
+        {
+            <button type="button" role="tab" class="@(_tab == tab ? "on" : null)" aria-selected="@(_tab == tab ? "true" : "false")"
+                    @onclick="() => Open(tab)">@label</button>
+        }
+    </div>
+
+    @if (_message is { } message)
+    {
+        <div class="account-msg ok admin-message" role="status">
+            <span>@message</span>
+            <button type="button" class="link-button" @onclick="ReloadSite">@L.Ui("admin.reloadSite")</button>
+        </div>
+    }
+
+    @switch (_tab)
+    {
+        case "cogs" when _cog is { } cog:
+            <section class="panel admin-editor">
+                @EditorHead(cog.IsNew ? L.Ui("admin.newCog") : CogName(cog.Id), "cogs", cog.Id, cog.IsNew)
+                <CogEditor Draft="cog" Api="Api" />
+                @EditorActions("cogs", cog.Id, cog.IsNew, () => SaveAsync(Api.SaveCogAsync(cog.ToEdit()), cog.Id))
+            </section>
+            break;
+        case "cogs":
+            <section class="panel">
+                @ListHead(L.Ui("admin.newCog"), () => _cog = CogDraft.New(Api.Status.Languages))
+                <ul class="admin-list">
+                    @foreach (var c in Api.Catalog.Cogs.Where(c => Matches(c.Id, CogName(c.Id))).OrderByDescending(c => c.Rank).ThenBy(c => CogName(c.Id)))
+                    {
+                        var entry = c;
+                        @ListItem("cogs", entry.Id, CogName(entry.Id), new string('★', entry.Rank), entry.Published,
+                            () => _cog = CogDraft.From(entry, Api.Texts, Api.Factions))
+                    }
+                </ul>
+            </section>
+            break;
+        case "equipment" when _equipment is { } e:
+            <section class="panel admin-editor">
+                @EditorHead(e.IsNew ? L.Ui("admin.newEquipment") : EquipmentName(e.Id), "equipment", e.Id, e.IsNew)
+                <EquipmentEditor Draft="e" Api="Api" />
+                @EditorActions("equipment", e.Id, e.IsNew, () => SaveAsync(Api.SaveEquipmentAsync(e.ToEdit()), e.Id))
+            </section>
+            break;
+        case "equipment":
+            <section class="panel">
+                @ListHead(L.Ui("admin.newEquipment"), () => _equipment = EquipmentDraft.New(Api.Status.Languages))
+                <ul class="admin-list">
+                    @foreach (var x in Api.Catalog.Equipment.Where(x => Matches(x.Id, EquipmentName(x.Id))).OrderBy(x => x.Kind).ThenBy(x => EquipmentName(x.Id)))
+                    {
+                        var entry = x;
+                        @ListItem("equipment", entry.Id, EquipmentName(entry.Id), L.Ui($"admin.kind.{entry.Kind}"), entry.Published,
+                            () => _equipment = EquipmentDraft.From(entry, Api.Texts))
+                    }
+                </ul>
+            </section>
+            break;
+        case "factions":
+            @foreach (var faction in Api.Factions.Factions)
+            {
+                var draft = _factions.TryGetValue(faction.Code, out var d) ? d : _factions[faction.Code] = FactionDraft.From(faction, Api.Texts);
+                <section class="panel admin-editor">
+                    <h3><Emblem Faction="@faction.Code" /> @(draft.Texts.GetValueOrDefault(L.Current)?.Name is { Length: > 0 } n ? n : faction.Code)
+                        @Badge(Api.StatusOf("factions", faction.Code))</h3>
+                    <div class="admin-row">
+                        <label class="field">
+                            <span>@L.Ui("admin.alignment")</span>
+                            <select @bind="draft.Alignment">
+                                @foreach (var a in Enum.GetValues<Alignment>())
+                                {
+                                    <option value="@a">@L.Ui($"pairings.alignment.{a}")</option>
+                                }
+                            </select>
+                        </label>
+                    </div>
+                    <div class="admin-languages">
+                        @foreach (var language in Api.Status.Languages)
+                        {
+                            var text = draft.Texts.TryGetValue(language, out var t) ? t : draft.Texts[language] = new();
+                            <div class="admin-language">
+                                <span class="admin-language-name">@LanguageName(language)</span>
+                                <label class="field"><span>@L.Ui("admin.name")</span><input @bind="text.Name" maxlength="@CatalogEditRules.MaxText" /></label>
+                                <label class="field"><span>@L.Ui("admin.description")</span><textarea rows="2" @bind="text.Description" maxlength="@CatalogEditRules.MaxText"></textarea></label>
+                            </div>
+                        }
+                    </div>
+                    <p class="hint">@L.Ui("admin.members", string.Join(", ", faction.CogIds.Select(CogName)))</p>
+                    @Problems("faction:" + faction.Code)
+                    <div class="account-actions">
+                        <button type="button" class="btn primary" disabled="@_busy" @onclick="() => SaveFactionAsync(draft)">@L.Ui("admin.save")</button>
+                    </div>
+                </section>
+            }
+            break;
+        default:
+            <section class="panel account-panel">
+                <h2>@L.Ui("admin.export.title")</h2>
+                <p>@L.Ui("admin.export.help")</p>
+                <p><a class="btn primary" href="@AdminCatalogApi.ExportUrl" download>@L.Ui("admin.export.download")</a></p>
+                @{ var changed = Api.Status.Entries.SelectMany(kv => kv.Value.Select(e => (Collection: kv.Key, Key: e.Key, State: e.Value))).ToList(); }
+                @if (changed.Count == 0)
+                {
+                    <p class="hint">@L.Ui("admin.export.none")</p>
+                }
+                else
+                {
+                    <p class="hint">@L.Ui("admin.export.changes", changed.Select(c => c.Key).Distinct().Count())</p>
+                    <ul class="admin-changes">
+                        @foreach (var c in changed.DistinctBy(c => (c.Collection, c.Key)).OrderBy(c => c.Collection).ThenBy(c => c.Key))
+                        {
+                            <li>@L.Ui($"admin.collection.{c.Collection}") — @Label(c.Collection, c.Key) @Badge(c.State)</li>
+                        }
+                    </ul>
+                }
+            </section>
+            break;
+    }
+}
+
+@code {
+    private bool _loaded, _busy;
+    private string? _loadError, _message, _search;
+    private string _tab = "cogs";
+    private CogDraft? _cog;
+    private EquipmentDraft? _equipment;
+    private readonly Dictionary<string, FactionDraft> _factions = new();
+    private readonly Dictionary<string, IReadOnlyList<Problem>> _problems = new();
+
+    private IEnumerable<(string Tab, string Label)> Tabs =>
+    [
+        ("cogs", L.Ui("admin.tab.cogs", Api.Catalog.Cogs.Count)),
+        ("equipment", L.Ui("admin.tab.equipment", Api.Catalog.Equipment.Count)),
+        ("factions", L.Ui("admin.tab.factions")),
+        ("export", L.Ui("admin.tab.export")),
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        Accounts.Changed += OnAccountChanged;
+        await Task.WhenAll(L.EnsureLoadedAsync(), Accounts.EnsureLoadedAsync());
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (Accounts.Current is not { CanEdit: true }) return;
+        var problems = await Api.LoadAsync();
+        _loadError = problems.Count > 0 ? Describe(problems) : null;
+        _factions.Clear();
+        _loaded = true;
+    }
+
+    private void Open(string tab)
+    {
+        _tab = tab;
+        _cog = null;
+        _equipment = null;
+        _problems.Clear();
+    }
+
+    private bool Matches(string id, string name) =>
+        string.IsNullOrWhiteSpace(_search) || id.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase)
+        || name.Contains(_search.Trim(), StringComparison.CurrentCultureIgnoreCase);
+
+    // ---- Morceaux de page ----
+
+    private RenderFragment ListHead(string newLabel, Action create) =>
+        @<div class="admin-toolbar">
+            <button type="button" class="btn primary" @onclick="() => { create(); _message = null; _problems.Clear(); }">+ @newLabel</button>
+            <input type="search" placeholder="@L.Ui("admin.search")" aria-label="@L.Ui("admin.search")" @bind="_search" @bind:event="oninput" />
+        </div>;
+
+    private RenderFragment ListItem(string collection, string id, string name, string meta, bool published, Action edit) =>
+        @<li class="admin-item">
+            <span class="admin-item-name">
+                <strong>@name</strong> <span class="hint">@id · @meta</span>
+                @if (!published) { <span class="draft-badge">@L.Ui("admin.draft")</span> }
+                @Badge(Api.StatusOf(collection, id))
+            </span>
+            <span class="admin-item-actions">
+                <button type="button" class="btn small" @onclick="() => { edit(); _message = null; _problems.Clear(); }">@L.Ui("admin.edit")</button>
+                <button type="button" class="btn small" disabled="@_busy" @onclick="() => SetPublishedAsync(collection, id, !published)">@L.Ui(published ? "admin.unpublish" : "admin.publish")</button>
+            </span>
+        </li>;
+
+    private RenderFragment EditorHead(string title, string collection, string id, bool isNew) =>
+        @<h2>@title @if (!isNew) { <span class="hint">@id</span> @Badge(Api.StatusOf(collection, id)) }</h2>;
+
+    private RenderFragment EditorActions(string collection, string id, bool isNew, Func<Task> save) =>
+        @<div>
+            @Problems("editor")
+            <div class="account-actions admin-actions">
+                <button type="button" class="btn primary" disabled="@_busy" @onclick="save">@L.Ui("admin.save")</button>
+                <button type="button" class="btn" @onclick="() => Open(_tab)">@L.Ui("admin.cancel")</button>
+                @if (!isNew && Api.StatusOf(collection, id) is { } state)
+                {
+                    <button type="button" class="btn danger" disabled="@_busy" @onclick="() => RevertAsync(collection, id, state)">
+                        @L.Ui(state == "new" ? "admin.deleteDraft" : "admin.revert")
+                    </button>
+                }
+            </div>
+            <p class="hint">@L.Ui("admin.required")</p>
+        </div>;
+
+    private RenderFragment? Badge(string? state) => state is null ? null : @<span class="admin-badge @state">@L.Ui($"admin.state.{state}")</span>;
+
+    private RenderFragment? Problems(string key) => _problems.TryGetValue(key, out var p)
+        ? @<p class="account-msg error" role="alert">@Describe(p)</p>
+        : null;
+
+    // ---- Actions ----
+
+    private async Task SaveAsync(Task<AccountResult<bool>> call, string id)
+    {
+        _busy = true;
+        _problems.Clear();
+        try
+        {
+            var result = await call;
+            if (!result.Ok)
+            {
+                _problems["editor"] = result.Problems;
+                return;
+            }
+            await LoadAsync();
+            Open(_tab);
+            _message = L.Ui("admin.saved", Label(_tab, id));
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task SaveFactionAsync(FactionDraft draft)
+    {
+        _busy = true;
+        _problems.Clear();
+        try
+        {
+            var result = await Api.SaveFactionAsync(draft.Code, draft.ToEdit());
+            if (!result.Ok)
+            {
+                _problems["faction:" + draft.Code] = result.Problems;
+                return;
+            }
+            await LoadAsync();
+            _message = L.Ui("admin.saved", Label("factions", draft.Code));
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task SetPublishedAsync(string collection, string id, bool published)
+    {
+        _busy = true;
+        try
+        {
+            var result = await Api.SetPublishedAsync(collection, id, published);
+            if (result.Ok) await LoadAsync();
+            _message = result.Ok ? L.Ui(published ? "admin.publishedDone" : "admin.unpublishedDone", Label(collection, id)) : Describe(result.Problems);
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task RevertAsync(string collection, string id, string state)
+    {
+        var label = Label(collection, id);
+        if (!await JS.InvokeAsync<bool>("confirm", L.Ui(state == "new" ? "admin.deleteDraft.confirm" : "admin.revert.confirm", label))) return;
+        _busy = true;
+        try
+        {
+            var result = await Api.RevertAsync(collection, id);
+            if (!result.Ok)
+            {
+                _problems["editor"] = result.Problems;
+                return;
+            }
+            await LoadAsync();
+            Open(_tab);
+            _message = L.Ui(state == "new" ? "admin.deletedDraft" : "admin.reverted", label);
+        }
+        finally { _busy = false; }
+    }
+
+    // Le constructeur garde le référentiel chargé à l'ouverture : rechargement complet pour y voir les changements.
+    private void ReloadSite() => Nav.NavigateTo(Nav.Uri, forceLoad: true);
+
+    // ---- Textes ----
+
+    private string CogName(string id) => Name(t => t.Cogs.GetValueOrDefault(id)?.Name) ?? id;
+    private string EquipmentName(string id) => Name(t => t.Equipment.GetValueOrDefault(id)?.Name) ?? id;
+    private string FactionName(string code) => Name(t => t.Factions.GetValueOrDefault(code)?.Name) ?? code;
+
+    private string Label(string collection, string key) => collection switch
+    {
+        "cogs" => CogName(key),
+        "equipment" => EquipmentName(key),
+        _ => FactionName(key),
+    };
+
+    // Langue courante, à défaut langue de référence (textes relus par l'éditeur, à jour).
+    private string? Name(Func<CardTexts, string?> pick) =>
+        (Api.Texts.GetValueOrDefault(L.Current) is { } current ? pick(current) : null)
+        ?? (Api.Texts.GetValueOrDefault(LocalizationService.ReferenceLanguage) is { } reference ? pick(reference) : null);
+
+    private string Describe(IReadOnlyList<Problem> problems) =>
+        string.Join(" ", problems.Select(p => L.Ui("admin.problem." + p.Key, (p.Args ?? []).Cast<object>().ToArray())));
+
+    private string LanguageName(string code) => L.Languages.FirstOrDefault(l => l.Code == code)?.Name ?? code;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnAccountChanged() => InvokeAsync(async () =>
+    {
+        if (!_loaded) await LoadAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        L.Changed -= OnChanged;
+        Accounts.Changed -= OnAccountChanged;
+    }
+}
