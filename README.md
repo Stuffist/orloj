@@ -562,7 +562,12 @@ transite vers une autre connexion.
   - **agenda** : choisi ou tiré au sort par J1 ;
   - **cycles** : chacun suit son camp avec les fiches du mode partie (`PlayCogCard`, en
     lecture seule pour le camp adverse). La fin de cycle s'applique aux deux camps quand les
-    deux l'ont confirmée ; la partie se termine après le 4ᵉ cycle, ou dès Fiel ou traque à 3.
+    deux l'ont confirmée ; la partie se termine après le 4ᵉ cycle, ou dès qu'un Fiel (propre à
+    chaque joueur) ou la traque atteint 3.
+- **Traque commune** : un seul niveau pour les deux joueurs, affiché dans l'en-tête de la partie.
+  Chaque camp garde sa part (ses rouages mis hors de combat, comptés automatiquement, et les
+  pions ajoutés à la main) ; la traque est leur somme (`OnlineRules.Hunt`), 3 au plus. Ainsi
+  l'annulation d'un joueur retire bien ses propres pions, et deux envois simultanés ne se gênent pas.
 - **Suivi d'un camp** : comme sur une vraie table, le joueur a la main sur sa fiche. Il envoie
   l'état de son camp avec la révision dont il part (`UpdateState`) : le serveur refuse un
   état dépassé (le client recharge), ou incohérent (autres cartes, ligne de vie qui ne découle

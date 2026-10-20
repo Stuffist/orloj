@@ -232,7 +232,7 @@ public static class OnlineRules
     public static Problem? SetEndCycle(OnlineGame g, int seat, bool ready, DateTimeOffset now)
     {
         if (NotAt(g, OnlineStep.Cycle) is { } p) return p;
-        if (g.Seats.Any(IsOver)) return Problem.Of("onlineOver");
+        if (IsOver(g)) return Problem.Of("onlineOver");
         g.Seats[seat].EndCycleReady = ready;
         if (!g.Seats.All(s => s.EndCycleReady)) return null;
 
@@ -252,7 +252,18 @@ public static class OnlineRules
         return null;
     }
 
-    public static bool IsOver(Seat s) => s.State is { } st && (st.Bile >= GameSession.MaxBile || st.Hunt >= GameSession.MaxHunt);
+    /// <summary>Camp perdu : Fiel à 3 (propre à chaque joueur).</summary>
+    public static bool IsOver(Seat s) => s.State is { } st && st.Bile >= GameSession.MaxBile;
+
+    /// <summary>
+    /// Traque de la partie : un seul niveau pour les deux joueurs (pions de la PoliSec). Chaque camp
+    /// garde sa part (State.Hunt : ses rouages mis hors de combat, ses ajustements) ; la traque est
+    /// leur somme, 3 au plus. À 3, la partie prend fin pour les deux.
+    /// </summary>
+    public static int Hunt(OnlineGame g) => Math.Min(GameSession.MaxHunt, g.Seats.Sum(s => s.State?.Hunt ?? 0));
+
+    /// <summary>Partie arrêtée avant la fin du 4ᵉ cycle : un Fiel à 3, ou la traque à 3.</summary>
+    public static bool IsOver(OnlineGame g) => g.Seats.Any(IsOver) || Hunt(g) >= GameSession.MaxHunt;
 
     private static void Remember(Seat s)
     {
@@ -273,7 +284,7 @@ public static class OnlineRules
     /// Au salon, la cabale des autres sièges reste secrète.
     /// </summary>
     public static OnlineView View(OnlineGame g, int? me, IReadOnlySet<int> connected, int logSize = 100) => new(
-        g.Code, g.Revision, g.Step, g.Cycle, g.First, g.Agenda, me,
+        g.Code, g.Revision, g.Step, g.Cycle, g.First, g.Agenda, Hunt(g), me,
         g.Seats.Select((s, i) =>
         {
             var hidden = g.Step == OnlineStep.Lobby && me != i;

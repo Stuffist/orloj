@@ -258,6 +258,32 @@ public class OnlineRulesTests
     }
 
     [Fact]
+    public async Task Traque_commune_aux_deux_joueurs_fin_a_3()
+    {
+        var (d, g) = await InCycle();
+        void Hunt(int seat, int hunt)
+        {
+            var s = g.Seats[seat];
+            var next = Copy(s.State!);
+            next.Hunt = hunt;
+            Ok(Do(g, seat, new(OnlineCommandType.UpdateState, State: next, BasedOn: s.StateRevision), d.Catalog));
+        }
+
+        Hunt(0, 2);
+        Assert.Equal(2, OnlineRules.View(g, 1, new HashSet<int>()).Hunt);
+        Assert.False(OnlineRules.View(g, 1, new HashSet<int>()).Over);
+        Hunt(1, 1);                                         // 2 + 1 : traque à 3, fin pour les deux
+        var view = OnlineRules.View(g, null, new HashSet<int>());
+        Assert.Equal(GameSession.MaxHunt, view.Hunt);
+        Assert.True(view.Over);
+        Assert.All(view.Seats, s => Assert.False(s.Over));  // personne n'a perdu (Fiel)
+        Assert.Equal("onlineOver", Key(Do(g, 0, new(OnlineCommandType.SetEndCycle, Flag: true), d.Catalog)));
+
+        Hunt(1, 0);                                         // correction : la partie reprend
+        Assert.False(OnlineRules.View(g, 0, new HashSet<int>()).Over);
+    }
+
+    [Fact]
     public async Task Vue_sans_jeton_ni_cabales_permises_des_autres()
     {
         var (d, a, _) = await Cabals();

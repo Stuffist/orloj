@@ -49,6 +49,21 @@ else
                     <a href="pairings/t/@tr.Code">@L.Ui("online.tournament", tr.Code, tr.Round, tr.Table)</a>
                 </p>
             }
+            @if (v.Step is OnlineStep.Cycle or OnlineStep.Finished)
+            {
+                var hunt = SharedHunt(v);
+                var mine = v.Me is not null && _mine is not null && v.Step == OnlineStep.Cycle;
+                <div class="play-counters online-hunt">
+                    <div class="counter hunt @(hunt >= GameSession.MaxHunt ? "lost" : null)" title="@L.Ui("online.hunt.title")">
+                        <span class="counter-label">@L.Ui("play.hunt")</span>
+                        <span class="counter-track">
+                            @if (mine) { <button class="step" @onclick="() => AdjustHuntAsync(-1)" disabled="@(_mine!.State.Hunt == 0)" title="@L.Ui("online.hunt.minus")" aria-label="@L.Ui("play.hunt") −">−</button> }
+                            <TokenTrack Token="hunt" Count="hunt" Max="GameSession.MaxHunt" />
+                            @if (mine) { <button class="step" @onclick="() => AdjustHuntAsync(1)" disabled="@(hunt >= GameSession.MaxHunt)" aria-label="@L.Ui("play.hunt") +">+</button> }
+                        </span>
+                    </div>
+                </div>
+            }
         </div>
         <div class="online-head-tools">
             @if (Hub.Status != Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
@@ -81,16 +96,13 @@ else
                     <p class="online-score">
                         @v.Seats[0].Name <strong>@v.Seats[0].State?.VictoryPoints</strong> – <strong>@v.Seats[1].State?.VictoryPoints</strong> @v.Seats[1].Name
                     </p>
-                    @foreach (var seat in v.Seats.Where(s => s.State is not null))
+                    @foreach (var seat in v.Seats.Where(s => s.State is { Bile: >= GameSession.MaxBile }))
                     {
-                        @if (seat.State!.Bile >= GameSession.MaxBile)
-                        {
-                            <p class="export-warning">@L.Ui("online.over.lost", seat.Name)</p>
-                        }
-                        else if (seat.State.Hunt >= GameSession.MaxHunt)
-                        {
-                            <p class="hint">@L.Ui("online.over.hunted", seat.Name)</p>
-                        }
+                        <p class="export-warning">@L.Ui("online.over.lost", seat.Name)</p>
+                    }
+                    @if (v.Hunt >= GameSession.MaxHunt)
+                    {
+                        <p class="hint">@L.Ui("online.over.hunted")</p>
                     }
                 </section>
             }
@@ -173,6 +185,20 @@ else
 
     private string WatchLink => $"{Nav.BaseUri}online/g/{_view?.Code ?? Code}";
     private string? InviteLink => _entry?.InviteToken is { } invite ? $"{WatchLink}#{invite}" : null;
+
+    // Traque commune : celle du serveur ; pour un joueur, avec sa part à jour (modification en cours d'envoi).
+    private int SharedHunt(OnlineView v) =>
+        v.Me is { } me && _mine is not null
+            ? Math.Min(GameSession.MaxHunt, _mine.State.Hunt + (v.Seats[1 - me].State?.Hunt ?? 0))
+            : v.Hunt;
+
+    // Sa part de la traque (pions ajoutés à la main : effet de carte, de scénario…) : comme une modification de son camp.
+    private Task AdjustHuntAsync(int delta)
+    {
+        if (_mine is null) return Task.CompletedTask;
+        _mine.AdjustHunt(delta);
+        return ChangedAsync(null);
+    }
 
     // Son camp d'abord, puis l'autre ; spectateur : dans l'ordre des sièges.
     private static IEnumerable<int> CampOrder(OnlineView v) => v.Me is { } me ? new[] { me, 1 - me } : new[] { 0, 1 };

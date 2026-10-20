@@ -1,4 +1,5 @@
 using Olomoc.Models;
+using Olomoc.Services;
 using Olomoc.Tournaments;
 
 namespace Olomoc.Online;
@@ -53,6 +54,7 @@ public sealed record OnlineView(
     int Cycle,
     int? First,
     Scenario? Agenda,
+    int Hunt,                       // traque commune aux deux joueurs (OnlineRules.Hunt)
     int? Me,
     IReadOnlyList<SeatView> Seats,
     OnlineTournamentRef? Tournament,
@@ -60,7 +62,7 @@ public sealed record OnlineView(
 {
     public SeatView? Mine => Me is { } i ? Seats[i] : null;
     public SeatView? Other => Me is { } i ? Seats[1 - i] : null;
-    public bool Over => Step == OnlineStep.Finished || Seats.Any(s => s.Over);
+    public bool Over => Step == OnlineStep.Finished || Seats.Any(s => s.Over) || Hunt >= GameSession.MaxHunt;
 }
 
 /// <summary>Un siège vu par la connexion. Cabal et State : null s'ils sont encore secrets (ou absents).</summary>

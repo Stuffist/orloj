@@ -1,6 +1,7 @@
-@* Un camp de la partie : joueur, faction, Fiel, traque, points de victoire, puis ses rouages
-   (fiches du mode partie). Editable : le camp du joueur, dont chaque modification part au
-   serveur (OnChanged) ; sinon lecture seule (adversaire, spectateur). *@
+@* Un camp de la partie : joueur, faction, Fiel, points de victoire, puis ses rouages (fiches du
+   mode partie) ; la traque, commune aux deux joueurs, est dans l'en-tête de la partie.
+   Editable : le camp du joueur, dont chaque modification part au serveur (OnChanged) ; sinon
+   lecture seule (adversaire, spectateur). *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 
@@ -34,14 +35,6 @@
                     @if (Editable) { <button class="step" @onclick="() => Act(() => Session.AdjustBile(-1))" disabled="@(s.Bile == 0)" aria-label="@L.Ui("play.bile") −">−</button> }
                     <TokenTrack Token="darkness" Count="s.Bile" Max="GameSession.MaxBile" />
                     @if (Editable) { <button class="step" @onclick="() => Act(() => Session.AdjustBile(1))" disabled="@(s.Bile >= GameSession.MaxBile)" aria-label="@L.Ui("play.bile") +">+</button> }
-                </span>
-            </div>
-            <div class="counter hunt @(s.Hunt >= GameSession.MaxHunt ? "lost" : null)" title="@L.Ui("play.hunt.title")">
-                <span class="counter-label">@L.Ui("play.hunt")</span>
-                <span class="counter-track">
-                    @if (Editable) { <button class="step" @onclick="() => Act(() => Session.AdjustHunt(-1))" disabled="@(s.Hunt == 0)" aria-label="@L.Ui("play.hunt") −">−</button> }
-                    <TokenTrack Token="hunt" Count="s.Hunt" Max="GameSession.MaxHunt" />
-                    @if (Editable) { <button class="step" @onclick="() => Act(() => Session.AdjustHunt(1))" disabled="@(s.Hunt >= GameSession.MaxHunt)" aria-label="@L.Ui("play.hunt") +">+</button> }
                 </span>
             </div>
             <div class="counter vp" title="@L.Ui("play.vp.title")">
