@@ -32,8 +32,16 @@ public sealed class CogState
     /// <summary>Ligne de vie de la partie : celle de la carte, précédée des PV ajoutés par ses équipements/dons.</summary>
     public List<HealthPointType> LifeLine { get; set; } = new();
 
-    /// <summary>Nombre de PV cochés, de gauche à droite.</summary>
-    public int Marked { get; set; }
+    /// <summary>
+    /// PV cochés, un par PV de la ligne de vie. Les blessures cochent de gauche à droite, mais un
+    /// PV peut être coché seul (correction, ou capacité comme celle de Jakub Myasnik : « cochez
+    /// 1 PV teinté »).
+    /// </summary>
+    public List<bool> Checked { get; set; } = new();
+
+    /// <summary>Ancien format (nombre de PV cochés depuis la gauche) : relu par <see cref="Normalize"/>, jamais écrit.</summary>
+    [JsonPropertyName("marked"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int LegacyMarked { get; set; }
 
     /// <summary>PV standards renforcés jusqu'à la fin du cycle (Anabolisant…).</summary>
     public bool Fortified { get; set; }
@@ -45,8 +53,34 @@ public sealed class CogState
     /// <summary>Utilisations des capacités limitées par partie, par clé de capacité.</summary>
     public Dictionary<string, int> Uses { get; set; } = new();
 
+    /// <summary>Nombre de PV cochés.</summary>
+    [JsonIgnore] public int Marked => Checked.Take(LifeLine.Count).Count(c => c);
     [JsonIgnore] public bool OutOfAction => Marked >= LifeLine.Count;
     [JsonIgnore] public int Remaining => Math.Max(0, LifeLine.Count - Marked);
+
+    public bool IsChecked(int i) => i >= 0 && i < Checked.Count && i < LifeLine.Count && Checked[i];
+
+    public void SetChecked(int i, bool on)
+    {
+        Normalize();
+        Checked[i] = on;
+    }
+
+    /// <summary>PV non cochés, de gauche à droite.</summary>
+    public IEnumerable<int> Unchecked() => Enumerable.Range(0, LifeLine.Count).Where(i => !IsChecked(i));
+
+    /// <summary>
+    /// Un booléen par PV de la ligne de vie ; une partie de l'ancien format reprend ses PV cochés
+    /// depuis la gauche.
+    /// </summary>
+    public void Normalize()
+    {
+        if (LegacyMarked > 0 && !Checked.Contains(true))
+            Checked = Enumerable.Range(0, LifeLine.Count).Select(i => i < LegacyMarked).ToList();
+        LegacyMarked = 0;
+        if (Checked.Count > LifeLine.Count) Checked.RemoveRange(LifeLine.Count, Checked.Count - LifeLine.Count);
+        while (Checked.Count < LifeLine.Count) Checked.Add(false);
+    }
 
     [JsonIgnore]
     public DarknessStatus Status => Darkness switch

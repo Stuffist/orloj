@@ -122,10 +122,67 @@ public class GameSessionTests
         Assert.Equal(3, g.State.Cogs[bohdan].Marked);
         Assert.Equal(3, g.Heal(bohdan, 10));                 // pas plus que les PV cochés
 
-        g.TogglePoint(bohdan, 4);                            // coche jusqu'au 5e PV
-        Assert.Equal(5, g.State.Cogs[bohdan].Marked);
-        g.TogglePoint(bohdan, 1);                            // décoche le 2e PV et les suivants
-        Assert.Equal(1, g.State.Cogs[bohdan].Marked);
+        var cog = g.State.Cogs[bohdan];
+        g.TogglePoint(bohdan, 4);                            // coche le 5e PV, lui seul
+        Assert.Equal(1, cog.Marked);
+        Assert.True(cog.IsChecked(4));
+        Assert.False(cog.IsChecked(3));
+        g.TogglePoint(bohdan, 4);                            // et le décoche
+        Assert.Equal(0, cog.Marked);
+    }
+
+    [Fact]
+    public async Task PV_coche_seul_puis_blessures_et_soins()
+    {
+        var g = await NewGame();
+        var bohdan = SlotOf(g, "3R06");
+        var cog = g.State.Cogs[bohdan];
+        g.TogglePoint(bohdan, 2);                            // ex. Jakub Myasnik : un PV précis
+        g.Wound(bohdan, 3, attack: false, ignoreProtection: false);
+        Assert.Equal(new[] { true, true, true, true }, Enumerable.Range(0, 4).Select(cog.IsChecked));   // le 3e PV est sauté
+        Assert.False(cog.IsChecked(4));
+
+        g.TogglePoint(bohdan, 6);
+        Assert.Equal(1, g.Heal(bohdan, 1));                  // soin : le PV coché le plus à droite
+        Assert.False(cog.IsChecked(6));
+        Assert.Equal(4, cog.Marked);
+
+        g.Undo();
+        Assert.True(g.State.Cogs[bohdan].IsChecked(6));      // annulation : état relu
+    }
+
+    [Fact]
+    public async Task PV_teinte_coche_a_la_main_donne_une_Noirceur()
+    {
+        var g = await NewGame();
+        var bohdan = SlotOf(g, "3R06");
+        var cog = g.State.Cogs[bohdan];
+        var t = cog.LifeLine.IndexOf(HealthPointType.T);
+        var s = cog.LifeLine.IndexOf(HealthPointType.S);
+
+        var o = g.TogglePoint(bohdan, t)!;                   // Jakub Myasnik : « cochez 1 PV teinté »
+        Assert.Equal(1, o.TaintedMarked);
+        Assert.Equal(1, cog.Darkness);
+        Assert.Null(g.TogglePoint(bohdan, t));               // décoché : la Noirceur reste
+        Assert.Equal(1, cog.Darkness);
+        Assert.Equal(0, g.TogglePoint(bohdan, s)!.TaintedMarked);   // PV standard : rien de plus
+        Assert.Equal(1, cog.Darkness);
+
+        g.AdjustDarkness(bohdan, 2);                         // Noirceur au maximum : le pion va sur le Fiel
+        g.TogglePoint(bohdan, t);
+        Assert.Equal(3, cog.Darkness);
+        Assert.Equal(1, g.State.Bile);
+    }
+
+    [Fact]
+    public void Partie_sauvegardee_dans_l_ancien_format()
+    {
+        // Avant : « marked » = nombre de PV cochés depuis la gauche.
+        var state = GameSession.FromJson("""{"version":1,"cogs":[{"rank":1,"cogId":"1R01","lifeLine":["S","S","T","S"],"marked":2}]}""")!;
+        var cog = state.Cogs[0];
+        Assert.Equal(new[] { true, true, false, false }, cog.Checked);
+        Assert.DoesNotContain("\"marked\"", GameSession.ToJson(state));
+        Assert.Equal(cog.Checked, GameSession.FromJson(GameSession.ToJson(state))!.Cogs[0].Checked);
     }
 
     [Fact]
@@ -153,7 +210,7 @@ public class GameSessionTests
         var bohdan = SlotOf(g, "3R06");
         g.AdjustDarkness(petra, 3);
         g.AdjustDarkness(bohdan, 3);
-        g.TogglePoint(bohdan, 11);                           // hors de combat : ne compte plus
+        g.State.Cogs[bohdan].Checked = g.State.Cogs[bohdan].LifeLine.Select(_ => true).ToList();   // hors de combat : ne compte plus
         g.AdjustActions(petra, -3);
 
         Assert.Equal(1, g.EndCycle());
@@ -173,11 +230,11 @@ public class GameSessionTests
         Assert.Equal(1, g.State.Hunt);
         Assert.False(g.PreviewWound(bohdan, 1, attack: false, ignoreProtection: false).HuntGained);   // déjà hors de combat
 
-        g.TogglePoint(bohdan, 0);                             // correction : de retour en jeu, pion retiré
+        g.TogglePoint(bohdan, 0);                             // correction (1er PV décoché) : de retour en jeu, pion retiré
         Assert.Equal(0, g.State.Hunt);
-        g.TogglePoint(bohdan, 11);
+        g.TogglePoint(bohdan, 0);
         Assert.Equal(1, g.State.Hunt);
-        g.Heal(bohdan, 1);
+        g.Heal(bohdan, 1);                                    // décoche le 12e PV
         Assert.Equal(0, g.State.Hunt);
 
         g.AdjustHunt(2);                                      // rouages adverses : à la main

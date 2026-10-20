@@ -390,7 +390,10 @@ Règles appliquées (`Services/GameSession.cs`) :
   attaque, une blessure de moins s'il reste au moins un PV renforcé à cocher (sauf
   blessures qui ignorent la protection), et arrêt au premier PV teinté coché. Tout
   PV teinté coché donne un pion de Noirceur (p.17), attaque ou non. Soin = décocher
-  les derniers PV cochés ; toucher un PV corrige la ligne à la main.
+  les derniers PV cochés (les plus à droite) ; toucher un PV le coche ou le décoche, lui
+  seul (correction, ou capacité qui vise un PV précis, comme Jakub Myasnik qui coche un PV
+  teinté de sa cible) ; un PV teinté ainsi coché donne aussi un pion de Noirceur (le
+  décocher ne le retire pas) ; les blessures suivantes sautent les PV déjà cochés.
 - **Carte supplémentaire** (Medic Ruzicka, `extraEquipment`) : choisie sur la carte
   du rouage pendant le premier cycle, parmi les équipements de l'Intégrité que la
   cabale ne porte pas déjà ; ses capacités sont suivies comme les autres.

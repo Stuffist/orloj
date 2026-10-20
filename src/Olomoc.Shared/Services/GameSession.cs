@@ -28,7 +28,11 @@ public sealed class GameSession
 
     private readonly List<string> _undo = new();
 
-    public GameSession(GameState state) => State = state;
+    public GameSession(GameState state)
+    {
+        State = state;
+        foreach (var cog in state.Cogs) cog.Normalize();
+    }
 
     public GameState State { get; private set; }
 
@@ -71,7 +75,9 @@ public sealed class GameSession
         try
         {
             var state = JsonSerializer.Deserialize<GameState>(json, JsonOpts);
-            return state is { Version: GameState.CurrentVersion } && state.Cogs.All(c => c.LifeLine.Count > 0) ? state : null;
+            if (state is not { Version: GameState.CurrentVersion } || !state.Cogs.All(c => c.LifeLine.Count > 0)) return null;
+            foreach (var cog in state.Cogs) cog.Normalize();     // ancien format : nombre de PV cochés
+            return state;
         }
         catch (JsonException) { return null; }
     }
@@ -94,7 +100,8 @@ public sealed class GameSession
     // ---- Ligne de vie (LDR p.16) ----
 
     /// <summary>
-    /// Blessures subies, cochées de gauche à droite. Pour une attaque : une blessure de moins
+    /// Blessures subies, cochées de gauche à droite sur les PV encore libres (un PV déjà coché
+    /// isolément est sauté). Pour une attaque : une blessure de moins
     /// s'il reste au moins un PV renforcé à cocher (sauf blessures qui ignorent la protection),
     /// et arrêt au premier PV teinté coché. Tout PV teinté coché donne un pion de Noirceur.
     /// </summary>
@@ -114,7 +121,7 @@ public sealed class GameSession
     private static WoundOutcome ApplyWound(GameState state, CogState cog, int wounds, bool attack, bool ignoreProtection)
     {
         var isProtected = attack && !ignoreProtection && wounds > 0 &&
-            Enumerable.Range(cog.Marked, cog.Remaining).Any(i => cog.PointAt(i) == HealthPointType.R);
+            cog.Unchecked().Any(i => cog.PointAt(i) == HealthPointType.R);
         if (isProtected) wounds--;
 
         int marked = 0, tainted = 0, bile = 0;
@@ -122,8 +129,9 @@ public sealed class GameSession
         var wasOut = cog.OutOfAction;
         while (wounds > 0 && !cog.OutOfAction)
         {
-            var point = cog.PointAt(cog.Marked);
-            cog.Marked++;
+            var next = cog.Unchecked().First();
+            var point = cog.PointAt(next);
+            cog.SetChecked(next, true);
             marked++;
             wounds--;
             if (point != HealthPointType.T) continue;
@@ -146,7 +154,7 @@ public sealed class GameSession
         return delta;
     }
 
-    /// <summary>Soin : décoche les derniers PV cochés.</summary>
+    /// <summary>Soin : décoche les derniers PV cochés (les plus à droite).</summary>
     public int Heal(int slot, int points)
     {
         var cog = Cog(slot);
@@ -154,20 +162,30 @@ public sealed class GameSession
         if (healed == 0) return 0;
         Record();
         var wasOut = cog.OutOfAction;
-        cog.Marked -= healed;
+        foreach (var i in Enumerable.Range(0, cog.LifeLine.Count).Where(cog.IsChecked).Reverse().Take(healed).ToList())
+            cog.SetChecked(i, false);
         UpdateHunt(State, cog, wasOut);
         return healed;
     }
 
-    /// <summary>Correction manuelle : coche jusqu'au PV <paramref name="index"/>, ou le décoche avec les suivants.</summary>
-    public void TogglePoint(int slot, int index)
+    /// <summary>
+    /// Correction manuelle, ou capacité qui vise un PV précis (Jakub Myasnik : « cochez 1 PV
+    /// teinté ») : coche ou décoche le seul PV <paramref name="index"/>. Un PV teinté coché donne
+    /// un pion de Noirceur (LDR p.17) ; le décocher ne le retire pas. Bilan du PV coché, null
+    /// s'il est décoché.
+    /// </summary>
+    public WoundOutcome? TogglePoint(int slot, int index)
     {
         var cog = Cog(slot);
-        if (index < 0 || index >= cog.LifeLine.Count) return;
+        if (index < 0 || index >= cog.LifeLine.Count) return null;
         Record();
         var wasOut = cog.OutOfAction;
-        cog.Marked = index < cog.Marked ? index : index + 1;
-        UpdateHunt(State, cog, wasOut);
+        var check = !cog.IsChecked(index);
+        cog.SetChecked(index, check);
+        var tainted = check && cog.PointAt(index) == HealthPointType.T;
+        var bile = tainted ? GiveDarkness(State, cog, 1) : 0;
+        var hunt = UpdateHunt(State, cog, wasOut) > 0;
+        return check ? new WoundOutcome(1, false, tainted ? 1 : 0, false, bile, cog.OutOfAction, hunt) : null;
     }
 
     // ---- Carte supplémentaire (Medic Ruzicka : « au début du premier cycle ») ----
@@ -186,8 +204,10 @@ public sealed class GameSession
         Record();
         var wasOut = state.OutOfAction;
         state.ExtraEquipmentId = extra?.Id;
+        // Ligne de vie recalculée : autant de PV cochés qu'avant, depuis la gauche.
+        var marked = state.Marked;
         state.LifeLine = LifeLineOf(cog, main, extra);
-        state.Marked = Math.Min(state.Marked, state.LifeLine.Count);
+        state.Checked = Enumerable.Range(0, state.LifeLine.Count).Select(i => i < marked).ToList();
         UpdateHunt(State, state, wasOut);
         return true;
     }

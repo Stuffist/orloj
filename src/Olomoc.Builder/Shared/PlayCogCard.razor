@@ -24,10 +24,10 @@
             {
                 var index = i;
                 var point = S.PointAt(i);
-                var marked = i < S.Marked;
+                var marked = S.IsChecked(i);
                 <button class="pip @point.ToString().ToLower() @(marked ? "marked" : null) @(point != S.LifeLine[i] ? "fortified" : null)"
                         title="@L.Ui($"hp.{point}") · @L.Ui("play.hp.toggle")" aria-pressed="@marked"
-                        @onclick="() => Change(() => Session.TogglePoint(Slot, index))"></button>
+                        @onclick="() => TogglePoint(index)"></button>
             }
         </div>
         <span class="hp-count">@S.Remaining<small>/@S.LifeLine.Count</small></span>
@@ -214,6 +214,13 @@
         if (panel == Panel.Wound)
             return Report(Describe(Session.Wound(Slot, _amount, _attack, _ignoreProtection)));
         return Report(L.Ui("play.result.healed", Session.Heal(Slot, _amount)));
+    }
+
+    // PV touché : compte rendu seulement s'il a un effet (Noirceur, hors de combat…).
+    private Task TogglePoint(int index)
+    {
+        var o = Session.TogglePoint(Slot, index);
+        return Report(o is { TaintedMarked: 0, OutOfAction: false, HuntGained: false } or null ? null : Describe(o));
     }
 
     private Task AddDarkness()
