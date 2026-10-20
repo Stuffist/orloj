@@ -1,10 +1,13 @@
 # Orloj — Constructeur de cabale et tournois pour Olomòc (Blazor WebAssembly)
 
-Application cliente qui charge le référentiel depuis deux fichiers JSON statiques
-(`src/Olomoc.Shared/wwwroot/data/`) — pas de base de données — et compose une cabale légale.
-Le site est servi par un petit hôte ASP.NET Core (`src/Olomoc.Server`) : constructeur
-sous `/builder/` (la racine `/` y renvoie), tournois sous `/pairings/` (inscriptions,
-appariements, résultats, classement), avec leur API (`/api/tournaments`).
+Une app Blazor WebAssembly : constructeur de cabale et mode partie (`/builder/`, la racine
+`/` y renvoie), tournois et statistiques (`/pairings/`), comptes facultatifs et éditeur du
+référentiel. Elle est servie par un hôte ASP.NET Core (`src/Olomoc.Server`) : API, base
+SQLite, e-mails. Le référentiel (rouages, équipements, factions, textes) est en JSON dans le
+dépôt (`src/Olomoc.Shared/wwwroot/`).
+
+**Architecture, technos, onglets et leurs données, limites connues :
+[docs/architecture.md](docs/architecture.md).**
 
 Olomòc est un jeu d'Occicat Games : le contenu du jeu repris ici leur appartient et n'est pas
 sous la licence du code (voir [Licence](#licence)).
@@ -33,10 +36,10 @@ Tests : `dotnet test` à la racine (solution `Olomoc.slnx`).
 
 Une seule image (`Dockerfile`, multi-étapes) : publication avec le SDK .NET, puis
 l'hôte `Olomoc.Server` sur le runtime ASP.NET (Alpine, ≈ 140 Mo), en HTTP sur le port
-8080, sous un utilisateur sans privilèges (`app`, uid 1654). Il sert le constructeur
-(`/builder/`) et les tournois (`/pairings/`), fichiers `_framework` précompressés en
-Brotli/gzip, les fichiers communs (`/_content/Olomoc.Shared/`), l'API des tournois,
-redirige `/` vers `/builder/`, et répond à `/healthz`. Les données (tournois, statistiques)
+8080, sous un utilisateur sans privilèges (`app`, uid 1654). Il sert l'app (constructeur
+`/builder/`, tournois `/pairings/` ; fichiers `_framework` précompressés en Brotli/gzip),
+les fichiers communs (`/_content/Olomoc.Shared/`) et l'API, redirige `/` vers `/builder/`,
+et répond à `/healthz`. Les données (tournois, statistiques, comptes, cabales des comptes)
 sont dans une base **SQLite**, `/data/olomoc.db` du conteneur, monté sur le dossier `./data`
 à côté du `docker-compose.yml` : conservées par `down`/`up`, `--force-recreate` et
 `--build`. Le serveur en fait chaque jour une copie cohérente dans `data/backups/` (les 7
@@ -529,7 +532,7 @@ plus tard ne l'est **jamais** (contrôle quotidien).
 
 ## Statistiques
 
-`/pairings/stats` (lien depuis l'accueil des tournois), publiques, sur les tournois **terminés**
+`/pairings/stats` (onglet « Statistiques »), publiques, sur les tournois **terminés**
 — sauf ceux que leur orga exclut (« Ne pas compter dans les statistiques », à la création ou
 à tout moment dans l'administration) :
 
@@ -550,7 +553,9 @@ des tournois ne touche pas : les statistiques couvrent tout l'historique. Elles 
 (`GET /api/stats`). Supprimer un tournoi, ou l'exclure, retire son archive ; au démarrage, un
 tournoi terminé sans archive en reçoit une.
 
-## Architecture
+## Fichiers
+
+Vue d'ensemble : [docs/architecture.md](docs/architecture.md). Fichiers principaux :
 
 ```
 Olomoc.slnx
@@ -651,7 +656,7 @@ nom d'hôte entre Orloj et B5T.
 **`tests/Olomoc.Tests`** — légalité, recherche, export, sauvegarde, mode partie, cohérence
 des langues, tournois (classement, appariements, règles) ; référence `Olomoc.Shared` et lit
 ses fichiers statiques sur le disque ; hôte démarré en mémoire (`WebApplicationFactory`)
-pour les routes du site, l'API des tournois et celle des comptes (dossier de données
+pour les routes du site et les API (tournois, comptes, référentiel ; dossier de données
 temporaire, e-mails écrits sur le disque).
 
 ## Licence

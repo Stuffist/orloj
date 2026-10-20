@@ -1,0 +1,102 @@
+# Architecture
+
+Vue d'ensemble technique d'Orloj. Le détail des règles et des fonctions est dans le
+[README](../README.md) ; le hors connexion dans [pwa.md](pwa.md).
+
+## Découpage
+
+```
+Navigateur ── une app Blazor WebAssembly (Olomoc.Web), téléchargée une fois
+   │            /builder/…  pages de Olomoc.Builder   (constructeur, partie, compte, éditeur)
+   │            /pairings/… pages de Olomoc.Pairings  (tournois, statistiques)
+   │            localStorage : cabales, partie, langue, tournois suivis
+   │
+   │  HTTPS (Caddy, deploy/proxy)
+   ▼
+Olomoc.Server (ASP.NET Core, un conteneur)
+   ├── fichiers : l'app (/_framework/, index.html), /_content/Olomoc.Shared/ (CSS, images, langues)
+   ├── référentiel : fichiers du dépôt + modifications de l'éditeur (DATA_DIR/catalog)
+   ├── API : /api/tournaments, /api/stats, /api/account, /api/admin/…
+   └── SQLite : DATA_DIR/olomoc.db (+ backups/, mail/ sans SMTP)
+```
+
+| Projet | Rôle |
+|---|---|
+| `Olomoc.Shared` | Bibliothèque commune au navigateur et au serveur : modèles, règles (légalité, partie, appariements, classement, statistiques), services du navigateur, composants d'affichage, fichiers statiques. |
+| `Olomoc.Web` | L'app du navigateur : démarrage, routeur, layout, menu. Réunit les deux bibliothèques de pages ; on passe de l'une à l'autre sans rechargement. |
+| `Olomoc.Builder` | Pages `/builder/…`. |
+| `Olomoc.Pairings` | Pages `/pairings/…`. |
+| `Olomoc.Server` | Hôte : sert l'app et les fichiers, API, base, e-mails, tâches de fond (purge, sauvegarde, e-mail de contrôle). |
+| `tests/Olomoc.Tests` | xUnit : règles (Shared) et API (serveur en mémoire, base temporaire). |
+
+Les règles sont dans `Olomoc.Shared` et tournent des deux côtés : le navigateur les applique
+pour l'affichage, le serveur les revérifie pour tout ce qu'il enregistre (inscriptions,
+résultats, référentiel).
+
+## Technos
+
+- **.NET 10** : Blazor WebAssembly (navigateur), ASP.NET Core (serveur), xUnit.
+- **SQLite + EF Core** : une base dans un fichier, schéma par migrations appliquées au
+  démarrage. Tournois et archives de statistiques : documents JSON (table `Documents`).
+- **ASP.NET Core Identity** : comptes, mots de passe, rôles, cookie de session (90 jours,
+  prolongé à l'usage), clés de chiffrement dans la base.
+- **MailKit** : e-mails par un relais SMTP (Brevo) ; sans `SMTP_HOST`, écrits dans `DATA_DIR/mail`.
+- **QRCoder** : QR codes des liens de tournoi.
+- **Docker** (image Alpine, lecture seule hormis `/data`) derrière **Caddy** (HTTPS, Let's Encrypt).
+- **Service worker** maison : réseau d'abord, copie en cache sans réseau (jamais l'API).
+- Aucune dépendance JavaScript : `olomoc.js` (téléchargements, fenêtre, impression, stockage)
+  et le service worker.
+
+## Onglets et données
+
+| Onglet | Ce qu'il fait | Données lues | Données écrites |
+|---|---|---|---|
+| **Constructeur** `/builder/` | Compose une cabale (faction, 3 rouages, équipements), vérifie la légalité, exporte (texte, JSON, planche de cartes), sauvegarde. Catalogue des équipements dans une fenêtre à part. | Référentiel (`olomoc-catalog.json`, `olomoc-factions.json`, `i18n/*/cards.json`) | `olomoc.cabals` (localStorage) ; avec un compte : table `SavedCabals` (`/api/account/cabals/sync`). Cabale en cours : mémoire, partagée avec la fenêtre des équipements (`olomoc.draft`). |
+| **Partie** `/builder/play` | Suit une partie : PV, Noirceur, Fiel, pions, capacités limitées, 4 cycles ; annulation. | La cabale lancée depuis le constructeur | `olomoc.game` (localStorage, une partie par appareil). Historique d'annulation : mémoire. |
+| **Tournois** `/pairings/` | Crée ou rejoint un tournoi ; page publique (inscription, rondes, classement) ; administration (rondes, résultats, abandons, export). Rafraîchie toutes les 30 s. | `/api/tournaments/{code}` | Tournoi : table `Documents` (sorte `tournament`). Jetons organisateur et joueur : `olomoc.tournaments` (localStorage) et lien d'administration (jeton dans l'ancre). |
+| **Stats** `/pairings/stats` | Statistiques publiques des tournois terminés : factions, rouages, victoires, scénarios. | `/api/stats`, calculées en mémoire | — (l'archive anonyme est écrite à la fin d'un tournoi : `Documents`, sorte `stats`) |
+| **Éditeur** `/builder/admin` (éditeurs, admins) | Crée et modifie rouages, équipements, dons, factions, en français et en anglais ; publication ; export zip. | Référentiel fusionné, brouillons compris | `DATA_DIR/catalog/` (JSON au format du dépôt, entrées modifiées seulement). Le dépôt n'est jamais modifié : export puis commit. |
+| **Compte** `/builder/account` | Connexion, création, e-mail (confirmation, mot de passe oublié), mot de passe, autres appareils, suppression ; rôles des comptes et mot de passe temporaire (admins). | `/api/account/me` | Tables d'Identity (comptes, rôles), `SavedCabals`. Session : cookie `olomoc_session`. |
+
+Langue : `olomoc.lang` (localStorage) ; textes de l'interface `i18n/*/ui.json`, des cartes
+`i18n/*/cards.json` (repli sur le français).
+
+### Droits
+
+- **Visiteur** : tout sauf l'éditeur ; cabales et partie sur l'appareil seulement.
+- **Compte** : en plus, ses cabales sur tous ses appareils.
+- **Éditeur** : en plus, l'éditeur et les brouillons. **Admin** : en plus, les rôles des autres
+  comptes (jamais le sien) et le mot de passe temporaire. Premier admin : `OLOMOC_ADMINS`.
+- **Tournois** : pas de compte. Administration par le jeton organisateur (dans le lien
+  d'administration) ou un mot de passe facultatif ; modification d'une inscription par le
+  jeton joueur.
+
+## Limites connues
+
+- **Un seul serveur** : SQLite et les verrous en mémoire excluent plusieurs instances.
+  Sauvegarde : copie quotidienne (`data/backups/`, 7 gardées), à sauvegarder hors du VPS.
+- **Partie** : une par appareil, ni partagée ni liée au compte.
+- **Cabales sans compte** : propres à l'appareil et au navigateur (vider les données du site
+  les efface). Avec un compte : 200 au plus ; en cas de conflit, la plus récente l'emporte, par nom.
+- **Tournois** :
+  - perdre le lien d'administration sans mot de passe, c'est perdre l'administration ;
+  - « Mes tournois » est propre à l'appareil ;
+  - 128 joueurs et 10 rondes au plus, 1 000 tournois en base ;
+  - purgés après 90 jours sans modification (les statistiques restent) ;
+  - mise à jour par rafraîchissement toutes les 30 s, pas en direct.
+- **Hors connexion** : l'interface marche ; les données de tournoi et de compte non (l'API
+  n'est jamais mise en cache).
+- **Éditeur** :
+  - pas d'envoi d'image (fichier à ajouter dans `img/cards/` du dépôt) ;
+  - pas de création de faction ;
+  - une entrée modifiée sur le serveur remplace celle du dépôt en entier : une PR sur la même
+    entrée ne se voit qu'après export ou retour à la version du dépôt ;
+  - après un enregistrement, recharger le site pour voir le référentiel à jour ailleurs.
+- **Comptes** :
+  - l'e-mail ne sert qu'à récupérer le compte ; sans e-mail confirmé, seul un admin peut
+    réinitialiser le mot de passe ;
+  - 3 e-mails par heure et par compte ; offre gratuite de Brevo : 300 par jour.
+- **Taille** : l'app entière (constructeur et tournois) est téléchargée à la première visite,
+  puis mise en cache.
+- **Langues** : français et anglais ; une carte sans texte anglais s'affiche en français.
+- **Branche `online-salon`** (mode en ligne) : à part, pas sur `main`.
