@@ -21,7 +21,7 @@ Puis ouvrir `http://localhost:5180/` (renvoie vers `/builder/`).
 
 **Devenir admin en local** : créer son compte (« Mon compte »), arrêter le serveur, puis le
 relancer une fois avec son pseudo dans `OLOMOC_ADMINS` ; le rôle est alors dans la base
-(`data/olomoc.db`), la variable n'est plus utile :
+(`src/Olomoc.Server/App_Data/olomoc.db`, non versionné), la variable n'est plus utile :
 
 ```powershell
 $env:OLOMOC_ADMINS = "MonPseudo"; dotnet run --project src/Olomoc.Server
