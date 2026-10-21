@@ -202,7 +202,7 @@ public sealed class TournamentApiTests : IDisposable
         var (a, b) = await MaiselCabals();
         var t = await Create(http);
         var url = $"/api/tournaments/{t.Code}";
-        var scenarios = new ScenariosRequest([new Scenario("SABOTAGE"), new Scenario(Agendas.Other, "Le bal")]);
+        var scenarios = new ScenariosRequest([new Scenario("SABOTAGE", null, "ROGUE", "INDOCTRINATION"), new Scenario(Agendas.Other, "Le bal", Ministry: "DISINFORMATION")]);
         Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/scenarios", scenarios))).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/scenarios", scenarios, t.OrganizerToken))).StatusCode);
         var bad = await http.SendAsync(Request(HttpMethod.Put, $"{url}/scenarios", new ScenariosRequest([new Scenario("INCONNU")]), t.OrganizerToken));
@@ -210,7 +210,8 @@ public sealed class TournamentApiTests : IDisposable
 
         // Visibles de tous, dès les inscriptions.
         var view = await View(http, t.Code);
-        Assert.Equal(new Scenario("SABOTAGE"), view.ScenarioOf(1));
+        Assert.Equal(new Scenario("SABOTAGE", null, "ROGUE", "INDOCTRINATION"), view.ScenarioOf(1));
+        Assert.Equal(new Scenario(Agendas.Other, "Le bal", null, "DISINFORMATION"), view.ScenarioOf(2));
         Assert.Equal("Le bal", view.ScenarioOf(2)!.Name);
 
         foreach (var name in new[] { "Ana", "Bo" }) await Register(http, t.Code, name, a, b);

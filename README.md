@@ -234,8 +234,9 @@ les autres langues se replient dessus).
 - **Pictogrammes** : identiques dans toutes les langues, jamais traduits. Dans les
   effets de jeu, ce sont des jetons neutres rendus par les icônes du livre de règles
   (`src/Olomoc.Shared/wwwroot/img/icons/`, `src/Olomoc.Shared/wwwroot/img/stats/`) :
-  `{tech}` `{melee}` `{ranged}` `{dodge}` `{active}` `{action}` `{darkness}`
-  `{stunned}` (pion sonné) et `{freq:planning|cycle|game:N}`.
+  `{tech}` `{melee}` `{ranged}` `{dodge}` `{active}` `{permanent}` `{action}` `{darkness}`
+  `{stunned}` (pion sonné) et `{freq:planning|cycle|game:N}`. Liste centrale :
+  `Models/GameTokens.cs`, reprise par le lexique « ⓘ Mots-clés » de l'éditeur du référentiel.
 - **Factions** : sans nom anglais officiel, `en/cards.json` reprend les noms
   français (noms propres assumés, donc pas signalés comme non traduits).
 - Les tests vérifient que chaque carte a ses textes `fr`, qu'aucune langue ne
@@ -524,7 +525,9 @@ plus tard ne l'est **jamais** (contrôle quotidien).
   parmi les 10 agendas du recueil officiel (Occicat, janvier 2026 ; version anglaise de
   septembre 2026), ou « Autre » pour un scénario maison à nommer. Tirage au sort possible :
   agendas officiels, sans répétition, pour les rondes pas encore appariées (scénarios maison
-  et rondes appariées gardés). Programme visible sur la page publique, scénario à côté du
+  et rondes appariées gardés). Pour chaque ronde, decks Artefact (Rogue, Parasite) et Ministère
+  (Désinformation, Endoctrinement) facultatifs, tirés au sort eux aussi (scénarios maison
+  compris). Programme visible sur la page publique, scénario et decks à côté du
   titre de chaque ronde.
 - **Correction d'un appariement** : ⇄ sur deux joueurs de la ronde en cours (tables sans
   résultat, exempt compris) les échange, après confirmation ; une revanche créée est signalée.
@@ -547,7 +550,7 @@ plus tard ne l'est **jamais** (contrôle quotidien).
   exclus), avec V/N/D et le nombre de parties ; estompé en dessous de 10 parties ;
 - sur les parties où l'orga les a notés : **victoires de J1**, **fins de partie** (Fiel, 4ᵉ cycle,
   PoliSec), **scénarios joués** (avec les victoires de J1 par scénario ; scénarios maison
-  regroupés, sans leur nom).
+  regroupés, sans leur nom), **decks Artefact et Ministère joués** (de même ; archives v3).
 
 À la fin d'un tournoi, une **archive anonyme** (factions, cabales en ids, parties ; ni noms
 ni jetons) est enregistrée dans la base (document « stats » du code du tournoi), que la purge

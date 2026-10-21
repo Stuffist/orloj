@@ -1,9 +1,13 @@
-@* Scénario d'une ronde, à la suite de son titre (rien s'il n'est pas choisi). *@
+@* Scénario d'une ronde, à la suite de son titre, avec ses decks s'ils sont précisés (rien s'il n'est pas choisi). *@
 @inject LocalizationService L
 
 @if (Scenario is { } s)
 {
     <span class="tn-scenario">@L.ScenarioName(s)</span>
+    @if (L.DecksLabel(s) is { } decks)
+    {
+        <span class="tn-decks">@decks</span>
+    }
 }
 
 @code {

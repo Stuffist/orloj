@@ -13,10 +13,6 @@ public class I18nConsistencyTests
 {
     private const string Ref = LocalizationService.ReferenceLanguage;
     private static readonly Regex Token = new(@"\{[^{}]*\}");
-    private static readonly HashSet<string> KnownTokens = new()
-    {
-        "{tech}", "{melee}", "{ranged}", "{dodge}", "{active}", "{action}", "{darkness}", "{stunned}",
-    };
 
     private static JsonElement Json(params string[] path) =>
         JsonDocument.Parse(File.ReadAllText(Path.Combine(new[] { AppData.WwwRoot }.Concat(path).ToArray()))).RootElement;
@@ -107,7 +103,7 @@ public class I18nConsistencyTests
                         if (effect is not null)
                         {
                             var tokens = Token.Matches(effect).Select(m => m.Value).ToList();
-                            problems.AddRange(tokens.Where(t => !KnownTokens.Contains(t) && !Regex.IsMatch(t, @"^\{freq:(planning|cycle|game):\d+\}$"))
+                            problems.AddRange(tokens.Where(t => !Olomoc.Models.GameTokens.IsKnown(t))
                                                     .Select(t => $"{lang}: {section}/{id}[{i}] jeton inconnu {t}"));
                             var refEffect = Get(reference, section, id, "abilities")?.EnumerateArray().ElementAtOrDefault(i);
                             var refTokens = refEffect is { } r && Get(r, "gameEffect")?.GetString() is { } re
@@ -119,6 +115,17 @@ public class I18nConsistencyTests
                     }
                 }
         Assert.Empty(problems);
+    }
+
+    [Fact]
+    public void Le_lexique_des_mots_cles_est_complet()
+    {
+        Assert.True(Olomoc.Models.GameTokens.IsKnown("{permanent}"));
+        Assert.True(Olomoc.Models.GameTokens.IsKnown("{freq:game:2}"));
+        Assert.False(Olomoc.Models.GameTokens.IsKnown("{freq:game:N}"));
+        Assert.False(Olomoc.Models.GameTokens.IsKnown("{inconnu}"));
+        var ui = Ui(Ref);
+        Assert.All(Olomoc.Models.GameTokens.All, t => Assert.True(ui.TryGetProperty(t.LabelKey, out _), t.LabelKey));
     }
 
     [Fact]

@@ -446,8 +446,14 @@ public class TournamentTests
 
         Assert.Equal("scenario", TournamentRules.SetScenarios(t, [new Scenario("INCONNU")])?.Key);
         Assert.Equal("scenarioName", TournamentRules.SetScenarios(t, [new Scenario(Agendas.Other, " ")])?.Key);
+        Assert.Equal("deck", TournamentRules.SetScenarios(t, [new Scenario("VISITS", null, "INCONNU")])?.Key);
+        Assert.Equal("deck", TournamentRules.SetScenarios(t, [new Scenario("VISITS", null, null, "ROGUE")])?.Key);   // pas un Ministère
         Assert.Equal("scenarioCount", TournamentRules.SetScenarios(t, [null, null, null, new Scenario("VISITS")])?.Key);
         Assert.Equal([new Scenario("VISITS")], t.Scenarios);                                 // refus : rien de changé
+
+        // Decks gardés, avec un agenda comme avec un scénario maison ; chacun facultatif.
+        Assert.Null(TournamentRules.SetScenarios(t, [new Scenario("VISITS", null, "ROGUE", "INDOCTRINATION"), new Scenario(Agendas.Other, "Bal", null, "DISINFORMATION")]));
+        Assert.Equal([new Scenario("VISITS", null, "ROGUE", "INDOCTRINATION"), new Scenario(Agendas.Other, "Bal", null, "DISINFORMATION")], t.Scenarios);
 
         t.Phase = TournamentPhase.Finished;
         Assert.Equal("finished", TournamentRules.SetScenarios(t, [])?.Key);
@@ -468,11 +474,16 @@ public class TournamentTests
             Assert.Equal(6, drawn.Count);
             Assert.Equal(current[0], drawn[0]);
             Assert.Equal(current[1], drawn[1]);
-            Assert.Equal(current[3], drawn[3]);
+            Assert.Equal(current[3], drawn[3]! with { Artifact = null, Ministry = null });       // maison gardé (decks tirés)
             var later = new[] { drawn[2], drawn[4], drawn[5] }.Select(s => s!.Id).ToList();
             Assert.Equal(later.Distinct(), later);
             Assert.All(later, id => Assert.Contains(id, Agendas.All));
             Assert.DoesNotContain("SABOTAGE", later);
+
+            // Decks tirés pour les rondes pas encore appariées (scénario maison compris), pas pour les autres.
+            Assert.All(drawn.Skip(2), s => Assert.True(Decks.IsArtifact(s!.Artifact) && Decks.IsMinistry(s.Ministry)));
+            Assert.Equal("Bal", drawn[3]!.Name);
+            Assert.All(all, s => Assert.True(Decks.IsArtifact(s!.Artifact) && Decks.IsMinistry(s.Ministry)));
         }
     }
 

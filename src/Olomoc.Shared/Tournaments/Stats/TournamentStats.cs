@@ -12,7 +12,10 @@ public sealed record WinRate(string Key, int Games, int Wins, int Draws, int Los
     public double Percent => Games == 0 ? 0 : 100.0 * Wins / Games;
 }
 
-/// <summary>Parties jouées sur un scénario (agenda, ou <see cref="Agendas.Other"/>), et bilan de J1 quand il est noté.</summary>
+/// <summary>
+/// Parties jouées sur un scénario (agenda, ou <see cref="Agendas.Other"/>) ou avec un deck
+/// (Artefact, Ministère), et bilan de J1 quand il est noté.
+/// </summary>
 public sealed record ScenarioStat(string Key, int Games, int Total, WinRate First)
 {
     public double Percent => Total == 0 ? 0 : 100.0 * Games / Total;
@@ -25,7 +28,8 @@ public sealed record StatsView(
     int Tournaments, int Players, int Games,
     IReadOnlyList<Share> Factions, IReadOnlyList<FactionPicks> Picks,
     IReadOnlyList<WinRate> FactionWins, IReadOnlyList<WinRate> Rank3Wins,
-    WinRate FirstPlayer, IReadOnlyList<Share> Ends, IReadOnlyList<ScenarioStat> Scenarios)
+    WinRate FirstPlayer, IReadOnlyList<Share> Ends, IReadOnlyList<ScenarioStat> Scenarios,
+    IReadOnlyList<ScenarioStat> Artifacts, IReadOnlyList<ScenarioStat> Ministries)
 {
     /// <summary>En dessous, un taux de victoire est peu significatif (affiché, mais signalé).</summary>
     public const int MinGames = 10;
@@ -42,7 +46,7 @@ public sealed record StatsView(
 /// <item>victoires : chaque camp d'une partie compte (un affrontement de même faction, des deux côtés) ;
 /// par faction, et par rouage de rang 3 de la cabale jouée, quand elle est connue ;</item>
 /// <item>parties où c'est noté : victoires de J1, causes de fin de partie, scénarios joués (et
-/// victoires de J1 par scénario).</item>
+/// victoires de J1 par scénario), decks Artefact et Ministère joués (de même).</item>
 /// </list>
 /// </summary>
 public static class TournamentStats
@@ -78,17 +82,25 @@ public static class TournamentStats
         var ends = ended.GroupBy(g => g.End!.Value)
             .Select(g => new Share(g.Key.ToString(), g.Count(), ended.Count))
             .OrderByDescending(s => s.Count).ThenBy(s => s.Key).ToList();
-        var withScenario = games.Where(g => g.Scenario is not null).ToList();
-        var scenarios = withScenario.GroupBy(g => g.Scenario!)
-            .Select(g => new ScenarioStat(g.Key, g.Count(), withScenario.Count, FirstRate(g.Key, g)))
-            .OrderByDescending(s => s.Games).ThenBy(s => Agendas.All.ToList().IndexOf(s.Key) is var i && i < 0 ? int.MaxValue : i).ToList();
 
         return new StatsView(
             list.Count, players.Count, games.Count,
             factions, picks,
             Rates(sides, s => s.Faction),
             Rates(sides.Where(s => s.Rank3 is not null), s => s.Rank3!),
-            FirstRate("J1", games), ends, scenarios);
+            FirstRate("J1", games), ends,
+            ByKey(games, g => g.Scenario, Agendas.All),
+            ByKey(games, g => g.Artifact, Decks.Artifacts),
+            ByKey(games, g => g.Ministry, Decks.Ministries));
+    }
+
+    // Parties où la clé est notée, groupées par clé : les plus jouées d'abord, puis dans l'ordre de référence.
+    private static IReadOnlyList<ScenarioStat> ByKey(IEnumerable<ArchivedGame> games, Func<ArchivedGame, string?> key, IReadOnlyList<string> order)
+    {
+        var noted = games.Where(g => key(g) is not null).ToList();
+        return noted.GroupBy(g => key(g)!)
+            .Select(g => new ScenarioStat(g.Key, g.Count(), noted.Count, FirstRate(g.Key, g)))
+            .OrderByDescending(s => s.Games).ThenBy(s => order.ToList().IndexOf(s.Key) is var i && i < 0 ? int.MaxValue : i).ToList();
     }
 
     // Bilan de J1 sur les parties où il est noté : victoire, nul ou défaite du joueur qui a commencé.

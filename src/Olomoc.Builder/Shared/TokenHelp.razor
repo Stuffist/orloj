@@ -1,0 +1,18 @@
+@* Éditeur du référentiel : lexique replié des mots-clés des effets de jeu (syntaxe, pictogramme
+   rendu, libellé). *@
+@inject LocalizationService L
+
+<details class="token-help">
+    <summary title="@L.Ui("admin.tokens.title")">ⓘ @L.Ui("admin.tokens")</summary>
+    <p class="hint">@L.Ui("admin.tokens.hint")</p>
+    <ul>
+        @foreach (var t in GameTokens.All)
+        {
+            <li>
+                <code>@t.Syntax</code>
+                <span class="game-effect"><Pictogram Token="@t.Pictogram" Count="@t.Count" /></span>
+                <span>@L.Ui(t.LabelKey)</span>
+            </li>
+        }
+    </ul>
+</details>

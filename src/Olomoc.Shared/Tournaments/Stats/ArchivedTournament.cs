@@ -12,16 +12,17 @@ public sealed record ArchivedPlayer(int Number, string Faction, IReadOnlyList<IR
 /// <summary>
 /// Une partie jouée (exempts exclus) : joueurs A et B, cabale jouée par chacun (si connue), PV ;
 /// si notés (archives version 2) : J1, cause de la fin, agenda de la ronde (<see cref="Agendas.Other"/>
-/// pour un scénario maison, sans son nom).
+/// pour un scénario maison, sans son nom) ; si précisés (archives version 3) : decks Artefact et Ministère.
 /// </summary>
 public sealed record ArchivedGame(int A, int B, int? CabalA, int? CabalB, int VpA, int VpB,
-    TableSide? First = null, GameEnd? End = null, string? Scenario = null);
+    TableSide? First = null, GameEnd? End = null, string? Scenario = null,
+    string? Artifact = null, string? Ministry = null);
 
 public sealed record ArchivedTournament(
     int Version, string Code, DateOnly? Date, DateTimeOffset FinishedAt, int CabalsPerPlayer,
     IReadOnlyList<ArchivedPlayer> Players, IReadOnlyList<ArchivedGame> Games)
 {
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 
     public static ArchivedTournament From(Tournament t, DateTimeOffset finishedAt)
     {
@@ -31,8 +32,10 @@ public sealed record ArchivedTournament(
                 .Select(s => new ArchivedSlot(s.Rank, s.Cog.Id, s.Equipment?.Id)).ToList()).ToList())).ToList();
         var games = t.Rounds.SelectMany(r => r.Tables.Select(x => (Round: r.Number, Table: x)))
             .Where(g => !g.Table.IsBye && g.Table.HasResult && number.ContainsKey(g.Table.PlayerA) && number.ContainsKey(g.Table.PlayerB!))
+            .Select(g => (g.Table, Scenario: t.ScenarioOf(g.Round)))
             .Select(g => new ArchivedGame(number[g.Table.PlayerA], number[g.Table.PlayerB!], g.Table.CabalA, g.Table.CabalB,
-                g.Table.VpA!.Value, g.Table.VpB!.Value, g.Table.First, g.Table.End, t.ScenarioOf(g.Round)?.Id))
+                g.Table.VpA!.Value, g.Table.VpB!.Value, g.Table.First, g.Table.End,
+                g.Scenario?.Id, g.Scenario?.Artifact, g.Scenario?.Ministry))
             .ToList();
         return new(CurrentVersion, t.Code, t.Date, finishedAt, t.CabalsPerPlayer, players, games);
     }

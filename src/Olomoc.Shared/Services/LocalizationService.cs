@@ -190,6 +190,17 @@ public sealed class LocalizationService
     /// <summary>Nom d'un scénario : agenda officiel dans la langue courante, ou nom du scénario maison.</summary>
     public string ScenarioName(Olomoc.Tournaments.Scenario s) => s.IsOther ? s.Name ?? Ui("agenda.OTHER") : Ui($"agenda.{s.Id}");
 
+    /// <summary>Decks d'un scénario : « Rogue · Désinformation » ; null si aucun n'est précisé.</summary>
+    public string? DecksLabel(Olomoc.Tournaments.Scenario s)
+    {
+        var parts = new[]
+        {
+            s.Artifact is { } a ? Ui($"deck.artifact.{a}") : null,
+            s.Ministry is { } m ? Ui($"deck.ministry.{m}") : null,
+        }.OfType<string>().ToList();
+        return parts.Count == 0 ? null : string.Join(" · ", parts);
+    }
+
     /// <summary>Message de légalité dans la langue courante.</summary>
     public string Describe(LegalityIssue issue) =>
         Ui($"legality.{issue.Key}", issue.Args.Select(a => (object)string.Join(", ", a.Values.Select(v => a.Kind switch

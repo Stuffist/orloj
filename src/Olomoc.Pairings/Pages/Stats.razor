@@ -129,6 +129,21 @@ else
                 <PercentBar Percent="sc.Percent" Detail="@ScenarioDetail(sc)">@L.Ui($"agenda.{sc.Key}")</PercentBar>
             }
         </section>
+
+        @foreach (var (title, prefix, decks) in new[] { ("pairings.stats.artifacts", "deck.artifact", s.Artifacts), ("pairings.stats.ministries", "deck.ministry", s.Ministries) })
+        {
+            <section class="panel">
+                <h3>@L.Ui(title)</h3>
+                @if (decks.Count == 0)
+                {
+                    <p class="empty">@L.Ui("pairings.stats.notNoted")</p>
+                }
+                @foreach (var d in decks)
+                {
+                    <PercentBar Percent="d.Percent" Detail="@ScenarioDetail(d)">@L.Ui($"{prefix}.{d.Key}")</PercentBar>
+                }
+            </section>
+        }
     }
 }
 

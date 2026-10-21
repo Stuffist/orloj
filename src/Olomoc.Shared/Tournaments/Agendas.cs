@@ -2,11 +2,25 @@ namespace Olomoc.Tournaments;
 
 /// <summary>
 /// Scénario d'une ronde : un agenda du recueil officiel (<see cref="Agendas.All"/>), ou
-/// <see cref="Agendas.Other"/> pour un scénario maison, nommé par l'organisateur.
+/// <see cref="Agendas.Other"/> pour un scénario maison, nommé par l'organisateur ; et, si
+/// précisés, les decks Artefact et Ministère joués (<see cref="Decks"/>).
 /// </summary>
-public sealed record Scenario(string Id, string? Name = null)
+public sealed record Scenario(string Id, string? Name = null, string? Artifact = null, string? Ministry = null)
 {
     public bool IsOther => Id == Agendas.Other;
+}
+
+/// <summary>
+/// Decks Artefact et Ministère, dans l'ordre de leur numéro (Artefact 1, 2…). Noms affichés :
+/// clés « deck.artifact.&lt;id&gt; » et « deck.ministry.&lt;id&gt; » des textes.
+/// </summary>
+public static class Decks
+{
+    public static readonly IReadOnlyList<string> Artifacts = ["ROGUE", "PARASITE"];
+    public static readonly IReadOnlyList<string> Ministries = ["DISINFORMATION", "INDOCTRINATION"];
+
+    public static bool IsArtifact(string? id) => id is not null && Artifacts.Contains(id);
+    public static bool IsMinistry(string? id) => id is not null && Ministries.Contains(id);
 }
 
 /// <summary>
@@ -30,7 +44,8 @@ public static class Agendas
     /// Tirage au sort des scénarios des rondes pas encore appariées (au-delà de
     /// <paramref name="pairedRounds"/>) : agendas officiels seulement, sans répétition, ni avec
     /// ceux des rondes gardées telles quelles (déjà appariées, ou scénario maison choisi par
-    /// l'organisateur). Recueil épuisé : on recommence.
+    /// l'organisateur). Recueil épuisé : on recommence. Chacune de ces rondes (scénarios maison
+    /// compris) reçoit aussi un deck Artefact et un deck Ministère au hasard.
     /// </summary>
     public static List<Scenario?> Draw(IReadOnlyList<Scenario?> current, int roundCount, int pairedRounds, Random random)
     {
@@ -49,6 +64,12 @@ public static class Agendas
             pool.Remove(pick);
             result[i] = new Scenario(pick);
         }
+        for (var i = pairedRounds; i < roundCount; i++)
+            result[i] = result[i]! with
+            {
+                Artifact = Decks.Artifacts[random.Next(Decks.Artifacts.Count)],
+                Ministry = Decks.Ministries[random.Next(Decks.Ministries.Count)],
+            };
         return result;
     }
 }

@@ -168,10 +168,12 @@ public static class TournamentRules
         {
             if (s is null) { cleaned.Add(null); continue; }
             if (!Agendas.IsKnown(s.Id)) return Problem.Of("scenario");
-            if (s.Id != Agendas.Other) { cleaned.Add(new Scenario(s.Id)); continue; }
+            if (s.Artifact is not null && !Decks.IsArtifact(s.Artifact)) return Problem.Of("deck");
+            if (s.Ministry is not null && !Decks.IsMinistry(s.Ministry)) return Problem.Of("deck");
+            if (s.Id != Agendas.Other) { cleaned.Add(new Scenario(s.Id, null, s.Artifact, s.Ministry)); continue; }
             var name = s.Name?.Trim() ?? "";
             if (name.Length is 0 || name.Length > MaxNameLength) return Problem.Of("scenarioName", MaxNameLength.ToString());
-            cleaned.Add(new Scenario(Agendas.Other, name));
+            cleaned.Add(new Scenario(Agendas.Other, name, s.Artifact, s.Ministry));
         }
         while (cleaned.Count > 0 && cleaned[^1] is null) cleaned.RemoveAt(cleaned.Count - 1);
         t.Scenarios = cleaned;

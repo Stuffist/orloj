@@ -23,6 +23,22 @@
                        placeholder="@L.Ui("pairings.scenarios.otherName")" aria-label="@L.Ui("pairings.scenarios.otherName")"
                        @oninput="e => Rename(index, e.Value?.ToString())" />
             }
+            <select class="tn-deck" value="@row.Artifact" disabled="@(ReadOnly || row.Id.Length == 0)" aria-label="@L.Ui("pairings.scenarios.artifact")"
+                    title="@L.Ui("pairings.scenarios.artifact")" @onchange="e => SetArtifact(index, e.Value?.ToString())">
+                <option value="">@L.Ui("pairings.scenarios.none")</option>
+                @foreach (var id in Decks.Artifacts)
+                {
+                    <option value="@id">@L.Ui($"deck.artifact.{id}")</option>
+                }
+            </select>
+            <select class="tn-deck" value="@row.Ministry" disabled="@(ReadOnly || row.Id.Length == 0)" aria-label="@L.Ui("pairings.scenarios.ministry")"
+                    title="@L.Ui("pairings.scenarios.ministry")" @onchange="e => SetMinistry(index, e.Value?.ToString())">
+                <option value="">@L.Ui("pairings.scenarios.none")</option>
+                @foreach (var id in Decks.Ministries)
+                {
+                    <option value="@id">@L.Ui($"deck.ministry.{id}")</option>
+                }
+            </select>
         </li>
     }
 </ol>
@@ -47,7 +63,10 @@
     [Parameter, EditorRequired] public Func<IReadOnlyList<Scenario?>, Task<IReadOnlyList<Problem>>> Save { get; set; } = default!;
     [Parameter] public bool ReadOnly { get; set; }
 
-    private sealed record Row(string Id, string Name);
+    // Chaînes vides : rien de choisi.
+    private sealed record Row(string Id, string Name, string Artifact = "", string Ministry = "");
+
+    private static Row RowOf(Scenario? s) => s is null ? new Row("", "") : new Row(s.Id, s.Name ?? "", s.Artifact ?? "", s.Ministry ?? "");
 
     private List<Row> _rows = new();
     private bool _dirty, _busy;
@@ -58,15 +77,18 @@
     {
         if (_dirty && _rows.Count == View.RoundCount) return;
         _rows = Enumerable.Range(1, View.RoundCount)
-            .Select(n => View.ScenarioOf(n) is { } s ? new Row(s.Id, s.Name ?? "") : new Row("", ""))
+            .Select(n => RowOf(View.ScenarioOf(n)))
             .ToList();
     }
 
     // Scénario maison sans nom : pas encore enregistrable.
     private bool Complete => _rows.All(r => r.Id != Agendas.Other || r.Name.Trim().Length > 0);
 
-    private void Choose(int index, string? id) => Edit(index, _rows[index] with { Id = id ?? "" });
+    // Plus d'agenda : plus de decks non plus (ils ne seraient pas enregistrés).
+    private void Choose(int index, string? id) => Edit(index, string.IsNullOrEmpty(id) ? new Row("", "") : _rows[index] with { Id = id });
     private void Rename(int index, string? name) => Edit(index, _rows[index] with { Name = name ?? "" });
+    private void SetArtifact(int index, string? id) => Edit(index, _rows[index] with { Artifact = id ?? "" });
+    private void SetMinistry(int index, string? id) => Edit(index, _rows[index] with { Ministry = id ?? "" });
 
     private void Edit(int index, Row row)
     {
@@ -78,15 +100,16 @@
     private void Draw()
     {
         var drawn = Agendas.Draw(Current(), View.RoundCount, View.Rounds.Count, new Random());
+        // Scénario maison : nom gardé (en cours de saisie), decks tirés.
         for (var i = View.Rounds.Count; i < View.RoundCount; i++)
-            if (_rows[i].Id != Agendas.Other)
-                _rows[i] = drawn[i] is { } s ? new Row(s.Id, "") : new Row("", "");
+            _rows[i] = _rows[i].Id == Agendas.Other ? RowOf(drawn[i]) with { Name = _rows[i].Name } : RowOf(drawn[i]);
         _dirty = true;
         _problems = null;
     }
 
     private List<Scenario?> Current() => _rows
-        .Select(r => r.Id.Length == 0 ? null : new Scenario(r.Id, r.Id == Agendas.Other ? r.Name.Trim() : null))
+        .Select(r => r.Id.Length == 0 ? null : new Scenario(r.Id, r.Id == Agendas.Other ? r.Name.Trim() : null,
+            r.Artifact.Length == 0 ? null : r.Artifact, r.Ministry.Length == 0 ? null : r.Ministry))
         .ToList();
 
     private async Task SaveAsync()

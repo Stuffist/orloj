@@ -78,6 +78,8 @@ public class TournamentStatsTests
         Assert.Equal(0, s.FirstPlayer.Games);
         Assert.Empty(s.Ends);
         Assert.Empty(s.Scenarios);
+        Assert.Empty(s.Artifacts);
+        Assert.Empty(s.Ministries);
     }
 
     [Fact]
@@ -87,9 +89,9 @@ public class TournamentStatsTests
         {
             Games = new[]
             {
-                new ArchivedGame(0, 2, 0, 0, 10, 5, TableSide.A, GameEnd.Bile, "SABOTAGE"),          // J1 (A) gagne
-                new ArchivedGame(1, 0, 0, 1, 6, 6, TableSide.B, GameEnd.FourthCycle, "SABOTAGE"),    // nul
-                new ArchivedGame(3, 1, null, 0, 2, 8, TableSide.A, GameEnd.FourthCycle, "VISITS"),   // J1 (A) perd
+                new ArchivedGame(0, 2, 0, 0, 10, 5, TableSide.A, GameEnd.Bile, "SABOTAGE", "PARASITE", "DISINFORMATION"),  // J1 (A) gagne
+                new ArchivedGame(1, 0, 0, 1, 6, 6, TableSide.B, GameEnd.FourthCycle, "SABOTAGE", "ROGUE"),  // nul, Ministère pas noté
+                new ArchivedGame(3, 1, null, 0, 2, 8, TableSide.A, GameEnd.FourthCycle, "VISITS", "PARASITE", "DISINFORMATION"),  // J1 (A) perd
                 new ArchivedGame(2, 3, 0, 0, 4, 1, null, null, Agendas.Other),                        // rien de noté, scénario maison
                 new ArchivedGame(2, 3, 0, 0, 4, 1),                                                   // archive v1 : rien
             },
@@ -104,6 +106,11 @@ public class TournamentStatsTests
         var sabotage = s.Scenarios[0].First;
         Assert.Equal((2, 1, 1), (sabotage.Games, sabotage.Wins, sabotage.Draws));
         Assert.Equal(0, s.Scenarios.Single(x => x.Key == Agendas.Other).First.Games);
+
+        // Decks : seulement les parties où ils sont notés (archives v3).
+        Assert.Equal(new[] { ("PARASITE", 2, 3), ("ROGUE", 1, 3) }, s.Artifacts.Select(x => (x.Key, x.Games, x.Total)));
+        Assert.Equal(new[] { ("DISINFORMATION", 2, 2) }, s.Ministries.Select(x => (x.Key, x.Games, x.Total)));
+        Assert.Equal((2, 1, 0), (s.Ministries[0].First.Games, s.Ministries[0].First.Wins, s.Ministries[0].First.Draws));
     }
 
     [Fact]
@@ -129,7 +136,7 @@ public class TournamentStatsTests
                 new Round { Number = 1, Tables = { new Table { Number = 1, PlayerA = "id-ana", PlayerB = "id-bo", VpA = 9, VpB = 4, CabalA = 0, CabalB = 0, First = TableSide.B, End = GameEnd.PoliSec }, new Table { Number = 2, PlayerA = "id-cy" } } },
                 new Round { Number = 2, Tables = { new Table { Number = 1, PlayerA = "id-cy", PlayerB = "id-ana" } } },   // sans résultat
             },
-            Scenarios = { new Scenario(Agendas.Other, "Bal masqué chez Ana"), new Scenario("SABOTAGE") },
+            Scenarios = { new Scenario(Agendas.Other, "Bal masqué chez Ana", "ROGUE", "INDOCTRINATION"), new Scenario("SABOTAGE") },
         };
 
         var archive = ArchivedTournament.From(t, DateTimeOffset.UtcNow);
@@ -140,6 +147,7 @@ public class TournamentStatsTests
         var game = Assert.Single(archive.Games);                         // exempt et partie sans résultat exclus
         Assert.Equal((0, 1, 9, 4), (game.A, game.B, game.VpA, game.VpB));
         Assert.Equal((TableSide.B, GameEnd.PoliSec, Agendas.Other), (game.First, game.End, game.Scenario));  // scénario maison : sans son nom
+        Assert.Equal(("ROGUE", "INDOCTRINATION"), (game.Artifact, game.Ministry));
         Assert.Equal("3R06", archive.Players[0].Cabals[0].Single(s => s.Rank == 1).Cog);
     }
 }

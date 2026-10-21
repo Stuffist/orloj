@@ -295,6 +295,14 @@ body {
 .export-preview { margin-top: .6rem; }
 .export-preview summary { cursor: pointer; color: var(--muted); font-size: .85rem; }
 .export-preview .export-output { margin-top: .5rem; }
+/* Lexique des mots-clés (éditeur du référentiel), replié par défaut */
+.token-help { margin: 0 0 .6rem; font-size: .8rem; }
+.token-help summary { cursor: pointer; color: var(--muted); width: fit-content; }
+.token-help[open] { background: var(--panel-2); border-radius: 6px; padding: .4rem .6rem; }
+.token-help .hint { margin: .3rem 0 .4rem; }
+.token-help ul { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr)); gap: .25rem .9rem; margin: 0; padding: 0; }
+.token-help li { display: flex; align-items: center; gap: .4rem; }
+.token-help code { font-family: Consolas, monospace; font-size: .75rem; color: var(--ink); background: var(--bg); border-radius: 3px; padding: 0 .25rem; user-select: all; }
 .btn {
     display: inline-block; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
     border-radius: 6px; padding: .45rem .9rem; font-size: .9rem; cursor: pointer; text-decoration: none;
@@ -900,8 +908,14 @@ body {
 
 /* Scénarios des rondes : saisie (organisateur), programme (page publique), titre de ronde */
 .tn-scenarios, .tn-schedule { list-style: none; margin: 0 0 .7rem; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
-.tn-scenarios li { display: grid; grid-template-columns: 4.2rem minmax(0, 16rem) minmax(0, 1fr); align-items: center; gap: .5rem; }
-.tn-schedule li { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr); align-items: baseline; gap: .5rem; }
+.tn-scenarios li { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .5rem; }
+.tn-scenarios li > label { flex: 0 0 4.2rem; }
+.tn-scenarios li > select { flex: 1 1 12rem; max-width: 16rem; min-width: 0; }
+.tn-scenarios li > input { flex: 1 1 10rem; min-width: 0; }
+.tn-scenarios li > select.tn-deck { flex: 0 1 9.5rem; }
+.tn-schedule li { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr) auto; align-items: baseline; gap: .5rem; }
+.tn-decks { margin-left: .5rem; color: var(--muted); font-size: .75rem; font-weight: 400; }
+.tn-schedule .tn-decks { margin-left: 0; }
 .tn-schedule li.current { font-weight: 700; }
 .tn-scenario {
     display: inline-block; margin-left: .6rem; padding: .05rem .5rem; border-radius: 999px; vertical-align: 1px;
@@ -927,8 +941,8 @@ body {
     .panel { padding: .8rem; }
     .tn-table, .tn-result { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); row-gap: .2rem; }
     .tn-table-number, .tn-result-save, .tn-result-end { grid-column: 1 / -1; }
-    .tn-scenarios li { grid-template-columns: 4.2rem minmax(0, 1fr); }
-    .tn-scenarios li input { grid-column: 2; }
+    .tn-scenarios li > select, .tn-scenarios li > input { flex-basis: calc(100% - 4.7rem); max-width: none; }
+    .tn-scenarios li > select.tn-deck { flex: 1 1 8rem; }
     .tn-faction { font-size: .72rem; }
     .tn-head-side { align-items: flex-start; flex-direction: row; }
 }

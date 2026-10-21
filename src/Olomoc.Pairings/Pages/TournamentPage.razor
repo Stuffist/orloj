@@ -69,6 +69,10 @@ else
                     <li class="@(v.LastRound?.Number == n ? "current" : null)">
                         <span class="tn-table-number">@L.Ui("pairings.roundN", n)</span>
                         <span>@(s is null ? L.Ui("pairings.scenarios.tbd") : L.ScenarioName(s))</span>
+                        @if (s is not null && L.DecksLabel(s) is { } decks)
+                        {
+                            <span class="tn-decks">@decks</span>
+                        }
                     </li>
                 }
             </ol>
