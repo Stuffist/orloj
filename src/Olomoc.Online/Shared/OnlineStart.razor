@@ -1,0 +1,68 @@
+@* « Jouer en ligne », sur la page Partie quand aucune partie n'est en cours : créer un salon (nom
+   proposé : celui du compte, sinon le dernier utilisé sur l'appareil ; laissé vide, un nom tiré
+   au sort ; cabale choisie au salon), et reprendre les parties suivies sur cet appareil. Le salon
+   créé devient la partie courante. *@
+@implements IDisposable
+@inject LocalizationService L
+@inject OnlineLauncher Launcher
+@inject MyGames Games
+
+@if (_ready)
+{
+    <section class="panel online-start">
+        <h2>@L.Ui("online.start.title")</h2>
+        <p class="hint">@L.Ui("online.create.help")</p>
+        <div class="field">
+            <label for="online-create-name">@L.Ui("online.name")</label>
+            <div class="online-inline">
+                <input id="online-create-name" type="text" maxlength="@OnlineRules.MaxNameLength" placeholder="@_random"
+                       @bind="_name" @bind:event="oninput" />
+                <button class="btn primary" type="button" disabled="@_busy" @onclick="CreateAsync">@L.Ui("online.create")</button>
+            </div>
+        </div>
+        <Problems Items="_problems" />
+
+        @if (Games.All.Count > 0)
+        {
+            <h3>@L.Ui("online.mine.title")</h3>
+            <ul class="online-games">
+                @foreach (var g in Games.All)
+                {
+                    <li>
+                        <a href="online/g/@g.Code">@(g.Title ?? g.Code)</a>
+                        <span class="hint">@g.Code · @g.SeenAt.ToLocalTime().ToString("g")</span>
+                        <button class="btn small" type="button" @onclick="() => Games.ForgetAsync(g.Code)">@L.Ui("online.forget")</button>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+}
+
+@code {
+    private bool _ready, _busy;
+    private string _name = "";
+    private string _random = "";
+    private IReadOnlyList<Problem>? _problems;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnLanguageChanged;
+        await L.EnsureLoadedAsync();
+        await Games.EnsureLoadedAsync();
+        _name = await Games.KnownNameAsync() ?? "";
+        _random = await Games.RandomNameAsync();
+        _ready = true;
+    }
+
+    private async Task CreateAsync()
+    {
+        _busy = true;
+        try { _problems = await Launcher.CreateAsync(_name.Trim().Length > 0 ? _name : _random); }
+        finally { _busy = false; }
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnLanguageChanged;
+}

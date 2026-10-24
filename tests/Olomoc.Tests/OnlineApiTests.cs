@@ -96,6 +96,44 @@ public sealed class OnlineApiTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Partie_locale_ouverte_en_ligne_cabale_prete()
+    {
+        var server = Server();
+        var http = server.CreateClient();
+        var (cabalA, cabalB) = await MaiselCabals();
+        var response = await http.PostAsJsonAsync("/api/online", new CreateOnlineRequest("Ana", cabalA), TournamentJson.Options);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = await Read<OnlineCreated>(response);
+
+        var a = await Connect(server);
+        var b = await Connect(server);
+        var mine = (await Join(a, created.Code, created.Token)).View!.Mine!;
+        Assert.True(mine.Ready);
+        Assert.Equal("A", mine.Cabal!.Name);
+        var guest = (await Join(b, created.Code, created.InviteToken)).View!;
+        Assert.True(guest.Seats[0].Ready);
+        Assert.Null(guest.Seats[0].Cabal);                    // secrète jusqu'à ce que l'invité soit prêt
+
+        await Ok(b, new(OnlineCommandType.SetName, "Bo"));
+        await Ok(b, new(OnlineCommandType.SetCabal, Cabal: cabalB));
+        await Ok(b, new(OnlineCommandType.SetReady, Flag: true));
+        var started = (await View(a))!;
+        Assert.Equal(OnlineStep.Initiative, started.Step);    // la partie commence au début
+        Assert.Equal("A", started.Seats[0].Cabal!.Name);
+    }
+
+    [Fact]
+    public async Task Salon_avec_une_cabale_illegale_refuse()
+    {
+        var http = Server().CreateClient();
+        var (cabalA, _) = await MaiselCabals();
+        var illegal = cabalA with { Faction = new CodeName("INCONNUE", "?") };
+        var response = await http.PostAsJsonAsync("/api/online", new CreateOnlineRequest("Ana", illegal), TournamentJson.Options);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("faction", (await Read<ProblemList>(response)).Problems[0].Key);
+    }
+
+    [Fact]
     public async Task Partie_libre_de_bout_en_bout()
     {
         var server = Server();

@@ -6,6 +6,8 @@
 @inject GameStore Games
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject CabalExporter Exporter
+@inject OnlineLauncher Launcher
 
 @if (!_ready)
 {
@@ -17,6 +19,7 @@ else if (Games.Session is not { } game)
         <p class="empty">@L.Ui("play.none")</p>
         <a class="btn" href="builder/">@L.Ui("play.toBuilder")</a>
     </section>
+    <OnlineStart />
 }
 else
 {
@@ -66,6 +69,7 @@ else
 
         <div class="play-commands">
             <button class="btn" @onclick="Undo" disabled="@(!game.CanUndo)" title="@L.Ui("play.undo.title")">↶ @L.Ui("play.undo")</button>
+            <button class="btn" @onclick="OpenOnlineAsync" disabled="@_opening" title="@L.Ui("play.openOnline.title")">@L.Ui("play.openOnline")</button>
             @* Bouton de fin de cycle et messages de fin superposés dans une même case, à la taille du plus
                grand : passer de l'un à l'autre ne décale rien. Seul l'élément courant est visible. *@
             <div class="play-end">
@@ -126,8 +130,30 @@ else
         // Partie sauvegardée avec des cartes disparues du référentiel : inutilisable.
         if (Games.Session is { } g && g.State.Cogs.Any(c => Catalog.CogById(c.CogId) is null))
             await Games.ClearAsync();
+        // Partie courante en ligne : c'est elle que montre l'onglet Partie.
+        if (Games.OnlineCode is { } online)
+        {
+            Nav.NavigateTo($"online/g/{online}", replace: true);
+            return;
+        }
         _wasOver = Games.Session?.IsOver ?? false;
         _ready = true;
+    }
+
+    private bool _opening;
+
+    // « Ouvrir en ligne » : salon créé avec la cabale de la partie (siège prêt), qui remplace la
+    // partie locale ; la partie en ligne commence au début.
+    private async Task OpenOnlineAsync()
+    {
+        if (Games.Session is not { } game || !await JS.InvokeAsync<bool>("confirm", L.Ui("play.openOnline.confirm"))) return;
+        _opening = true;
+        try
+        {
+            var problems = await Launcher.CreateAsync(null, Exporter.FromGame(game.State, Catalog));
+            if (problems.Count > 0) Toast(string.Join(" ", problems.Select(L.Describe)));
+        }
+        finally { _opening = false; }
     }
 
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);

@@ -31,5 +31,6 @@ builder.Services.AddScoped<MyTournaments>();
 builder.Services.AddScoped<OnlineApi>();
 builder.Services.AddScoped<OnlineConnection>();         // hub SignalR, ouvert sur la page d'une partie
 builder.Services.AddScoped<MyGames>();
+builder.Services.AddScoped<OnlineLauncher>();          // salon ouvert, devenu la partie courante
 
 await builder.Build().RunAsync();

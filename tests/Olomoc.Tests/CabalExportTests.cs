@@ -110,4 +110,19 @@ public class CabalExportTests
     [InlineData(null, "json", "cabale.json")]
     public void Nom_de_fichier(string? name, string extension, string expected) =>
         Assert.Equal(expected, CabalExporter.FileName(name, extension));
+
+    [Fact]
+    public async Task Cabale_d_une_partie_locale_pour_l_ouvrir_en_ligne()
+    {
+        var (d, x, cogs, equipment) = await Cabal(("1R01", "Harmonium"), ("2R08", "Carapace"), ("3R06", "Phéromones"));
+        var game = new GameSession(GameSession.NewGame("Ma cabale", "MAISEL", cogs, equipment));
+        game.Wound(0, 3, attack: false, ignoreProtection: false);          // l'état de la partie ne compte pas
+
+        var cabal = x.FromGame(game.State, d.Catalog);
+        Assert.Equal("Ma cabale", cabal.Name);
+        Assert.Equal("MAISEL", cabal.Faction!.Code);
+        Assert.Equal(new[] { 1, 2, 3 }, cabal.Cogs.Select(c => c.Rank));
+        Assert.True(CabalLibrary.SameCards(x.ToModel("Ma cabale", "MAISEL", cogs, equipment), cabal));
+        Assert.Empty(d.Catalog.CheckLegality("MAISEL", d.Catalog.Resolve(cabal).Cogs, d.Catalog.Resolve(cabal).Equipment).Issues);
+    }
 }

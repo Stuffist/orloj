@@ -4,6 +4,7 @@
    ce que les deux soient prêts (LDR p.32). *@
 @inject LocalizationService L
 @inject CatalogService Catalog
+@inject MyGames Games
 
 <section class="panel">
     <h2>@L.Ui("online.lobby.title")</h2>
@@ -48,11 +49,10 @@
         {
             <div class="field">
                 <label for="online-name">@L.Ui("online.name")</label>
-                <div class="online-inline">
-                    <input id="online-name" type="text" maxlength="@OnlineRules.MaxNameLength" value="@NameValue"
-                           disabled="@mine.Ready" @oninput="e => _name = e.Value?.ToString()" />
-                    <button class="btn small" type="button" disabled="@(mine.Ready || !NameChanged)" @onclick="SaveNameAsync">@L.Ui("online.name.save")</button>
-                </div>
+                @* Nom envoyé en quittant le champ, ou avec « Je suis prêt » : rien à valider. Modifiable
+                   tout le salon, même une fois prêt (nom tiré au sort, siège ouvert prêt depuis une partie locale). *@
+                <input id="online-name" type="text" maxlength="@OnlineRules.MaxNameLength" value="@NameValue"
+                       @oninput="e => _name = e.Value?.ToString()" @onchange="SaveNameAsync" />
             </div>
         }
 
@@ -88,9 +88,9 @@
             }
             else
             {
-                <button class="btn primary" type="button" disabled="@(mine.Cabal is null || mine.Name.Length == 0)"
-                        @onclick="() => Send(new(OnlineCommandType.SetReady, Flag: true))">@L.Ui("online.ready")</button>
-                @if (mine.Name.Length == 0)
+                <button class="btn primary" type="button" disabled="@(mine.Cabal is null || NameValue.Trim().Length == 0)"
+                        @onclick="ReadyAsync">@L.Ui("online.ready")</button>
+                @if (NameValue.Trim().Length == 0)
                 {
                     <span class="hint">@L.Ui("online.ready.needName")</span>
                 }
@@ -112,10 +112,21 @@
     private string NameValue => _name ?? View.Mine?.Name ?? "";
     private bool NameChanged => _name is not null && _name.Trim().Length > 0 && _name.Trim() != View.Mine?.Name;
 
+    // Nom saisi, envoyé s'il a changé (et retenu sur l'appareil pour la fois suivante).
     private async Task SaveNameAsync()
     {
-        await Send(new(OnlineCommandType.SetName, _name));
+        if (!NameChanged) return;
+        var name = _name!.Trim();
+        await Games.RememberNameAsync(name);
+        await Send(new(OnlineCommandType.SetName, name));
         _name = null;
+    }
+
+    // Prêt : le nom saisi part d'abord, s'il n'a pas encore été envoyé.
+    private async Task ReadyAsync()
+    {
+        await SaveNameAsync();
+        await Send(new(OnlineCommandType.SetReady, Flag: true));
     }
 
     private async Task CopyAsync(string text)

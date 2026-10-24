@@ -19,16 +19,23 @@ public static class OnlineEndpoints
         app.MapHub<OnlineHub>(OnlineHub.Path);
     }
 
-    private static async Task<IResult> Create(CreateOnlineRequest? body, OnlineStore store)
+    private static async Task<IResult> Create(CreateOnlineRequest? body, OnlineStore store, ServerCatalog catalog)
     {
         var name = body?.Name?.Trim() ?? "";
         if (name.Length > OnlineRules.MaxNameLength) return Problems(Problem.Of("playerName", OnlineRules.MaxNameLength.ToString()), 400);
+        // Cabale du créateur (partie locale ouverte en ligne) : légale, et son siège prêt s'il est nommé.
+        var cabal = body?.Cabal;
+        if (cabal is not null && OnlineRules.CheckCabal(cabal, await catalog.GetAsync()) is { Count: > 0 } problems)
+            return Results.Json(new ProblemList(problems), TournamentJson.Options, statusCode: 400);
         var (token, invite) = (Tokens.New(), Tokens.New());
         var game = await store.CreateAsync(g =>
         {
-            g.Seats.Add(new Seat { Name = name, TokenHash = Tokens.Hash(token) });
+            var now = DateTimeOffset.UtcNow;
+            var ready = cabal is not null && name.Length > 0;
+            g.Seats.Add(new Seat { Name = name, TokenHash = Tokens.Hash(token), Cabal = cabal, Ready = ready });
             g.Seats.Add(new Seat { TokenHash = Tokens.Hash(invite) });
-            if (name.Length > 0) g.Log.Add(new OnlineLogEntry(DateTimeOffset.UtcNow, 0, "joined"));
+            if (name.Length > 0) g.Log.Add(new OnlineLogEntry(now, 0, "joined"));
+            if (ready) g.Log.Add(new OnlineLogEntry(now, 0, "ready"));
         });
         return game is null
             ? Problems(Problem.Of("storageFull"), 503)

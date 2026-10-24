@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Olomoc.Models;
 using Olomoc.Tournaments;
 
 namespace Olomoc.Online.Services;
@@ -13,11 +14,11 @@ public sealed record ApiResult<T>(T? Value, IReadOnlyList<Problem> Problems)
 /// <summary>Création d'une partie en ligne (/api/online, même origine) ; tout le reste passe par le hub.</summary>
 public sealed class OnlineApi(HttpClient http)
 {
-    public async Task<ApiResult<OnlineCreated>> CreateAsync(string? name)
+    public async Task<ApiResult<OnlineCreated>> CreateAsync(string? name, CabalExport? cabal = null)
     {
         try
         {
-            using var response = await http.PostAsJsonAsync("/api/online", new CreateOnlineRequest(name), TournamentJson.Options);
+            using var response = await http.PostAsJsonAsync("/api/online", new CreateOnlineRequest(name, cabal), TournamentJson.Options);
             if (response.IsSuccessStatusCode)
                 return new(await response.Content.ReadFromJsonAsync<OnlineCreated>(TournamentJson.Options), Array.Empty<Problem>());
             if (response.StatusCode == HttpStatusCode.TooManyRequests) return Failure("tooManyRequests");

@@ -545,20 +545,36 @@ l'étape et le siège ; chacun ne reçoit que **sa** vue (`OnlineRules.View`). A
 changement, la salle reçoit « Changed » et chaque client relit sa vue : rien de secret ne
 transite vers une autre connexion.
 
-- **Accès** sans compte :
-  - **partie libre** : « Créer la partie » donne le lien du créateur et un **lien
-    d'invitation** (jeton du second siège, dans l'ancre `#…`, gardé sur l'appareil puis
-    retiré de l'adresse) ;
+- **Une partie courante par appareil**, locale ou en ligne (`GameStore` : `olomoc.game`, ou le
+  code de la partie en ligne dans `olomoc.game.online`). L'onglet **Partie** montre la partie
+  locale, ou mène à la partie en ligne courante ; « Quitter la partie » l'en retire (elle reste
+  sur le serveur et dans « Mes parties en ligne »). Lancer une partie depuis le constructeur
+  remplace la partie courante (après confirmation).
+- **Accès** sans compte, depuis l'onglet **Partie** (l'ancienne adresse `/online/` y renvoie) :
+  - **ouvrir en ligne une partie locale** : « Ouvrir en ligne » (barre de la partie) crée un
+    salon avec sa cabale (reconstruite de la partie : `CabalExporter.FromGame`), vérifiée par
+    le serveur et **prête** d'office ; la partie en ligne commence au début (numéro des joueurs,
+    agenda) et remplace la partie locale. Une cabale illégale est refusée (message) ;
+  - **partie libre** : sans partie en cours, le cadre « Jouer en ligne » ; « Créer un salon »
+    donne le lien du créateur et un **lien d'invitation** (jeton du second siège, dans l'ancre
+    `#…`, gardé sur l'appareil puis retiré de l'adresse), cabale choisie au salon. L'invité qui
+    rejoint sans partie en cours sur son appareil en fait sa partie courante ;
+  - **nom du joueur** : celui du compte s'il est connecté, sinon le dernier utilisé sur
+    l'appareil (`olomoc.online.name`), sinon tiré au sort (« Joueur 4821 ») ; l'invité qui ouvre
+    son lien est nommé de même, et peut changer de nom au salon ;
   - **table de tournoi** : « Jouer en ligne » sur sa table de la ronde en cours (tournoi
     lancé). La partie est créée au premier appel puis retrouvée. Chaque joueur s'y identifie
     avec son jeton de joueur du tournoi et choisit l'une de ses cabales inscrites, qui est
     notée à la table au lancement. La table affiche un lien « en ligne » pour la suivre ;
   - **spectateurs** : le lien sans jeton suit la partie sans pouvoir jouer.
 - **Étapes guidées** (`OnlineStep`) :
-  - **salon** : nom, cabale (« Mes cabales », composer, coller), « Prêt ». La cabale
+  - **salon** : nom (envoyé en quittant le champ ou avec « Prêt », sans le valider ; modifiable
+    tout le salon, même une fois prêt), cabale (« Mes cabales »,
+    composer, coller), « Prêt » dès qu'il y a un nom et une cabale. La cabale
     adverse reste secrète jusqu'à ce que les deux soient prêts (LDR p.32) ;
   - **numéro des joueurs** : 5 D6 lancés par le serveur, réussite à 5+, le plus de réussites
-    devient J1, égalité : on relance (LDR p.31) ;
+    devient J1, égalité : on relance (LDR p.31). Après le second jet, les deux jets et le verdict
+    restent affichés 2 s avant l'étape suivante (`SetupPanel`, relus dans le journal) ;
   - **agenda** : choisi ou tiré au sort par J1 ;
   - **cycles** : chacun suit son camp avec les fiches du mode partie (`PlayCogCard`, en
     lecture seule pour le camp adverse). La fin de cycle s'applique aux deux camps quand les
@@ -653,7 +669,7 @@ tests/Olomoc.Tests/   xUnit
   `Problems.razor`, `FactionBadge.razor`, `ScenarioTag.razor` — choix et résumé d'une
   cabale, problèmes renvoyés par le serveur (tournois, parties en ligne).
 - `Components/AppNav.razor` — menu du site : onglets sous l'en-tête (ordinateur), barre fixée en bas
-  (téléphone) ; constructeur, partie (point si une partie est en cours), tournois, en ligne,
+  (téléphone) ; constructeur, partie (point si une partie est en cours ; parties en ligne comprises), tournois,
   statistiques, éditeur (éditeurs et admins), compte. `Components/HeaderTools.razor` — choix de la langue.
 - `Accounts/AccountApiModels.cs` (règles et échanges de l'API des comptes), `Services/AccountService.cs`
   (session du site).
@@ -686,10 +702,12 @@ tests/Olomoc.Tests/   xUnit
   sur l'appareil).
 
 **`src/Olomoc.Online`** (bibliothèque Razor, routes `/online/…`)
-- `Pages/Home.razor` — créer une partie, parties suivies sur l'appareil (`Services/MyGames.cs`).
+- `Shared/OnlineStart.razor` — cadre « Jouer en ligne » de la page Partie : créer un salon, parties
+  suivies sur l'appareil et nom du joueur (`Services/MyGames.cs`) ; `Pages/Home.razor` : `/online/` → page Partie.
 - `Pages/Game.razor` — une partie : salon (`Shared/LobbyPanel.razor`), mise en place
   (`Shared/SetupPanel.razor`), camps (`Shared/CampPanel.razor`), journal (`Shared/GameLog.razor`).
 - `Services/OnlineConnection.cs` — connexion au hub, reconnexion automatique.
+- `Services/OnlineLauncher.cs` — ouvre un salon (avec ou sans cabale) et en fait la partie courante.
 
 **`src/Olomoc.Server`**
 - `Program.cs` — en-têtes (`Cache-Control: no-cache`, `nosniff`), `/` → `/builder/`,

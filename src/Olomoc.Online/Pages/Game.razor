@@ -4,6 +4,7 @@
 @inject CatalogService Catalog
 @inject OnlineConnection Hub
 @inject MyGames Games
+@inject GameStore Current
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
@@ -20,7 +21,7 @@ else if (_view is not { } v)
 {
     <section class="panel">
         <p class="export-warning" role="alert">@L.Ui($"online.error.{_error ?? "network"}")</p>
-        <a class="btn" href="online/">@L.Ui("online.home")</a>
+        <a class="btn" href="builder/play">@L.Ui("online.home")</a>
     </section>
 }
 else
@@ -75,6 +76,10 @@ else
                 <code>@WatchLink</code>
                 <button class="btn small" type="button" @onclick="() => CopyAsync(WatchLink)">@L.Ui("online.copy")</button>
             </div>
+            @if (IsCurrent)
+            {
+                <button class="btn small @(v.Over ? "primary" : null)" type="button" title="@L.Ui("online.leave.title")" @onclick="LeaveAsync">@L.Ui("online.leave")</button>
+            }
         </div>
     </section>
 
@@ -179,8 +184,32 @@ else
         {
             Apply(view, force: true);
             if (_entry is not null) await Games.RememberAsync(Code);
+            await NameSeatAsync();
+            // Joueur de cette partie, sans partie en cours sur l'appareil : elle devient la partie
+            // courante (onglet Partie). Une partie locale n'est jamais remplacée sans le demander.
+            await Current.EnsureLoadedAsync();
+            if (view.Me is not null && !Current.HasGame) await Current.OpenOnlineAsync(Code);
         }
         _ready = true;
+    }
+
+    // Partie courante de l'appareil : « Quitter la partie » la retire de l'onglet Partie (elle reste
+    // sur le serveur, et dans « Mes parties en ligne » pour la reprendre).
+    private bool IsCurrent => string.Equals(Current.OnlineCode, Code, StringComparison.OrdinalIgnoreCase);
+
+    private async Task LeaveAsync()
+    {
+        await Current.LeaveOnlineAsync();
+        Nav.NavigateTo("builder/play");
+    }
+
+    // Siège encore sans nom (invité qui ouvre son lien) : nom du compte, sinon celui de l'appareil ou
+    // tiré au sort ; modifiable au salon. Table de tournoi : nom de l'inscription.
+    private async Task NameSeatAsync()
+    {
+        if (_view is not { Step: OnlineStep.Lobby, Tournament: null, Mine.Name.Length: 0 }) return;
+        var result = await Hub.SendAsync(new(OnlineCommandType.SetName, await Games.DefaultNameAsync()));
+        if (result.Ok) await RefreshAsync();
     }
 
     private string WatchLink => $"{Nav.BaseUri}online/g/{_view?.Code ?? Code}";

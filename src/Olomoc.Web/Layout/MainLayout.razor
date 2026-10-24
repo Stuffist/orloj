@@ -12,7 +12,7 @@
 
 <div class="app-shell@(IsWindow ? " compact" : null)">
     <header class="app-header">
-        <a class="mark" href="@Section/" title="@(L.Loaded ? L.Ui(Home) : null)"></a>
+        <a class="mark" href="@(Section == "online" ? "builder/play" : Section + "/")" title="@(L.Loaded ? L.Ui(Home) : null)"></a>
         <div class="app-titles">
             @if (L.Loaded)
             {
@@ -61,12 +61,8 @@
         _ => "nav.builder",
     };
 
-    private string Title => Section switch
-    {
-        "pairings" => "pairings.title",
-        "online" => "online.title",
-        _ => "app.title",
-    };
+    // Parties en ligne : sous l'onglet Partie, avec le titre du site (sous-titre propre).
+    private string Title => Section == "pairings" ? "pairings.title" : "app.title";
 
     private string Subtitle => Section switch
     {

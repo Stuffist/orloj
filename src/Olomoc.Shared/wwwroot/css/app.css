@@ -989,6 +989,7 @@ body {
 }
 .online-die.hit { color: #fff; border-color: var(--rust-soft); background: var(--rust); }
 .online-successes { font-size: .85rem; color: var(--muted); }
+.online-verdict { font-weight: 600; margin: .6rem 0 0; }
 .online-commands { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .8rem; }
 .online-commands .btn { min-height: 2.4rem; }
 .online-camps { display: flex; flex-direction: column; gap: 1.2rem; }
@@ -1004,6 +1005,9 @@ body {
 }
 .online-log time { color: var(--muted); margin-right: .4rem; font-variant-numeric: tabular-nums; }
 .online-games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+/* Page Partie sans partie en cours : cadre « Jouer en ligne ». */
+.online-start { margin-bottom: 1rem; }
+.online-start h3 { margin: 1rem 0 .5rem; font-size: .95rem; }
 .online-games li { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 .online-games .btn { margin-left: auto; }
 @media (max-width: 600px) {

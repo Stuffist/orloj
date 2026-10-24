@@ -4,7 +4,11 @@ using Olomoc.Tournaments;
 
 namespace Olomoc.Online;
 
-public sealed record CreateOnlineRequest(string? Name = null);
+/// <summary>
+/// Nouvelle partie libre : nom du créateur, et sa cabale s'il en a déjà une (partie locale ouverte
+/// en ligne) : son siège est alors prêt d'office.
+/// </summary>
+public sealed record CreateOnlineRequest(string? Name = null, CabalExport? Cabal = null);
 
 /// <summary>Partie créée : son code, le jeton du créateur (siège A) et celui de l'invité (siège B).</summary>
 public sealed record OnlineCreated(string Code, string Token, string InviteToken);

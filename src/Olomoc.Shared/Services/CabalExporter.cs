@@ -57,6 +57,19 @@ public sealed class CabalExporter
                 equipment[i] is { } e ? new IdName(e.Id, _l.EquipmentName(e).Text) : null))
             .ToList());
 
+    /// <summary>
+    /// Cabale d'une partie (ouvrir en ligne une partie locale) : rouages du rang 1 au rang 3 et leur
+    /// carte de départ. La carte supplémentaire (Medic Ruzicka) n'en fait pas partie : elle se
+    /// choisit en partie.
+    /// </summary>
+    public CabalExport FromGame(GameState state, CatalogService catalog)
+    {
+        var cogs = state.Cogs.OrderBy(c => c.Rank).ToList();
+        return ToModel(state.Name, state.Faction,
+            cogs.Select(c => catalog.CogById(c.CogId)).ToList(),
+            cogs.Select(c => c.EquipmentId is { } e ? catalog.EquipmentById(e) : null).ToList());
+    }
+
     public string ToJson(string? cabalName, string? faction, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment) =>
         JsonSerializer.Serialize(ToModel(cabalName, faction, cogs, equipment), JsonOpts);
 

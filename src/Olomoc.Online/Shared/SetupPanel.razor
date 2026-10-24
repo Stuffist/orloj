@@ -4,7 +4,33 @@
 @inject LocalizationService L
 
 <section class="panel">
-    @if (View.Step == OnlineStep.Initiative)
+    @if (_held is { } held)
+    {
+        @* Jet complet, gardé 2 s à l'écran : le serveur a déjà désigné J1 (ou demandé de relancer). *@
+        <h2>@L.Ui("online.initiative.title")</h2>
+        <ul class="online-dice-rows">
+            @for (var i = 0; i < View.Seats.Count; i++)
+            {
+                <li>
+                    <span class="online-seat-name">@View.Seats[i].Name</span>
+                    @if (held.Dice[i] is { } dice)
+                    {
+                        <span class="online-dice">
+                            @foreach (var d in dice)
+                            {
+                                <span class="online-die @(d >= OnlineRules.Success ? "hit" : null)">@d</span>
+                            }
+                        </span>
+                        <span class="online-successes">@L.Ui("online.initiative.successes", OnlineRules.Successes(dice))</span>
+                    }
+                </li>
+            }
+        </ul>
+        <p class="@(held.First is null ? "export-warning" : "online-verdict")">
+            @(held.First is { } first ? L.Ui("online.first", View.Seats[first].Name) : L.Ui("online.initiative.tie"))
+        </p>
+    }
+    else if (View.Step == OnlineStep.Initiative)
     {
         <h2>@L.Ui("online.initiative.title")</h2>
         <p class="hint">@L.Ui("online.initiative.help", OnlineRules.InitiativeDice, OnlineRules.Success)</p>
@@ -69,4 +95,48 @@
     [Parameter, EditorRequired] public Func<OnlineCommand, Task> Send { get; set; } = default!;
 
     private string _agenda = Agendas.All[0];
+
+    // ---- Résultat du jet, gardé 2 s ----
+    // Au second jet, le serveur désigne J1 (étape suivante) ou efface les dés (égalité) : sans pause,
+    // le résultat disparaît aussitôt. Le jet complet est relu dans le journal (« initiative » de
+    // chaque siège, puis « first » ou « initiativeTie ») et affiché 2 s, seulement quand on le voit
+    // arriver (pas au chargement de la page).
+    private const int HoldMilliseconds = 2000;
+
+    private sealed record InitiativeRound(IReadOnlyList<int>?[] Dice, int? First);
+
+    private DateTimeOffset? _lastRound;     // fin du dernier jet complet déjà vu
+    private bool _started;
+    private InitiativeRound? _held;
+    private int _holdId;
+
+    protected override void OnParametersSet()
+    {
+        var log = View.Log;
+        var end = -1;
+        for (var i = log.Count - 1; i >= 0 && end < 0; i--)
+            if (log[i].Key is "first" or "initiativeTie") end = i;
+        var at = end >= 0 ? log[end].At : (DateTimeOffset?)null;
+        if (!_started)
+        {
+            (_started, _lastRound) = (true, at);
+            return;
+        }
+        if (at is null || at == _lastRound) return;
+        _lastRound = at;
+
+        // Les jets de ce tour : entrées « initiative » juste avant la fin, une par siège.
+        var dice = new IReadOnlyList<int>?[View.Seats.Count];
+        for (var i = end - 1; i >= 0 && log[i].Key == "initiative"; i--)
+            if (log[i].Seat is { } seat && seat < dice.Length && dice[seat] is null && log[i].Args is { Count: > 0 } args)
+                dice[seat] = args[0].Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
+        _held = new InitiativeRound(dice, log[end].Key == "first" ? log[end].Seat : null);
+        var id = ++_holdId;
+        _ = Task.Delay(HoldMilliseconds).ContinueWith(_ => InvokeAsync(() =>
+        {
+            if (_holdId != id) return;
+            _held = null;
+            StateHasChanged();
+        }));
+    }
 }

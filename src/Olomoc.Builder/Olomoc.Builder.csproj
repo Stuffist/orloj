@@ -19,6 +19,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Olomoc.Shared\Olomoc.Shared.csproj" />
+    <!-- Page Partie : cadre « Jouer en ligne » (créer un salon, parties suivies). -->
+    <ProjectReference Include="..\Olomoc.Online\Olomoc.Online.csproj" />
   </ItemGroup>
 
 </Project>

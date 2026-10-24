@@ -45,6 +45,10 @@ else
         {
             <a class="btn" href="builder/play">@L.Ui("play.launch.resumeShort", Math.Min(game.State.Cycle, GameSession.Cycles))</a>
         }
+        else if (Games.OnlineCode is { } online)
+        {
+            <a class="btn" href="online/g/@online">@L.Ui("play.launch.resumeOnline", online)</a>
+        }
         @if (_loadNotice is not null)
         {
             <p class="load-notice" role="status">
@@ -740,7 +744,7 @@ else
 
     private async Task StartGameAsync()
     {
-        if (Games.Session is not null && !await JS.InvokeAsync<bool>("confirm", L.Ui("play.launch.replace"))) return;
+        if (Games.HasGame && !await JS.InvokeAsync<bool>("confirm", L.Ui("play.launch.replace"))) return;
         await Games.StartAsync(GameSession.NewGame(_cabalName, NullIfEmpty(_faction), _cogs, _equipment));
         Nav.NavigateTo("builder/play");
     }
