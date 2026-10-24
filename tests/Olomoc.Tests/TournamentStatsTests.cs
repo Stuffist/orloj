@@ -120,7 +120,7 @@ public class TournamentStatsTests
         var x = new Olomoc.Services.CabalExporter(d.L);
         CabalExport Cabal(params (string Cog, string Equipment)[] slots) =>
             x.ToModel("Secrète", "MAISEL", slots.Select(s => (Cog?)d.Cog(s.Cog)).ToArray(), slots.Select(s => (Equipment?)d.Equipment(s.Equipment)).ToArray());
-        var cabal = Cabal(("3R06", "Phéromones"), ("2R08", "Carapace"), ("1R01", "Harmonium"));
+        var cabal = Cabal(("3R06", "E03" /* Phéromones */), ("2R08", "D01" /* Carapace */), ("1R01", "E11" /* Harmonium */));
         var t = new Tournament
         {
             Code = "BBBBBB", Name = "Open", CabalsPerPlayer = 1, Phase = TournamentPhase.Finished,

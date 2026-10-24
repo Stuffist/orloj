@@ -1997,11 +1997,6 @@
         "front": "3_E29.jpg"
       },
       "set": "2025",
-      "buildRules": [
-        {
-          "type": "ALL_MINISTRIES"
-        }
-      ],
       "published": true
     },
     {

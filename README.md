@@ -259,10 +259,10 @@ les autres langues se replient dessus).
     faction affilié à l'Axe, de rang 1 ou 2.
   - `RECRUIT_WEARER` — *Asservisseur mental* : le rouage équipé, de rang 1 ou 2,
     peut être recruté hors faction (chez les Autres).
-  - `ALL_MINISTRIES` — *Passe-droit du Census* : le rouage équipé compte comme
-    affilié à tous les Ministères (équipements/dons disponibles, recrutement).
-    Il ne rend pas disponible son propre Passe-droit : un rouage de la
-    Coordination reste nécessaire.
+  - `ALL_MINISTRIES` — aucune carte actuellement (le *Passe-droit du Census* la
+    portait avant sa mise à jour) : le rouage équipé compte comme affilié à tous
+    les Ministères (équipements/dons disponibles, recrutement). Il ne rend pas
+    disponible sa propre carte : un rouage du Ministère de celle-ci reste nécessaire.
 
   Les rouages hors faction ainsi recrutables apparaissent dans la liste avec la
   mention « via … ». La fiche d'un rouage choisi donne ses factions (logo et nom),

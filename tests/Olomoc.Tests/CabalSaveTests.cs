@@ -12,7 +12,7 @@ public class CabalSaveTests
     {
         var d = await AppData.CreateAsync();
         Cog?[] cogs = { d.Cog("3R05"), d.Cog("2R04"), d.Cog("1R01") };
-        Equipment?[] equipment = { d.Equipment("Harmonium"), null, d.Equipment("Asservisseur mental") };
+        Equipment?[] equipment = { d.Equipment("E11" /* Harmonium */), null, d.Equipment("E13" /* Asservisseur mental */) };
         return (d, new CabalExporter(d.L).ToModel(name, "MAISEL", cogs, equipment));
     }
 
@@ -22,7 +22,7 @@ public class CabalSaveTests
         var (d, cabal) = await Export();
         var json = new CabalExporter(d.L).ToJson(cabal.Name, "MAISEL",
             new Cog?[] { d.Cog("3R05"), d.Cog("2R04"), d.Cog("1R01") },
-            new Equipment?[] { d.Equipment("Harmonium"), null, d.Equipment("Asservisseur mental") });
+            new Equipment?[] { d.Equipment("E11" /* Harmonium */), null, d.Equipment("E13" /* Asservisseur mental */) });
 
         var read = CabalExporter.FromJson(json);
         Assert.NotNull(read);
@@ -32,7 +32,7 @@ public class CabalSaveTests
         var resolved = d.Catalog.Resolve(read);
         Assert.Equal("MAISEL", resolved.Faction);
         Assert.Equal(new[] { "3R05", "2R04", "1R01" }, resolved.Cogs.Select(c => c?.Id));
-        Assert.Equal(new[] { "E11", null, d.Equipment("Asservisseur mental").Id }, resolved.Equipment.Select(e => e?.Id));
+        Assert.Equal(new[] { "E11", null, "E13" }, resolved.Equipment.Select(e => e?.Id));
         Assert.Empty(resolved.Missing);
     }
 

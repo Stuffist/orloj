@@ -35,7 +35,7 @@ public class CardSheetTests
     {
         var d = await AppData.GetAsync();
         Cog?[] cogs = { d.Cog("3R05"), d.Cog("2R04"), d.Cog("1R01") };
-        Equipment?[] equipment = { d.Equipment("Harmonium"), null, d.Equipment("Asservisseur mental") };
+        Equipment?[] equipment = { d.Equipment("E11" /* Harmonium */), null, d.Equipment("E13" /* Asservisseur mental */) };
 
         var value = CardSheet.Encode(cogs, equipment);
         Assert.Equal($"3R05.E11,2R04,1R01.{equipment[2]!.Id}", value);

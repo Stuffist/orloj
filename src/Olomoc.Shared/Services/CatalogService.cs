@@ -114,7 +114,7 @@ public sealed class CatalogService
 
     /// <summary>
     /// Ministères d'un rouage pendant la composition : ceux de sa carte, ou tous
-    /// s'il porte une carte ALL_MINISTRIES (Passe-droit du Census).
+    /// s'il porte une carte ALL_MINISTRIES.
     /// </summary>
     private IReadOnlyCollection<string> EffectiveMinistries(Cog cog, Equipment? equipment) =>
         equipment?.GrantsAllMinistries == true ? _allMinistries : cog.Ministries;
@@ -271,8 +271,8 @@ public sealed class CatalogService
     /// Équipements/dons proposables pour le rouage de l'emplacement <paramref name="slot"/>,
     /// selon la règle du LDR p.32 : affilié à la faction de la cabale, OU à un ministère
     /// présent parmi les rouages sélectionnés, OU au rouage équipé. Les ministères
-    /// conférés par un Passe-droit porté ailleurs comptent ; ceux du rouage lui-même non,
-    /// puisque l'équipement qu'on lui choisit remplacerait le Passe-droit.
+    /// conférés par une carte ALL_MINISTRIES portée ailleurs comptent ; ceux du rouage lui-même
+    /// non, puisque l'équipement qu'on lui choisit remplacerait cette carte.
     /// </summary>
     public List<Equipment> AvailableEquipment(int slot, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment, string? faction)
     {
@@ -427,7 +427,7 @@ public sealed class CatalogService
 
     /// <summary>
     /// Le rouage j peut-il rendre disponible un équipement/don de ce Ministère porté en
-    /// <paramref name="wearer"/> ? Par sa carte, ou par un Passe-droit — mais pas le Passe-droit
+    /// <paramref name="wearer"/> ? Par sa carte, ou par une carte ALL_MINISTRIES — mais pas celle
     /// qu'il porte lui-même.
     /// </summary>
     private bool CanUnlock(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment, int j, int wearer, string ministry) =>

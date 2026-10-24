@@ -580,7 +580,7 @@ else
             foreach (var d in swap.Displaced) _equipment[d] = null;
         }
         _equipment[idx] = eq;
-        PruneEquipment();                   // retirer un Passe-droit peut invalider les autres équipements/dons
+        PruneEquipment();                   // retirer une carte ALL_MINISTRIES peut invalider les autres équipements/dons
         Recompute();
     }
 

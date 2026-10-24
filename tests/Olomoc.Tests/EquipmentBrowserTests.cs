@@ -15,14 +15,14 @@ public class EquipmentBrowserTests
 
         // Faction seule : ses cartes.
         var faction = d.Catalog.EquipableByCabal(new Olomoc.Models.Cog?[3], none, "MAISEL")!;
-        Assert.Contains(d.Equipment("Harmonium").Id, faction);
-        Assert.DoesNotContain(d.Equipment("Phéromones").Id, faction);
+        Assert.Contains("E11" /* Harmonium */, faction);
+        Assert.DoesNotContain("E03" /* Phéromones */, faction);
 
         // Harmonie et Effort : leurs Ministères, la faction ; pas la Sécurité, l'Axe ni une autre faction.
         var cogs = new Olomoc.Models.Cog?[] { d.Cog("3R06"), d.Cog("2R11"), null };
         var equipable = d.Catalog.EquipableByCabal(cogs, none, "MAISEL")!;
-        foreach (var name in new[] { "Phéromones", "Ration", "Harmonium" }) Assert.Contains(d.Equipment(name).Id, equipable);
-        foreach (var name in new[] { "Lumen", "Carapace", "Asservisseur mental" }) Assert.DoesNotContain(d.Equipment(name).Id, equipable);
+        foreach (var id in new[] { "E03" /* Phéromones */, "E07" /* Ration */, "E11" /* Harmonium */ }) Assert.Contains(id, equipable);
+        foreach (var id in new[] { "E08" /* Lumen */, "D01" /* Carapace */, "E13" /* Asservisseur mental */ }) Assert.DoesNotContain(id, equipable);
 
         var groups = EquipmentBrowser.Browse(d.Catalog, d.L, null, "", EquipmentSort.Ministry, equipable);
         Assert.Equal(equipable.Count, groups.Sum(g => g.Items.Count));
@@ -34,7 +34,7 @@ public class EquipmentBrowserTests
     {
         var d = await AppData.GetAsync();
         var cogs = new Olomoc.Models.Cog?[] { d.Cog("3R06"), null, d.Cog("1R01") };
-        var equipment = new Olomoc.Models.Equipment?[] { d.Equipment("Phéromones"), null, null };
+        var equipment = new Olomoc.Models.Equipment?[] { d.Equipment("E03" /* Phéromones */), null, null };
         var (faction, readCogs, readEquipment) = CabalDraft.Read(CabalDraft.Share("MAISEL", cogs, equipment), d.Catalog);
         Assert.Equal("MAISEL", faction);
         Assert.Equal(cogs.Select(c => c?.Id), readCogs.Select(c => c?.Id));

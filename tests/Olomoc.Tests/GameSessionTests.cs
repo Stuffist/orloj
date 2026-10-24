@@ -8,7 +8,7 @@ namespace Olomoc.Tests;
 public class GameSessionTests
 {
     // Cabale Maisel légale : rang 1 Petra Kantor (RRRRSTSSSSSS), rang 2 Le Chasseur, rang 3 Bohdan Gross.
-    private static async Task<GameSession> NewGame(string rank1Equipment = "Harmonium", string rank2Equipment = "Carapace", string rank3Equipment = "Phéromones")
+    private static async Task<GameSession> NewGame(string rank1Equipment = "E11" /* Harmonium */, string rank2Equipment = "D01" /* Carapace */, string rank3Equipment = "E03" /* Phéromones */)
     {
         var d = await AppData.GetAsync();
         var state = GameSession.NewGame("Test", "MAISEL",
@@ -274,9 +274,9 @@ public class GameSessionTests
     public async Task Capacite_limitee_par_partie_Pilules_stabilisantes()
     {
         var d = await AppData.GetAsync();
-        var g = await NewGame(rank3Equipment: "Pilules stabilisantes");
+        var g = await NewGame(rank3Equipment: "E15" /* Pilules stabilisantes */);
         var bohdan = SlotOf(g, "3R06");
-        var pills = d.Equipment("Pilules stabilisantes");
+        var pills = d.Equipment("E15" /* Pilules stabilisantes */);
         var key = GameSession.AbilityKey(pills.Id, 0);
         var ability = pills.Abilities[0];
 
@@ -309,7 +309,7 @@ public class GameSessionTests
         Assert.Equal(AbilityBlock.Stunned, g.CanUse(petra, key, veteran));
         g.SetStunned(petra, false);
 
-        var demolition = d.Equipment("Avis de démolition").Abilities[0];   // 1 pion d'action
+        var demolition = d.Equipment("E18" /* Avis de démolition */).Abilities[0];   // 1 pion d'action
         var dKey = GameSession.AbilityKey("E18", 0);
         g.AdjustActions(petra, -GameSession.ActionsPerCycle);
         Assert.Equal(AbilityBlock.NoActions, g.CanUse(petra, dKey, demolition));
@@ -320,11 +320,11 @@ public class GameSessionTests
     {
         var d = await AppData.GetAsync();
         var ruzicka = d.Cog("3R27");
-        var kit = d.Equipment("Kit d'Intégrité");
-        var hazmat = d.Equipment("Combinaison Hazmat");
+        var kit = d.Equipment("E16" /* Kit d'Intégrité */);
+        var hazmat = d.Equipment("E17" /* Combinaison Hazmat */);
         var g = new GameSession(GameSession.NewGame(null, "BLOCKHAUS",
             new Cog?[] { ruzicka, d.Cog("2R08"), d.Cog("1R01") },
-            new Equipment?[] { kit, d.Equipment("Carapace"), d.Equipment("Harmonium") }));
+            new Equipment?[] { kit, d.Equipment("D01" /* Carapace */), d.Equipment("E11" /* Harmonium */) }));
         var slot = SlotOf(g, "3R27");
 
         // Équipements de l'Intégrité seulement, sans doublon avec ceux de la cabale.
@@ -334,7 +334,7 @@ public class GameSessionTests
         Assert.All(options, e => Assert.True(e.Ministry == "INTEGRITY" && e.Kind == EquipmentKind.EQUIPMENT));
         Assert.Empty(d.Catalog.ExtraEquipmentOptions(d.Cog("1R01"), Array.Empty<string>()));
 
-        Assert.False(g.SetExtraEquipment(slot, ruzicka, kit, d.Equipment("Carapace")));     // hors Intégrité
+        Assert.False(g.SetExtraEquipment(slot, ruzicka, kit, d.Equipment("D01" /* Carapace */)));     // hors Intégrité
         Assert.True(g.SetExtraEquipment(slot, ruzicka, kit, hazmat));
         Assert.Equal(hazmat.Id, g.State.Cogs[slot].ExtraEquipmentId);
         Assert.Equal(ruzicka.LifeLine, g.State.Cogs[slot].LifeLine);
@@ -372,10 +372,10 @@ public class GameSessionTests
     [Fact]
     public async Task Sauvegarde_JSON_aller_retour()
     {
-        var g = await NewGame(rank3Equipment: "Pilules stabilisantes");
+        var g = await NewGame(rank3Equipment: "E15" /* Pilules stabilisantes */);
         g.Wound(0, 3, attack: true, ignoreProtection: false);
         g.SetStunned(1, true);
-        g.Use(0, GameSession.AbilityKey("E15", 0), (await AppData.GetAsync()).Equipment("Pilules stabilisantes").Abilities[0]);
+        g.Use(0, GameSession.AbilityKey("E15", 0), (await AppData.GetAsync()).Equipment("E15" /* Pilules stabilisantes */).Abilities[0]);
 
         var json = GameSession.ToJson(g.State);
         var back = GameSession.FromJson(json);

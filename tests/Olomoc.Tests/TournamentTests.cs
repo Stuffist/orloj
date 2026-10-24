@@ -526,8 +526,8 @@ public class TournamentTests
             x.ToModel(name, "MAISEL", slots.Select(s => (Cog?)d.Cog(s.Cog)).ToArray(),
                 slots.Select(s => (Equipment?)d.Equipment(s.Equipment)).ToArray());
         return (d,
-            Cabal("A", ("3R06", "Phéromones"), ("2R08", "Carapace"), ("1R01", "Harmonium")),
-            Cabal("B", ("3R06", "Dose de Mélisse"), ("2R04", "Phéromones"), ("1R01", "Passe-droit du Census")));
+            Cabal("A", ("3R06", "E03" /* Phéromones */), ("2R08", "D01" /* Carapace */), ("1R01", "E11" /* Harmonium */)),
+            Cabal("B", ("3R06", "E03" /* Phéromones */), ("2R11", "E07" /* Ration */), ("1R01", "E08" /* Lumen */)));
     }
 
     [Fact]

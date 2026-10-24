@@ -17,7 +17,7 @@ public class CabalImportTests
     // Composition légale en Ligue de Maisel (rang 1, 2, 3).
     private static CabalExport Maisel(AppData d, CabalExporter x, string? name = "Assaut") => x.ToModel(name, "MAISEL",
         new Cog?[] { d.Cog("1R01"), d.Cog("2R08"), d.Cog("3R06") },
-        new Equipment?[] { d.Equipment("Harmonium"), d.Equipment("Carapace"), d.Equipment("Phéromones") });
+        new Equipment?[] { d.Equipment("E11" /* Harmonium */), d.Equipment("D01" /* Carapace */), d.Equipment("E03" /* Phéromones */) });
 
     [Fact]
     public async Task Export_texte_relu_a_l_identique()
@@ -53,7 +53,7 @@ public class CabalImportTests
         await d.L.SetLanguageAsync("en");
         var cabal = x.ToModel("B", "MAISEL",
             new Cog?[] { d.Cog("1R01"), d.Cog("2R04"), d.Cog("3R06") },
-            new Equipment?[] { d.Equipment("Passe-droit du Census"), d.Equipment("Phéromones"), d.Equipment("Dose de Mélisse") });
+            new Equipment?[] { d.Equipment("E29" /* Passe-droit du Census */), d.Equipment("E03" /* Phéromones */), d.Equipment("E26" /* Dose de Mélisse */) });
         var result = import.Parse(x.ToText("B", Cogs(d, cabal), Equipment(d, cabal)), "MAISEL");
         Assert.Empty(result.Issues);
         Assert.True(CabalLibrary.SameCards(cabal, result.Cabal!));

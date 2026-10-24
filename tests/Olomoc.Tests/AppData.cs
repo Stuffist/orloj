@@ -39,9 +39,8 @@ public sealed class AppData
 
     public Cog Cog(string id) => Catalog.CogById(id) ?? throw new ArgumentException($"rouage inconnu : {id}");
 
-    /// <summary>Équipement/don par son nom dans la langue de référence.</summary>
-    public Equipment Equipment(string referenceName) =>
-        Catalog.Catalog.Equipment.Single(e => L.ReferenceName(e) == referenceName);
+    /// <summary>Équipement/don par son id (stable, contrairement au nom que l'éditeur peut changer).</summary>
+    public Equipment Equipment(string id) => Catalog.EquipmentById(id) ?? throw new ArgumentException($"équipement/don inconnu : {id}");
 
     private static string FindRoot()
     {

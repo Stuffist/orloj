@@ -20,7 +20,7 @@ public class CabalExportTests
 
     // Composition relevée sur le builder de référence (2026-10-10) et son export texte, à l'identique.
     private static readonly (string, string?)[] Reference =
-        { ("3R05", "Harmonium"), ("2R04", "Chronographe"), ("1R01", "Asservisseur mental") };
+        { ("3R05", "E11" /* Harmonium */), ("2R04", "E12" /* Chronographe */), ("1R01", "E13" /* Asservisseur mental */) };
 
     [Fact]
     public async Task Texte_identique_au_builder_de_reference()
@@ -43,7 +43,7 @@ public class CabalExportTests
     [Fact]
     public async Task Texte_rouage_non_equipe_et_emplacement_vide()
     {
-        var (_, x, cogs, equipment) = await Cabal(("3R05", null), ("2R04", "Chronographe"), ("1R01", null));
+        var (_, x, cogs, equipment) = await Cabal(("3R05", null), ("2R04", "E12" /* Chronographe */), ("1R01", null));
         cogs[1] = null;   // rang 2 non recruté
         Assert.Equal("X\r\nDOMINIK KRALOV\r\nPETRA KANTOR", x.ToText("X", cogs, equipment));
     }
@@ -51,7 +51,7 @@ public class CabalExportTests
     [Fact]
     public async Task Texte_en_majuscules_sans_accents()
     {
-        var (_, x, cogs, equipment) = await Cabal(("3R27", "Thymorégulateur"), ("2R28", "Fumigènes"), ("1R29", "Lumen"));
+        var (_, x, cogs, equipment) = await Cabal(("3R27", "E45" /* Thymorégulateur */), ("2R28", "E43" /* Fumigènes */), ("1R29", "E08" /* Lumen */));
         Assert.Equal("MEDIC RUZICKA - THYMOREGULATEUR\r\nOPERATEUR SIKORA - FUMIGENES\r\nCAPORAL VLACH - LUMEN",
             x.ToText(null, cogs, equipment));
     }

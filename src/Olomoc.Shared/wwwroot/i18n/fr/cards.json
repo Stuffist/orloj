@@ -548,7 +548,7 @@
       "abilities": [
         {
           "name": "Kit d'Intégrité",
-          "gameEffect": "Soignez jusqu'à 2 points de vie du rouage équipé ou d'un rouage allié à 1\" de lui."
+          "gameEffect": "Soignez jusqu'à 2 points de vie du rouage équipé."
         }
       ]
     },
@@ -620,7 +620,7 @@
       "abilities": [
         {
           "name": "Manuel de la Marave",
-          "gameEffect": "Le rouage équipé peut réaliser la tactique de combat suivante pour 1 réussite : infligez une blessure qui ignore la protection à la cible de l'attaque."
+          "gameEffect": "Le rouage équipé gagne une valeur de 3{melee} lorsqu'il cible avec une attaque frontale un rouage adverse qui n'a plus de pion {action}."
         }
       ]
     },
@@ -647,7 +647,7 @@
       "abilities": [
         {
           "name": "Dose de Chrono",
-          "gameEffect": "Le rouage équipé subit 1D3 blessures qui ignorent la protection puis réattribuez-lui un pion {action}."
+          "gameEffect": "Le rouage équipé subit 1D3 blessures qui ignorent la protection puis poussez-le X fois. Où X est le résultat du D3."
         }
       ]
     },
@@ -665,7 +665,7 @@
       "abilities": [
         {
           "name": "Passe-droit du Census",
-          "gameEffect": "Le rouage équipé est considéré comme étant affilié à tous les ministères lors de la constitution de votre cabale."
+          "gameEffect": "Le rouage équipé ne peut pas être ciblé par des attaques d'opportunité."
         }
       ]
     },
