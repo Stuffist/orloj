@@ -114,7 +114,7 @@ public class CabalExportTests
     [Fact]
     public async Task Cabale_d_une_partie_locale_pour_l_ouvrir_en_ligne()
     {
-        var (d, x, cogs, equipment) = await Cabal(("1R01", "Harmonium"), ("2R08", "Carapace"), ("3R06", "Phéromones"));
+        var (d, x, cogs, equipment) = await Cabal(("1R01", "E11" /* Harmonium */), ("2R08", "D01" /* Carapace */), ("3R06", "E03" /* Phéromones */));
         var game = new GameSession(GameSession.NewGame("Ma cabale", "MAISEL", cogs, equipment));
         game.Wound(0, 3, attack: false, ignoreProtection: false);          // l'état de la partie ne compte pas
 
