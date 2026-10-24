@@ -37,9 +37,9 @@ window.olomoc = {
     },
 
     // Petite fenêtre à part (réutilisée si elle est déjà ouverte sous ce nom), à poser à côté
-    // de la page. Renvoie false si le navigateur l'a bloquée.
-    openWindow(url, name) {
-        const w = window.open(url, name, "popup,width=480,height=900");
+    // de la page (largeur et hauteur facultatives). Renvoie false si le navigateur l'a bloquée.
+    openWindow(url, name, width = 480, height = 900) {
+        const w = window.open(url, name, `popup,width=${width},height=${height}`);
         if (!w) return false;
         w.focus();
         return true;

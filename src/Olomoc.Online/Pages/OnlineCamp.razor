@@ -1,0 +1,74 @@
+@page "/online/g/{Code}/camp/{Seat:int}"
+@implements IAsyncDisposable
+@inject LocalizationService L
+@inject CatalogService Catalog
+@inject OnlineConnection Hub
+
+@* Camp d'un joueur seul, en lecture : fenêtre détachée depuis la partie (?window=true, en-tête
+   compact), à poser sur un autre écran. Suivi en spectateur, sans jeton : la présence du joueur
+   n'est pas touchée, et rien ne s'y modifie. *@
+
+@if (!_ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else if (_view is not { } v)
+{
+    <p class="export-warning" role="alert">@L.Ui($"online.error.{_error ?? "network"}")</p>
+}
+else if (v.Seats.ElementAtOrDefault(Seat) is not { State: { } state } seat)
+{
+    <p class="empty">@L.Ui("online.other.none")</p>
+}
+else
+{
+    <p class="tn-meta online-camp-meta">
+        @L.Ui("online.game.title", v.Code)
+        · @L.Ui("online.cycle", Math.Min(v.Cycle, GameSession.Cycles), GameSession.Cycles)
+        · @L.Ui("play.hunt") @v.Hunt/@GameSession.MaxHunt
+        @if (Hub.Status != Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
+        {
+            <span class="export-warning"> · @L.Ui("online.reconnecting")</span>
+        }
+    </p>
+    <div class="online-camps">
+        <CampPanel Seat="seat" Session="new GameSession(state)" IsFirst="@(v.First == Seat)" />
+    </div>
+}
+
+@code {
+    [Parameter] public string Code { get; set; } = "";
+    [Parameter] public int Seat { get; set; }
+
+    private bool _ready;
+    private string? _error;
+    private OnlineView? _view;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        await L.EnsureLoadedAsync();
+        await Catalog.EnsureLoadedAsync();
+        Hub.Changed += OnServerChanged;
+        Hub.StatusChanged += OnChanged;
+        var joined = await Hub.JoinAsync(Code, token: null);
+        (_view, _error) = (joined.View, joined.Error);
+        _ready = true;
+    }
+
+    private Task OnServerChanged() => InvokeAsync(async () =>
+    {
+        _view = await Hub.GetViewAsync() ?? _view;
+        StateHasChanged();
+    });
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public async ValueTask DisposeAsync()
+    {
+        L.Changed -= OnChanged;
+        Hub.Changed -= OnServerChanged;
+        Hub.StatusChanged -= OnChanged;
+        await Hub.LeaveAsync();
+    }
+}

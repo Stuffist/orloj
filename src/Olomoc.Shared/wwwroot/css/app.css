@@ -994,6 +994,15 @@ body {
 .online-commands .btn { min-height: 2.4rem; }
 .online-camps { display: flex; flex-direction: column; gap: 1.2rem; }
 .online-camp .play-bar { position: static; }
+/* Camp adverse (joueur) : à masquer ou détacher ; fenêtre détachée : meta au-dessus du camp. */
+.online-other-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.online-other-head + .online-camp { margin-top: -.6rem; }      /* camp affiché : collé à son en-tête */
+.online-other-head:last-child { margin-bottom: 1rem; }           /* camp replié ou détaché : espace avant le journal */
+.online-other-head h2 { margin: 0 auto 0 0; font-size: 1.05rem; }
+.online-camp-meta { margin: 0 0 .8rem; }
+/* Faction et nom de la cabale sur une ligne, alignés (« Ligue de Maisel · Ma cabale »). */
+.camp-line { display: flex; flex-wrap: wrap; align-items: center; column-gap: .45em; row-gap: .1em; }
+.camp-line .emblem-name + .camp-cabal::before { content: "·"; margin-right: .45em; }
 .online-camp.mine .play-bar { border-color: var(--rust-soft); }
 .online-over { border-color: var(--rust-soft); }
 .online-score { font-size: 1.1rem; margin: .3rem 0 .6rem; }

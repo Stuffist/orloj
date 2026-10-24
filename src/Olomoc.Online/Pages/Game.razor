@@ -134,9 +134,25 @@ else
                 @foreach (var i in CampOrder(v))
                 {
                     var seat = v.Seats[i];
+                    var other = v.Me is { } me && me != i;
                     if (SessionOf(v, i) is not { } session) continue;
-                    <CampPanel Seat="seat" Session="session" Editable="@(v.Me == i && v.Step == OnlineStep.Cycle)"
-                               IsFirst="@(v.First == i)" OnChanged="ChangedAsync" />
+                    @if (other)
+                    {
+                        @* Camp adverse : à masquer, ou à détacher dans une fenêtre à part (autre écran). *@
+                        var index = i;
+                        <div class="online-other-head">
+                            <h2>@L.Ui("online.other.title", seat.Name)</h2>
+                            <button class="btn small" aria-expanded="@(_otherShown ? "true" : "false")" @onclick="() => _otherShown = !_otherShown">
+                                @L.Ui(_otherShown ? "equipment.hide" : "equipment.show")
+                            </button>
+                            <button class="btn small" title="@L.Ui("online.other.detach.title")" @onclick="() => DetachAsync(index)">@L.Ui("equipment.detach")</button>
+                        </div>
+                    }
+                    @if (!other || _otherShown)
+                    {
+                        <CampPanel Seat="seat" Session="session" Editable="@(v.Me == i && v.Step == OnlineStep.Cycle)"
+                                   IsFirst="@(v.First == i)" OnChanged="ChangedAsync" />
+                    }
                 }
             </div>
             break;
@@ -196,6 +212,16 @@ else
     // Partie courante de l'appareil : « Quitter la partie » la retire de l'onglet Partie (elle reste
     // sur le serveur, et dans « Mes parties en ligne » pour la reprendre).
     private bool IsCurrent => string.Equals(Current.OnlineCode, Code, StringComparison.OrdinalIgnoreCase);
+
+    // Camp adverse affiché dans la page ; détaché (fenêtre ouverte), il s'y replie. Fenêtre bloquée
+    // par le navigateur : il reste affiché.
+    private bool _otherShown = true;
+
+    private async Task DetachAsync(int seat)
+    {
+        if (await JS.InvokeAsync<bool>("olomoc.openWindow", $"online/g/{Code}/camp/{seat}?window=true", $"olomoc-camp-{Code}", 760, 900))
+            _otherShown = false;
+    }
 
     private async Task LeaveAsync()
     {

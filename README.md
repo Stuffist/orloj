@@ -575,9 +575,12 @@ transite vers une autre connexion.
   - **numéro des joueurs** : 5 D6 lancés par le serveur, réussite à 5+, le plus de réussites
     devient J1, égalité : on relance (LDR p.31). Après le second jet, les deux jets et le verdict
     restent affichés 2 s avant l'étape suivante (`SetupPanel`, relus dans le journal) ;
-  - **agenda** : choisi ou tiré au sort par J1 ;
+  - **agenda** : choisi ou tiré au sort par J1 ; le tirage est proposé, à confirmer ou à
+    relancer (rien n'est envoyé avant « Confirmer ») ;
   - **cycles** : chacun suit son camp avec les fiches du mode partie (`PlayCogCard`, en
-    lecture seule pour le camp adverse). La fin de cycle s'applique aux deux camps quand les
+    lecture seule pour le camp adverse ; celui-ci se masque, ou se détache dans une fenêtre à
+    part pour un autre écran : `Pages/OnlineCamp.razor`, `/online/g/{code}/camp/{siège}?window=true`,
+    suivie en spectateur). La fin de cycle s'applique aux deux camps quand les
     deux l'ont confirmée ; la partie se termine après le 4ᵉ cycle, ou dès qu'un Fiel (propre à
     chaque joueur) ou la traque atteint 3.
 - **Traque commune** : un seul niveau pour les deux joueurs, affiché dans l'en-tête de la partie.

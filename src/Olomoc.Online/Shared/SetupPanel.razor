@@ -1,6 +1,6 @@
 @* Mise en place guidée (LDR p.31). Initiative : chaque joueur lance 5 D6 (tirés par le serveur),
    réussite à 5+, le plus de réussites devient J1, égalité : on relance. Agenda : J1 le choisit
-   ou le tire au sort parmi le recueil officiel. *@
+   ou le tire au sort parmi le recueil officiel (tirage à confirmer, ou à relancer). *@
 @inject LocalizationService L
 
 <section class="panel">
@@ -73,15 +73,21 @@
         @if (View.Me == View.First)
         {
             <div class="online-inline">
-                <select aria-label="@L.Ui("online.agenda.title")" value="@_agenda" @onchange="e => _agenda = e.Value?.ToString() ?? Agendas.All[0]">
+                @* Tirage au sort : propose un agenda dans la liste, à confirmer ou relancer (rien n'est
+                   envoyé avant « Confirmer »). *@
+                <select aria-label="@L.Ui("online.agenda.title")" value="@_agenda" @onchange="e => (_agenda, _drawn) = (e.Value?.ToString() ?? Agendas.All[0], false)">
                     @foreach (var id in Agendas.All)
                     {
                         <option value="@id">@L.Ui($"agenda.{id}")</option>
                     }
                 </select>
-                <button class="btn primary" type="button" @onclick="() => Send(new(OnlineCommandType.ChooseAgenda, _agenda))">@L.Ui("online.agenda.choose")</button>
-                <button class="btn" type="button" @onclick="() => Send(new(OnlineCommandType.DrawAgenda))">@L.Ui("online.agenda.draw")</button>
+                <button class="btn primary" type="button" @onclick="() => Send(new(OnlineCommandType.ChooseAgenda, _agenda))">@L.Ui(_drawn ? "online.agenda.confirm" : "online.agenda.choose")</button>
+                <button class="btn" type="button" @onclick="Draw">@L.Ui(_drawn ? "online.agenda.redraw" : "online.agenda.draw")</button>
             </div>
+            @if (_drawn)
+            {
+                <p class="online-verdict">@L.Ui("online.agenda.drawn", L.Ui($"agenda.{_agenda}"))</p>
+            }
         }
         else
         {
@@ -95,6 +101,14 @@
     [Parameter, EditorRequired] public Func<OnlineCommand, Task> Send { get; set; } = default!;
 
     private string _agenda = Agendas.All[0];
+    private bool _drawn;
+
+    // Agenda au hasard dans le recueil officiel, autre que celui proposé : à confirmer ou relancer.
+    private void Draw()
+    {
+        var others = Agendas.All.Where(id => id != _agenda).ToList();
+        (_agenda, _drawn) = (others[Random.Shared.Next(others.Count)], true);
+    }
 
     // ---- Résultat du jet, gardé 2 s ----
     // Au second jet, le serveur désigne J1 (étape suivante) ou efface les dés (égalité) : sans pause,

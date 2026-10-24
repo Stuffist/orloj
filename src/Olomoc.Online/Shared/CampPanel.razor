@@ -18,12 +18,15 @@
                         <span class="tn-first-mark" title="@L.Ui("pairings.result.first.played")">@L.Ui("pairings.result.first")</span>
                     }
                 </span>
-                <span class="play-faction">
+                <span class="play-faction camp-line">
                     @if (s.Faction is { } f)
                     {
                         <span class="emblem-name"><Emblem Faction="@f" />@L.FactionName(f)</span>
                     }
-                    @(s.Name is { } n ? $" · {n}" : null)
+                    @if (s.Name is { } n)
+                    {
+                        <span class="camp-cabal">@n</span>
+                    }
                 </span>
             </div>
         </div>
