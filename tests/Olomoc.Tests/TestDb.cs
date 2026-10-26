@@ -4,7 +4,7 @@ using Olomoc.Server.Data;
 
 namespace Olomoc.Tests;
 
-/// <summary>Base SQLite d'un dossier de données temporaire (créée et mise à jour à l'ouverture).</summary>
+/// <summary>SQLite database of a temporary data folder (created and updated when opened).</summary>
 public sealed class TestDb : IDbContextFactory<OlomocDb>
 {
     private readonly DbContextOptions<OlomocDb> _options;
@@ -26,25 +26,25 @@ public sealed class TestDb : IDbContextFactory<OlomocDb>
 
     public OlomocDb CreateDbContext() => new(_options);
 
-    /// <summary>Document enregistré (sorte, code), ou null.</summary>
+    /// <summary>Stored document (kind, code), or null.</summary>
     public StoredDocumentRow? Find(string kind, string code)
     {
         using var db = CreateDbContext();
         return db.Documents.AsNoTracking().FirstOrDefault(d => d.Kind == kind && d.Code == code);
     }
 
-    /// <summary>Modifie directement un document (dates, contenu illisible…).</summary>
+    /// <summary>Changes a document directly (dates, unreadable content…).</summary>
     public void Change(string kind, string code, Action<StoredDocumentRow> change)
     {
         using var db = CreateDbContext();
-        var row = db.Documents.Find(kind, code) ?? throw new InvalidOperationException($"{kind}/{code} absent");
+        var row = db.Documents.Find(kind, code) ?? throw new InvalidOperationException($"{kind}/{code} missing");
         change(row);
         db.SaveChanges();
     }
 
     /// <summary>
-    /// Supprime un dossier de données : les connexions SQLite gardées en réserve tiennent le
-    /// fichier ouvert (Windows refuserait la suppression).
+    /// Deletes a data folder: the pooled SQLite connections keep the file open (Windows would
+    /// refuse the deletion).
     /// </summary>
     public static void Delete(string dataDirectory)
     {

@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Partie en ligne : étapes guidées, sièges, cabales secrètes, suivi des camps (référentiel réel).</summary>
+/// <summary>Online game: guided steps, seats, secret cabals, tracking of the sides (real card catalog).</summary>
 public class OnlineRulesTests
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 16, 20, 0, 0, TimeSpan.Zero);
@@ -32,7 +32,7 @@ public class OnlineRulesTests
 
     private static string Key(OnlineResult r) => Assert.Single(r.Problems).Key;
 
-    /// <summary>Deux joueurs nommés, cabales choisies et prêts : la partie est à l'initiative.</summary>
+    /// <summary>Two named players, cabals chosen and ready: the game is at the initiative.</summary>
     private static async Task<(AppData D, OnlineGame G)> Started()
     {
         var (d, a, b) = await Cabals();
@@ -46,7 +46,7 @@ public class OnlineRulesTests
         return (d, g);
     }
 
-    /// <summary>Partie lancée, J1 tiré, agenda choisi : premier cycle.</summary>
+    /// <summary>Game started, P1 drawn, agenda chosen: first cycle.</summary>
     private static async Task<(AppData D, OnlineGame G)> InCycle()
     {
         var (d, g) = await Started();
@@ -59,7 +59,7 @@ public class OnlineRulesTests
     private static GameState Copy(GameState s) => GameSession.FromJson(GameSession.ToJson(s))!;
 
     [Fact]
-    public async Task Salon_cabales_secretes_puis_revelees_quand_les_deux_sont_prets()
+    public async Task Lobby_cabals_secret_then_revealed_when_both_are_ready()
     {
         var (d, a, b) = await Cabals();
         var g = NewGame();
@@ -71,7 +71,7 @@ public class OnlineRulesTests
         Ok(Do(g, 0, new(OnlineCommandType.SetReady, Flag: true), d.Catalog));
         Assert.Equal("onlineReady", Key(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: b), d.Catalog)));
 
-        // Bo ne voit pas la cabale d'Ana (ni sa faction), Ana voit la sienne ; un spectateur aucune.
+        // Bo does not see Ana's cabal (nor her faction), Ana sees her own; a spectator none.
         var bo = OnlineRules.View(g, 1, new HashSet<int>());
         Assert.True(bo.Seats[0].HasCabal);
         Assert.Null(bo.Seats[0].Cabal);
@@ -89,7 +89,7 @@ public class OnlineRulesTests
     }
 
     [Fact]
-    public async Task Cabale_illegale_ou_non_inscrite_refusee()
+    public async Task Illegal_or_unregistered_cabal_refused()
     {
         var (d, a, b) = await Cabals();
         var g = NewGame();
@@ -99,14 +99,14 @@ public class OnlineRulesTests
         Assert.All(r.Problems, p => Assert.Equal("cabalIllegal", p.Key));
         Assert.Null(g.Seats[0].Cabal);
 
-        // Table de tournoi : seules les cabales inscrites (mêmes cartes) sont permises.
+        // Tournament table: only the registered cabals (same cards) are allowed.
         g.Seats[1].AllowedCabals.Add(a);
         Assert.Equal("onlineCabalNotRegistered", Key(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: b), d.Catalog)));
         Ok(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: a with { Name = "Renommée" }), d.Catalog));
     }
 
     [Fact]
-    public async Task Commandes_hors_de_leur_etape_refusees()
+    public async Task Commands_outside_their_step_refused()
     {
         var (d, g) = await Started();
         Assert.Equal("onlineStep", Key(Do(g, 0, new(OnlineCommandType.SetName, "Autre"), d.Catalog)));
@@ -118,10 +118,10 @@ public class OnlineRulesTests
     }
 
     [Fact]
-    public async Task Initiative_cinq_des_a_5_plus_relance_en_cas_d_egalite()
+    public async Task Initiative_five_dice_at_5_plus_roll_again_on_a_tie()
     {
         var (d, g) = await Started();
-        // Égalité forcée : mêmes dés des deux côtés (même graine) → relance.
+        // Forced tie: same dice on both sides (same seed) → roll again.
         Ok(Do(g, 0, new(OnlineCommandType.RollInitiative), d.Catalog, seed: 7));
         Assert.Equal("onlineRolled", Key(Do(g, 0, new(OnlineCommandType.RollInitiative), d.Catalog)));
         Ok(Do(g, 1, new(OnlineCommandType.RollInitiative), d.Catalog, seed: 7));
@@ -129,7 +129,7 @@ public class OnlineRulesTests
         Assert.All(g.Seats, s => Assert.Null(s.Initiative));
         Assert.Contains(g.Log, e => e.Key == "initiativeTie");
 
-        // Graines différentes jusqu'à départager.
+        // Different seeds until there is a winner.
         for (var seed = 1; g.Step == OnlineStep.Initiative; seed += 2)
         {
             Ok(Do(g, 0, new(OnlineCommandType.RollInitiative), d.Catalog, seed));
@@ -142,7 +142,7 @@ public class OnlineRulesTests
     }
 
     [Fact]
-    public async Task Agenda_choisi_ou_tire_par_J1_seulement()
+    public async Task Agenda_chosen_or_drawn_by_P1_only()
     {
         var (d, g) = await Started();
         g.Step = OnlineStep.Agenda;
@@ -155,7 +155,7 @@ public class OnlineRulesTests
     }
 
     [Fact]
-    public async Task Chaque_joueur_suit_son_camp_a_partir_de_la_derniere_revision()
+    public async Task Each_player_tracks_their_side_from_the_last_revision()
     {
         var (d, g) = await InCycle();
         var revision = g.Seats[0].StateRevision;
@@ -171,10 +171,10 @@ public class OnlineRulesTests
         Assert.Equal("Bohdan : 2 blessures", g.Log[^1].Args![0]);
         Assert.Equal(0, g.Seats[1].State!.VictoryPoints);
 
-        // Mise à jour partie d'une révision dépassée : refusée.
+        // Update starting from an outdated revision: refused.
         Assert.Equal("onlineStale", Key(Do(g, 0, new(OnlineCommandType.UpdateState, State: session.State, BasedOn: revision), d.Catalog)));
 
-        // Annulation : l'état précédent revient, une seule fois.
+        // Undo: the previous state comes back, only once.
         Ok(Do(g, 0, new(OnlineCommandType.Undo), d.Catalog));
         Assert.Equal(0, g.Seats[0].State!.VictoryPoints);
         Assert.Equal("onlineNothingToUndo", Key(Do(g, 0, new(OnlineCommandType.Undo), d.Catalog)));
@@ -182,7 +182,7 @@ public class OnlineRulesTests
     }
 
     [Fact]
-    public async Task Etat_incoherent_refuse()
+    public async Task Inconsistent_state_refused()
     {
         var (d, g) = await InCycle();
         var s = g.Seats[0];
@@ -198,24 +198,24 @@ public class OnlineRulesTests
         Assert.Equal("onlineState", Key(Send(n => n.Cogs[1].LifeLine.Add(HealthPointType.S))));
         Assert.Equal("onlineState", Key(Send(n => n.Cogs[1].Darkness = 4)));
         Assert.Equal("onlineState", Key(Send(n => n.Cogs[1].Actions = 5)));
-        Assert.Equal("onlineState", Key(Send(n => n.Cogs[1].Checked = n.Cogs[1].LifeLine.Select(_ => true).Append(true).ToList())));   // plus de cases que de PV
+        Assert.Equal("onlineState", Key(Send(n => n.Cogs[1].Checked = n.Cogs[1].LifeLine.Select(_ => true).Append(true).ToList())));   // more boxes than HP
         Assert.Equal("onlineState", Key(Send(n => n.Bile = 4)));
         Assert.Equal("onlineState", Key(Send(n => n.Cogs[0].ExtraEquipmentId = "E02")));
 
-        // Le cycle et le nom restent ceux du serveur, quoi qu'envoie le joueur.
+        // The cycle and the name stay the server's, whatever the player sends.
         Ok(Send(n => { n.Cycle = 3; n.Name = "Pirate"; }));
         Assert.Equal(1, s.State!.Cycle);
         Assert.Equal("A", s.State.Name);
     }
 
     [Fact]
-    public async Task Fin_de_cycle_quand_les_deux_confirment_puis_fin_de_partie()
+    public async Task End_of_cycle_when_both_confirm_then_end_of_game()
     {
         var (d, g) = await InCycle();
         var s = g.Seats[1];
         var next = Copy(s.State!);
         next.Cogs[0].Actions = 0;
-        next.Cogs[0].Darkness = 3;      // corrompu : +1 Fiel en fin de cycle
+        next.Cogs[0].Darkness = 3;      // corrupted: +1 Bile at the end of the cycle
         Ok(Do(g, 1, new(OnlineCommandType.UpdateState, State: next, BasedOn: s.StateRevision), d.Catalog));
 
         Ok(Do(g, 0, new(OnlineCommandType.SetEndCycle, Flag: true), d.Catalog));
@@ -232,7 +232,7 @@ public class OnlineRulesTests
         Assert.All(g.Seats, x => Assert.False(x.EndCycleReady));
         Assert.Equal("onlineNothingToUndo", Key(Do(g, 1, new(OnlineCommandType.Undo), d.Catalog)));
 
-        // Plus de rouage corrompu : le Fiel n'atteint pas 3, les cycles vont jusqu'au bout.
+        // No corrupted cog left: the Bile does not reach 3, the cycles go to the end.
         next = Copy(s.State);
         next.Cogs[0].Darkness = 0;
         Ok(Do(g, 1, new(OnlineCommandType.UpdateState, State: next, BasedOn: s.StateRevision), d.Catalog));
@@ -246,7 +246,7 @@ public class OnlineRulesTests
     }
 
     [Fact]
-    public async Task Fiel_a_3_partie_terminee_plus_de_fin_de_cycle()
+    public async Task Bile_at_3_game_over_no_more_end_of_cycle()
     {
         var (d, g) = await InCycle();
         var s = g.Seats[0];
@@ -258,7 +258,7 @@ public class OnlineRulesTests
     }
 
     [Fact]
-    public async Task Traque_commune_aux_deux_joueurs_fin_a_3()
+    public async Task Hunt_shared_by_both_players_end_at_3()
     {
         var (d, g) = await InCycle();
         void Hunt(int seat, int hunt)
@@ -272,19 +272,19 @@ public class OnlineRulesTests
         Hunt(0, 2);
         Assert.Equal(2, OnlineRules.View(g, 1, new HashSet<int>()).Hunt);
         Assert.False(OnlineRules.View(g, 1, new HashSet<int>()).Over);
-        Hunt(1, 1);                                         // 2 + 1 : traque à 3, fin pour les deux
+        Hunt(1, 1);                                         // 2 + 1: hunt at 3, end for both
         var view = OnlineRules.View(g, null, new HashSet<int>());
         Assert.Equal(GameSession.MaxHunt, view.Hunt);
         Assert.True(view.Over);
-        Assert.All(view.Seats, s => Assert.False(s.Over));  // personne n'a perdu (Fiel)
+        Assert.All(view.Seats, s => Assert.False(s.Over));  // nobody lost (Bile)
         Assert.Equal("onlineOver", Key(Do(g, 0, new(OnlineCommandType.SetEndCycle, Flag: true), d.Catalog)));
 
-        Hunt(1, 0);                                         // correction : la partie reprend
+        Hunt(1, 0);                                         // correction: the game resumes
         Assert.False(OnlineRules.View(g, 0, new HashSet<int>()).Over);
     }
 
     [Fact]
-    public async Task Vue_sans_jeton_ni_cabales_permises_des_autres()
+    public async Task View_without_tokens_or_the_others_allowed_cabals()
     {
         var (d, a, _) = await Cabals();
         var g = NewGame();

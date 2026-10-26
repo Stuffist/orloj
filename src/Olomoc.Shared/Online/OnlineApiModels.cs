@@ -5,28 +5,28 @@ using Olomoc.Tournaments;
 namespace Olomoc.Online;
 
 /// <summary>
-/// Nouvelle partie libre : nom du créateur, et sa cabale s'il en a déjà une (partie locale ouverte
-/// en ligne) : son siège est alors prêt d'office.
+/// New free game: creator's name, and their cabal if they already have one (local game opened
+/// online): their seat is then ready right away.
 /// </summary>
 public sealed record CreateOnlineRequest(string? Name = null, CabalExport? Cabal = null);
 
-/// <summary>Partie créée : son code, le jeton du créateur (siège A) et celui de l'invité (siège B).</summary>
+/// <summary>Game created: its code, the creator's token (seat A) and the guest's (seat B).</summary>
 public sealed record OnlineCreated(string Code, string Token, string InviteToken);
 
-/// <summary>Partie ouverte depuis une table de tournoi (les joueurs s'y identifient avec leur jeton de joueur).</summary>
+/// <summary>Game opened from a tournament table (the players identify with their player token).</summary>
 public sealed record OnlineOpened(string Code);
 
 public enum OnlineCommandType
 {
-    SetName, SetCabal, SetReady,            // salon
-    RollInitiative,                          // numéro des joueurs
+    SetName, SetCabal, SetReady,            // lobby
+    RollInitiative,                          // player numbers
     ChooseAgenda, DrawAgenda,                // agenda
     UpdateState, Undo, SetEndCycle,          // cycles
 }
 
 /// <summary>
-/// Commande d'un joueur. Text : nom, agenda ; Flag : prêt, fin de cycle ; State et BasedOn : nouvel
-/// état de son camp et la révision dont il part ; Note : compte rendu pour le journal.
+/// A player's command. Text: name, agenda; Flag: ready, end of cycle; State and BasedOn: new state
+/// of their side and the revision it starts from; Note: report for the log.
 /// </summary>
 public sealed record OnlineCommand(
     OnlineCommandType Type,
@@ -37,19 +37,18 @@ public sealed record OnlineCommand(
     int? BasedOn = null,
     string? Note = null);
 
-/// <summary>Réponse à Join (hub) : la vue de la partie, ou le problème qui empêche de la rejoindre (notFound, forbidden).</summary>
+/// <summary>Answer to Join (hub): the game's view, or the problem that prevents joining it (notFound, forbidden).</summary>
 public sealed record OnlineJoin(OnlineView? View, string? Error = null);
 
-/// <summary>Réponse à une commande : problèmes (aucun si acceptée), révision de l'état de son camp.</summary>
+/// <summary>Answer to a command: problems (none if accepted), revision of the state of one's side.</summary>
 public sealed record OnlineResult(IReadOnlyList<Problem> Problems, int? StateRevision = null)
 {
     public bool Ok => Problems.Count == 0;
 }
 
 /// <summary>
-/// La partie telle que la voit une connexion. Me : son siège (null : spectateur). Avant que les
-/// deux joueurs soient prêts, la cabale de l'autre siège n'est pas envoyée (composition secrète,
-/// LDR p.32).
+/// The game as a connection sees it. Me: its seat (null: spectator). Until both players are
+/// ready, the other seat's cabal is not sent (secret composition, rulebook p.32).
 /// </summary>
 public sealed record OnlineView(
     string Code,
@@ -58,7 +57,7 @@ public sealed record OnlineView(
     int Cycle,
     int? First,
     Scenario? Agenda,
-    int Hunt,                       // traque commune aux deux joueurs (OnlineRules.Hunt)
+    int Hunt,                       // hunt shared by both players (OnlineRules.Hunt)
     int? Me,
     IReadOnlyList<SeatView> Seats,
     OnlineTournamentRef? Tournament,
@@ -69,7 +68,7 @@ public sealed record OnlineView(
     public bool Over => Step == OnlineStep.Finished || Seats.Any(s => s.Over) || Hunt >= GameSession.MaxHunt;
 }
 
-/// <summary>Un siège vu par la connexion. Cabal et State : null s'ils sont encore secrets (ou absents).</summary>
+/// <summary>A seat as seen by the connection. Cabal and State: null while still secret (or missing).</summary>
 public sealed record SeatView(
     string Name,
     bool Connected,

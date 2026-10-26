@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Cabale collée : texte au format de l'export (builder de référence) ou JSON.</summary>
+/// <summary>Pasted cabal: text in the export format (reference builder) or JSON.</summary>
 public class CabalImportTests
 {
     private static async Task<(AppData D, CabalExporter X, CabalImport I)> Services()
@@ -14,13 +14,13 @@ public class CabalImportTests
         return (d, x, new CabalImport(d.Catalog, d.L, x));
     }
 
-    // Composition légale en Ligue de Maisel (rang 1, 2, 3).
+    // Legal composition in the Maisel League (rank 1, 2, 3).
     private static CabalExport Maisel(AppData d, CabalExporter x, string? name = "Assaut") => x.ToModel(name, "MAISEL",
         new Cog?[] { d.Cog("1R01"), d.Cog("2R08"), d.Cog("3R06") },
         new Equipment?[] { d.Equipment("E11" /* Harmonium */), d.Equipment("D01" /* Carapace */), d.Equipment("E03" /* Phéromones */) });
 
     [Fact]
-    public async Task Export_texte_relu_a_l_identique()
+    public async Task Text_export_read_back_identically()
     {
         var (d, x, import) = await Services();
         var cabal = Maisel(d, x);
@@ -29,25 +29,25 @@ public class CabalImportTests
         var result = import.Parse(text, faction: null);
         Assert.Empty(result.Issues);
         Assert.Equal("Assaut", result.Cabal!.Name);
-        Assert.Equal("MAISEL", result.Cabal.Faction?.Code);          // déduite : légale seulement en Maisel
+        Assert.Equal("MAISEL", result.Cabal.Faction?.Code);          // deduced: legal only in Maisel
         Assert.True(CabalLibrary.SameCards(cabal, result.Cabal));
     }
 
     [Fact]
-    public async Task Saisie_a_la_main_tolerante()
+    public async Task Tolerant_hand_typing()
     {
         var (d, x, import) = await Services();
-        // Minuscules, sans accents, tiret long ou collé, espaces en trop, sans nom, ordre quelconque, CRLF.
+        // Lowercase, no accents, long or attached dash, extra spaces, no name, any order, CRLF.
         var text = "  phéromones est absent ici\r\nPetra Kantor –  harmonium\r\n\r\nle chasseur-carapace\r\nBOHDAN   GROSS - PHEROMONES ";
         var result = import.Parse(text, faction: "MAISEL");
 
-        Assert.Equal("phéromones est absent ici", result.Cabal!.Name);   // première ligne non reconnue : le nom
+        Assert.Equal("phéromones est absent ici", result.Cabal!.Name);   // first line not recognized: the name
         Assert.Empty(result.Issues);
         Assert.True(CabalLibrary.SameCards(Maisel(d, x), result.Cabal));
     }
 
     [Fact]
-    public async Task Noms_anglais_et_trait_d_union_dans_un_nom()
+    public async Task English_names_and_hyphen_inside_a_name()
     {
         var (d, x, import) = await Services();
         await d.L.SetLanguageAsync("en");
@@ -60,7 +60,7 @@ public class CabalImportTests
     }
 
     [Fact]
-    public async Task Texte_valable_dans_plusieurs_factions_a_faire_choisir()
+    public async Task Text_valid_in_several_factions_to_be_chosen()
     {
         var (_, _, import) = await Services();
         const string text = "JANA ALENA NOVAK - CATALYSEUR QUANTIQUE\nKUBIK OKTOBAR - CARTE DU SYNDICAT TETRA\nBOHDAN GROSS - MANUEL DE L'HARMONIE";
@@ -76,22 +76,22 @@ public class CabalImportTests
     }
 
     [Fact]
-    public async Task Lignes_inconnues_et_rang_en_double_signales()
+    public async Task Unknown_lines_and_duplicate_rank_reported()
     {
         var (_, _, import) = await Services();
         var result = import.Parse("Ma liste\nDOMINIK KRALOV - HARMONIUM\nGANDALF - BATON\nBOHDAN GROSS", "MAISEL");
 
         Assert.Equal(new[] { ("unknownLine", "3"), ("sameRank", "4") }, result.Issues.Select(i => (i.Key, i.Args[0])));
-        Assert.Equal("3R05", Assert.Single(result.Cabal!.Cogs).Cog.Id);      // Dominik Kralov, rang 1 ; Bohdan Gross aussi
+        Assert.Equal("3R05", Assert.Single(result.Cabal!.Cogs).Cog.Id);      // Dominik Kralov, rank 1; Bohdan Gross too
     }
 
     [Fact]
-    public async Task JSON_accepte()
+    public async Task JSON_accepted()
     {
         var (d, x, import) = await Services();
         var cabal = Maisel(d, x);
         var json = x.ToJson(cabal.Name, "MAISEL", Cogs(d, cabal), Equipment(d, cabal));
-        var result = import.Parse("\n  " + json, faction: "RUBIN");      // la faction du JSON fait foi
+        var result = import.Parse("\n  " + json, faction: "RUBIN");      // the JSON's faction prevails
         Assert.Empty(result.Issues);
         Assert.Equal("MAISEL", result.Cabal!.Faction?.Code);
         Assert.Equal("json", Assert.Single(import.Parse("{ cassé", null).Issues).Key);
@@ -101,7 +101,7 @@ public class CabalImportTests
     [InlineData("", "empty")]
     [InlineData("   \n ", "empty")]
     [InlineData("rien de connu\nnon plus", "noCog")]
-    public async Task Rien_a_lire(string text, string key)
+    public async Task Nothing_to_read(string text, string key)
     {
         var (_, _, import) = await Services();
         var result = import.Parse(text, null);

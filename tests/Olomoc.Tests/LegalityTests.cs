@@ -4,11 +4,11 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Composition de cabale (LDR p.32) et règles portées par les cartes (buildRules).</summary>
+/// <summary>Cabal composition (rulebook p.32) and rules carried by the cards (buildRules).</summary>
 public class LegalityTests
 {
-    // Carte fictive de la Coordination portant la règle ALL_MINISTRIES : aucune carte du référentiel
-    // ne la porte (le Passe-droit du Census l'a perdue), mais l'éditeur peut la donner à une carte.
+    // Fictitious Coordination card carrying the ALL_MINISTRIES rule: no card of the catalog carries
+    // it (Passe-droit du Census lost it), but the editor can give it to a card.
     private const string AllMinistries = "(Tous les Ministères)";
     private static readonly Equipment AllMinistriesCard = new()
     {
@@ -19,7 +19,7 @@ public class LegalityTests
         Published = true
     };
 
-    // Emplacements dans l'ordre rang 1, rang 2, rang 3 : (id du rouage, nom de l'équipement/don).
+    // Slots in the order rank 1, rank 2, rank 3: (cog id, equipment/boon name).
     private static async Task<LegalityResult> Check(string faction, params (string Cog, string Equipment)[] slots)
     {
         var d = await AppData.GetAsync();
@@ -29,7 +29,7 @@ public class LegalityTests
     }
 
     private static void AssertLegal(LegalityResult r) =>
-        Assert.True(r.IsLegal, "illégale : " + string.Join(" | ", r.Issues.Select(i => i.Key)));
+        Assert.True(r.IsLegal, "illegal: " + string.Join(" | ", r.Issues.Select(i => i.Key)));
 
     private static LegalityIssue AssertIssue(LegalityResult r, string key)
     {
@@ -37,83 +37,83 @@ public class LegalityTests
         return Assert.Single(r.Issues, i => i.Key == key);
     }
 
-    // ---- Harmonium (Maisel) : un rouage de l'Axe, de rang 1 ou 2, hors faction ----
+    // ---- Harmonium (Maisel): one cog of the Axis, of rank 1 or 2, out of faction ----
 
     [Fact]
-    public async Task Harmonium_permet_un_rouage_de_l_Axe() =>
+    public async Task Harmonium_allows_a_cog_of_the_Axis() =>
         AssertLegal(await Check("MAISEL", ("3R06", "E03" /* Phéromones */), ("2R08", "D01" /* Carapace */), ("1R01", "E11" /* Harmonium */)));
 
     [Fact]
-    public async Task Sans_Harmonium_le_rouage_de_l_Axe_est_hors_faction()
+    public async Task Without_Harmonium_the_Axis_cog_is_out_of_faction()
     {
         var issue = AssertIssue(await Check("MAISEL", ("3R06", "E03" /* Phéromones */), ("2R08", "D01" /* Carapace */), ("1R01", "E08" /* Lumen */)), "outsideFaction");
         Assert.Equal(new[] { "2R08" }, issue.Args[1].Values);
     }
 
     [Fact]
-    public async Task Un_seul_Harmonium_ne_couvre_qu_un_rouage() =>
+    public async Task A_single_Harmonium_covers_only_one_cog() =>
         AssertIssue(await Check("MAISEL", ("3R07", "D01" /* Carapace */), ("2R08", "D03" /* Stigmates */), ("1R01", "E11" /* Harmonium */)), "outsideFaction");
 
     [Fact]
-    public async Task Harmonium_refuse_un_rang_3()
+    public async Task Harmonium_refuses_a_rank_3()
     {
         var issue = AssertIssue(await Check("MAISEL", ("3R06", "E03" /* Phéromones */), ("2R02", "E11" /* Harmonium */), ("1R09", "D01" /* Carapace */)), "outsideFaction");
         Assert.Equal(new[] { "1R09" }, issue.Args[1].Values);
     }
 
-    // ---- Asservisseur mental (Autres) : le porteur, de rang 1 ou 2 ----
+    // ---- Asservisseur mental (Others): its wearer, of rank 1 or 2 ----
 
     [Fact]
-    public async Task Asservisseur_permet_son_porteur() =>
+    public async Task Asservisseur_allows_its_wearer() =>
         AssertLegal(await Check("OTHERS", ("3R17", "E26" /* Dose de Mélisse */), ("2R02", "E13" /* Asservisseur mental */), ("1R09", "D01" /* Carapace */)));
 
     [Fact]
-    public async Task Asservisseur_porte_par_un_autre_ne_couvre_pas()
+    public async Task Asservisseur_carried_by_another_does_not_cover()
     {
         var issue = AssertIssue(await Check("OTHERS", ("3R17", "E26" /* Dose de Mélisse */), ("2R02", "D01" /* Carapace */), ("1R09", "E13" /* Asservisseur mental */)), "outsideFaction");
         Assert.Equal(new[] { "2R02" }, issue.Args[1].Values);
     }
 
     [Fact]
-    public async Task Asservisseur_refuse_un_porteur_de_rang_3() =>
+    public async Task Asservisseur_refuses_a_rank_3_wearer() =>
         AssertIssue(await Check("OTHERS", ("3R17", "E26" /* Dose de Mélisse */), ("2R08", "D01" /* Carapace */), ("1R01", "E13" /* Asservisseur mental */)), "outsideFaction");
 
-    // ---- ALL_MINISTRIES : le porteur compte comme affilié à tous les Ministères ----
+    // ---- ALL_MINISTRIES: the wearer counts as affiliated with every Ministry ----
 
     [Fact]
-    public async Task Tous_les_ministeres_rend_la_Frange_disponible() =>
+    public async Task All_ministries_makes_the_Fringe_available() =>
         AssertLegal(await Check("MAISEL", ("3R06", "E26" /* Dose de Mélisse */), ("2R04", "E03" /* Phéromones */), ("1R01", AllMinistries)));
 
     [Fact]
-    public async Task Tous_les_ministeres_ne_se_rend_pas_disponible_lui_meme()
+    public async Task All_ministries_does_not_make_itself_available()
     {
         var issue = AssertIssue(await Check("MAISEL", ("3R06", "E03" /* Phéromones */), ("2R02", "E01" /* Manuel du Progrès */), ("1R01", AllMinistries)), "ministryAbsent");
         Assert.Equal(new[] { "COORDINATION" }, issue.Args[1].Values);
     }
 
     [Fact]
-    public async Task Tous_les_ministeres_occupe_l_emplacement_de_son_porteur() =>
+    public async Task All_ministries_takes_its_wearer_slot() =>
         AssertIssue(await Check("MAISEL", ("3R06", "E26" /* Dose de Mélisse */), ("2R04", AllMinistries), ("1R01", "E08" /* Lumen */)), "ministryOverflow");
 
     [Fact]
-    public async Task Sans_tous_les_ministeres_la_Frange_est_absente() =>
+    public async Task Without_all_ministries_the_Fringe_is_missing() =>
         AssertIssue(await Check("MAISEL", ("3R06", "E26" /* Dose de Mélisse */), ("2R04", "E03" /* Phéromones */), ("1R01", "E08" /* Lumen */)), "ministryAbsent");
 
     [Fact]
-    public async Task Tous_les_ministeres_compte_comme_l_Axe_pour_Harmonium() =>
+    public async Task All_ministries_counts_as_the_Axis_for_Harmonium() =>
         AssertLegal(await Check("MAISEL", ("3R20", AllMinistries), ("2R04", "E11" /* Harmonium */), ("1R01", "E08" /* Lumen */)));
 
     [Fact]
-    public async Task Le_Passe_droit_du_Census_ne_donne_plus_tous_les_ministeres()
+    public async Task Passe_droit_du_Census_no_longer_grants_all_ministries()
     {
         var d = await AppData.GetAsync();
         Assert.False(d.Equipment("E29" /* Passe-droit du Census */).GrantsAllMinistries);
     }
 
-    // ---- Disponibilité ----
+    // ---- Availability ----
 
     [Fact]
-    public async Task Listes_proposees_selon_les_regles_de_recrutement()
+    public async Task Lists_offered_according_to_the_recruitment_rules()
     {
         var d = await AppData.GetAsync();
         var maisel2 = d.Catalog.AvailableCogs(2, "MAISEL", null, CogQuery.Empty);
@@ -125,45 +125,45 @@ public class LegalityTests
     }
 
     [Fact]
-    public async Task Factions_compatibles_avec_les_rouages_deja_choisis()
+    public async Task Factions_compatible_with_the_cogs_already_chosen()
     {
         var d = await AppData.GetAsync();
         var all = d.Catalog.AllFactions.Select(f => f.Code).ToList();
         Assert.Equal(all, d.Catalog.CompatibleFactions(new Olomoc.Models.Cog?[3]));
 
-        // Un rouage seul : ses factions, chacune l'accueillant ; un rouage propre à une faction.
+        // A single cog: its factions, each one welcoming it; a cog specific to one faction.
         var indra = d.Catalog.CompatibleFactions([null, null, d.Cog("1R16")]);
         Assert.Equal(["URKARAS"], indra);
         var petra = d.Catalog.CompatibleFactions([d.Cog("1R01")]);
         Assert.Contains("MAISEL", petra);
         Assert.All(petra, f => Assert.True(d.Catalog.Fits(d.Cog("1R01"), f)));
 
-        // Plusieurs rouages : l'intersection, dans l'ordre du référentiel.
+        // Several cogs: the intersection, in the catalog's order.
         var both = d.Catalog.CompatibleFactions([d.Cog("1R01"), d.Cog("1R12")]);
         Assert.Equal(petra.Intersect(d.Catalog.CompatibleFactions([d.Cog("1R12")])), both);
     }
 
     [Fact]
-    public async Task Factions_d_un_rouage_membre_ou_recrute_par_une_carte()
+    public async Task Factions_of_a_cog_member_or_recruited_through_a_card()
     {
         var d = await AppData.GetAsync();
         string Show(string id) => string.Join(" ", d.Catalog.FactionsOf(d.Cog(id))
             .Select(f => f.Member ? f.Faction : $"{f.Faction}<{d.L.ReferenceName(f.Via!)}>"));
 
-        // Rang 1 : ses trois factions, et Les Autres par la carte qui recrute son porteur.
+        // Rank 1: its three factions, and Les Autres through the card that recruits its wearer.
         Assert.Equal("OTHERS<Asservisseur mental> BLOCKHAUS DYKOVIAN MAISEL", Show("3R05"));
-        // Rouage de l'Axe : Les Autres, et la Ligue de Maisel par l'Harmonium.
+        // Axis cog: Les Autres, and the Maisel League through the Harmonium.
         Assert.Equal("OTHERS MAISEL<Harmonium>", Show("2R08"));
-        // Rang 3 : aucune carte ne le recrute hors de sa faction.
+        // Rank 3: no card recruits it outside its faction.
         Assert.Equal("URKARAS", Show("1R16"));
-        // Toujours cohérent avec Fits.
+        // Always consistent with Fits.
         foreach (var cog in d.Catalog.Catalog.Cogs)
             Assert.Equal(d.Catalog.AllFactions.Where(f => d.Catalog.Fits(cog, f.Code)).Select(f => f.Code),
                          d.Catalog.FactionsOf(cog).Select(f => f.Faction));
     }
 
     [Fact]
-    public async Task Sans_faction_rouages_proposes_compatibles_avec_ceux_deja_choisis()
+    public async Task Without_a_faction_offered_cogs_compatible_with_those_already_chosen()
     {
         var d = await AppData.GetAsync();
         var factions = d.Catalog.CompatibleFactions([d.Cog("1R01")]);
@@ -174,12 +174,12 @@ public class LegalityTests
             Assert.All(limited, c => Assert.Contains(factions, f => d.Catalog.Fits(c, f)));
             Assert.True(limited.Count <= d.Catalog.AvailableCogs(rank, null, null, CogQuery.Empty).Count);
         }
-        // Sans liste de factions : inchangé (tous les rouages du rang).
+        // Without a list of factions: unchanged (all the cogs of the rank).
         Assert.Equal(d.Catalog.Catalog.Cogs.Count(c => c.Rank == 3), d.Catalog.AvailableCogs(3, null, null, CogQuery.Empty).Count);
     }
 
     [Fact]
-    public async Task Tous_les_ministeres_porte_ailleurs_elargit_les_equipements_proposes()
+    public async Task All_ministries_carried_elsewhere_widens_the_offered_equipment()
     {
         var d = await AppData.GetAsync();
         var cogs = new Cog?[] { d.Cog("3R06"), d.Cog("2R04"), d.Cog("1R01") };
@@ -188,7 +188,7 @@ public class LegalityTests
         Assert.DoesNotContain(d.Catalog.AvailableEquipment(2, cogs, equipment, "MAISEL"), e => e.Ministry == "FRINGE");
     }
 
-    // ---- Choix grisés : déjà « pris » par le reste de la cabale ----
+    // ---- Greyed-out choices: already "taken" by the rest of the cabal ----
 
     private static async Task<(AppData D, Cog?[] Cogs)> Cogs(params string?[] ids)
     {
@@ -197,65 +197,65 @@ public class LegalityTests
     }
 
     [Fact]
-    public async Task Harmonium_deja_utilise_grise_un_autre_rouage_de_l_Axe()
+    public async Task Harmonium_already_used_greys_out_another_Axis_cog()
     {
-        var (d, cogs) = await Cogs("3R07", null, null);                // Axe, hors faction : via Harmonium
+        var (d, cogs) = await Cogs("3R07", null, null);                // Axis, out of faction: through Harmonium
         Assert.False(d.Catalog.CanJoin(1, d.Cog("2R08"), cogs, "MAISEL"));
-        Assert.True(d.Catalog.CanJoin(1, d.Cog("2R11"), cogs, "MAISEL"));   // membre de Maisel
-        Assert.True(d.Catalog.CanJoin(0, d.Cog("3R07"), cogs, "MAISEL"));   // le remplacer par lui-même
+        Assert.True(d.Catalog.CanJoin(1, d.Cog("2R11"), cogs, "MAISEL"));   // member of Maisel
+        Assert.True(d.Catalog.CanJoin(0, d.Cog("3R07"), cogs, "MAISEL"));   // replacing it with itself
     }
 
     [Fact]
-    public async Task Sans_faction_grise_ce_qu_aucune_faction_ne_couvre_ensemble()
+    public async Task Without_a_faction_greys_out_what_no_faction_covers_together()
     {
-        var (d, cogs) = await Cogs("3R07", null, "1R01");              // possible pour Maisel seulement
+        var (d, cogs) = await Cogs("3R07", null, "1R01");              // possible for Maisel only
         Assert.False(d.Catalog.CanJoin(1, d.Cog("2R08"), cogs, null));
         Assert.True(d.Catalog.CanJoin(1, d.Cog("2R11"), cogs, null));
     }
 
     [Fact]
-    public async Task Asservisseur_deja_utilise_grise_un_autre_rouage_hors_faction()
+    public async Task Asservisseur_already_used_greys_out_another_out_of_faction_cog()
     {
-        var (d, cogs) = await Cogs(null, "2R02", null);                // hors faction pour Others
+        var (d, cogs) = await Cogs(null, "2R02", null);                // out of faction for Others
         Assert.False(d.Catalog.CanJoin(0, d.Cog("3R05"), cogs, "OTHERS"));
         Assert.True(d.Catalog.CanJoin(0, d.Cog("3R07"), cogs, "OTHERS"));
     }
 
     [Fact]
-    public async Task Cabale_deja_impossible_ne_grise_pas_tout()
+    public async Task Cabal_already_impossible_does_not_grey_out_everything()
     {
-        var (d, cogs) = await Cogs("3R07", "2R08", null);              // deux rouages de l'Axe, un seul Harmonium
+        var (d, cogs) = await Cogs("3R07", "2R08", null);              // two Axis cogs, a single Harmonium
         Assert.True(d.Catalog.CanJoin(2, d.Cog("1R01"), cogs, "MAISEL"));
     }
 
     [Fact]
-    public async Task Rouage_hors_faction_echange_celui_qui_prend_sa_carte()
+    public async Task Out_of_faction_cog_swaps_the_one_taking_its_card()
     {
-        var (d, cogs) = await Cogs("3R07", null, "1R01");              // 3R07 : Axe, via Harmonium
+        var (d, cogs) = await Cogs("3R07", null, "1R01");              // 3R07: Axis, through Harmonium
         Assert.Equal(new[] { 0 }, d.Catalog.CogConflict(1, d.Cog("2R08"), cogs, "MAISEL")?.Displaced);
-        Assert.Equal(new[] { 0 }, d.Catalog.CogConflict(1, d.Cog("2R08"), cogs, null)?.Displaced);   // sans faction
-        Assert.Null(d.Catalog.CogConflict(1, d.Cog("2R11"), cogs, "MAISEL"));                        // membre : rien à échanger
+        Assert.Equal(new[] { 0 }, d.Catalog.CogConflict(1, d.Cog("2R08"), cogs, null)?.Displaced);   // without a faction
+        Assert.Null(d.Catalog.CogConflict(1, d.Cog("2R11"), cogs, "MAISEL"));                        // member: nothing to swap
     }
 
     [Fact]
-    public async Task Carte_de_recrutement_equipee_d_office()
+    public async Task Recruitment_card_equipped_automatically()
     {
         var d = await AppData.GetAsync();
         var maisel = new Cog?[] { null, d.Cog("2R08"), d.Cog("1R01") };
         Assert.Equal("Harmonium", d.L.ReferenceName(d.Catalog.RecruitCard(1, maisel, new Equipment?[3], "MAISEL")!));
-        // Déjà couvert par l'Harmonium que porte un autre rouage : rien à équiper.
+        // Already covered by the Harmonium another cog carries: nothing to equip.
         Assert.Null(d.Catalog.RecruitCard(1, maisel, new Equipment?[] { null, null, d.Equipment("E11" /* Harmonium */) }, "MAISEL"));
-        Assert.Null(d.Catalog.RecruitCard(2, maisel, new Equipment?[3], "MAISEL"));                  // membre
+        Assert.Null(d.Catalog.RecruitCard(2, maisel, new Equipment?[3], "MAISEL"));                  // member
 
         var others = new Cog?[] { d.Cog("3R07"), d.Cog("2R02"), null };
         Assert.Equal("Asservisseur mental", d.L.ReferenceName(d.Catalog.RecruitCard(1, others, new Equipment?[3], "OTHERS")!));
-        // Porté par un membre, qui n'en profite pas : proposé quand même (le choisir le déplace).
+        // Carried by a member, who does not benefit from it: offered anyway (choosing it moves it).
         var onMember = new Equipment?[] { d.Equipment("E13" /* Asservisseur mental */), null, null };
         Assert.Equal("Asservisseur mental", d.L.ReferenceName(d.Catalog.RecruitCard(1, others, onMember, "OTHERS")!));
     }
 
     [Fact]
-    public async Task Factions_compatibles_avec_les_rouages_pris_ensemble()
+    public async Task Factions_compatible_with_the_cogs_taken_together()
     {
         var (d, cogs) = await Cogs("3R07", "2R08", null);
         var factions = d.Catalog.CompatibleFactions(cogs);
@@ -264,32 +264,32 @@ public class LegalityTests
     }
 
     [Fact]
-    public async Task Equipement_deja_porte_echange()
+    public async Task Equipment_already_carried_swapped()
     {
         var (d, cogs) = await Cogs("3R06", "2R11", "1R01");
         var equipment = new Equipment?[] { d.Equipment("E03" /* Phéromones */), null, null };
         var swap = d.Catalog.EquipmentConflict(1, d.Equipment("E03" /* Phéromones */), cogs, equipment);
         Assert.Equal("equipment.swap.duplicate", swap?.Reason);
-        Assert.Equal(new[] { 0 }, swap!.Displaced);                                                 // retiré à Bohdan Gross
-        Assert.Null(d.Catalog.EquipmentConflict(0, d.Equipment("E03" /* Phéromones */), cogs, equipment));   // son propre emplacement
+        Assert.Equal(new[] { 0 }, swap!.Displaced);                                                 // removed from Bohdan Gross
+        Assert.Null(d.Catalog.EquipmentConflict(0, d.Equipment("E03" /* Phéromones */), cogs, equipment));   // its own slot
     }
 
     [Fact]
-    public async Task Ministere_deja_utilise_echange_son_equipement()
+    public async Task Ministry_already_used_swaps_its_equipment()
     {
-        // Un seul rouage de l'Harmonie, qui débloque déjà Phéromones.
+        // A single Harmony cog, which already unlocks Phéromones.
         var (d, cogs) = await Cogs("3R06", "2R11", "1R01");
         var equipment = new Equipment?[] { d.Equipment("E03" /* Phéromones */), null, null };
         var swap = d.Catalog.EquipmentConflict(1, d.Equipment("E21" /* Collier de dévotion */), cogs, equipment);
         Assert.Equal("equipment.swap.ministry", swap?.Reason);
         Assert.Equal(new[] { 0 }, swap!.Displaced);
-        Assert.Null(d.Catalog.EquipmentConflict(1, d.Equipment("E07" /* Ration */), cogs, equipment));      // Effort : le sien
+        Assert.Null(d.Catalog.EquipmentConflict(1, d.Equipment("E07" /* Ration */), cogs, equipment));      // Effort: its own
     }
 
     [Fact]
-    public async Task Tous_les_ministeres_porte_ailleurs_debloque_un_Ministere_de_plus()
+    public async Task All_ministries_carried_elsewhere_unlocks_one_more_Ministry()
     {
-        // 1R01 porte la carte ALL_MINISTRIES (débloquée par la Coordination de 2R04) : il peut débloquer l'Harmonie.
+        // 1R01 carries the ALL_MINISTRIES card (unlocked by 2R04's Coordination): it can unlock Harmony.
         var (d, cogs) = await Cogs("3R06", "2R04", "1R01");
         var collier = d.Equipment("E21" /* Collier de dévotion */);
         var sans = new Equipment?[] { d.Equipment("E03" /* Phéromones */), null, null };
@@ -302,18 +302,18 @@ public class LegalityTests
     }
 
     [Fact]
-    public async Task Equipements_restants_par_Ministere()
+    public async Task Remaining_equipment_per_Ministry()
     {
-        var (d, cogs) = await Cogs("3R06", "2R11", "1R01");                // Harmonie, Effort, Sécurité
+        var (d, cogs) = await Cogs("3R06", "2R11", "1R01");                // Harmony, Effort, Security
         var equipment = new Equipment?[] { d.Equipment("E03" /* Phéromones */), null, null };
-        Assert.Equal(0, d.Catalog.MinistryRemaining(1, "HARMONY", cogs, equipment));   // Bohdan Gross a déjà le sien
-        Assert.Equal(1, d.Catalog.MinistryRemaining(0, "HARMONY", cogs, equipment));   // le sien, qu'il remplacerait
+        Assert.Equal(0, d.Catalog.MinistryRemaining(1, "HARMONY", cogs, equipment));   // Bohdan Gross already has his
+        Assert.Equal(1, d.Catalog.MinistryRemaining(0, "HARMONY", cogs, equipment));   // its own, which it would replace
         Assert.Equal(1, d.Catalog.MinistryRemaining(1, "EFFORT", cogs, equipment));
-        Assert.Equal(0, d.Catalog.MinistryRemaining(1, "AXIS", cogs, equipment));      // aucun rouage de l'Axe
+        Assert.Equal(0, d.Catalog.MinistryRemaining(1, "AXIS", cogs, equipment));      // no Axis cog
     }
 
     [Fact]
-    public async Task Les_messages_se_traduisent_avec_les_noms_de_la_langue()
+    public async Task Messages_are_translated_with_the_language_names()
     {
         var d = await AppData.CreateAsync();
         var r = d.Catalog.CheckLegality("MAISEL",
@@ -322,7 +322,7 @@ public class LegalityTests
         var issue = Assert.Single(r.Issues);
         Assert.Contains("Hors faction Ligue de Maisel : Le Chasseur", d.L.Describe(issue));
         await d.L.SetLanguageAsync("en");
-        Assert.StartsWith("Outside the Ligue de Maisel faction: Le Chasseur", d.L.Describe(issue));   // faction : nom fr assumé ; rouage : repli fr
+        Assert.StartsWith("Outside the Ligue de Maisel faction: Le Chasseur", d.L.Describe(issue));   // faction: French name assumed; cog: French fallback
         Assert.False(d.L.FactionName("MAISEL").IsFallback);
         Assert.True(d.L.CogName(d.Cog("2R08")).IsFallback);
     }

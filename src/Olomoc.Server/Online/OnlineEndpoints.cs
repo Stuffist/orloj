@@ -5,9 +5,9 @@ using Olomoc.Tournaments;
 namespace Olomoc.Server.Online;
 
 /// <summary>
-/// Création des parties en ligne : partie libre (lien du créateur et lien d'invitation), ou
-/// partie d'une table de tournoi, ouverte par l'un de ses deux joueurs (jeton de joueur).
-/// Tout le reste passe par le hub (<see cref="OnlineHub"/>).
+/// Creation of online games: free game (creator's link and invitation link), or game of a
+/// tournament table, opened by one of its two players (player token). Everything else goes
+/// through the hub (<see cref="OnlineHub"/>).
 /// </summary>
 public static class OnlineEndpoints
 {
@@ -23,7 +23,7 @@ public static class OnlineEndpoints
     {
         var name = body?.Name?.Trim() ?? "";
         if (name.Length > OnlineRules.MaxNameLength) return Problems(Problem.Of("playerName", OnlineRules.MaxNameLength.ToString()), 400);
-        // Cabale du créateur (partie locale ouverte en ligne) : légale, et son siège prêt s'il est nommé.
+        // Creator's cabal (local game opened online): legal, and their seat ready if they are named.
         var cabal = body?.Cabal;
         if (cabal is not null && OnlineRules.CheckCabal(cabal, await catalog.GetAsync()) is { Count: > 0 } problems)
             return Results.Json(new ProblemList(problems), TournamentJson.Options, statusCode: 400);
@@ -43,8 +43,8 @@ public static class OnlineEndpoints
     }
 
     /// <summary>
-    /// Partie de la table (ronde en cours, deux joueurs), créée au premier appel puis retrouvée :
-    /// les sièges sont ceux des joueurs inscrits, avec leurs cabales inscrites.
+    /// Game of the table (current round, two players), created on the first call then found again:
+    /// the seats are those of the registered players, with their registered cabals.
     /// </summary>
     private static async Task<IResult> OpenTable(string code, int round, int table, HttpContext ctx,
         TournamentStore tournaments, OnlineStore store)
@@ -71,7 +71,7 @@ public static class OnlineEndpoints
         });
         if (game is null) return Problems(Problem.Of("storageFull"), 503);
 
-        // Notée à la table ; si l'autre joueur en a ouvert une entre-temps, c'est la sienne qui compte.
+        // Recorded on the table; if the other player opened one in the meantime, theirs is the one that counts.
         var kept = await tournaments.UpdateAsync(code, x =>
         {
             var tb = x.Rounds.FirstOrDefault(r => r.Number == round)?.Tables.FirstOrDefault(y => y.Number == table);
@@ -88,7 +88,7 @@ public static class OnlineEndpoints
                 await store.DeleteAsync(game.Code, _ => (true, game.Code));
                 return Opened(kept);
             }
-            // L'ancienne partie a été purgée : la nouvelle la remplace.
+            // The old game was purged: the new one replaces it.
             await tournaments.UpdateAsync(code, x =>
             {
                 var tb = x.Rounds.First(r => r.Number == round).Tables.First(y => y.Number == table);

@@ -3,17 +3,17 @@ using Olomoc.Tournaments;
 
 namespace Olomoc.Builder.Shared;
 
-/// <summary>Compte rendu d'un formulaire du compte : texte, réussite ou erreur.</summary>
+/// <summary>Report of an account form: text, success or error.</summary>
 public sealed record AccountStatus(string Text, bool Ok);
 
-/// <summary>Outils des pages du compte.</summary>
+/// <summary>Helpers of the account pages.</summary>
 public static class AccountUi
 {
-    /// <summary>Problèmes renvoyés par l'API des comptes, dans la langue courante.</summary>
+    /// <summary>Problems returned by the accounts API, in the current language.</summary>
     public static string Describe(this LocalizationService l, IReadOnlyList<Problem> problems) =>
         string.Join(" ", problems.Select(p => l.Ui("account.problem." + p.Key, (p.Args ?? []).Cast<object>().ToArray())));
 
-    /// <summary>Paramètres de l'ancre d'une adresse (#user=…&amp;token=…) : liens reçus par e-mail.</summary>
+    /// <summary>Parameters of an address fragment (#user=…&amp;token=…): links received by email.</summary>
     public static IReadOnlyDictionary<string, string> Fragment(string uri)
     {
         var hash = uri.IndexOf('#');

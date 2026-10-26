@@ -1,114 +1,113 @@
 # Architecture
 
-Vue d'ensemble technique d'Orloj. Le détail des règles et des fonctions est dans le
-[README](../README.md) ; le hors connexion dans [pwa.md](pwa.md).
+Technical overview of Orloj. The details of the rules and features are in the
+[README](../README.md); offline use in [pwa.md](pwa.md).
 
-## Découpage
+## Layout
 
 ```
-Navigateur ── une app Blazor WebAssembly (Olomoc.Web), téléchargée une fois
-   │            /builder/…  pages de Olomoc.Builder   (constructeur, partie, compte, éditeur, admin)
-   │            /pairings/… pages de Olomoc.Pairings  (tournois, statistiques)
-   │            /online/…   pages de Olomoc.Online    (parties en ligne à deux)
-   │            localStorage : cabales, partie, langue, tournois et parties en ligne suivis
+Browser ── one Blazor WebAssembly app (Olomoc.Web), downloaded once
+   │         /builder/…  Olomoc.Builder pages   (builder, play, account, editor, admin)
+   │         /pairings/… Olomoc.Pairings pages  (tournaments, statistics)
+   │         /online/…   Olomoc.Online pages    (two-player online games)
+   │         localStorage: cabals, game, language, followed tournaments and online games
    │
-   │  HTTPS (Caddy, deploy/proxy) ; WebSocket pour les parties en ligne
+   │  HTTPS (reverse proxy; orloj.top: Caddy, deploy/proxy); WebSocket for online games
    ▼
-Olomoc.Server (ASP.NET Core, un conteneur)
-   ├── fichiers : l'app (/_framework/, index.html), /_content/Olomoc.Shared/ (CSS, images, langues)
-   ├── référentiel : fichiers du dépôt + modifications de l'éditeur (DATA_DIR/catalog)
-   ├── API : /api/tournaments, /api/stats, /api/account, /api/online, /api/admin/… (éditeur, panneau d'administration)
-   ├── hub SignalR : /hubs/online (parties en ligne)
-   └── SQLite : DATA_DIR/olomoc.db (+ backups/, mail/ sans SMTP)
+Olomoc.Server (ASP.NET Core, one container)
+   ├── files: the app (/_framework/, index.html), /_content/Olomoc.Shared/ (CSS, images, languages)
+   ├── card catalog: repository files + editor changes (DATA_DIR/catalog)
+   ├── API: /api/tournaments, /api/stats, /api/account, /api/online, /api/admin/… (editor, admin panel)
+   ├── SignalR hub: /hubs/online (online games)
+   └── SQLite: DATA_DIR/olomoc.db (+ backups/, mail/ without SMTP)
 ```
 
-| Projet | Rôle |
+| Project | Role |
 |---|---|
-| `Olomoc.Shared` | Bibliothèque commune au navigateur et au serveur : modèles, règles (légalité, partie, appariements, classement, statistiques), services du navigateur, composants d'affichage, fichiers statiques. |
-| `Olomoc.Web` | L'app du navigateur : démarrage, routeur, layout, menu. Réunit les trois bibliothèques de pages ; on passe de l'une à l'autre sans rechargement. |
-| `Olomoc.Builder` | Pages `/builder/…`. |
-| `Olomoc.Pairings` | Pages `/pairings/…`. |
-| `Olomoc.Online` | Pages `/online/…` ; client SignalR. |
-| `Olomoc.Server` | Hôte : sert l'app et les fichiers, API, hub des parties en ligne, base, e-mails, tâches de fond (purges, sauvegarde, e-mail de contrôle). |
-| `tests/Olomoc.Tests` | xUnit : règles (Shared) et API (serveur en mémoire, base temporaire). |
+| `Olomoc.Shared` | Library shared by the browser and the server: models, rules (legality, play, pairings, standings, statistics), browser services, display components, static files. |
+| `Olomoc.Web` | The browser app: startup, router, layout, menu. Brings the three page libraries together; moving from one to another needs no reload. |
+| `Olomoc.Builder` | `/builder/…` pages. |
+| `Olomoc.Pairings` | `/pairings/…` pages. |
+| `Olomoc.Online` | `/online/…` pages; SignalR client. |
+| `Olomoc.Server` | Host: serves the app and the files, API, online games hub, database, emails, background tasks (purges, backup, check email). |
+| `tests/Olomoc.Tests` | xUnit: rules (Shared) and API (in-memory server, temporary database). |
 
-Les règles sont dans `Olomoc.Shared` et tournent des deux côtés : le navigateur les applique
-pour l'affichage, le serveur les revérifie pour tout ce qu'il enregistre (inscriptions,
-résultats, référentiel, commandes des parties en ligne).
+The rules live in `Olomoc.Shared` and run on both sides: the browser applies them for display,
+the server checks them again for everything it stores (registrations, results, card catalog,
+online game commands).
 
-## Technos
+## Technologies
 
-- **.NET 10** : Blazor WebAssembly (navigateur), ASP.NET Core (serveur), xUnit.
-- **SQLite + EF Core** : une base dans un fichier, schéma par migrations appliquées au
-  démarrage. Tournois, archives de statistiques et parties en ligne : documents JSON (table `Documents`).
-- **SignalR** (WebSocket) : synchronisation des parties en ligne.
-- **ASP.NET Core Identity** : comptes, mots de passe, rôles, cookie de session (90 jours,
-  prolongé à l'usage), clés de chiffrement dans la base.
-- **MailKit** : e-mails par un relais SMTP (Brevo) ; sans `SMTP_HOST`, écrits dans `DATA_DIR/mail`.
-- **QRCoder** : QR codes des liens de tournoi.
-- **Docker** (image Alpine, lecture seule hormis `/data`) derrière **Caddy** (HTTPS, Let's Encrypt).
-- **Service worker** maison : réseau d'abord, copie en cache sans réseau (jamais l'API).
-- Aucune dépendance JavaScript : `olomoc.js` (téléchargements, fenêtre, impression, stockage)
-  et le service worker.
+- **.NET 10**: Blazor WebAssembly (browser), ASP.NET Core (server), xUnit.
+- **SQLite + EF Core**: a database in one file, schema through migrations applied at startup.
+  Tournaments, statistics archives and online games: JSON documents (`Documents` table).
+- **SignalR** (WebSocket): synchronization of online games.
+- **ASP.NET Core Identity**: accounts, passwords, roles, session cookie (90 days, extended on
+  use), encryption keys in the database.
+- **MailKit**: emails through an SMTP relay (Brevo); without `SMTP_HOST`, written to `DATA_DIR/mail`.
+- **QRCoder**: QR codes of the tournament links.
+- **Docker** (Alpine image, read-only except `/data`) behind a reverse proxy for HTTPS (orloj.top: **Caddy** and Let's Encrypt, `deploy/proxy`, specific to that server).
+- Home-made **service worker**: network first, cached copy without network (never the API).
+- No JavaScript dependency: `olomoc.js` (downloads, window, printing, storage) and the service
+  worker.
 
-## Onglets et données
+## Tabs and data
 
-| Onglet | Ce qu'il fait | Données lues | Données écrites |
+| Tab | What it does | Data read | Data written |
 |---|---|---|---|
-| **Constructeur** `/builder/` | Compose une cabale (faction, 3 rouages, équipements), vérifie la légalité, exporte (texte, JSON, planche de cartes), sauvegarde. Catalogue des équipements dans une fenêtre à part. | Référentiel (`olomoc-catalog.json`, `olomoc-factions.json`, `i18n/*/cards.json`) | `olomoc.cabals` (localStorage) ; avec un compte : table `SavedCabals` (`/api/account/cabals/sync`). Cabale en cours : mémoire, partagée avec la fenêtre des équipements (`olomoc.draft`). |
-| **Partie** `/builder/play` | La partie courante de l'appareil, locale ou en ligne. Locale : PV, Noirceur, Fiel, pions, capacités limitées, 4 cycles ; annulation ; « Ouvrir en ligne » la passe en ligne avec sa cabale. | La cabale lancée depuis le constructeur | `olomoc.game` (localStorage) ou `olomoc.game.online` (code de la partie en ligne courante) : une partie courante par appareil. Historique d'annulation : mémoire. |
-| ↳ **En ligne** (parties `/online/g/…` ; sans partie en cours, cadre « Jouer en ligne ») | Partie à deux synchronisée : salon (cabales secrètes jusqu'à « Prêt »), numéro des joueurs, agenda, cycles ; chacun suit son camp, l'autre en lecture ; traque commune. Partie libre (lien d'invitation) ou table de tournoi. Nom : compte, sinon appareil, sinon tiré au sort. | Hub `/hubs/online` (vue propre à chaque siège) | Partie : table `Documents` (sorte `online`). Jetons de siège : `olomoc.online`, nom : `olomoc.online.name` (localStorage) ; présence : mémoire du serveur. |
-| **Tournois** `/pairings/` | Crée ou rejoint un tournoi ; page publique (inscription, rondes, classement) ; administration (rondes, résultats, abandons, export). Rafraîchie toutes les 30 s. | `/api/tournaments/{code}` | Tournoi : table `Documents` (sorte `tournament`). Jetons organisateur et joueur : `olomoc.tournaments` (localStorage) et lien d'administration (jeton dans l'ancre). |
-| **Stats** `/pairings/stats` | Statistiques publiques des tournois terminés : factions, rouages, victoires, scénarios, decks. | `/api/stats`, calculées en mémoire | — (l'archive anonyme est écrite à la fin d'un tournoi : `Documents`, sorte `stats`) |
-| **Éditeur** `/builder/admin` (éditeurs, admins) | Crée et modifie rouages, équipements, dons, factions, en français et en anglais ; publication ; export zip. | Référentiel fusionné, brouillons compris | `DATA_DIR/catalog/` (JSON au format du dépôt, entrées modifiées seulement). Le dépôt n'est jamais modifié : export puis commit. |
-| **Compte** `/builder/account` | Connexion, création, e-mail (confirmation, mot de passe oublié), mot de passe, autres appareils, suppression ; liens vers l'éditeur et le panneau d'administration. | `/api/account/me` | Tables d'Identity (comptes, rôles), `SavedCabals`. Session : cookie `olomoc_session`. |
-| **Admin** `/builder/control` (admins) | Chiffres de la base ; comptes (rôle, mot de passe temporaire, déverrouillage, déconnexion, suppression) ; tournois de tout le monde (nouveau lien d'administration, stats, suppression) ; parties en ligne (suppression) ; sauvegarde et purges à la main ; journal. | `/api/admin/…` (overview, accounts, tournaments, online, audit) | Tables d'Identity, `Documents`, `DATA_DIR/backups/` ; chaque action dans la table `AdminActions` (gardée un an). |
+| **Builder** `/builder/` | Composes a cabal (faction, 3 cogs, equipment), checks legality, exports (text, JSON, card sheet), saves. Equipment catalog in a separate window. | Card catalog (`olomoc-catalog.json`, `olomoc-factions.json`, `i18n/*/cards.json`) | `olomoc.cabals` (localStorage); with an account: `SavedCabals` table (`/api/account/cabals/sync`). Cabal being composed: memory, shared with the equipment window (`olomoc.draft`). |
+| **Play** `/builder/play` | The device's current game, local or online. Local: HP, Darkness, Bile, tokens, limited abilities, 4 cycles; undo; "Open online" takes it online with its cabal. | The cabal started from the builder | `olomoc.game` (localStorage) or `olomoc.game.online` (code of the current online game): one current game per device. Undo history: memory. |
+| ↳ **Online** (games `/online/g/…`; without a game in progress, "Play online" box) | Synchronized two-player game: lobby (cabals secret until "Ready"), player numbers, agenda, cycles; each player tracks their side, the other read-only; shared hunt. Free game (invitation link) or tournament table. Name: account, otherwise device, otherwise random. | `/hubs/online` hub (view specific to each seat) | Game: `Documents` table (kind `online`). Seat tokens: `olomoc.online`, name: `olomoc.online.name` (localStorage); presence: server memory. |
+| **Tournaments** `/pairings/` | Creates or joins a tournament; public page (registration, rounds, standings); administration (rounds, results, drops, export). Refreshed every 30 s. | `/api/tournaments/{code}` | Tournament: `Documents` table (kind `tournament`). Organizer and player tokens: `olomoc.tournaments` (localStorage) and admin link (token in the fragment). |
+| **Stats** `/pairings/stats` | Public statistics of finished tournaments: factions, cogs, wins, scenarios, decks. | `/api/stats`, computed in memory | — (the anonymous archive is written at the end of a tournament: `Documents`, kind `stats`) |
+| **Editor** `/builder/admin` (editors, admins) | Creates and edits cogs, equipment, boons, factions, in French and English; publication; zip export. | Merged card catalog, drafts included | `DATA_DIR/catalog/` (JSON in the repository format, changed entries only). The repository is never changed: export, then commit. |
+| **Account** `/builder/account` | Sign-in, creation, email (confirmation, forgotten password), password, other devices, deletion; links to the editor and the admin panel. | `/api/account/me` | Identity tables (accounts, roles), `SavedCabals`. Session: `olomoc_session` cookie. |
+| **Admin** `/builder/control` (admins) | Database figures; accounts (role, temporary password, unlock, sign out, deletion); everyone's tournaments (new admin link, stats, deletion); online games (deletion); backup and purges by hand; log. | `/api/admin/…` (overview, accounts, tournaments, online, audit) | Identity tables, `Documents`, `DATA_DIR/backups/`; each action in the `AdminActions` table (kept for a year). |
 
-Langue : `olomoc.lang` (localStorage) ; textes de l'interface `i18n/*/ui.json`, des cartes
-`i18n/*/cards.json` (repli sur le français).
+Language: `olomoc.lang` (localStorage); interface texts `i18n/*/ui.json`, card texts
+`i18n/*/cards.json` (French fallback).
 
-### Droits
+### Rights
 
-- **Visiteur** : tout sauf l'éditeur ; cabales et partie sur l'appareil seulement.
-- **Compte** : en plus, ses cabales sur tous ses appareils.
-- **Éditeur** : en plus, l'éditeur et les brouillons. **Admin** : en plus, le panneau
-  d'administration : les autres comptes (rôle, jamais le sien ; suppression, jamais d'un admin),
-  les tournois et parties en ligne de tout le monde (actions limitées, journalisées).
-  Premier admin : `OLOMOC_ADMINS`.
-- **Tournois** : pas de compte. Administration par le jeton organisateur (dans le lien
-  d'administration) ou un mot de passe facultatif ; modification d'une inscription par le
-  jeton joueur. Un admin ne pilote pas un tournoi : il peut en générer un nouveau lien
-  d'administration (l'ancien cesse de marcher), l'exclure des stats ou le supprimer.
+- **Visitor**: everything except the editor; cabals and game on the device only.
+- **Account**: in addition, their cabals on all their devices.
+- **Editor**: in addition, the editor and the drafts. **Admin**: in addition, the admin panel:
+  other accounts (role, never their own; deletion, never of an admin), everyone's tournaments and
+  online games (limited actions, logged). First admin: `OLOMOC_ADMINS`.
+- **Tournaments**: no account. Administration through the organizer token (in the admin link) or
+  an optional password; a registration is changed with the player token. An admin does not run a
+  tournament: they can generate a new admin link for it (the old one stops working), exclude it
+  from the stats or delete it.
 
-## Limites connues
+## Known limits
 
-- **Un seul serveur** : SQLite et les verrous en mémoire excluent plusieurs instances.
-  Sauvegarde : copie quotidienne (`data/backups/`, 7 gardées), à sauvegarder hors du VPS.
-- **Partie** : une par appareil, ni partagée ni liée au compte.
-- **Cabales sans compte** : propres à l'appareil et au navigateur (vider les données du site
-  les efface). Avec un compte : 200 au plus ; en cas de conflit, la plus récente l'emporte, par nom.
-- **Tournois** :
-  - perdre le lien d'administration sans mot de passe, c'est perdre l'administration ;
-  - « Mes tournois » est propre à l'appareil ;
-  - 128 joueurs et 10 rondes au plus, 1 000 tournois en base ;
-  - purgés après 90 jours sans modification (les statistiques restent) ;
-  - mise à jour par rafraîchissement toutes les 30 s, pas en direct.
-- **Hors connexion** : l'interface marche ; les données de tournoi et de compte non (l'API
-  n'est jamais mise en cache).
-- **Éditeur** :
-  - pas d'envoi d'image (fichier à ajouter dans `img/cards/` du dépôt) ;
-  - pas de création de faction ;
-  - une entrée modifiée sur le serveur remplace celle du dépôt en entier : une PR sur la même
-    entrée ne se voit qu'après export ou retour à la version du dépôt ;
-  - après un enregistrement, recharger le site pour voir le référentiel à jour ailleurs.
-- **Comptes** :
-  - l'e-mail ne sert qu'à récupérer le compte ; sans e-mail confirmé, seul un admin peut
-    réinitialiser le mot de passe ;
-  - 3 e-mails par heure et par compte ; offre gratuite de Brevo : 300 par jour.
-- **Taille** : l'app entière (constructeur et tournois) est téléchargée à la première visite,
-  puis mise en cache.
-- **Langues** : français et anglais ; une carte sans texte anglais s'affiche en français.
-- **Parties en ligne** :
-  - sans compte : perdre le lien (jeton du siège) sur un autre appareil, c'est jouer en spectateur ;
-  - 2 000 parties en base, purgées après 7 jours sans activité ;
-  - le Bloc (plateau, figurines) n'est pas encore géré : seuls les camps sont suivis.
+- **A single server**: SQLite and in-memory locks rule out several instances. Backup: daily
+  copy (`data/backups/`, 7 kept), to back up off the server.
+- **Play**: one game per device, neither shared nor tied to the account.
+- **Cabals without an account**: specific to the device and the browser (clearing the site's
+  data erases them). With an account: 200 at most; on conflict, the most recent wins, by name.
+- **Tournaments**:
+  - losing the admin link without a password means losing the administration (an admin can
+    issue a new link);
+  - "My tournaments" is specific to the device;
+  - 128 players and 10 rounds at most, 1,000 tournaments in the database;
+  - purged after 90 days without changes (statistics stay);
+  - updated by refreshing every 30 s, not live.
+- **Offline**: the interface works; tournament and account data do not (the API is never cached).
+- **Editor**:
+  - no image upload (file to add to `img/cards/` in the repository);
+  - no faction creation;
+  - an entry changed on the server replaces the repository's entirely: a PR on the same entry is
+    only seen after an export or a return to the repository version;
+  - after saving, reload the site to see the updated catalog elsewhere.
+- **Accounts**:
+  - the email is only used to recover the account; without a confirmed email, only an admin can
+    reset the password;
+  - 3 emails per hour and per account; Brevo free plan: 300 per day.
+- **Size**: the whole app (builder and tournaments) is downloaded on the first visit, then cached.
+- **Languages**: French and English; a card without English text is shown in French.
+- **Online games**:
+  - without an account: losing the link (seat token) on another device means playing as a
+    spectator;
+  - 2,000 games in the database, purged after 7 days without activity;
+  - the Block (board, miniatures) is not handled yet: only the sides are tracked.

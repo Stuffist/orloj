@@ -1,7 +1,7 @@
-@* Panneau d'administration : comptes. Sans recherche, les éditeurs et les admins (ou les derniers
-   créés) ; avec, les comptes dont le pseudo la contient. Par compte : rôle, dates, état, et les
-   actions (mot de passe temporaire, déverrouiller, déconnecter, supprimer). Jamais l'e-mail ;
-   son propre compte ne se modifie pas ici. *@
+@* Admin panel: accounts. Without a search, the editors and admins (or the newest accounts); with
+   one, the accounts whose username contains it. Per account: role, dates, state, and the actions
+   (temporary password, unlock, sign out, delete). Never the email; one's own account is not
+   changed here. *@
 @using Olomoc.Accounts
 @inject AdminApi Api
 @inject AccountService Accounts
@@ -80,12 +80,12 @@
 </section>
 
 @code {
-    /// <summary>Après une action qui change les chiffres (rôle, suppression…).</summary>
+    /// <summary>After an action that changes the figures (role, deletion…).</summary>
     [Parameter] public EventCallback Changed { get; set; }
 
     private bool _busy, _recent;
     private string _search = "", _shown = "";
-    private int _version;       // lignes recréées à chaque lecture : rôle refusé, liste rétablie
+    private int _version;       // rows recreated on each read: role refused, list restored
     private List<AdminAccount>? _accounts;
     private (string Text, bool Ok)? _status;
 
@@ -127,7 +127,7 @@
 
     private Task ReloadAsync() => LoadAsync(_shown, _recent);
 
-    // Action sur un compte : compte rendu, liste relue, chiffres de la page relus.
+    // Action on an account: report, list read again, page figures read again.
     private async Task RunAsync<T>(Func<Task<AccountResult<T>>> call, Func<T?, string> success)
     {
         _busy = true;
@@ -163,7 +163,7 @@
         await RunAsync(() => Api.LogoutAsync(account.UserName), _ => L.Ui("control.accounts.loggedOut", account.UserName));
     }
 
-    // Suppression confirmée en retapant le pseudo.
+    // Deletion confirmed by typing the username again.
     private async Task DeleteAsync(AdminAccount account)
     {
         var typed = await JS.InvokeAsync<string?>("prompt", L.Ui("control.accounts.delete.confirm", account.UserName, account.Cabals));

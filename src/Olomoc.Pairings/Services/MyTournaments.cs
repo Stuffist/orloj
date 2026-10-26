@@ -3,14 +3,14 @@ using Microsoft.JSInterop;
 
 namespace Olomoc.Pairings.Services;
 
-/// <summary>Tournoi suivi sur cet appareil, avec les jetons reçus (organisateur, inscription).</summary>
+/// <summary>Tournament followed on this device, with the tokens received (organizer, registration).</summary>
 public sealed record MyTournament(string Code, string Name, string? OrganizerToken, string? PlayerId, string? PlayerToken, DateTimeOffset SeenAt);
 
 /// <summary>
-/// Tournois suivis sur cet appareil (localStorage, clé « olomoc.tournaments ») : ceux qu'on
-/// organise (jeton organisateur, seule clé d'administration) et ceux où l'on s'est inscrit
-/// (jeton joueur). Perdre le jeton organisateur, c'est perdre l'administration : le lien
-/// d'administration (qui le contient) est à garder.
+/// Tournaments followed on this device (localStorage, "olomoc.tournaments" key): those one
+/// organizes (organizer token, the only admin key) and those one registered for (player token).
+/// Losing the organizer token means losing the administration: the admin link (which contains it)
+/// must be kept.
 /// </summary>
 public sealed class MyTournaments(IJSRuntime js)
 {
@@ -20,14 +20,14 @@ public sealed class MyTournaments(IJSRuntime js)
     private Task? _loading;
     private List<MyTournament> _items = new();
 
-    /// <summary>Le plus récemment consulté d'abord.</summary>
+    /// <summary>Most recently viewed first.</summary>
     public IReadOnlyList<MyTournament> All => _items;
 
     public Task EnsureLoadedAsync() => _loading ??= LoadAsync();
 
     public MyTournament? Get(string code) => _items.FirstOrDefault(t => Same(t.Code, code));
 
-    /// <summary>Met à jour l'entrée du tournoi (les jetons non fournis sont conservés).</summary>
+    /// <summary>Updates the tournament's entry (tokens not given are kept).</summary>
     public async Task RememberAsync(string code, string name, string? organizerToken = null, string? playerId = null, string? playerToken = null)
     {
         var old = Get(code);
@@ -37,7 +37,7 @@ public sealed class MyTournaments(IJSRuntime js)
         await StoreAsync();
     }
 
-    /// <summary>Oublie l'inscription (désinscription) en gardant le reste.</summary>
+    /// <summary>Forgets the registration (withdrawal) while keeping the rest.</summary>
     public async Task ForgetPlayerAsync(string code)
     {
         if (Get(code) is not { } t) return;
@@ -61,13 +61,13 @@ public sealed class MyTournaments(IJSRuntime js)
             if (!string.IsNullOrEmpty(json))
                 _items = JsonSerializer.Deserialize<List<MyTournament>>(json, JsonOpts)?.OrderByDescending(t => t.SeenAt).ToList() ?? new();
         }
-        catch (JSException) { /* stockage indisponible */ }
-        catch (JsonException) { /* contenu illisible : ignoré */ }
+        catch (JSException) { /* storage unavailable */ }
+        catch (JsonException) { /* unreadable content: ignored */ }
     }
 
     private async Task StoreAsync()
     {
         try { await js.InvokeVoidAsync("localStorage.setItem", StorageKey, JsonSerializer.Serialize(_items, JsonOpts)); }
-        catch (JSException) { /* navigation privée… : le temps de l'onglet */ }
+        catch (JSException) { /* private browsing…: as long as the tab lives */ }
     }
 }

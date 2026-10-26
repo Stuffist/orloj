@@ -5,9 +5,9 @@
 @inject CatalogService Catalog
 @inject TournamentApi Api
 
-@* Statistiques des tournois terminés et comptés (archives anonymes) : factions jouées, choix des
-   rouages par faction, victoires par faction et par rouage de rang 3 ; là où l'orga les a notés,
-   victoires de J1, fins de partie, scénarios joués. *@
+@* Statistics of the finished and counted tournaments (anonymous archives): factions played, cog
+   choices per faction, wins per faction and per rank 3 cog; where the organizer recorded them, P1
+   wins, game endings, scenarios played. *@
 
 @if (!_ready)
 {
@@ -92,7 +92,7 @@ else
             }
         </section>
 
-        @* Notés par l'organisateur à la saisie des résultats (facultatif) : J1, fin de partie, scénario. *@
+        @* Recorded by the organizer when entering results (optional): P1, end of the game, scenario. *@
         <section class="panel">
             <h3>@L.Ui("pairings.stats.first")</h3>
             @if (s.FirstPlayer.Games == 0)
@@ -168,15 +168,15 @@ else
 
     public void Dispose() => L.Changed -= OnLanguageChanged;
 
-    // Faction choisie pour les rouages : la plus jouée par défaut.
+    // Faction chosen for the cogs: the most played by default.
     private string? PicksFaction => _faction ?? _stats?.Picks.FirstOrDefault()?.Faction;
 
     private string CogName(string id) => Catalog.CogById(id) is { } cog ? L.CogName(cog).Text : id;
 
-    // « 5 V · 1 N · 2 D — 8 parties »
+    // "5 W · 1 D · 2 L — 8 games"
     private string Record(WinRate w) => L.Ui("pairings.stats.record", w.Wins, w.Draws, w.Losses, w.Games);
 
-    // « 12 parties · J1 gagne 58 % (7 parties notées) »
+    // "12 games · P1 wins 58% (7 games recorded)"
     private string ScenarioDetail(ScenarioStat sc) => sc.First.Games == 0
         ? L.Ui("pairings.stats.games", sc.Games)
         : L.Ui("pairings.stats.scenarioFirst", sc.Games, Math.Round(sc.First.Percent), sc.First.Games);

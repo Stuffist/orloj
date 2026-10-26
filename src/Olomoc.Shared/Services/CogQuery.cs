@@ -7,11 +7,11 @@ namespace Olomoc.Services;
 
 public enum StatKind { Tech, Melee, Ranged, Dodge }
 
-/// <summary>Condition sur une caractéristique, telle que saisie dans la recherche (« tir>4 »).</summary>
-/// <param name="Start">Position du fragment dans la saisie, pour pouvoir le retirer.</param>
+/// <summary>Condition on a stat, as typed in the search ("tir>4").</summary>
+/// <param name="Start">Position of the fragment in the input, so that it can be removed.</param>
 public sealed record StatCondition(StatKind Stat, string Op, int Value, int Start, int Length)
 {
-    /// <summary>Classe CSS de l'icône (voir StatLine).</summary>
+    /// <summary>CSS class of the icon (see StatLine).</summary>
     public string Icon => Stat.ToString().ToLowerInvariant();
 
     public string OpLabel => Op switch { ">=" => "≥", "<=" => "≤", _ => Op };
@@ -37,10 +37,10 @@ public sealed record StatCondition(StatKind Stat, string Op, int Value, int Star
 }
 
 /// <summary>
-/// Recherche de rouages : mots libres (comparés sans accents ni casse au texte cherchable du
-/// rouage) et conditions cumulables sur les caractéristiques, ex. « kantor tir>4 esq&lt;=3 ».
-/// Les mots-clés de stats (trigrammes, noms) sont fournis par les paquets de langue : la
-/// syntaxe accepte ceux de toutes les langues, quelle que soit la langue affichée.
+/// Cog search: free words (compared without accents or case to the cog's searchable text) and
+/// cumulative conditions on the stats, e.g. "kantor tir>4 esq&lt;=3" (French keywords). The stat
+/// keywords (three-letter codes, names) come from the language packs: the syntax accepts those
+/// of every language, whatever the displayed language.
 /// </summary>
 public sealed class CogQuery
 {
@@ -57,16 +57,16 @@ public sealed class CogQuery
         Words = words;
     }
 
-    /// <param name="keywords">Mot-clé en minuscules → caractéristique (voir LocalizationService.StatKeywords).</param>
+    /// <param name="keywords">Lowercase keyword → stat (see LocalizationService.StatKeywords).</param>
     public static CogQuery Parse(string? input, IReadOnlyDictionary<string, StatKind> keywords)
     {
         input ??= "";
         if (keywords.Count == 0) return new(Array.Empty<StatCondition>(), Fold(input).Split(' ', StringSplitOptions.RemoveEmptyEntries));
 
-        // Les mots-clés les plus longs d'abord : « technique » avant « tec ».
+        // Longest keywords first: "technique" before "tec".
         var names = string.Join('|', keywords.Keys.OrderByDescending(k => k.Length).Select(Regex.Escape));
         var condition = new Regex($@"\b({names})\s*({Ops})\s*(\d+)", RegexOptions.IgnoreCase);
-        // Condition en cours de frappe (opérateur sans nombre) : ignorée plutôt que traitée comme texte.
+        // Condition being typed (operator without a number): ignored rather than treated as text.
         var pending = new Regex($@"\b({names})\s*({Ops})(?=\s|$)", RegexOptions.IgnoreCase);
 
         var conditions = condition.Matches(input)
@@ -81,7 +81,7 @@ public sealed class CogQuery
         return new(conditions, Fold(rest).Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
-    /// <param name="searchText">Texte cherchable du rouage (noms, titres), voir LocalizationService.SearchText.</param>
+    /// <param name="searchText">Searchable text of the cog (names, titles), see LocalizationService.SearchText.</param>
     public bool Matches(Cog cog, string searchText)
     {
         if (!Conditions.All(c => c.Matches(cog.Stats))) return false;
@@ -90,12 +90,12 @@ public sealed class CogQuery
         return Words.All(haystack.Contains);
     }
 
-    /// <summary>La saisie sans le fragment de la condition (pour la pastille « ✕ »).</summary>
+    /// <summary>The input without the condition's fragment (for the "✕" chip).</summary>
     public static string Without(string input, StatCondition condition) =>
         string.Join(' ', input.Remove(condition.Start, condition.Length)
             .Split(' ', StringSplitOptions.RemoveEmptyEntries));
 
-    /// <summary>Minuscules sans diacritiques, espaces normalisés : « Pétra » -> « petra ».</summary>
+    /// <summary>Lowercase without diacritics, normalized spaces: "Pétra" -> "petra".</summary>
     public static string Fold(string s)
     {
         var sb = new StringBuilder(s.Length);

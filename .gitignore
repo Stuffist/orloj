@@ -1,4 +1,4 @@
-# Sorties de build .NET
+# .NET build outputs
 bin/
 obj/
 [Dd]ebug/
@@ -19,22 +19,22 @@ publish/
 *.userprefs
 *.DotSettings.user
 
-# Tests et couverture
+# Tests and coverage
 TestResults/
 coverage*/
 *.coverage
 
-# Outillage JS éventuel (validation des schémas, etc.)
+# Possible JS tooling (schema validation, etc.)
 node_modules/
 
-# Réglages locaux Claude Code
+# Claude Code local settings
 .claude/settings.local.json
 
-# Système
+# System
 .DS_Store
 Thumbs.db
 App_Data/
-# Tournois du conteneur (dossier monté par docker-compose.yml), pas le référentiel
+# The container's data (folder mounted by docker-compose.yml), not the card catalog
 /data/
-# Réglages et secrets du conteneur (copiés à la main sur le VPS)
+# The container's settings and secrets (written by hand on the server)
 .env

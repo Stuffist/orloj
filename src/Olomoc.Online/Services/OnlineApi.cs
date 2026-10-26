@@ -5,13 +5,13 @@ using Olomoc.Tournaments;
 
 namespace Olomoc.Online.Services;
 
-/// <summary>Réponse de l'API : la valeur, ou les problèmes qui l'ont empêchée.</summary>
+/// <summary>API response: the value, or the problems that prevented it.</summary>
 public sealed record ApiResult<T>(T? Value, IReadOnlyList<Problem> Problems)
 {
     public bool Ok => Problems.Count == 0;
 }
 
-/// <summary>Création d'une partie en ligne (/api/online, même origine) ; tout le reste passe par le hub.</summary>
+/// <summary>Creation of an online game (/api/online, same origin); everything else goes through the hub.</summary>
 public sealed class OnlineApi(HttpClient http)
 {
     public async Task<ApiResult<OnlineCreated>> CreateAsync(string? name, CabalExport? cabal = null)

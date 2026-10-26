@@ -39,7 +39,7 @@ body {
 
 .loading { color: var(--muted); padding: 2rem; text-align: center; }
 
-/* Filtres */
+/* Filters */
 .filters {
     display: flex; flex-wrap: wrap; gap: 1rem;
     background: var(--panel); border: 1px solid var(--line);
@@ -54,7 +54,7 @@ body {
 }
 .field select:focus, .field input:focus { outline: 2px solid var(--rust-soft); }
 
-/* Recherche : conditions sur les stats reconnues, ou rappel de la syntaxe */
+/* Search: recognized conditions on the stats, or a reminder of the syntax */
 .query-help { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; min-height: 1.6rem; }
 .query-chip {
     display: inline-flex; align-items: center; gap: .3rem;
@@ -105,7 +105,7 @@ body {
 .cog-option-factions { display: flex; gap: .3rem; flex: none; color: var(--muted); padding-top: .1rem; }
 .cog-option-factions .emblem { width: 1.1rem; height: 1.1rem; }
 
-/* Fiche du rouage : factions dont il est membre, puis celles où une carte permet de le recruter */
+/* Cog details: factions it is a member of, then those where a card allows recruiting it */
 .cog-factions {
     display: grid; grid-template-columns: auto 1fr; column-gap: .7rem; row-gap: .3rem; align-items: start;
     font-size: .8rem;
@@ -120,7 +120,7 @@ body {
 
 .cog-card { display: flex; flex-direction: column; gap: .7rem; }
 
-/* Icônes du livre de règles teintées via mask-image (stats LDR p.15, pictogrammes LDR p.20) */
+/* Rulebook icons tinted through mask-image (stats rulebook p.15, pictograms rulebook p.20) */
 .icon {
     display: inline-block; flex: none; width: 1.15rem; height: 1.15rem; background-color: var(--muted);
     -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat;
@@ -131,7 +131,7 @@ body {
 .icon.freq-cycle    { -webkit-mask-image: url("../img/icons/freq-cycle.png");    mask-image: url("../img/icons/freq-cycle.png"); }
 .icon.freq-game     { -webkit-mask-image: url("../img/icons/freq-game.png");     mask-image: url("../img/icons/freq-game.png"); }
 
-/* Logos de faction et emblèmes des Ministères (composant Emblem) : à la taille du texte qui les suit */
+/* Faction logos and Ministry emblems (Emblem component): the size of the text that follows them */
 .emblem {
     display: inline-block; flex: none; width: 1.3em; height: 1.3em; vertical-align: -.3em;
     background-color: currentColor;
@@ -140,8 +140,8 @@ body {
 .emblem.ministry { background-color: var(--rust-soft); }
 .emblem-name { display: inline-flex; align-items: center; gap: .3em; white-space: nowrap; }
 .emblem-names { display: flex; flex-wrap: wrap; column-gap: .7em; row-gap: .1em; }
-/* Logo du choix courant dans la liste fermée (une <option> ne peut pas porter d'image) :
-   place réservée en permanence, la liste garde sa largeur, qu'il y ait un logo ou non. */
+/* Logo of the current choice in the closed list (an <option> cannot carry an image): space
+   always reserved, the list keeps its width whether there is a logo or not. */
 .with-emblem { position: relative; display: flex; flex-direction: column; }
 .with-emblem > .emblem {
     position: absolute; left: .55rem; top: 50%; transform: translateY(-50%);
@@ -149,9 +149,9 @@ body {
 }
 .with-emblem select { padding-left: 2.25rem; }
 
-/* Listes à emblèmes : logo devant chaque choix dans la liste ouverte, là où le navigateur
-   permet de styler la liste (appearance: base-select, Chrome/Edge 135+). Ailleurs, liste
-   native en texte seul (l'emblème vide d'une <option> n'y est pas affiché). */
+/* Lists with emblems: logo in front of each choice in the open list, where the browser allows
+   styling the list (appearance: base-select, Chrome/Edge 135+). Elsewhere, native text-only list
+   (the empty emblem of an <option> is not shown there). */
 @supports (appearance: base-select) {
     .emblem-select, .emblem-select::picker(select) { appearance: base-select; }
     .emblem-select { display: flex; align-items: center; }
@@ -178,7 +178,7 @@ body {
 .cog-min .emblem { width: 1.55em; height: 1.55em; }
 .tn-faction .emblem { width: 1.75em; height: 1.75em; background-color: var(--ink); }
 
-/* Caractéristiques (composant StatLine) */
+/* Stats (StatLine component) */
 .stat-line { display: grid; grid-template-columns: repeat(4, 1fr); gap: .35rem; }
 .stat {
     display: grid; grid-template-columns: auto auto; justify-content: center; align-items: center;
@@ -226,7 +226,7 @@ body {
     width: 100%; min-width: 0; text-overflow: ellipsis;
 }
 
-/* Légalité : pastille dans l'en-tête « Sauvegarde et export », raisons dessous */
+/* Legality: badge in the "Save and export" header, reasons below */
 .legality-badge {
     display: inline-block; padding: .2rem .65rem; border-radius: 999px; border: 1px solid var(--line);
     font-size: .85rem; font-weight: 600;
@@ -242,7 +242,7 @@ body {
 }
 #blazor-error-ui a { color: #fff; margin-left: 1rem; }
 
-/* Capacités (AbilityList) : colonne de pictogrammes puis nom et effet de jeu */
+/* Abilities (AbilityList): column of pictograms then name and game effect */
 .abilities { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
 .ability { display: flex; gap: .55rem; align-items: flex-start; font-size: .82rem; line-height: 1.4; }
 .ability-picts {
@@ -257,7 +257,7 @@ body {
 .pict-img { width: 1.05rem; height: 1.05rem; vertical-align: -.15em; }
 .game-effect .pict-img { width: .95em; height: .95em; margin: 0 .1em; }
 
-/* Fréquences : silhouette du livre, chiffre superposé (au-dessus de la couronne) */
+/* Frequencies: the rulebook's silhouette, digit on top (above the crown) */
 .freq { position: relative; display: inline-flex; justify-content: center; align-items: center; }
 .freq .freq-n {
     position: absolute; inset: 0; display: flex; justify-content: center; align-items: center;
@@ -270,10 +270,10 @@ body {
 
 .pict-unknown { font-family: Consolas, monospace; font-size: .75rem; color: var(--rust-soft); }
 
-/* Texte d'une carte non traduit : affiché dans la langue de référence */
+/* Untranslated card text: shown in the reference language */
 .untranslated { font-style: italic; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
 
-/* Export (texte au format bwaaaanegamesdb.fr, ou JSON) */
+/* Export (text in the bwaaaanegamesdb.fr format, or JSON) */
 .export { margin-bottom: 1rem; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; }
 .export-head { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; margin-bottom: .7rem; }
 .export h2 { margin: 0; font-size: 1.05rem; }
@@ -295,7 +295,7 @@ body {
 .export-preview { margin-top: .6rem; }
 .export-preview summary { cursor: pointer; color: var(--muted); font-size: .85rem; }
 .export-preview .export-output { margin-top: .5rem; }
-/* Lexique des mots-clés (éditeur du référentiel), replié par défaut */
+/* Keyword glossary (card catalog editor), collapsed by default */
 .token-help { margin: 0 0 .6rem; font-size: .8rem; }
 .token-help summary { cursor: pointer; color: var(--muted); width: fit-content; }
 .token-help[open] { background: var(--panel-2); border-radius: 6px; padding: .4rem .6rem; }
@@ -315,7 +315,7 @@ body {
 .btn.danger { color: var(--rust-soft); border-color: var(--rust); background: transparent; }
 .btn.small { padding: .25rem .6rem; font-size: .8rem; }
 
-/* Planche des cartes (/builder/cards) : A4 paysage, cartes à taille réelle, positions en % de la page */
+/* Card sheet (/builder/cards): landscape A4, cards at actual size, positions in % of the page */
 .cards-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .8rem 1.2rem; margin-bottom: 1rem; }
 .cards-titles { flex: 1 1 18rem; min-width: 0; }
 .cards-titles h2 { margin: 0 0 .2rem; font-size: 1.1rem; }
@@ -328,9 +328,9 @@ body {
 .card-sheet-card, .card-sheet-empty { position: absolute; display: block; }
 .card-sheet-card { object-fit: fill; }
 .card-sheet-empty { border: 1px dashed #c8c8c8; box-sizing: border-box; }
-/* Impression : une seule page A4 paysage. Tout le document est sur la page « cards » (sinon ce
-   qui suit la planche peut ouvrir une page au format par défaut, portrait et vide), limité à
-   sa hauteur. */
+/* Printing: a single landscape A4 page. The whole document is on the "cards" page (otherwise what
+   follows the sheet can open a page in the default format, portrait and empty), limited to its
+   height. */
 .card-sheet, html:has(.card-sheet) { page: cards; }
 @page cards { size: A4 landscape; margin: 0; }
 @media print {
@@ -342,16 +342,16 @@ body {
     .card-sheet-empty { display: none; }
 }
 
-/* Constructeur ouvert depuis l'inscription à un tournoi */
+/* Builder opened from a tournament registration */
 .tournament-notice {
     display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .8rem; margin: 0 0 .8rem; padding: .55rem .8rem;
     border: 1px solid var(--ok); border-radius: 8px; background: rgba(63, 166, 106, .1); font-size: .88rem;
 }
 .tournament-notice a { color: var(--ok); font-weight: 600; }
 
-/* Cabales sauvegardées sur l'appareil */
+/* Cabals saved on the device */
 .builder-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-bottom: .8rem; }
-.builder-tools > .btn { align-self: stretch; }      /* même hauteur, ▶ compris */
+.builder-tools > .btn { align-self: stretch; }      /* same height, ▶ included */
 .builder-tools .count {
     display: inline-block; min-width: 1.3rem; margin-left: .3rem; padding: 0 .35rem; border-radius: 999px;
     background: var(--rust); color: #fff; font-size: .75rem; font-weight: 700; text-align: center;
@@ -360,7 +360,7 @@ body {
     display: flex; align-items: center; gap: .5rem; margin: 0; padding: .35rem .6rem; border-radius: 8px;
     border: 1px solid var(--rust); background: rgba(193, 68, 14, .1); color: var(--rust-soft); font-size: .85rem;
 }
-.export-controls > .btn { min-width: 9.5rem; text-align: center; }   /* « Sauvegardée ✓ » sans décalage */
+.export-controls > .btn { min-width: 9.5rem; text-align: center; }   /* "Saved ✓" without shifting */
 .saved-cabals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
 .saved-cabal {
     display: flex; flex-direction: column; gap: .35rem;
@@ -376,7 +376,7 @@ body {
 .library-import .export-warning { margin: 0; }
 
 
-/* Mode partie : pensé pour un téléphone ou une tablette posé sur la table */
+/* Play mode: designed for a phone or a tablet lying on the table */
 .play-empty { text-align: center; padding: 2rem 0; }
 .play-bar {
     position: sticky; top: 0; z-index: 10;
@@ -444,7 +444,7 @@ body {
 .check { display: flex; align-items: center; gap: .45rem; font-size: .85rem; }
 .check input { width: 1.1rem; height: 1.1rem; accent-color: var(--rust); }
 .check.disabled { opacity: .45; }
-/* Case dans un champ de filtre : texte normal (pas celui des titres de champ), à la hauteur des autres contrôles. */
+/* Checkbox in a filter field: normal text (not that of the field titles), at the height of the other controls. */
 .field label.check { min-height: 2.35rem; font-size: .9rem; text-transform: none; letter-spacing: normal; color: var(--ink); cursor: pointer; }
 .play-preview { margin: 0; font-size: .85rem; color: var(--muted); }
 
@@ -487,18 +487,18 @@ body {
 
 .play-footer { margin-top: 1.5rem; text-align: center; }
 
-/* Fin de partie, à la place du bouton de fin de cycle */
+/* End of the game, in place of the end-of-cycle button */
 .play-over {
     display: inline-flex; align-items: center; min-height: 2.4rem; padding: .3rem .8rem; border-radius: 8px;
     border: 1px solid var(--ok); background: rgba(63, 166, 106, .12); font-size: .85rem; font-weight: 600;
 }
 .play-over.lost { border-color: var(--ko); background: rgba(193, 68, 14, .15); color: var(--rust-soft); }
-/* Même case pour tous : elle prend la taille du plus grand, l'élément courant la remplit */
+/* Same box for all: it takes the size of the largest, the current item fills it */
 .play-end { display: grid; }
 .play-end > * { grid-area: 1 / 1; justify-content: center; text-align: center; }
 .play-end > .off { visibility: hidden; }
 
-/* Carte supplémentaire (Medic Ruzicka) */
+/* Extra card (Medic Ruzicka) */
 .play-extra { display: flex; flex-direction: column; gap: .3rem; }
 .play-extra label { font-size: .72rem; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
 .play-extra select {
@@ -506,7 +506,7 @@ body {
     border-radius: 6px; padding: .45rem .5rem; font-size: .9rem; width: 100%; min-width: 0;
 }
 
-/* Fenêtre superposée (Sheet) : panneau en bas sur téléphone, centré sur grand écran */
+/* Overlay window (Sheet): panel at the bottom on phones, centered on large screens */
 .sheet-backdrop {
     position: fixed; inset: 0; z-index: 100; background: rgba(5, 8, 10, .6);
     display: flex; align-items: flex-end; justify-content: center;
@@ -527,7 +527,7 @@ body {
 .sheet-actions { display: flex; justify-content: flex-end; gap: .5rem; }
 .sheet-actions .btn { min-height: 2.6rem; min-width: 6.5rem; }
 
-/* Notification : compte rendu de la dernière action, par-dessus la page */
+/* Notification: report of the last action, over the page */
 .toast {
     position: fixed; z-index: 90; left: 50%; bottom: calc(1rem + env(safe-area-inset-bottom)); transform: translateX(-50%);
     width: max-content; max-width: min(32rem, calc(100vw - 1.5rem));
@@ -538,17 +538,17 @@ body {
 }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, .6rem); } }
 
-/* Téléphone : en-tête compact, pour laisser la place aux rouages */
+/* Phone: compact header, to leave room for the cogs */
 @media (max-width: 600px) {
     .app-shell { padding: .8rem .75rem 3rem; }
-    /* Titre sur sa propre ligne, langue en dessous : rien n'écrase le titre. */
+    /* Title on its own line, language below: nothing squeezes the title. */
     .app-header { gap: .5rem .6rem; margin-bottom: .8rem; flex-wrap: wrap; }
     .app-header .mark { width: 30px; height: 30px; border-width: 2px; }
     .app-titles { flex-basis: calc(100% - 30px - .6rem); }
     .lang-switch { margin-left: auto; }
     .app-header h1 { font-size: 1.02rem; }
     .subtitle { font-size: .78rem; }
-    /* Barre trop haute pour rester fixée : « Annuler » est aussi dans les notifications. */
+    /* Bar too tall to stay fixed: "Undo" is also in the notifications. */
     .play-bar { position: static; padding: .5rem .6rem; gap: .5rem .8rem; }
     .play-bar .step { width: 2rem; height: 2rem; }
     .play-counters { gap: .45rem .8rem; }
@@ -556,7 +556,7 @@ body {
     .play-cog { padding: .7rem; }
 }
 
-/* Menu du site (AppNav) : onglets sous l'en-tête ; sur téléphone, barre fixée en bas */
+/* Site menu (AppNav): tabs under the header; on phones, bar fixed at the bottom */
 .app-header a.mark { display: block; }
 .app-tabs {
     display: flex; flex-wrap: wrap; gap: .2rem; margin: -.6rem 0 1.4rem;
@@ -597,13 +597,13 @@ body {
     .app-tab .tab-long { display: none; }
     .app-tab .tab-short { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
     .tab-dot { position: absolute; top: .4rem; left: calc(50% + .5rem); }
-    /* Bas de page et notifications au-dessus de la barre. */
+    /* Page bottom and notifications above the bar. */
     .app-shell { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)); }
     .toast { bottom: calc(4.4rem + env(safe-area-inset-bottom)); }
 }
 @media print { .app-tabs { display: none !important; } }
 
-/* Compte (/builder/account, liens reçus par e-mail, données personnelles) */
+/* Account (/builder/account, links received by email, personal data) */
 .account-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 1rem; }
 @media (min-width: 760px) { .account-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .account-panel h2, .account-panel h3 { overflow-wrap: anywhere; }
@@ -627,7 +627,7 @@ body {
 .account-role-name { overflow-wrap: anywhere; min-width: 0; }
 .account-roles select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: .35rem .5rem; font-size: .9rem; }
 
-/* Panneau d'administration (/builder/control) */
+/* Admin panel (/builder/control) */
 .control-title { margin: 0 0 1rem; }
 .control-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: .6rem; }
 .control-tile {
@@ -663,7 +663,7 @@ body {
 .library-account { margin: 0 0 .8rem; }
 .library-account a { color: var(--rust-soft); }
 
-/* Éditeur du référentiel (/builder/admin, admins) */
+/* Card catalog editor (/builder/admin, admins) */
 .draft-badge, .admin-badge {
     display: inline-block; margin-left: .4rem; padding: 0 .45rem; border-radius: 999px; border: 1px dashed var(--rust-soft);
     color: var(--rust-soft); font-size: .68rem; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; vertical-align: middle;
@@ -721,7 +721,7 @@ body {
 .admin-actions { margin-top: .8rem; }
 .admin-changes { margin: 0; padding-left: 1.2rem; font-size: .9rem; }
 
-/* ---- Catalogue des équipements et dons (bas du constructeur, fenêtre détachée /builder/equipment) ---- */
+/* ---- Equipment and boon catalog (bottom of the builder, detached window /builder/equipment) ---- */
 .equip-section { margin-top: 1.5rem; }
 .equip-section-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .8rem; }
 .equip-section-head h2 { margin: 0 auto 0 0; font-size: 1.05rem; }
@@ -741,7 +741,7 @@ body {
 .equip-sort .export-modes { align-self: flex-start; }
 .card-full { display: block; width: 100%; height: auto; border-radius: 8px; }
 
-/* Fenêtre à part (?window=true) : en-tête réduit, la liste prend la place */
+/* Separate window (?window=true): reduced header, the list takes the space */
 .app-shell.compact { padding: .7rem .75rem 2rem; }
 .app-shell.compact .app-header { gap: .6rem; margin-bottom: .7rem; }
 .app-shell.compact .app-header .mark { width: 28px; height: 28px; border-width: 2px; }
@@ -750,7 +750,7 @@ body {
 .app-shell.compact .filters { gap: .6rem; padding: .7rem; margin-bottom: .8rem; }
 .app-shell.compact .field { min-width: 0; flex: 1 1 12rem; }
 
-/* ---- Tournois (/pairings/) ---- */
+/* ---- Tournaments (/pairings/) ---- */
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
 .panel h2 { margin: 0 0 .7rem; font-size: 1.1rem; }
 .panel h3 { margin: 0 0 .7rem; font-size: 1rem; }
@@ -762,7 +762,7 @@ body {
     padding: .5rem .6rem; font-size: 1rem; width: 14rem; max-width: 100%;
 }
 .tn-join .tn-inline input { text-transform: uppercase; letter-spacing: 2px; width: 12rem; }
-/* Le code tapé en capitales espacées, mais pas le texte d'exemple (sinon tronqué). */
+/* The typed code in spaced capitals, but not the placeholder text (otherwise truncated). */
 .tn-join .tn-inline input::placeholder { text-transform: none; letter-spacing: normal; }
 .tn-form { display: flex; flex-direction: column; gap: .9rem; }
 .tn-fields { display: flex; flex-wrap: wrap; gap: .8rem 1rem; }
@@ -839,7 +839,7 @@ body {
 
 .tn-cabals { display: flex; flex-wrap: wrap; gap: .6rem; }
 .tn-cabal { min-width: 0; }
-.tn-cabals .tn-cabal { flex: 1 1 14rem; }        /* côte à côte dans une liste de cabales seulement */
+.tn-cabals .tn-cabal { flex: 1 1 14rem; }        /* side by side in a list of cabals only */
 .tn-cabal-name { font-size: .8rem; color: var(--muted); margin-bottom: .2rem; }
 .tn-cabal ul { list-style: none; margin: 0; padding: 0; font-size: .85rem; display: flex; flex-direction: column; gap: .1rem; }
 .tn-cabal .stars { display: inline-block; width: 2.6em; color: var(--rust); font-size: .72rem; }
@@ -857,7 +857,7 @@ body {
 .tn-player-lists .tn-cabals { padding-top: .4rem; }
 .tn-history { margin-top: .8rem; border-top: 1px solid var(--line); padding-top: .3rem; }
 
-/* Tables d'une ronde : même grille en lecture et en saisie, rien ne bouge d'une ligne à l'autre */
+/* Tables of a round: same grid when reading and entering, nothing moves from one line to the next */
 .tn-tables, .tn-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
 .tn-table, .tn-result {
     display: grid; grid-template-columns: 4.2rem minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: .5rem;
@@ -882,7 +882,7 @@ body {
 .tn-result-state.dirty { color: var(--rust-soft); }
 .tn-result-state.error { color: var(--ko); }
 
-/* Statistiques : barres en CSS seul (libellé, barre, %, détail), estompées si l'échantillon est petit */
+/* Statistics: CSS-only bars (label, bar, %, detail), faded if the sample is small */
 .stat-row {
     display: grid; grid-template-columns: minmax(8rem, 15rem) minmax(4rem, 1fr) 3.2rem minmax(5rem, 11rem);
     align-items: center; gap: .3rem .7rem; padding: .3rem 0; border-bottom: 1px solid var(--line); font-size: .88rem;
@@ -905,7 +905,7 @@ body {
 }
 .tn-cabal-choice button.on { background: var(--rust); border-color: var(--rust); color: #fff; }
 .tn-cabal-choice button:disabled { cursor: default; }
-/* Échange de deux joueurs de la ronde en cours (organisateur) */
+/* Swap of two players of the current round (organizer) */
 .tn-swap {
     align-self: flex-start; margin-top: .15rem; padding: 0 .4rem; font-size: .85rem; line-height: 1.4; cursor: pointer;
     background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 5px;
@@ -917,7 +917,7 @@ body {
 .tn-swap-hint { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .tn-swap-hint.active { color: var(--rust-soft); font-weight: 600; }
 
-/* Saisie facultative (statistiques) : J1, cause de la fin de partie ; affichage dans les tables */
+/* Optional entry (statistics): P1, cause of the end of the game; display in the tables */
 .tn-first, .tn-result-end button {
     padding: .1rem .45rem; font-size: .72rem; cursor: pointer;
     background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 5px;
@@ -934,7 +934,7 @@ body {
 }
 .tn-end { display: block; font-size: .68rem; font-weight: 400; color: var(--muted); }
 
-/* Scénarios des rondes : saisie (organisateur), programme (page publique), titre de ronde */
+/* Round scenarios: entry (organizer), schedule (public page), round title */
 .tn-scenarios, .tn-schedule { list-style: none; margin: 0 0 .7rem; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
 .tn-scenarios li { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .5rem; }
 .tn-scenarios li > label { flex: 0 0 4.2rem; }
@@ -975,7 +975,7 @@ body {
     .tn-head-side { align-items: flex-start; flex-direction: row; }
 }
 
-/* Parties en ligne : salon, mise en place, camps des deux joueurs, journal */
+/* Online games: lobby, setup, both players' sides, log */
 .play-cog-lock { display: flex; flex-direction: column; gap: .65rem; border: 0; margin: 0; padding: 0; min-width: 0; }
 .online-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .6rem 1rem; }
 .online-head h2 { margin: 0; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
@@ -1022,13 +1022,13 @@ body {
 .online-commands .btn { min-height: 2.4rem; }
 .online-camps { display: flex; flex-direction: column; gap: 1.2rem; }
 .online-camp .play-bar { position: static; }
-/* Camp adverse (joueur) : à masquer ou détacher ; fenêtre détachée : meta au-dessus du camp. */
+/* Opponent's side (player): to hide or detach; detached window: meta above the side. */
 .online-other-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-.online-other-head + .online-camp { margin-top: -.6rem; }      /* camp affiché : collé à son en-tête */
-.online-other-head:last-child { margin-bottom: 1rem; }           /* camp replié ou détaché : espace avant le journal */
+.online-other-head + .online-camp { margin-top: -.6rem; }      /* side shown: stuck to its header */
+.online-other-head:last-child { margin-bottom: 1rem; }           /* side collapsed or detached: space before the log */
 .online-other-head h2 { margin: 0 auto 0 0; font-size: 1.05rem; }
 .online-camp-meta { margin: 0 0 .8rem; }
-/* Faction et nom de la cabale sur une ligne, alignés (« Ligue de Maisel · Ma cabale »). */
+/* Faction and cabal name on one line, aligned ("Maisel League · My cabal"). */
 .camp-line { display: flex; flex-wrap: wrap; align-items: center; column-gap: .45em; row-gap: .1em; }
 .camp-line .emblem-name + .camp-cabal::before { content: "·"; margin-right: .45em; }
 .online-camp.mine .play-bar { border-color: var(--rust-soft); }
@@ -1042,7 +1042,7 @@ body {
 }
 .online-log time { color: var(--muted); margin-right: .4rem; font-variant-numeric: tabular-nums; }
 .online-games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
-/* Page Partie sans partie en cours : cadre « Jouer en ligne ». */
+/* Play page without a game in progress: "Play online" box. */
 .online-start { margin-bottom: 1rem; }
 .online-start h3 { margin: 1rem 0 .5rem; font-size: .95rem; }
 .online-games li { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }

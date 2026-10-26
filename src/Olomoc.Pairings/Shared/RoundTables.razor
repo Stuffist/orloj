@@ -1,5 +1,5 @@
-@* Tables d'une ronde (lecture) : adversaires, factions et résultat une fois saisi (avec J1 et la
-   cause de la fin de partie, si l'organisateur les a notés) ; partie en ligne à suivre, s'il y en a une. *@
+@* Tables of a round (read-only): opponents, factions and result once entered (with P1 and the
+   cause of the end of the game, if the organizer recorded them); online game to follow, if any. *@
 @inject LocalizationService L
 
 <ol class="tn-tables">
@@ -52,7 +52,7 @@
         ? @<span class="tn-first-mark" title="@L.Ui("pairings.result.first.played")">@L.Ui("pairings.result.first")</span>
         : null;
 
-    // « Cabale 2 — Nom » si le joueur a joué une cabale connue parmi plusieurs.
+    // "Cabal 2 — Name" if the player played a known cabal among several.
     private RenderFragment? Played(PlayerView? player, int? cabal) => player is null || cabal is not { } i || View.CabalsPerPlayer < 2
         ? null
         : @<span class="tn-played">@(player.Cabals is { } c && i < c.Count && c[i].Name is { Length: > 0 } name ? $"{L.Ui("pairings.cabalN", i + 1)} — {name}" : L.Ui("pairings.cabalN", i + 1))</span>;

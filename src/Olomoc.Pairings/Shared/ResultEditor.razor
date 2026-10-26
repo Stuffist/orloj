@@ -1,6 +1,6 @@
-@* Saisie des PV d'une table (organisateur), et de la cabale jouée par chacun quand le tournoi en
-   demande deux (facultative, pour les statistiques). Mise en page fixe : les champs et les boutons ne bougent
-   pas ; l'état (enregistré, modifié, erreur) occupe une case de largeur constante. *@
+@* Entry of a table's VP (organizer), and of the cabal played by each player when the tournament
+   asks for two (optional, for the statistics). Fixed layout: fields and buttons do not move; the
+   state (saved, changed, error) takes a box of constant width. *@
 @inject LocalizationService L
 
 <li class="tn-result @(Table.IsBye ? "bye" : null)">
@@ -45,7 +45,7 @@
             <button class="btn small" disabled="@(!CanSave)" @onclick="SaveAsync" title="@L.Ui("pairings.result.save")">@L.Ui("pairings.result.validate")</button>
             <span class="tn-result-state @StateClass" title="@StateTitle">@StateMark</span>
         </span>
-        @* Facultatif, pour les statistiques : ce qui a mis fin à la partie. *@
+        @* Optional, for the statistics: what ended the game. *@
         <span class="tn-result-end" role="group" aria-label="@L.Ui("pairings.result.end.title")" title="@L.Ui("pairings.result.end.title")">
             <span class="tn-result-end-label">@L.Ui("pairings.result.end")</span>
             @foreach (var end in Enum.GetValues<GameEnd>())
@@ -61,25 +61,25 @@
     [Parameter, EditorRequired] public TournamentView View { get; set; } = default!;
     [Parameter, EditorRequired] public int RoundNumber { get; set; }
     [Parameter, EditorRequired] public Table Table { get; set; } = default!;
-    /// <summary>Enregistrement (n° de ronde, de table, résultat) : renvoie les problèmes (aucun si accepté).</summary>
+    /// <summary>Save (round number, table number, result): returns the problems (none if accepted).</summary>
     [Parameter, EditorRequired] public Func<int, int, ResultRequest, Task<IReadOnlyList<Problem>>> Save { get; set; } = default!;
-    /// <summary>Tournoi terminé : résultats affichés, plus modifiables.</summary>
+    /// <summary>Tournament finished: results shown, no longer editable.</summary>
     [Parameter] public bool ReadOnly { get; set; }
     /// <summary>
-    /// Échange de joueurs (ronde en cours) : bouton ⇄ sur chaque joueur d'une table sans résultat ;
-    /// <see cref="SwapSelected"/> est le joueur déjà choisi, le second clic désigne l'autre.
+    /// Player swap (current round): ⇄ button on each player of a table without a result;
+    /// <see cref="SwapSelected"/> is the player already chosen, the second click picks the other one.
     /// </summary>
     [Parameter] public EventCallback<string> OnSwap { get; set; }
     [Parameter] public string? SwapSelected { get; set; }
 
-    // Table sans PV enregistrés (l'exempt compris) : ses joueurs peuvent être échangés.
+    // Table without VP saved (the bye included): its players can be swapped.
     private bool Swappable => OnSwap.HasDelegate && !ReadOnly && (Table.IsBye || (Table.VpA is null && Table.VpB is null));
 
     private RenderFragment? SwapButton(string playerId)
     {
         if (!Swappable) return null;
         var selected = SwapSelected == playerId;
-        // Second joueur : pas à la même table que le premier (ce ne serait pas un échange).
+        // Second player: not at the same table as the first (that would not be a swap).
         var sameTable = SwapSelected is { } s && !selected && Table.Involves(s);
         var title = selected ? L.Ui("pairings.swap.cancel")
             : SwapSelected is { } first ? L.Ui("pairings.swap.with", View.Player(first)?.Name ?? "")
@@ -93,7 +93,7 @@
     private TableSide? _first;
     private GameEnd? _end;
 
-    // J1 : un clic le désigne, un second le retire (facultatif).
+    // P1: one click sets it, a second one removes it (optional).
     private RenderFragment FirstChoice(TableSide side, string playerId) => @<button type="button" class="tn-first @(_first == side ? "on" : null)" disabled="@ReadOnly"
             aria-pressed="@(_first == side ? "true" : "false")" title="@L.Ui("pairings.result.first.title", View.Player(playerId)?.Name ?? "")"
             @onclick="() => Toggle(ref _first, side)">@L.Ui("pairings.result.first")</button>;
@@ -108,7 +108,7 @@
 
     private bool TwoCabals => View.CabalsPerPlayer > 1;
 
-    // Choix de la cabale jouée : « C1 » / « C2 », nom de la cabale en info-bulle.
+    // Choice of the cabal played: "C1" / "C2", cabal name in the tooltip.
     private RenderFragment CabalChoice(string playerId, int? chosen, Action<int> pick) => @<span class="tn-cabal-choice" role="group" aria-label="@L.Ui("pairings.result.cabalOf", View.Player(playerId)?.Name ?? "")">
         @for (var i = 0; i < View.CabalsPerPlayer; i++)
         {
@@ -122,7 +122,7 @@
         View.Player(playerId)?.Cabals is { } cabals && index < cabals.Count && cabals[index].Name is { Length: > 0 } name
             ? name : L.Ui("pairings.cabalN", index + 1);
 
-    // Valeurs du serveur reprises tant que la saisie n'est pas en cours (actualisation périodique).
+    // Server values taken back as long as no entry is in progress (periodic refresh).
     protected override void OnParametersSet()
     {
         if (_dirty) return;
@@ -150,7 +150,7 @@
 
     private static int? Parse(string s) => int.TryParse(s, out var n) ? n : null;
 
-    // Deux valeurs (ou aucune, pour effacer), différentes de ce qui est enregistré.
+    // Two values (or none, to clear), different from what is saved.
     private bool CanSave => !ReadOnly && _dirty && !_busy && (_a.Length == 0) == (_b.Length == 0)
                             && (_a.Length == 0 || (Parse(_a) is >= 0 and <= TournamentRules.MaxVictoryPoints
                                                    && Parse(_b) is >= 0 and <= TournamentRules.MaxVictoryPoints));

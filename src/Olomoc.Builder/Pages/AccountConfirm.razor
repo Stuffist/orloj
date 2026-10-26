@@ -6,8 +6,8 @@
 @inject LocalizationService L
 @inject NavigationManager Nav
 
-@* Lien de confirmation reçu par e-mail (/builder/account/confirm#user=…&token=…) : marche
-   aussi sur un appareil sans session. Le jeton est retiré de l'adresse dès sa lecture. *@
+@* Confirmation link received by email (/builder/account/confirm#user=…&token=…): also works on a
+   device without a session. The token is removed from the address as soon as it is read. *@
 
 <section class="panel account-panel">
     <h2>@(L.Loaded ? L.Ui("account.confirmPage.title") : "…")</h2>

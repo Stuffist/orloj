@@ -1,7 +1,6 @@
-@* Un camp de la partie : joueur, faction, Fiel, points de victoire, puis ses rouages (fiches du
-   mode partie) ; la traque, commune aux deux joueurs, est dans l'en-tête de la partie.
-   Editable : le camp du joueur, dont chaque modification part au serveur (OnChanged) ; sinon
-   lecture seule (adversaire, spectateur). *@
+@* A side of the game: player, faction, Bile, victory points, then their cogs (play mode cards);
+   the hunt, shared by both players, is in the game's header. Editable: the player's side, each
+   change of which goes to the server (OnChanged); otherwise read-only (opponent, spectator). *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 
@@ -66,7 +65,7 @@
     [Parameter, EditorRequired] public GameSession Session { get; set; } = default!;
     [Parameter] public bool Editable { get; set; }
     [Parameter] public bool IsFirst { get; set; }
-    /// <summary>Après chaque modification du camp (éditable), avec son compte rendu éventuel.</summary>
+    /// <summary>After each change of the side (editable), with its optional report.</summary>
     [Parameter] public EventCallback<string?> OnChanged { get; set; }
 
     private Task Act(Action action)

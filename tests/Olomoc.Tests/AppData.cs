@@ -5,8 +5,8 @@ using Olomoc.Services;
 namespace Olomoc.Tests;
 
 /// <summary>
-/// Services de l'app alimentés par les fichiers statiques communs (src/Olomoc.Shared/wwwroot),
-/// comme dans le navigateur (HttpClient servi depuis le disque). Langue courante : la langue de référence.
+/// App services fed with the shared static files (src/Olomoc.Shared/wwwroot), as in the browser
+/// (HttpClient served from the disk). Current language: the reference language.
 /// </summary>
 public sealed class AppData
 {
@@ -25,7 +25,7 @@ public sealed class AppData
         Catalog = catalog;
     }
 
-    /// <summary>Nouvelle instance, pour les tests qui changent de langue.</summary>
+    /// <summary>New instance, for the tests that change the language.</summary>
     public static async Task<AppData> CreateAsync()
     {
         var http = new HttpClient(new FileHandler(WwwRoot)) { BaseAddress = new Uri("http://local/") };
@@ -37,20 +37,20 @@ public sealed class AppData
         return new AppData(l, catalog);
     }
 
-    public Cog Cog(string id) => Catalog.CogById(id) ?? throw new ArgumentException($"rouage inconnu : {id}");
+    public Cog Cog(string id) => Catalog.CogById(id) ?? throw new ArgumentException($"unknown cog: {id}");
 
-    /// <summary>Équipement/don par son id (stable, contrairement au nom que l'éditeur peut changer).</summary>
-    public Equipment Equipment(string id) => Catalog.EquipmentById(id) ?? throw new ArgumentException($"équipement/don inconnu : {id}");
+    /// <summary>Equipment/boon by its id (stable, unlike the name, which the editor can change).</summary>
+    public Equipment Equipment(string id) => Catalog.EquipmentById(id) ?? throw new ArgumentException($"unknown equipment/boon: {id}");
 
     private static string FindRoot()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
             if (File.Exists(Path.Combine(dir.FullName, "Olomoc.slnx")))
                 return dir.FullName;
-        throw new DirectoryNotFoundException("Olomoc.slnx introuvable au-dessus du dossier de test.");
+        throw new DirectoryNotFoundException("Olomoc.slnx not found above the test folder.");
     }
 
-    // Requêtes vers /_content/Olomoc.Shared/… (Assets.Base) : fichiers de WwwRoot.
+    // Requests to /_content/Olomoc.Shared/… (Assets.Base): files of WwwRoot.
     private sealed class FileHandler(string root) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)

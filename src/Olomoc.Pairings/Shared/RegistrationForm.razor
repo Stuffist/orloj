@@ -1,5 +1,5 @@
-@* Inscription (ou modification) : nom, faction, et les cabales demandées par le tournoi. Par le
-   joueur (page publique) ou par l'organisateur (administration). *@
+@* Registration (or change): name, faction, and the cabals the tournament asks for. By the player
+   (public page) or by the organizer (administration). *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 @inject CabalLibrary Library
@@ -48,10 +48,10 @@
     [Parameter, EditorRequired] public int CabalCount { get; set; }
     [Parameter, EditorRequired] public string TournamentCode { get; set; } = "";
     [Parameter] public PlayerView? Existing { get; set; }
-    /// <summary>Envoi : renvoie les problèmes (aucun si l'inscription est acceptée).</summary>
+    /// <summary>Submit: returns the problems (none if the registration is accepted).</summary>
     [Parameter, EditorRequired] public Func<RegistrationRequest, Task<IReadOnlyList<Problem>>> Submit { get; set; } = default!;
     [Parameter] public EventCallback OnCancel { get; set; }
-    /// <summary>Saisie par l'organisateur : « Nom du joueur » et « Ajouter » au lieu de « Votre nom » et « S'inscrire ».</summary>
+    /// <summary>Entered by the organizer: "Player name" and "Add" instead of "Your name" and "Register".</summary>
     [Parameter] public bool ByOrganizer { get; set; }
 
     private string _name = "";
@@ -60,7 +60,7 @@
     private IReadOnlyList<Problem>? _problems;
     private bool _busy;
 
-    // Retour sur l'onglet (après « Composer… » dans le constructeur) : « Mes cabales » relu.
+    // Back on the tab (after "Compose…" in the builder): "My cabals" read again.
     private int _libraryVersion;
     private DotNetObjectReference<RegistrationForm>? _self;
     private int? _visibilityHandler;
@@ -70,7 +70,7 @@
         if (!firstRender) return;
         _self = DotNetObjectReference.Create(this);
         try { _visibilityHandler = await JS.InvokeAsync<int>("olomoc.onVisible", _self, nameof(OnPageVisibleAsync)); }
-        catch (JSException) { /* sans script : la liste se relit au prochain chargement */ }
+        catch (JSException) { /* without script: the list is read again at the next load */ }
     }
 
     [JSInvokable]
@@ -105,7 +105,7 @@
     private void OnCabalChanged(int index, CabalExport? cabal)
     {
         _cabals[index] = cabal;
-        // Première cabale choisie : sa faction devient celle du joueur.
+        // First cabal chosen: its faction becomes the player's.
         if (_faction.Length == 0 && cabal?.Faction is { } f) _faction = f.Code;
     }
 

@@ -10,8 +10,8 @@ using Xunit;
 namespace Olomoc.Tests;
 
 /// <summary>
-/// API des comptes, serveur en mémoire sur un dossier de données temporaire ; e-mails écrits dans
-/// DATA_DIR/mail (pas de SMTP). Chaque HttpClient garde ses cookies : un client = un appareil.
+/// Accounts API, in-memory server on a temporary data folder; emails written to DATA_DIR/mail (no
+/// SMTP). Each HttpClient keeps its cookies: one client = one device.
 /// </summary>
 public sealed partial class AccountApiTests : IDisposable
 {
@@ -24,7 +24,7 @@ public sealed partial class AccountApiTests : IDisposable
         TestDb.Delete(_data);
     }
 
-    private WebApplicationFactory<Program> Server(string? admins = null, int accountsPerHour = 1000)
+    private WebApplicationFactory<Program> Server(string? admins = null, int accountsPerHour = 1000, string? publicUrl = null)
     {
         var server = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("DATA_DIR", _data)
@@ -32,7 +32,8 @@ public sealed partial class AccountApiTests : IDisposable
             .UseSetting("RATE_ACCOUNTS_PER_HOUR", accountsPerHour.ToString())
             .UseSetting("RATE_LOGINS_PER_15_MINUTES", "1000")
             .UseSetting("RATE_MAILS_PER_HOUR", "1000")
-            .UseSetting("OLOMOC_ADMINS", admins ?? ""));
+            .UseSetting("OLOMOC_ADMINS", admins ?? "")
+            .UseSetting("PUBLIC_URL", publicUrl ?? ""));
         _servers.Add(server);
         return server;
     }
@@ -40,7 +41,7 @@ public sealed partial class AccountApiTests : IDisposable
     private static Task<HttpResponseMessage> Post(HttpClient http, string url, object? body = null) =>
         http.PostAsync(url, body is null ? null : JsonContent.Create(body, body.GetType(), options: TournamentJson.Options));
 
-    // Compte de la session, ou null (204).
+    // Session account, or null (204).
     private static async Task<AccountView?> Me(HttpClient http)
     {
         var response = await http.GetAsync("/api/account/me");
@@ -57,14 +58,14 @@ public sealed partial class AccountApiTests : IDisposable
     private static async Task<string[]> Keys(HttpResponseMessage response) =>
         (await response.Content.ReadFromJsonAsync<ProblemList>(TournamentJson.Options))!.Problems.Select(p => p.Key).ToArray();
 
-    // ---- E-mails écrits sur le disque ----
+    // ---- Emails written to disk ----
 
     private string[] Mails(string to) =>
         Directory.Exists(Path.Combine(_data, "mail"))
             ? Directory.GetFiles(Path.Combine(_data, "mail")).Order().Select(File.ReadAllText).Where(m => m.StartsWith($"To: {to}\n")).ToArray()
             : [];
 
-    /// <summary>Attend le n-ième e-mail pour cette adresse (envoi en arrière-plan) ; renvoie son lien (compte, jeton).</summary>
+    /// <summary>Waits for the n-th email to this address (sent in the background); returns its link (account, token).</summary>
     private async Task<(string Page, string User, string Token)> MailLink(string to, int count)
     {
         for (var i = 0; i < 100 && Mails(to).Length < count; i++) await Task.Delay(50);
@@ -81,7 +82,7 @@ public sealed partial class AccountApiTests : IDisposable
     // ---- Tests ----
 
     [Fact]
-    public async Task Inscription_connexion_deconnexion()
+    public async Task Register_sign_in_sign_out()
     {
         var http = Server().CreateClient();
         Assert.Null(await Me(http));
@@ -98,14 +99,14 @@ public sealed partial class AccountApiTests : IDisposable
         Assert.Equal(["credentials"], await Keys(wrong));
         Assert.Equal(["credentials"], await Keys(await Login(http, "Personne")));
 
-        Assert.Equal(HttpStatusCode.OK, (await Login(http, "bOHDAN")).StatusCode);          // pseudo sans tenir compte de la casse
+        Assert.Equal(HttpStatusCode.OK, (await Login(http, "bOHDAN")).StatusCode);          // username, case-insensitive
         Assert.Equal("Bohdan", (await Me(http))!.UserName);
         await Post(http, "/api/account/logout");
-        Assert.Equal(HttpStatusCode.OK, (await Login(http, "BOHDAN@example.org")).StatusCode);  // ou par e-mail
+        Assert.Equal(HttpStatusCode.OK, (await Login(http, "BOHDAN@example.org")).StatusCode);  // or by email
     }
 
     [Fact]
-    public async Task Pseudo_email_et_mot_de_passe_verifies()
+    public async Task Username_email_and_password_are_checked()
     {
         var server = Server();
         Assert.Equal(HttpStatusCode.OK, (await Register(server.CreateClient(), "Bohdan")).StatusCode);
@@ -124,7 +125,7 @@ public sealed partial class AccountApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Creation_de_comptes_limitee_par_adresse()
+    public async Task Account_creation_limited_per_address()
     {
         var server = Server(accountsPerHour: 2);
         Assert.Equal(HttpStatusCode.OK, (await Register(server.CreateClient(), "Uno")).StatusCode);
@@ -133,7 +134,7 @@ public sealed partial class AccountApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Confirmation_de_l_email_par_le_lien_recu()
+    public async Task Email_confirmed_through_the_link_received()
     {
         var http = Server().CreateClient();
         await Register(http, "Bohdan");
@@ -144,21 +145,33 @@ public sealed partial class AccountApiTests : IDisposable
         Assert.Equal(["invalidLink"], await Keys(bad));
         Assert.False((await Me(http))!.EmailConfirmed);
 
-        // Lien ouvert sur un autre appareil, sans session : il suffit.
+        // Link opened on another device, without a session: it is enough.
         var other = _servers[0].CreateClient();
         Assert.Equal(HttpStatusCode.NoContent, (await Post(other, "/api/account/confirm", new ConfirmEmailRequest(user, token))).StatusCode);
         Assert.True((await Me(http))!.EmailConfirmed);
     }
 
     [Fact]
-    public async Task Mot_de_passe_oublie_seulement_pour_un_email_confirme()
+    public async Task Email_links_use_PUBLIC_URL_rather_than_the_request_host()
+    {
+        var http = Server(publicUrl: "https://orloj.example/").CreateClient();
+        http.DefaultRequestHeaders.Host = "attacker.example";
+        await Register(http, "Bohdan");
+        await MailLink("bohdan@example.org", 1);
+        var mail = Assert.Single(Mails("bohdan@example.org"));
+        Assert.Contains("https://orloj.example/builder/account/confirm#user=", mail);
+        Assert.DoesNotContain("attacker.example", mail);
+    }
+
+    [Fact]
+    public async Task Forgotten_password_only_for_a_confirmed_email()
     {
         var server = Server();
         var phone = server.CreateClient();
         await Register(phone, "Bohdan");
         var forgot = new ForgotPasswordRequest("bohdan", "en");
 
-        // Compte inconnu ou e-mail non confirmé : même réponse, aucun e-mail de plus.
+        // Unknown account or unconfirmed email: same answer, no extra email.
         Assert.Equal(HttpStatusCode.NoContent, (await Post(server.CreateClient(), "/api/account/forgot", new ForgotPasswordRequest("Personne", "fr"))).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Post(server.CreateClient(), "/api/account/forgot", forgot)).StatusCode);
         var (_, user, confirmToken) = await MailLink("bohdan@example.org", 1);
@@ -168,25 +181,25 @@ public sealed partial class AccountApiTests : IDisposable
         Assert.Equal(HttpStatusCode.NoContent, (await Post(computer, "/api/account/forgot", forgot)).StatusCode);
         var (page, _, token) = await MailLink("bohdan@example.org", 2);
         Assert.Equal("reset", page);
-        Assert.Contains("Orloj — new password", Mails("bohdan@example.org")[^1]);       // langue de la demande
+        Assert.Contains("Orloj — new password", Mails("bohdan@example.org")[^1]);       // language of the request
 
         Assert.Equal(["password"], await Keys(await Post(computer, "/api/account/reset", new ResetPasswordRequest(user, token, "court"))));
         var reset = await Post(computer, "/api/account/reset", new ResetPasswordRequest(user, token, "nouveau mot de passe"));
         Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
-        Assert.Equal("Bohdan", (await Me(computer))!.UserName);       // connecté sur cet appareil
-        Assert.Null(await Me(phone));                                 // les autres sessions sont fermées
+        Assert.Equal("Bohdan", (await Me(computer))!.UserName);       // signed in on this device
+        Assert.Null(await Me(phone));                                 // the other sessions are closed
 
-        // Lien à usage unique ; ancien mot de passe refusé, nouveau accepté.
+        // Single-use link; old password refused, new one accepted.
         Assert.Equal(["invalidLink"], await Keys(await Post(computer, "/api/account/reset", new ResetPasswordRequest(user, token, "encore un autre"))));
         Assert.Equal(["credentials"], await Keys(await Login(phone, "Bohdan")));
         Assert.Equal(HttpStatusCode.OK, (await Login(phone, "Bohdan", "nouveau mot de passe")).StatusCode);
     }
 
     [Fact]
-    public async Task Trois_emails_par_heure_et_par_compte()
+    public async Task Three_emails_per_hour_and_per_account()
     {
         var http = Server().CreateClient();
-        await Register(http, "Bohdan");                                // 1 : confirmation
+        await Register(http, "Bohdan");                                // 1: confirmation
         var resend = new LanguageRequest("fr");
         Assert.Equal(HttpStatusCode.NoContent, (await Post(http, "/api/account/confirm/send", resend)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Post(http, "/api/account/confirm/send", resend)).StatusCode);
@@ -199,19 +212,19 @@ public sealed partial class AccountApiTests : IDisposable
     private const int AccountEndpointsMailsPerHour = Olomoc.Server.Accounts.AccountEndpoints.MailsPerHour;
 
     [Fact]
-    public async Task Verrouillage_apres_cinq_echecs()
+    public async Task Lockout_after_five_failures()
     {
         var http = Server().CreateClient();
         await Register(http, "Bohdan");
         await Post(http, "/api/account/logout");
         for (var i = 0; i < 5; i++) await Login(http, "Bohdan", "mauvais!!");
-        var locked = await Login(http, "Bohdan");                     // même le bon mot de passe
+        var locked = await Login(http, "Bohdan");                     // even the right password
         Assert.Equal(HttpStatusCode.Forbidden, locked.StatusCode);
         Assert.Equal(["lockedOut"], await Keys(locked));
     }
 
     [Fact]
-    public async Task Changer_de_mot_de_passe_deconnecte_les_autres_appareils()
+    public async Task Changing_the_password_signs_out_the_other_devices()
     {
         var server = Server();
         var phone = server.CreateClient();
@@ -228,14 +241,14 @@ public sealed partial class AccountApiTests : IDisposable
         Assert.Null(await Me(computer));
         Assert.Equal(HttpStatusCode.OK, (await Login(computer, "Bohdan", "nouveau mot de passe")).StatusCode);
 
-        // « Déconnecter les autres appareils » : même effet, sans changer le mot de passe.
+        // "Sign out the other devices": same effect, without changing the password.
         Assert.Equal(HttpStatusCode.NoContent, (await Post(phone, "/api/account/logout-others")).StatusCode);
         Assert.NotNull(await Me(phone));
         Assert.Null(await Me(computer));
     }
 
     [Fact]
-    public async Task Changer_d_email_le_remet_a_confirmer()
+    public async Task Changing_the_email_requires_confirming_it_again()
     {
         var server = Server();
         var http = server.CreateClient();
@@ -255,7 +268,7 @@ public sealed partial class AccountApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Suppression_du_compte_avec_son_mot_de_passe()
+    public async Task Account_deletion_with_its_password()
     {
         var server = Server();
         var http = server.CreateClient();
@@ -268,11 +281,11 @@ public sealed partial class AccountApiTests : IDisposable
         Assert.Null(await Me(http));
         Assert.Null(await Me(other));
         Assert.Equal(["credentials"], await Keys(await Login(http, "Bohdan")));
-        Assert.Equal(HttpStatusCode.OK, (await Register(http, "Bohdan")).StatusCode);       // pseudo et e-mail libérés
+        Assert.Equal(HttpStatusCode.OK, (await Register(http, "Bohdan")).StatusCode);       // username and email released
     }
 
     [Fact]
-    public async Task Sans_session_les_operations_du_compte_sont_refusees()
+    public async Task Without_a_session_account_operations_are_refused()
     {
         var http = Server().CreateClient();
         Assert.Equal(HttpStatusCode.Unauthorized, (await Post(http, "/api/account/password", new ChangePasswordRequest("a", "b"))).StatusCode);
@@ -281,7 +294,7 @@ public sealed partial class AccountApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Admin_par_la_variable_et_mot_de_passe_temporaire()
+    public async Task Admin_through_the_variable_and_temporary_password()
     {
         var first = Server();
         var root = first.CreateClient();
@@ -290,7 +303,7 @@ public sealed partial class AccountApiTests : IDisposable
         await Register(bob, "Bob");
         Assert.False((await Me(root))!.IsAdmin);
 
-        // Redémarrage avec la liste des admins (pseudo sans tenir compte de la casse ; « Fantome » n'existe pas).
+        // Restart with the list of admins (username, case-insensitive; "Fantome" does not exist).
         var second = Server(admins: "root; Fantome");
         var rootAgain = second.CreateClient();
         await Login(rootAgain, "Root");
@@ -304,10 +317,10 @@ public sealed partial class AccountApiTests : IDisposable
         var reset = await Post(rootAgain, "/api/admin/accounts/bob/reset-password");
         var temporary = (await reset.Content.ReadFromJsonAsync<TemporaryPassword>(TournamentJson.Options))!.Password;
         Assert.Equal(14, temporary.Length);
-        Assert.Null(await Me(bobAgain));                                  // sessions de Bob fermées
+        Assert.Null(await Me(bobAgain));                                  // Bob's sessions closed
         Assert.Equal(HttpStatusCode.OK, (await Login(bobAgain, "Bob", temporary)).StatusCode);
 
-        // Retiré de la liste : toujours admin (le rôle est dans la base ; la variable ne fait que le donner).
+        // Removed from the list: still admin (the role is in the database; the variable only grants it).
         var third = Server(admins: "");
         var rootLast = third.CreateClient();
         await Login(rootLast, "Root");
@@ -321,7 +334,7 @@ public sealed partial class AccountApiTests : IDisposable
         (await http.GetFromJsonAsync<AccountSummary[]>($"/api/admin/accounts?search={search}", TournamentJson.Options))!;
 
     [Fact]
-    public async Task Roles_en_base_joueur_editeur_admin()
+    public async Task Roles_in_the_database_player_editor_admin()
     {
         var first = Server();
         foreach (var name in new[] { "Root", "Bob", "Carla", "Carlos" }) await Register(first.CreateClient(), name);
@@ -336,17 +349,17 @@ public sealed partial class AccountApiTests : IDisposable
         Assert.Equal(AccountRole.Admin, (await Me(root))!.Role);
         Assert.Equal(AccountRole.User, (await Me(bob))!.Role);
 
-        // Joueur : ni rôles, ni éditeur du référentiel.
+        // Player: no roles, no card catalog editor.
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/admin/accounts")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await SetRole(bob, "Bob", AccountRole.Admin)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/admin/catalog/status")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await server.CreateClient().GetAsync("/api/admin/accounts")).StatusCode);
 
-        // Liste : sans recherche, l'équipe ; avec, les pseudos qui la contiennent (sans tenir compte de la casse).
+        // List: without a search, the staff; with one, the usernames that contain it (case-insensitive).
         Assert.Equal([new AccountSummary("Root", AccountRole.Admin)], await Accounts(root));
         Assert.Equal(["Carla", "Carlos"], (await Accounts(root, "carl")).Select(a => a.UserName));
 
-        // Éditeur : éditeur du référentiel, tout de suite (session en cours), mais pas les rôles.
+        // Editor: card catalog editor, right away (current session), but not the roles.
         Assert.Equal(HttpStatusCode.OK, (await SetRole(root, "bob", AccountRole.Editor)).StatusCode);
         Assert.Equal(AccountRole.Editor, (await Me(bob))!.Role);
         Assert.Equal(HttpStatusCode.OK, (await bob.GetAsync("/api/admin/catalog/status")).StatusCode);
@@ -354,7 +367,7 @@ public sealed partial class AccountApiTests : IDisposable
         Assert.Equal(HttpStatusCode.Forbidden, (await SetRole(bob, "Carla", AccountRole.Editor)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.PostAsync("/api/admin/accounts/Carla/reset-password", null)).StatusCode);
 
-        // Admin : jamais son propre rôle ; celui des autres admins, si.
+        // Admin: never their own role; other admins' roles, yes.
         Assert.Equal(["ownRole"], await Keys(await SetRole(root, "Root", AccountRole.User)));
         Assert.Equal(["unknownUser"], await Keys(await SetRole(root, "Personne", AccountRole.Editor)));
         Assert.Equal(HttpStatusCode.OK, (await SetRole(root, "Carla", AccountRole.Admin)).StatusCode);
@@ -364,7 +377,7 @@ public sealed partial class AccountApiTests : IDisposable
         Assert.Equal(AccountRole.Editor, (await Me(root))!.Role);
         Assert.Equal(HttpStatusCode.Forbidden, (await root.GetAsync("/api/admin/accounts")).StatusCode);
 
-        // Rôles gardés au redémarrage, sans variable (Root n'y est plus : reste éditeur).
+        // Roles kept after a restart, without the variable (Root is no longer in it: stays editor).
         var again = Server(admins: "");
         var bobAgain = again.CreateClient();
         await Login(bobAgain, "Bob");
@@ -375,7 +388,7 @@ public sealed partial class AccountApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Email_de_controle_tous_les_soixante_jours()
+    public async Task Check_email_every_sixty_days()
     {
         var db = await TestDb.OpenAsync(_data);
         var sender = new RecordingSender();
@@ -389,7 +402,7 @@ public sealed partial class AccountApiTests : IDisposable
         Assert.Equal(2, sender.Sent.Count);
         Assert.Equal("admin@example.org", sender.Sent[0].To);
 
-        // Échec d'envoi : rien d'enregistré, réessayé à la vérification suivante.
+        // Sending failure: nothing recorded, retried at the next check.
         sender.Fail = true;
         await Assert.ThrowsAsync<IOException>(() => check.CheckAsync(day.AddDays(121)));
         sender.Fail = false;
@@ -397,7 +410,7 @@ public sealed partial class AccountApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Email_de_controle_au_demarrage_pas_a_chaque_redemarrage()
+    public async Task Check_email_at_startup_not_at_every_restart()
     {
         Server().WithWebHostBuilder(b => b.UseSetting("MAIL_CHECK_TO", "admin@example.org")).CreateClient();
         for (var i = 0; i < 100 && Mails("admin@example.org").Length == 0; i++) await Task.Delay(50);
@@ -416,14 +429,14 @@ public sealed partial class AccountApiTests : IDisposable
 
         public Task SendAsync(Olomoc.Server.Accounts.OutgoingMail mail, CancellationToken stop)
         {
-            if (Fail) throw new IOException("relais injoignable");
+            if (Fail) throw new IOException("relay unreachable");
             Sent.Add(mail);
             return Task.CompletedTask;
         }
     }
 
     [Fact]
-    public async Task Session_conservee_apres_un_redemarrage()
+    public async Task Session_kept_after_a_restart()
     {
         var first = Server().CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         var registered = await Register(first, "Bohdan");

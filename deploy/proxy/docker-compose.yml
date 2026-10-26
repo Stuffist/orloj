@@ -1,9 +1,10 @@
-# Reverse proxy du VPS : Caddy, ports 80/443 (et 8443 pour les anciennes adresses d'Olomòc).
-# Répartition par nom d'hôte et certificats : Caddyfile. Sur le VPS : /var/www/proxy/.
+# SPECIFIC TO ORLOJ.TOP: reverse proxy of the author's VPS (Caddy), ports 80/443 (and 8443 for
+# Olomòc's old addresses), shared with another project (B5T). Not needed to run Orloj elsewhere.
+# Routing by host name and certificates: Caddyfile. On the VPS: /var/www/proxy/.
 #
-#   docker network create web                        (une fois par machine)
+#   docker network create web                        (once per machine)
 #   docker compose up -d
-#   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile   (Caddyfile modifié)
+#   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile   (Caddyfile changed)
 
 services:
   caddy:
@@ -17,10 +18,10 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp"         # HTTP/3
-      - "8443:8443"           # anciennes adresses d'Olomòc : redirection
+      - "8443:8443"           # Olomòc's old addresses: redirect
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      # Certificats et clés obtenus par Caddy : à conserver (sinon redemandés au démarrage).
+      # Certificates and keys obtained by Caddy: to keep (otherwise requested again at startup).
       - ./caddy-data:/data
       - ./caddy-config:/config
     networks: [web]

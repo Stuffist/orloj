@@ -3,14 +3,14 @@ using System.Text.RegularExpressions;
 namespace Olomoc.Models;
 
 /// <summary>
-/// Un mot-clé des effets de jeu : syntaxe à écrire, pictogramme rendu (<c>Pictogram.razor</c>,
-/// avec son compte) et clé du libellé qui l'explique dans le lexique de l'éditeur.
+/// A game-effect keyword: syntax to write, rendered pictogram (<c>Pictogram.razor</c>, with its
+/// count) and key of the label that explains it in the editor's glossary.
 /// </summary>
 public sealed record GameToken(string Syntax, string Pictogram, int Count, string LabelKey);
 
 /// <summary>
-/// Mots-clés des effets de jeu ({melee}, {freq:game:1}…), rendus par les icônes du livre de
-/// règles, identiques dans toutes les langues. N : un nombre.
+/// Game-effect keywords ({melee}, {freq:game:1}…), rendered with the rulebook's icons, identical
+/// in every language. N: a number.
 /// </summary>
 public static class GameTokens
 {
@@ -32,7 +32,7 @@ public static class GameTokens
 
     private static readonly Regex Frequency = new(@"^\{freq:(planning|cycle|game):\d+\}$");
 
-    /// <summary>Jeton connu, accolades comprises : « {stunned} », « {freq:game:2} ».</summary>
+    /// <summary>Known token, braces included: "{stunned}", "{freq:game:2}".</summary>
     public static bool IsKnown(string token) =>
         Frequency.IsMatch(token) || All.Any(t => !t.Syntax.Contains(':') && t.Syntax == token);
 }

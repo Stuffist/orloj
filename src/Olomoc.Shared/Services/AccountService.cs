@@ -5,28 +5,28 @@ using Olomoc.Tournaments;
 
 namespace Olomoc.Services;
 
-/// <summary>Réponse de l'API des comptes : la valeur, ou les problèmes qui l'ont empêchée.</summary>
+/// <summary>Response of the accounts API: the value, or the problems that prevented it.</summary>
 public sealed record AccountResult<T>(T? Value, IReadOnlyList<Problem> Problems)
 {
     public bool Ok => Problems.Count == 0;
 }
 
-/// <summary>Compte vu par la bibliothèque de cabales : qui est connecté, et l'envoi des changements.</summary>
+/// <summary>Account as seen by the cabal library: who is signed in, and the upload of changes.</summary>
 public interface ICabalCloud
 {
-    /// <summary>Pseudo du compte connecté (session vérifiée une fois), ou null.</summary>
+    /// <summary>Username of the signed-in account (session checked once), or null.</summary>
     Task<string?> CurrentUserAsync();
 
-    /// <summary>Connexion, déconnexion, changement de compte.</summary>
+    /// <summary>Sign-in, sign-out, account change.</summary>
     event Action? Changed;
 
     Task<AccountResult<CabalSyncResult>> SyncCabalsAsync(IReadOnlyList<CabalChange> changes);
 }
 
 /// <summary>
-/// Compte de la session (/api/account, même origine : le cookie de session part avec chaque
-/// appel). Commun aux apps : connecté dans le constructeur, connecté dans les tournois. Compte
-/// facultatif : sans lui, tout marche comme avant.
+/// Session account (/api/account, same origin: the session cookie goes with each call). Shared
+/// by the apps: signed in in the builder, signed in in the tournaments. Optional account: without
+/// it, everything works as before.
 /// </summary>
 public sealed class AccountService(HttpClient http) : ICabalCloud
 {
@@ -34,7 +34,7 @@ public sealed class AccountService(HttpClient http) : ICabalCloud
 
     private Task? _loading;
 
-    /// <summary>Compte connecté, ou null.</summary>
+    /// <summary>Signed-in account, or null.</summary>
     public AccountView? Current { get; private set; }
 
     public bool Loaded { get; private set; }
@@ -47,14 +47,14 @@ public sealed class AccountService(HttpClient http) : ICabalCloud
     {
         var me = await SendAsync<AccountView>(HttpMethod.Get, "me", null);
         if (me.Ok || me.Problems.Any(p => p.Key == "signedOut")) Set(me.Value);
-        else if (!Loaded) Set(null);          // serveur injoignable : pas de compte affiché
+        else if (!Loaded) Set(null);          // server unreachable: no account displayed
     }
 
     public Task<AccountResult<AccountView>> RegisterAsync(RegisterRequest request) => SignInAsync("register", request);
 
     public Task<AccountResult<AccountView>> LoginAsync(LoginRequest request) => SignInAsync("login", request);
 
-    /// <summary>Nouveau mot de passe depuis le lien reçu : connecte cet appareil.</summary>
+    /// <summary>New password from the link received: signs this device in.</summary>
     public Task<AccountResult<AccountView>> ResetPasswordAsync(ResetPasswordRequest request) => SignInAsync("reset", request);
 
     public async Task LogoutAsync()
@@ -127,12 +127,12 @@ public sealed class AccountService(HttpClient http) : ICabalCloud
             if (response.IsSuccessStatusCode) return new(await response.Content.ReadFromJsonAsync<T>(TournamentJson.Options), []);
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                if (Current is not null) Set(null);             // session fermée ailleurs (mot de passe changé…)
+                if (Current is not null) Set(null);             // session closed elsewhere (password changed…)
                 return Failure<T>("signedOut");
             }
             var problems = await ReadProblemsAsync(response);
             if (problems.Count > 0) return new(default, problems);
-            // Sans détail : limite de requêtes par adresse (429), ou erreur du serveur.
+            // Without details: request limit per address (429), or server error.
             return response.StatusCode == HttpStatusCode.TooManyRequests
                 ? Failure<T>("tooManyRequests") : Failure<T>("server", ((int)response.StatusCode).ToString());
         }

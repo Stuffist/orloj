@@ -7,9 +7,9 @@ using Olomoc.Tournaments;
 namespace Olomoc.Builder.Shared;
 
 /// <summary>
-/// Éditeur du référentiel (éditeurs et admins) : référentiel complet (brouillons compris, tel que servi à un
-/// admin), textes de chaque langue, état des modifications, et enregistrements
-/// (/api/admin/catalog). Indépendant de CatalogService : relu après chaque enregistrement.
+/// Card catalog editor (editors and admins): complete catalog (drafts included, as served to an
+/// admin), texts of each language, state of the changes, and saving (/api/admin/catalog).
+/// Independent of CatalogService: read again after each save.
 /// </summary>
 public sealed class AdminCatalogApi(HttpClient http)
 {
@@ -21,7 +21,7 @@ public sealed class AdminCatalogApi(HttpClient http)
     public Dictionary<string, CardTexts> Texts { get; private set; } = new();
     public CatalogStatus Status { get; private set; } = new(new(), []);
 
-    /// <summary>Relit tout ; problèmes : pas admin (forbidden, signedOut), réseau…</summary>
+    /// <summary>Reads everything again; problems: not an admin (forbidden, signedOut), network…</summary>
     public async Task<IReadOnlyList<Problem>> LoadAsync()
     {
         var status = await SendAsync<CatalogStatus>(HttpMethod.Get, "status", null);
@@ -40,7 +40,7 @@ public sealed class AdminCatalogApi(HttpClient http)
         catch (HttpRequestException) { return [Problem.Of("network")]; }
     }
 
-    /// <summary>« new », « modified » ou null pour une entrée d'une collection (cogs, equipment, factions).</summary>
+    /// <summary>"new", "modified" or null for an entry of a collection (cogs, equipment, factions).</summary>
     public string? StatusOf(string collection, string key) => Status.Entries.GetValueOrDefault(collection)?.GetValueOrDefault(key);
 
     public Task<AccountResult<bool>> SaveCogAsync(CogEdit edit) => SendAsync<bool>(HttpMethod.Put, $"cogs/{Uri.EscapeDataString(edit.Cog.Id)}", edit);
@@ -53,7 +53,7 @@ public sealed class AdminCatalogApi(HttpClient http)
     public Task<AccountResult<bool>> SetPublishedAsync(string collection, string id, bool published) =>
         SendAsync<bool>(HttpMethod.Put, $"{collection}/{Uri.EscapeDataString(id)}/published", new PublishedRequest(published));
 
-    /// <summary>Annule les modifications d'une entrée (version du dépôt) ; une entrée nouvelle disparaît.</summary>
+    /// <summary>Cancels the changes of an entry (repository version); a new entry disappears.</summary>
     public Task<AccountResult<bool>> RevertAsync(string collection, string id) =>
         SendAsync<bool>(HttpMethod.Delete, $"{collection}/{Uri.EscapeDataString(id)}", null);
 

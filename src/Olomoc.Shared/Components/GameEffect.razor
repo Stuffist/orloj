@@ -1,5 +1,5 @@
-@* Effet de jeu : texte avec des jetons neutres ({melee}, {darkness}, {freq:game:1}…) rendus
-   par les icônes du livre de règles, identiques dans toutes les langues. *@
+@* Game effect: text with neutral tokens ({melee}, {darkness}, {freq:game:1}…) rendered with the
+   rulebook's icons, identical in every language. *@
 @using System.Text.RegularExpressions
 
 <span class="game-effect@(Text.IsFallback ? " untranslated" : "")" title="@(Text.IsFallback ? UntranslatedTitle : null)">
@@ -24,7 +24,7 @@
 
     private sealed record Part(string Text, string? Token = null, int Count = 0);
 
-    // « freq:game:1 » devient le jeton « freq-game » de compte 1.
+    // "freq:game:1" becomes the "freq-game" token with count 1.
     private static IEnumerable<Part> Parts(string text)
     {
         var last = 0;

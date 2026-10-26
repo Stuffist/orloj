@@ -8,10 +8,10 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
-@* Partie en ligne : on la rejoint avec le jeton de son siège (lien reçu, gardé sur l'appareil),
-   ou sans jeton en spectateur. Chaque changement annoncé par le serveur fait relire la vue.
-   Le camp du joueur est suivi localement (GameSession) et chaque modification part au serveur
-   avec la révision dont elle part ; refusée (état dépassé…), la vue du serveur est reprise. *@
+@* Online game: joined with one's seat token (link received, kept on the device), or without a
+   token as a spectator. Each change announced by the server makes the view be read again. The
+   player's side is tracked locally (GameSession) and each change goes to the server with the
+   revision it starts from; if refused (outdated state…), the server's view is taken back. *@
 
 @if (!_ready)
 {
@@ -138,7 +138,7 @@ else
                     if (SessionOf(v, i) is not { } session) continue;
                     @if (other)
                     {
-                        @* Camp adverse : à masquer, ou à détacher dans une fenêtre à part (autre écran). *@
+                        @* Opponent's side: to hide, or to detach into a separate window (another screen). *@
                         var index = i;
                         <div class="online-other-head">
                             <h2>@L.Ui("online.other.title", seat.Name)</h2>
@@ -170,7 +170,7 @@ else
     private IReadOnlyList<Problem>? _problems;
     private MyGame? _entry;
 
-    // Camp du joueur, suivi localement : chaque modification part au serveur à partir de _basedOn.
+    // The player's side, tracked locally: each change goes to the server starting from _basedOn.
     private GameSession? _mine;
     private int _basedOn;
     private int _pending;
@@ -183,7 +183,7 @@ else
         await Catalog.EnsureLoadedAsync();
         await Games.EnsureLoadedAsync();
 
-        // Jeton reçu dans le lien (#jeton) : gardé sur l'appareil, puis retiré de l'adresse.
+        // Token received in the link (#token): kept on the device, then removed from the address.
         var fragment = new Uri(Nav.Uri).Fragment.TrimStart('#');
         if (fragment.Length > 0)
         {
@@ -201,20 +201,20 @@ else
             Apply(view, force: true);
             if (_entry is not null) await Games.RememberAsync(Code);
             await NameSeatAsync();
-            // Joueur de cette partie, sans partie en cours sur l'appareil : elle devient la partie
-            // courante (onglet Partie). Une partie locale n'est jamais remplacée sans le demander.
+            // Player of this game, without a game in progress on the device: it becomes the current
+            // game (Play tab). A local game is never replaced without asking.
             await Current.EnsureLoadedAsync();
             if (view.Me is not null && !Current.HasGame) await Current.OpenOnlineAsync(Code);
         }
         _ready = true;
     }
 
-    // Partie courante de l'appareil : « Quitter la partie » la retire de l'onglet Partie (elle reste
-    // sur le serveur, et dans « Mes parties en ligne » pour la reprendre).
+    // The device's current game: "Leave the game" removes it from the Play tab (it stays on the
+    // server, and in "My online games" to resume it).
     private bool IsCurrent => string.Equals(Current.OnlineCode, Code, StringComparison.OrdinalIgnoreCase);
 
-    // Camp adverse affiché dans la page ; détaché (fenêtre ouverte), il s'y replie. Fenêtre bloquée
-    // par le navigateur : il reste affiché.
+    // Opponent's side shown in the page; detached (window open), it collapses there. Window blocked
+    // by the browser: it stays displayed.
     private bool _otherShown = true;
 
     private async Task DetachAsync(int seat)
@@ -229,8 +229,8 @@ else
         Nav.NavigateTo("builder/play");
     }
 
-    // Siège encore sans nom (invité qui ouvre son lien) : nom du compte, sinon celui de l'appareil ou
-    // tiré au sort ; modifiable au salon. Table de tournoi : nom de l'inscription.
+    // Seat still without a name (guest opening their link): account name, otherwise the device's or
+    // a random one; can be changed in the lobby. Tournament table: name of the registration.
     private async Task NameSeatAsync()
     {
         if (_view is not { Step: OnlineStep.Lobby, Tournament: null, Mine.Name.Length: 0 }) return;
@@ -241,13 +241,13 @@ else
     private string WatchLink => $"{Nav.BaseUri}online/g/{_view?.Code ?? Code}";
     private string? InviteLink => _entry?.InviteToken is { } invite ? $"{WatchLink}#{invite}" : null;
 
-    // Traque commune : celle du serveur ; pour un joueur, avec sa part à jour (modification en cours d'envoi).
+    // Shared hunt: the server's; for a player, with their share up to date (change being sent).
     private int SharedHunt(OnlineView v) =>
         v.Me is { } me && _mine is not null
             ? Math.Min(GameSession.MaxHunt, _mine.State.Hunt + (v.Seats[1 - me].State?.Hunt ?? 0))
             : v.Hunt;
 
-    // Sa part de la traque (pions ajoutés à la main : effet de carte, de scénario…) : comme une modification de son camp.
+    // Their share of the hunt (tokens added by hand: card effect, scenario…): like a change of their side.
     private Task AdjustHuntAsync(int delta)
     {
         if (_mine is null) return Task.CompletedTask;
@@ -255,7 +255,7 @@ else
         return ChangedAsync(null);
     }
 
-    // Son camp d'abord, puis l'autre ; spectateur : dans l'ordre des sièges.
+    // Their side first, then the other; spectator: in seat order.
     private static IEnumerable<int> CampOrder(OnlineView v) => v.Me is { } me ? new[] { me, 1 - me } : new[] { 0, 1 };
 
     private GameSession? SessionOf(OnlineView v, int seat) =>
@@ -264,8 +264,8 @@ else
     private void Apply(OnlineView view, bool force = false)
     {
         _view = view;
-        // État de son camp repris du serveur s'il a changé ailleurs (fin de cycle, annulation…),
-        // sauf pendant un envoi : la réponse dira de quelle révision repartir.
+        // State of their side taken back from the server if it changed elsewhere (end of cycle,
+        // undo…), except during an upload: the answer will say which revision to start from.
         if (view.Mine?.State is { } state && (force || _mine is null || (_pending == 0 && view.Mine.StateRevision != _basedOn)))
         {
             _mine = new GameSession(GameSession.FromJson(GameSession.ToJson(state))!);
@@ -293,7 +293,7 @@ else
         await RefreshAsync(force: !result.Ok);
     }
 
-    // Modification de son camp : envoyée dans l'ordre, chacune à partir de la révision précédente.
+    // Change of their side: sent in order, each one from the previous revision.
     private async Task ChangedAsync(string? note)
     {
         if (_mine is null) return;
@@ -316,7 +316,7 @@ else
     private async Task CopyAsync(string text)
     {
         try { await JS.InvokeVoidAsync("navigator.clipboard.writeText", text); }
-        catch (JSException) { /* presse-papiers indisponible : le lien reste affiché */ }
+        catch (JSException) { /* clipboard unavailable: the link stays displayed */ }
     }
 
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);

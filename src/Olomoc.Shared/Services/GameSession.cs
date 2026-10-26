@@ -5,10 +5,10 @@ using Olomoc.Models;
 namespace Olomoc.Services;
 
 /// <summary>
-/// Partie en cours : règles de suivi d'une cabale (LDR p.16-18, p.20, p.33) appliquées à un
-/// <see cref="GameState"/>, avec historique d'annulation. Chaque modification enregistre
-/// d'abord l'état précédent. Les effets des cartes non décrits dans les données restent
-/// à la charge du joueur, via les actions génériques (blessures, soins, pions…).
+/// Game in progress: tracking rules of a cabal (rulebook p.16-18, p.20, p.33) applied to a
+/// <see cref="GameState"/>, with an undo history. Each change records the previous state first.
+/// Card effects not described in the data are left to the player, through the generic actions
+/// (wounds, healing, tokens…).
 /// </summary>
 public sealed class GameSession
 {
@@ -42,11 +42,11 @@ public sealed class GameSession
     public bool IsFinished => State.Cycle > Cycles;
     public bool IsOver => IsLost || IsHunted || IsFinished;
 
-    // ---- Création et sérialisation ----
+    // ---- Creation and serialization ----
 
     /// <summary>
-    /// Nouvelle partie à partir des emplacements de la cabale (index 0 = rang 1) : rouages
-    /// affichés du rang 3 au rang 1, 4 pions d'action chacun (début du cycle 1).
+    /// New game from the cabal's slots (index 0 = rank 1): cogs displayed from rank 3 to rank 1,
+    /// 4 action tokens each (start of cycle 1).
     /// </summary>
     public static GameState NewGame(string? name, string? faction, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment) => new()
     {
@@ -68,7 +68,7 @@ public sealed class GameSession
 
     public static string ToJson(GameState state) => JsonSerializer.Serialize(state, JsonOpts);
 
-    /// <summary>État relu ; null s'il est illisible ou d'une version inconnue.</summary>
+    /// <summary>State read back; null if it is unreadable or of an unknown version.</summary>
     public static GameState? FromJson(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return null;
@@ -76,7 +76,7 @@ public sealed class GameSession
         {
             var state = JsonSerializer.Deserialize<GameState>(json, JsonOpts);
             if (state is not { Version: GameState.CurrentVersion } || !state.Cogs.All(c => c.LifeLine.Count > 0)) return null;
-            foreach (var cog in state.Cogs) cog.Normalize();     // ancien format : nombre de PV cochés
+            foreach (var cog in state.Cogs) cog.Normalize();     // old format: number of marked HP
             return state;
         }
         catch (JsonException) { return null; }
@@ -97,13 +97,13 @@ public sealed class GameSession
 
     private CogState Cog(int slot) => State.Cogs[slot];
 
-    // ---- Ligne de vie (LDR p.16) ----
+    // ---- Life line (rulebook p.16) ----
 
     /// <summary>
-    /// Blessures subies, cochées de gauche à droite sur les PV encore libres (un PV déjà coché
-    /// isolément est sauté). Pour une attaque : une blessure de moins
-    /// s'il reste au moins un PV renforcé à cocher (sauf blessures qui ignorent la protection),
-    /// et arrêt au premier PV teinté coché. Tout PV teinté coché donne un pion de Noirceur.
+    /// Wounds taken, marked from left to right on the HP still free (an HP already marked on its
+    /// own is skipped). For an attack: one wound fewer if at least one reinforced HP is left to
+    /// mark (except wounds that ignore protection), and stop at the first tainted HP marked. Every
+    /// tainted HP marked gives a Darkness token.
     /// </summary>
     public WoundOutcome Wound(int slot, int wounds, bool attack, bool ignoreProtection)
     {
@@ -111,7 +111,7 @@ public sealed class GameSession
         return ApplyWound(State, Cog(slot), wounds, attack, ignoreProtection);
     }
 
-    /// <summary>Résultat de <see cref="Wound"/>, sans rien modifier.</summary>
+    /// <summary>Result of <see cref="Wound"/>, without changing anything.</summary>
     public WoundOutcome PreviewWound(int slot, int wounds, bool attack, bool ignoreProtection)
     {
         var copy = FromJson(ToJson(State))!;
@@ -143,8 +143,8 @@ public sealed class GameSession
         return new WoundOutcome(marked, isProtected, tainted, stopped, bile, cog.OutOfAction, hunt);
     }
 
-    // Rouage (non hostile) mis hors de combat : +1 traque (LDR p.16, p.26) ; une correction
-    // qui le remet en jeu retire ce pion. Renvoie la variation du niveau de traque.
+    // Cog (not hostile) taken out of action: +1 hunt (rulebook p.16, p.26); a correction that puts
+    // it back in play removes that token. Returns the change of the hunt level.
     private static int UpdateHunt(GameState state, CogState cog, bool wasOut)
     {
         var delta = (cog.OutOfAction ? 1 : 0) - (wasOut ? 1 : 0);
@@ -154,7 +154,7 @@ public sealed class GameSession
         return delta;
     }
 
-    /// <summary>Soin : décoche les derniers PV cochés (les plus à droite).</summary>
+    /// <summary>Healing: unmarks the last marked HP (the rightmost ones).</summary>
     public int Heal(int slot, int points)
     {
         var cog = Cog(slot);
@@ -169,10 +169,10 @@ public sealed class GameSession
     }
 
     /// <summary>
-    /// Correction manuelle, ou capacité qui vise un PV précis (Jakub Myasnik : « cochez 1 PV
-    /// teinté ») : coche ou décoche le seul PV <paramref name="index"/>. Un PV teinté coché donne
-    /// un pion de Noirceur (LDR p.17) ; le décocher ne le retire pas. Bilan du PV coché, null
-    /// s'il est décoché.
+    /// Manual correction, or an ability that targets a specific HP (Jakub Myasnik: "mark 1 tainted
+    /// HP"): marks or unmarks only the HP <paramref name="index"/>. A tainted HP marked gives a
+    /// Darkness token (rulebook p.17); unmarking it does not remove it. Summary of the marked HP,
+    /// null if it is unmarked.
     /// </summary>
     public WoundOutcome? TogglePoint(int slot, int index)
     {
@@ -188,13 +188,13 @@ public sealed class GameSession
         return check ? new WoundOutcome(1, false, tainted ? 1 : 0, false, bile, cog.OutOfAction, hunt) : null;
     }
 
-    // ---- Carte supplémentaire (Medic Ruzicka : « au début du premier cycle ») ----
+    // ---- Extra card (Medic Ruzicka: "at the start of the first cycle") ----
 
     public bool CanChooseExtraEquipment(Cog cog) => cog.ExtraEquipment is not null && State.Cycle == 1;
 
     /// <summary>
-    /// Choisit (ou retire) la carte supplémentaire du rouage, pendant le premier cycle :
-    /// la ligne de vie est recalculée avec les PV qu'ajoutent ses cartes.
+    /// Chooses (or removes) the cog's extra card, during the first cycle: the life line is computed
+    /// again with the HP its cards add.
     /// </summary>
     public bool SetExtraEquipment(int slot, Cog cog, Equipment? main, Equipment? extra)
     {
@@ -204,7 +204,7 @@ public sealed class GameSession
         Record();
         var wasOut = state.OutOfAction;
         state.ExtraEquipmentId = extra?.Id;
-        // Ligne de vie recalculée : autant de PV cochés qu'avant, depuis la gauche.
+        // Life line computed again: as many HP marked as before, from the left.
         var marked = state.Marked;
         state.LifeLine = LifeLineOf(cog, main, extra);
         state.Checked = Enumerable.Range(0, state.LifeLine.Count).Select(i => i < marked).ToList();
@@ -212,7 +212,7 @@ public sealed class GameSession
         return true;
     }
 
-    /// <summary>Ligne de vie de la partie : PV ajoutés par les cartes portées, puis ceux du rouage.</summary>
+    /// <summary>Life line of the game: HP added by the carried cards, then the cog's own.</summary>
     public static List<HealthPointType> LifeLineOf(Cog cog, params Equipment?[] equipment) =>
         equipment.SelectMany(e => e?.LifeLinePrefix ?? new()).Concat(cog.LifeLine).ToList();
 
@@ -223,9 +223,9 @@ public sealed class GameSession
         Cog(slot).Fortified = on;
     }
 
-    // ---- Noirceur et Fiel (LDR p.17), état sonné (p.18), pions d'action (p.33) ----
+    // ---- Darkness and Bile (rulebook p.17), stunned state (p.18), action tokens (p.33) ----
 
-    /// <summary>Ajoute (delta &gt; 0) ou retire des pions de Noirceur ; renvoie le Fiel gagné par débordement.</summary>
+    /// <summary>Adds (delta &gt; 0) or removes Darkness tokens; returns the Bile gained by overflow.</summary>
     public int AdjustDarkness(int slot, int delta)
     {
         var cog = Cog(slot);
@@ -235,7 +235,7 @@ public sealed class GameSession
         return GiveDarkness(State, cog, delta);
     }
 
-    // Un rouage a au plus 3 pions de Noirceur : un pion de plus va sur la carte Fiel du joueur.
+    // A cog has at most 3 Darkness tokens: one more token goes on the player's Bile card.
     private static int GiveDarkness(GameState state, CogState cog, int count)
     {
         var bile = 0;
@@ -255,7 +255,7 @@ public sealed class GameSession
         State.Bile = bile;
     }
 
-    /// <summary>Niveau de traque : pions de la PoliSec, y compris pour les rouages adverses mis hors de combat.</summary>
+    /// <summary>Hunt level: PoliSec tokens, including for enemy cogs taken out of action.</summary>
     public void AdjustHunt(int delta)
     {
         var hunt = Math.Clamp(State.Hunt + delta, 0, MaxHunt);
@@ -279,7 +279,7 @@ public sealed class GameSession
         Cog(slot).Stunned = on;
     }
 
-    /// <summary>Dépense (delta &lt; 0) ou regagne des pions d'action, dans la limite de la réserve du cycle.</summary>
+    /// <summary>Spends (delta &lt; 0) or regains action tokens, within the cycle's reserve.</summary>
     public void AdjustActions(int slot, int delta)
     {
         var cog = Cog(slot);
@@ -289,15 +289,15 @@ public sealed class GameSession
         cog.Actions = actions;
     }
 
-    // ---- Capacités (LDR p.20) ----
+    // ---- Abilities (rulebook p.20) ----
 
     public static string AbilityKey(string ownerId, int index) => $"{ownerId}#{index}";
 
-    /// <summary>Limite d'utilisation par partie (pictogramme cercle) ; null sans limite.</summary>
+    /// <summary>Use limit per game (circle pictogram); null without a limit.</summary>
     public static int? GameLimit(Ability a) =>
         a.Frequencies.Where(f => f.Per == "GAME").Select(f => (int?)f.Count).Min();
 
-    /// <summary>Capacité suivie par le mode partie : elle a un coût ou une limite par partie.</summary>
+    /// <summary>Ability tracked by the play mode: it has a cost or a limit per game.</summary>
     public static bool IsTracked(Ability a) => a.ActionCost > 0 || a.DarknessCost > 0 || GameLimit(a) is not null;
 
     public int UsesLeft(int slot, string key, Ability a) =>
@@ -313,7 +313,7 @@ public sealed class GameSession
         return AbilityBlock.None;
     }
 
-    /// <summary>Utilisation : paie les pions d'action, reçoit les pions de Noirceur, décompte l'usage par partie.</summary>
+    /// <summary>Use: pays the action tokens, receives the Darkness tokens, counts the use per game.</summary>
     public bool Use(int slot, string key, Ability a)
     {
         if (CanUse(slot, key, a) != AbilityBlock.None) return false;
@@ -325,11 +325,11 @@ public sealed class GameSession
         return true;
     }
 
-    // ---- Fin du cycle (LDR p.35) ----
+    // ---- End of the cycle (rulebook p.35) ----
 
     /// <summary>
-    /// +1 Fiel par rouage corrompu encore en jeu, fin des effets du cycle (PV renforcés
-    /// temporaires), 4 pions d'action pour le cycle suivant. Renvoie le Fiel gagné.
+    /// +1 Bile per corrupted cog still in play, end of the cycle's effects (temporary reinforced
+    /// HP), 4 action tokens for the next cycle. Returns the Bile gained.
     /// </summary>
     public int EndCycle()
     {
@@ -348,5 +348,5 @@ public sealed class GameSession
     }
 }
 
-/// <summary>Raison pour laquelle une capacité ne peut pas être utilisée.</summary>
+/// <summary>Reason why an ability cannot be used.</summary>
 public enum AbilityBlock { None, OutOfAction, Exhausted, Stunned, NoActions }

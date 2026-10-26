@@ -7,10 +7,10 @@ using Olomoc.Tournaments.Stats;
 namespace Olomoc.Server.Tournaments;
 
 /// <summary>
-/// Archives anonymes des tournois terminés et comptés, une par tournoi (documents « stats » de la
-/// base, sous le code du tournoi), hors de la purge des tournois : les statistiques couvrent tout
-/// l'historique. Les chiffres sont calculés une fois, gardés en mémoire, et recalculés après
-/// chaque ajout ou retrait d'archive.
+/// Anonymous archives of the finished and counted tournaments, one per tournament ("stats"
+/// documents of the database, under the tournament's code), outside the tournament purge: the
+/// statistics cover the whole history. The figures are computed once, kept in memory, and
+/// computed again after each archive added or removed.
 /// </summary>
 public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory)
 {
@@ -19,7 +19,7 @@ public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory)
     private readonly object _lock = new();
     private StatsView? _stats;
 
-    /// <summary>Archive le tournoi s'il est terminé et compté ; sinon retire son archive.</summary>
+    /// <summary>Archives the tournament if it is finished and counted; otherwise removes its archive.</summary>
     public void Update(Tournament t, DateTimeOffset finishedAt)
     {
         if (t.Phase != TournamentPhase.Finished || t.ExcludeFromStats)
@@ -66,7 +66,7 @@ public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory)
         }
     }
 
-    /// <summary>Au démarrage : archive les tournois terminés et comptés qui n'en ont pas encore.</summary>
+    /// <summary>At startup: archives the finished and counted tournaments that do not have one yet.</summary>
     public async Task<int> BackfillAsync(TournamentStore store)
     {
         var added = 0;
@@ -82,6 +82,6 @@ public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory)
     private static ArchivedTournament? Read(string json)
     {
         try { return JsonSerializer.Deserialize<ArchivedTournament>(json, TournamentJson.Options); }
-        catch (JsonException) { return null; }       // archive illisible : ignorée, laissée à examiner
+        catch (JsonException) { return null; }       // unreadable archive: ignored, left to be examined
     }
 }

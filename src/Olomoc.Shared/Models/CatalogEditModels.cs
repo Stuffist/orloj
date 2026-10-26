@@ -3,24 +3,24 @@ using Olomoc.Tournaments;
 
 namespace Olomoc.Models;
 
-// Éditeur du référentiel (admins, /api/admin/catalog) : une entrée et ses textes dans chaque
-// langue. Erreurs : Problem (clés « admin.problem. » de ui.json).
+// Card catalog editor (admins, /api/admin/catalog): an entry and its texts in each language.
+// Errors: Problem ("admin.problem." keys of ui.json).
 
-/// <summary>Rouage, ses textes par langue (null : inchangés) et ses factions.</summary>
+/// <summary>Cog, its texts per language (null: unchanged) and its factions.</summary>
 public sealed record CogEdit(Cog Cog, Dictionary<string, CogText?> Texts, List<string> Factions, bool IsNew);
 
-/// <summary>Équipement ou don, et ses textes par langue (null : inchangés).</summary>
+/// <summary>Equipment or boon, and its texts per language (null: unchanged).</summary>
 public sealed record EquipmentEdit(Equipment Equipment, Dictionary<string, EquipmentText?> Texts, bool IsNew);
 
-/// <summary>Faction : alignement et textes par langue (nom, description).</summary>
+/// <summary>Faction: alignment and texts per language (name, description).</summary>
 public sealed record FactionEdit(Alignment Alignment, Dictionary<string, NamedText?> Texts);
 
 public sealed record PublishedRequest(bool Published);
 
-/// <summary>Entrées modifiées (« modified ») ou nouvelles (« new ») par collection, et langues des textes.</summary>
+/// <summary>Changed ("modified") or new ("new") entries per collection, and text languages.</summary>
 public sealed record CatalogStatus(Dictionary<string, Dictionary<string, string>> Entries, IReadOnlyList<string> Languages);
 
-/// <summary>Règles d'une entrée du référentiel, communes à l'éditeur et au serveur.</summary>
+/// <summary>Rules of a card catalog entry, shared by the editor and the server.</summary>
 public static partial class CatalogEditRules
 {
     public const int MaxText = 2000, MaxAbilities = 10, MaxFrequencies = 3, MaxBuildRules = 5, MaxLifeLine = 30;
@@ -83,7 +83,7 @@ public static partial class CatalogEditRules
         return problems;
     }
 
-    /// <summary>Textes d'un rouage, tous champs confondus (vide : rien à écrire dans cette langue).</summary>
+    /// <summary>Texts of a cog, all fields together (empty: nothing to write in this language).</summary>
     public static string?[]? Strings(CogText? t) =>
         t is null ? null : new[] { t.Name, t.Title, t.Instinct }.Concat(t.Abilities.SelectMany(a => new[] { a.Name, a.GameEffect })).ToArray();
 
@@ -120,7 +120,7 @@ public static partial class CatalogEditRules
     {
         if (texts.Keys.Any(l => !languages.Contains(l))) problems.Add(Problem.Of("language"));
         if (texts.Values.Any(t => t is not null && t.Any(s => s?.Length > MaxText))) problems.Add(Problem.Of("textTooLong", MaxText.ToString()));
-        // Nom dans la langue de référence : obligatoire pour une nouvelle entrée, ou s'il est modifié.
+        // Name in the reference language: required for a new entry, or if it is changed.
         if ((isNew || texts.GetValueOrDefault(referenceLanguage) is not null) && string.IsNullOrWhiteSpace(referenceName)) problems.Add(Problem.Of("name"));
     }
 }

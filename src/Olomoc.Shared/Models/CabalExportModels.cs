@@ -1,13 +1,13 @@
 namespace Olomoc.Models;
 
-// Export JSON d'une cabale (schemas/olomoc-cabal.schema.json). Les ids et codes font
-// référence au référentiel ; les noms sont donnés dans la langue de l'export, pour lecture.
+// JSON export of a cabal (schemas/olomoc-cabal.schema.json). Ids and codes refer to the card
+// catalog; names are given in the export's language, for reading.
 
 public sealed record IdName(string Id, string Name);
 
 public sealed record CodeName(string Code, string Name);
 
-/// <summary>Un emplacement de la cabale : rouage de ce rang et son équipement/don éventuel.</summary>
+/// <summary>A slot of the cabal: cog of this rank and its optional equipment/boon.</summary>
 public sealed record CabalSlot(int Rank, IdName Cog, IdName? Equipment);
 
 public sealed record CabalExport(
@@ -23,7 +23,7 @@ public sealed record CabalExport(
 }
 
 /// <summary>
-/// Cabale sauvegardée (CabalLibrary) et sa date de sauvegarde. <see cref="Pending"/> : pas encore
-/// envoyée au compte (sauvegardée hors connexion, ou sans compte).
+/// Saved cabal (CabalLibrary) and its save date. <see cref="Pending"/>: not sent to the account
+/// yet (saved offline, or without an account).
 /// </summary>
 public sealed record SavedCabal(DateTimeOffset SavedAt, CabalExport Cabal, bool Pending = false);

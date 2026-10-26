@@ -3,28 +3,28 @@ using Olomoc.Models;
 namespace Olomoc.Services;
 
 /// <summary>
-/// Cabale en cours de composition, conservée le temps de la session de l'app : on la
-/// retrouve en revenant au constructeur depuis le mode partie.
+/// Cabal being composed, kept for the app's session: you find it again when coming back to the
+/// builder from the play mode.
 /// </summary>
 public sealed class CabalDraft
 {
     public string Faction { get; set; } = "";
     public string Name { get; set; } = "";
 
-    // index 0 => rang 1, index 1 => rang 2, index 2 => rang 3
+    // index 0 => rank 1, index 1 => rank 2, index 2 => rank 3
     public Cog?[] Cogs { get; } = new Cog?[3];
     public Equipment?[] Equipment { get; } = new Equipment?[3];
 
-    // ---- Partage avec la fenêtre détachée du catalogue (autre instance de l'app, même origine) ----
+    // ---- Sharing with the detached catalog window (another app instance, same origin) ----
 
-    /// <summary>Clé du localStorage où le constructeur publie la cabale en cours.</summary>
+    /// <summary>localStorage key where the builder publishes the cabal being composed.</summary>
     public const string ShareKey = "olomoc.draft";
 
-    /// <summary>« FACTION|c », c au format de l'adresse de la planche (<see cref="CardSheet.Encode"/>).</summary>
+    /// <summary>"FACTION|c", c in the card sheet's address format (<see cref="CardSheet.Encode"/>).</summary>
     public static string Share(string? faction, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment) =>
         $"{faction}|{CardSheet.Encode(cogs, equipment)}";
 
-    /// <summary>Cabale publiée par <see cref="Share"/> ; faction et ids inconnus ignorés.</summary>
+    /// <summary>Cabal published by <see cref="Share"/>; unknown faction and ids ignored.</summary>
     public static (string? Faction, Cog?[] Cogs, Equipment?[] Equipment) Read(string? value, CatalogService catalog)
     {
         var parts = (value ?? "").Split('|', 2);

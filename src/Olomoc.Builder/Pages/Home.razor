@@ -19,7 +19,7 @@
 }
 else
 {
-    @* Ouvert depuis l'inscription à un tournoi (« Composer… ») : que faire de la cabale composée. *@
+    @* Opened from a tournament registration ("Compose…"): what to do with the composed cabal. *@
     @if (Tournament is { Length: > 0 } tournament)
     {
         <p class="tournament-notice" role="note">
@@ -36,7 +36,7 @@ else
                 <span class="count">@Library.Cabals.Count</span>
             }
         </button>
-        @* Mode partie : composition complète requise ; illégale, la partie suit la composition actuelle. *@
+        @* Play mode: complete composition required; if illegal, the game follows the current composition. *@
         <button class="btn @(_cogs.Any(c => c is null) ? null : "primary")" disabled="@_cogs.Any(c => c is null)" @onclick="StartGameAsync"
                 title="@L.Ui(_cogs.Any(c => c is null) ? "play.launch.incomplete" : _legality.IsLegal ? "play.launch.intro" : "play.launch.notLegal")">
             @L.Ui("play.launch.button")
@@ -58,7 +58,7 @@ else
         }
     </div>
 
-    @* Sauvegarde et export en tête, avec l'état de la cabale (légale ou non, et pourquoi). *@
+    @* Save and export at the top, with the cabal's state (legal or not, and why). *@
     <section class="export">
         <div class="export-head">
             <h2>@L.Ui("export.title")</h2>
@@ -112,8 +112,8 @@ else
                     @L.Ui("export.cards")
                 </a>
             </div>
-            @* Texte de l'export replié : copier / télécharger n'en ont pas besoin, et il repousserait
-               les rouages vers le bas. *@
+            @* Export text collapsed: copy / download do not need it, and it would push the cogs
+               down. *@
             <details class="export-preview">
                 <summary>@L.Ui("export.preview")</summary>
                 <textarea class="export-output" readonly rows="@Math.Min(content.Split('\n').Length, 18)"
@@ -125,7 +125,7 @@ else
     <section class="filters">
         <div class="field">
             <label>@L.Ui("filter.faction")</label>
-            @* Factions où les rouages déjà choisis n'ont pas leur place : grisées. *@
+            @* Factions where the cogs already chosen do not fit: greyed out. *@
             @{ var compatible = Catalog.CompatibleFactions(_cogs); }
             <div class="with-emblem">
                 <Emblem Faction="@_faction" />
@@ -202,7 +202,7 @@ else
                 @if (cog is null)
                 {
                     <div class="picker">
-                        @* Sans faction : seulement les rouages compatibles avec ceux déjà choisis. *@
+                        @* Without a faction: only the cogs compatible with those already chosen. *@
                         @{ var options = Catalog.AvailableCogs(rank, NullIfEmpty(_faction), NullIfEmpty(_ministryFilter), _query, Catalog.CompatibleFactions(_cogs)); }
                         @if (options.Count == 0)
                         {
@@ -213,14 +213,14 @@ else
                             @foreach (var c in options)
                             {
                                 var via = NullIfEmpty(_faction) is { } f ? Catalog.RecruitVia(c, f) : null;
-                                @* Hors faction, et sa carte de recrutement couvre déjà un autre rouage : marqué 🔃,
-                                   le choisir retire cet autre rouage (échange) ; grisé si aucun échange ne suffit. *@
+                                @* Out of faction, and its recruitment card already covers another cog: marked 🔃,
+                                   choosing it removes that other cog (swap); greyed out if no swap is enough. *@
                                 var swap = Catalog.CogConflict(idx, c, _cogs, NullIfEmpty(_faction));
                                 var blocked = swap is { Displaced.Count: 0 };
                                 <button class="cog-option@(swap is not null && !blocked ? " swap" : null)" disabled="@blocked" @onclick="() => SelectCog(idx, c)">
                                     <span class="cog-option-head">
                                         <span class="cog-name">@Text(L.CogName(c))@DraftBadge(c.Published)</span>
-                                        @* Factions dont le rouage est membre (les recrutements par carte sont sur sa fiche). *@
+                                        @* Factions the cog is a member of (recruitments through a card are on its details). *@
                                         <span class="cog-option-factions">
                                             @foreach (var fit in Catalog.FactionsOf(c).Where(x => x.Member))
                                             {
@@ -290,23 +290,23 @@ else
                         <div class="equipment-zone">
                             <label>@L.Ui("cog.equipment")</label>
                             @{
-                                // Rangés par Ministère / faction, puis par nom : la liste et ‹ › suivent cet ordre.
+                                // Sorted by Ministry / faction, then by name: the list and ‹ › follow this order.
                                 var available = EquipmentBrowser.Ordered(Catalog.AvailableEquipment(idx, _cogs, _equipment, NullIfEmpty(_faction)), Catalog, L);
                                 var position = current is null ? -1 : available.FindIndex(e => e.Id == current.Id);
-                                // Déjà « pris » par le reste de la cabale (même carte, Ministère épuisé) : marqué 🔃,
-                                // le choisir retire la carte en conflit à l'autre rouage (échange, en infobulle).
+                                // Already "taken" by the rest of the cabal (same card, Ministry exhausted): marked 🔃,
+                                // choosing it removes the conflicting card from the other cog (swap, in the tooltip).
                                 var conflicts = available.Select(e => e.Id == current?.Id ? null : Catalog.EquipmentConflict(idx, e, _cogs, _equipment)).ToArray();
                                 var conflictOf = available.Select((e, k) => (e.Id, Conflict: conflicts[k])).ToDictionary(x => x.Id, x => x.Conflict);
                                 var previous = Neighbor(conflicts, position, -1);
                                 var next = Neighbor(conflicts, position, +1);
                             }
-                            @* ‹ › choisit directement la carte voisine sans échange : son effet s'affiche aussitôt dessous. *@
+                            @* ‹ › directly chooses the neighbouring card without a swap: its effect shows at once below. *@
                             <div class="equip-stepper">
                                 <button class="step" disabled="@(previous < 0)" title="@L.Ui("equipment.previous")" aria-label="@L.Ui("equipment.previous")"
                                         @onclick="() => SelectEquipment(idx, available[previous])">‹</button>
-                                @* @key : les options gardent leur élément quand la liste s'allonge (nouveau rouage,
-                                   nouveaux Ministères) ; sans clé, Blazor réécrirait les options en place et la
-                                   sélection du navigateur resterait sur la même position, sur une autre carte. *@
+                                @* @key: options keep their element when the list grows (new cog, new Ministries);
+                                   without a key, Blazor would rewrite the options in place and the browser's
+                                   selection would stay at the same position, on another card. *@
                                 <select value="@current?.Id" @onchange="e => SelectEquipment(idx, e)">
                                     <option value="">@L.Ui("common.choose")</option>
                                     @foreach (var group in EquipmentBrowser.Grouped(available))
@@ -346,8 +346,8 @@ else
         }
     </section>
 
-    @* Catalogue de tous les équipements et dons, indépendant de la cabale ; détachable dans une
-       petite fenêtre à poser à côté (il se replie alors ici). *@
+    @* Catalog of all equipment and boons, independent of the cabal; can be detached into a small
+       window to place alongside (it then collapses here). *@
     <section class="equip-section">
         <div class="equip-section-head">
             <h2>@L.Ui("equipment.section")</h2>
@@ -365,7 +365,7 @@ else
     @if (_libraryOpen)
     {
         <Sheet Title="@L.Ui("library.title")" OnClose="() => _libraryOpen = false">
-            @* Compte : mêmes cabales sur tous les appareils ; sans compte : celles de cet appareil. *@
+            @* Account: same cabals on every device; without an account: those of this device. *@
             <p class="hint library-account">
                 @if (Accounts.Current is { } me)
                 {
@@ -429,14 +429,14 @@ else
 }
 
 @code {
-    // Composition conservée par CabalDraft : on la retrouve en revenant du mode partie.
+    // Composition kept by CabalDraft: you find it again when coming back from the play mode.
     private string _faction { get => Draft.Faction; set => Draft.Faction = value; }
     private string _ministryFilter = "";
     private string _search = "";
     private CogQuery _query = CogQuery.Empty;
     private IReadOnlyDictionary<string, StatKind> _keywords = new Dictionary<string, StatKind>();
 
-    // index 0 => rang 1, index 1 => rang 2, index 2 => rang 3
+    // index 0 => rank 1, index 1 => rank 2, index 2 => rank 3
     private Cog?[] _cogs => Draft.Cogs;
     private Equipment?[] _equipment => Draft.Equipment;
     private LegalityResult _legality = new(false, new[] { new LegalityIssue("start") });
@@ -444,23 +444,23 @@ else
     protected override async Task OnInitializedAsync()
     {
         L.Changed += OnLanguageChanged;
-        Library.Changed += OnLanguageChanged;          // cabales du compte arrivées, autre compte…
+        Library.Changed += OnLanguageChanged;          // account cabals arrived, other account…
         Accounts.Changed += OnLanguageChanged;
         await L.EnsureLoadedAsync();
         await Catalog.EnsureLoadedAsync();
         await Games.EnsureLoadedAsync();
         await Library.EnsureLoadedAsync();
         _keywords = L.StatKeywords();
-        // Faction choisie à l'inscription au tournoi, si rien n'est encore composé.
+        // Faction chosen at the tournament registration, if nothing is composed yet.
         if (FactionParam is { } f && _cogs.All(c => c is null) && Catalog.AllFactions.Any(x => x.Code == f)) _faction = f;
         Recompute();
     }
 
-    // Ouverture depuis l'inscription à un tournoi : /builder/?tournament=CODE&faction=MAISEL
+    // Opened from a tournament registration: /builder/?tournament=CODE&faction=MAISEL
     [SupplyParameterFromQuery(Name = "tournament")] public string? Tournament { get; set; }
     [SupplyParameterFromQuery(Name = "faction")] public string? FactionParam { get; set; }
 
-    // Les textes se résolvent au rendu : un changement de langue (ou des cabales du compte) ne demande qu'un re-rendu.
+    // Texts are resolved at render time: a language change (or the account's cabals) only needs a re-render.
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
     public void Dispose()
@@ -472,8 +472,8 @@ else
 
     private static int RankIndex(int rank) => rank - 1;
 
-    // ‹ › : indice de la carte voisine (step = -1 ou +1) qui se choisit sans échange ; -1 s'il
-    // n'y en a pas. Faire défiler ne retire jamais la carte d'un autre rouage.
+    // ‹ ›: index of the neighbouring card (step = -1 or +1) that can be chosen without a swap; -1 if
+    // there is none. Scrolling never removes another cog's card.
     private static int Neighbor(Swap?[] conflicts, int position, int step)
     {
         for (var k = position + step; k >= 0 && k < conflicts.Length; k += step)
@@ -481,31 +481,31 @@ else
         return -1;
     }
 
-    // Titre d'une catégorie de la liste d'équipement ; pour un Ministère, combien la cabale peut
-    // encore en prendre (la carte de ce rouage mise à part, puisqu'on la remplacerait).
+    // Title of a category of the equipment list; for a Ministry, how many more the cabal can take
+    // (this cog's card set aside, since it would be replaced).
     private string GroupLabel(string key, int idx) =>
         EquipmentBrowser.GroupMinistry(key) is { } m
             ? $"{EquipmentBrowser.GroupTitle(key, L)} · {L.Ui("equipment.remaining", Catalog.MinistryRemaining(idx, m, _cogs, _equipment))}"
             : EquipmentBrowser.GroupTitle(key, L);
 
-    // Infobulle d'une option 🔃 : ce que l'échange retirerait, et pourquoi.
+    // Tooltip of a 🔃 option: what the swap would remove, and why.
     private string SwapTitle(Swap swap) =>
         swap.Displaced.Count == 0
             ? L.Ui("equipment.swap.none")
             : L.Ui(swap.Reason, SwapVictims(swap));
 
-    // « Carte (Rouage) » de chaque emplacement qui perdrait sa carte.
+    // "Card (Cog)" of each slot that would lose its card.
     private string SwapVictims(Swap swap) =>
         string.Join(", ", swap.Displaced.Select(d => L.Ui("equipment.swapVictim", L.EquipmentName(_equipment[d]!).Text, L.CogName(_cogs[d]!).Text)));
 
-    // Dernier échange fait par la liste d'un rouage : rappelé sous cette liste jusqu'au choix suivant.
+    // Last swap made by a cog's list: recalled under that list until the next choice.
     private (int Slot, string Text)? _swapNote;
 
     private void OnFactionChanged(ChangeEventArgs e)
     {
         _faction = e.Value?.ToString() ?? "";
-        // Seules les factions compatibles sont proposées : les rouages restent ; les cartes de
-        // l'ancienne faction, elles, peuvent ne plus être disponibles.
+        // Only the compatible factions are offered: the cogs stay; the cards of the old faction
+        // may no longer be available.
         PruneEquipment();
         Recompute();
     }
@@ -530,7 +530,7 @@ else
 
     private void SelectCog(int idx, Cog c)
     {
-        // Rouage marqué 🔃 : l'autre rouage dont il prend la carte de recrutement est retiré (échange).
+        // Cog marked 🔃: the other cog whose recruitment card it takes is removed (swap).
         var notes = new List<string>();
         if (Catalog.CogConflict(idx, c, _cogs, NullIfEmpty(_faction)) is { Displaced.Count: > 0 } swap)
         {
@@ -542,12 +542,12 @@ else
             }
         }
         _cogs[idx] = c;
-        _equipment[idx] = null;             // les Ministères présents changent : on réévalue les équipements/dons
-        // Sans faction choisie, une seule encore possible : on la prend.
+        _equipment[idx] = null;             // the Ministries present change: the equipment/boons are re-evaluated
+        // Without a chosen faction, only one still possible: take it.
         if (NullIfEmpty(_faction) is null && Catalog.CompatibleFactions(_cogs) is [var only]) _faction = only;
         PruneEquipment();
-        // Hors faction et pas encore couvert : la carte qui le recrute, équipée d'office (et retirée
-        // au rouage qui la portait sans en profiter, s'il y en a un).
+        // Out of faction and not covered yet: the card that recruits it, equipped automatically (and
+        // removed from the cog that carried it without benefiting from it, if any).
         _swapNote = null;
         if (NullIfEmpty(_faction) is { } f && Catalog.RecruitCard(idx, _cogs, _equipment, f) is { } card)
         {
@@ -576,7 +576,7 @@ else
 
     private void SelectEquipment(int idx, Equipment? eq)
     {
-        // Choix marqué 🔃 : la carte en conflit est retirée à l'autre rouage (échange).
+        // Choice marked 🔃: the conflicting card is removed from the other cog (swap).
         _swapNote = null;
         if (eq is not null && eq.Id != _equipment[idx]?.Id && Catalog.EquipmentConflict(idx, eq, _cogs, _equipment) is { Displaced.Count: > 0 } swap)
         {
@@ -584,12 +584,12 @@ else
             foreach (var d in swap.Displaced) _equipment[d] = null;
         }
         _equipment[idx] = eq;
-        PruneEquipment();                   // retirer une carte ALL_MINISTRIES peut invalider les autres équipements/dons
+        PruneEquipment();                   // removing an ALL_MINISTRIES card can invalidate the other equipment/boons
         Recompute();
     }
 
-    // Retire les équipements/dons devenus indisponibles après un changement de rouage ou
-    // d'équipement/don ; répété jusqu'à stabilité, un retrait pouvant en entraîner un autre.
+    // Removes the equipment/boons that became unavailable after a cog or equipment/boon change;
+    // repeated until stable, since one removal can lead to another.
     private void PruneEquipment()
     {
         bool changed;
@@ -611,8 +611,8 @@ else
         _ = ShareDraftAsync();
     }
 
-    // Cabale publiée pour la fenêtre détachée du catalogue (filtre « équipables seulement »),
-    // qui la suit par l'événement storage. Stockage indisponible : la fenêtre n'a pas de filtre.
+    // Cabal published for the catalog's detached window ("equippable only" filter), which follows
+    // it through the storage event. Storage unavailable: the window has no filter.
     private async Task ShareDraftAsync()
     {
         try { await JS.InvokeVoidAsync("localStorage.setItem", CabalDraft.ShareKey, CabalDraft.Share(NullIfEmpty(_faction), _cogs, _equipment)); }
@@ -623,13 +623,13 @@ else
 
     private string _cabalName { get => Draft.Name; set => Draft.Name = value; }
     private bool _exportJson;
-    private string? _copied;            // dernier contenu copié : le bouton l'indique tant qu'il est à jour
+    private string? _copied;            // last copied content: the button shows it while it is up to date
 
     private string ExportContent() => _exportJson
         ? Exporter.ToJson(_cabalName, NullIfEmpty(_faction), _cogs, _equipment)
         : Exporter.ToText(_cabalName, _cogs, _equipment);
 
-    // Planche des cartes (impression / PDF / PNG), dans un nouvel onglet : la cabale passe dans l'adresse.
+    // Card sheet (print / PDF / PNG), in a new tab: the cabal goes in the address.
     private string CardsLink => $"builder/cards?c={Uri.EscapeDataString(CardSheet.Encode(_cogs, _equipment))}"
         + (string.IsNullOrWhiteSpace(_cabalName) ? "" : $"&name={Uri.EscapeDataString(_cabalName.Trim())}");
 
@@ -645,23 +645,23 @@ else
         }
         catch (JSException)
         {
-            // Presse-papiers indisponible (contexte non sécurisé, refus) : le texte reste sélectionnable.
+            // Clipboard unavailable (insecure context, refusal): the text stays selectable.
             _copied = null;
         }
     }
 
-    // ---- Sauvegarde ----
+    // ---- Save ----
 
-    private const long MaxImportBytes = 64 * 1024;     // un export pèse moins d'1 Ko
+    private const long MaxImportBytes = 64 * 1024;     // an export weighs less than 1 KB
     private bool _libraryOpen;
-    private bool _nameRequired;                        // sauvegarde demandée sans nom
+    private bool _nameRequired;                        // save requested without a name
     private bool _importError;
-    private string? _loadNotice;                       // cartes introuvables au chargement
+    private string? _loadNotice;                       // cards not found when loading
     private ElementReference _nameInput;
 
     private CabalExport CurrentCabal() => Exporter.ToModel(_cabalName, NullIfEmpty(_faction), _cogs, _equipment);
 
-    // La composition affichée est celle sauvegardée sous son nom.
+    // The displayed composition is the one saved under its name.
     private bool IsSaved() =>
         Library.Find(_cabalName) is { } saved && CabalLibrary.SameCards(saved.Cabal, CurrentCabal());
 
@@ -681,7 +681,7 @@ else
 
     private async Task LoadAsync(CabalExport cabal)
     {
-        // Composition en cours non sauvegardée : on demande avant de l'écraser.
+        // Unsaved composition in progress: ask before overwriting it.
         if (_cogs.Any(c => c is not null) && !IsSaved()
             && !await JS.InvokeAsync<bool>("confirm", L.Ui("library.loadReplace"))) return;
         var resolved = Catalog.Resolve(cabal);
@@ -708,16 +708,16 @@ else
             using var reader = new StreamReader(e.File.OpenReadStream(MaxImportBytes));
             json = await reader.ReadToEndAsync();
         }
-        catch (IOException) { /* fichier trop gros ou illisible */ }
+        catch (IOException) { /* file too big or unreadable */ }
         var cabal = CabalExporter.FromJson(json);
         _importError = cabal is null;
         if (cabal is not null) await LoadAsync(cabal);
     }
 
-    // Brouillon de l'éditeur du référentiel : servi aux seuls admins, signalé.
+    // Draft of the card catalog editor: served to admins only, flagged.
     private RenderFragment? DraftBadge(bool published) => published ? null : @<span class="draft-badge">@L.Ui("admin.draft")</span>;
 
-    // Noms dans la langue courante si la carte existe encore, sinon tels qu'enregistrés.
+    // Names in the current language if the card still exists, otherwise as recorded.
     private string CogLabel(IdName cog) => Catalog.CogById(cog.Id) is { } c ? L.CogName(c).Text : cog.Name;
     private string EquipmentLabel(IdName e) => Catalog.EquipmentById(e.Id) is { } x ? L.EquipmentName(x).Text : e.Name;
     private string FactionLabel(CodeName f) => Catalog.AllFactions.Any(x => x.Code == f.Code) ? L.FactionName(f.Code).Text : f.Name;
@@ -728,19 +728,19 @@ else
         catch (CultureNotFoundException) { return date.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture); }
     }
 
-    // ---- Catalogue des équipements ----
+    // ---- Equipment catalog ----
 
     private bool _equipShown = true;
 
-    // Fenêtre à part (réutilisée si déjà ouverte) : le catalogue se replie ici. Fenêtre bloquée
-    // par le navigateur : il reste affiché dans la page.
+    // Separate window (reused if already open): the catalog collapses here. Window blocked by the
+    // browser: it stays displayed in the page.
     private async Task DetachEquipmentAsync()
     {
         if (await JS.InvokeAsync<bool>("olomoc.openWindow", "builder/equipment?window=true", "olomoc-equipment"))
             _equipShown = false;
     }
 
-    // ---- Mode partie ----
+    // ---- Play mode ----
 
     private async Task StartGameAsync()
     {
@@ -752,7 +752,7 @@ else
     private static string? NullIfEmpty(string s) => string.IsNullOrWhiteSpace(s) ? null : s;
     private static string Stars(int rank) => new string('★', rank);
 
-    // Texte de carte, stylé s'il se replie sur la langue de référence faute de traduction.
+    // Card text, styled if it falls back to the reference language for lack of a translation.
     private RenderFragment Text(Localized text) => @<span class="@(text.IsFallback ? "untranslated" : null)"
                                                           title="@(text.IsFallback ? L.Ui("common.untranslated") : null)">@text.Text</span>;
 }

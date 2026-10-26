@@ -10,16 +10,16 @@ using Olomoc.Tournaments;
 namespace Olomoc.Server.Accounts;
 
 /// <summary>
-/// Cabales du compte (POST /api/account/cabals/sync) : l'appareil envoie ses changements
-/// (sauvegardes, suppressions), le serveur applique ceux plus récents que ce qu'il connaît pour
-/// ce nom et renvoie toutes les cabales du compte. Sans changement : simple lecture.
+/// Account cabals (POST /api/account/cabals/sync): the device sends its changes (saves,
+/// deletions), the server applies those newer than what it knows for that name and returns all
+/// the account's cabals. Without changes: a plain read.
 /// </summary>
 public static class CabalSyncEndpoint
 {
-    /// <summary>Taille au plus d'une cabale (JSON) : trois rouages et leurs équipements pèsent ~1 Ko.</summary>
+    /// <summary>Maximum size of a cabal (JSON): three cogs and their equipment weigh ~1 KB.</summary>
     public const int MaxCabalJson = 16 * 1024;
 
-    // Une synchronisation à la fois par compte (deux appareils en même temps : pas de doublon).
+    // One synchronization at a time per account (two devices at once: no duplicates).
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Locks = new();
 
     public static async Task<IResult> Sync(CabalSyncRequest body, HttpContext ctx, UserManager<OlomocUser> users, IDbContextFactory<OlomocDb> factory)
@@ -47,7 +47,7 @@ public static class CabalSyncEndpoint
                 }
                 var key = CabalSyncRules.Key(name);
                 var row = rows.FirstOrDefault(r => r.NormalizedName == key);
-                if (!CabalSyncRules.IsNewer(change.At, row is null ? null : Utc(row.SavedAt))) continue;      // le compte a plus récent
+                if (!CabalSyncRules.IsNewer(change.At, row is null ? null : Utc(row.SavedAt))) continue;      // the account has a newer one
 
                 string? json = null;
                 if (change.Cabal is { } cabal)
@@ -66,8 +66,8 @@ public static class CabalSyncEndpoint
                 }
                 if (row is null)
                 {
-                    // Suppression d'une cabale inconnue gardée aussi : une sauvegarde plus ancienne, venue
-                    // d'un autre appareil, ne la fera pas réapparaître.
+                    // Deletion of an unknown cabal kept too: an older save coming from another device
+                    // will not bring it back.
                     row = new SavedCabalRow { UserId = user.Id, NormalizedName = key };
                     db.SavedCabals.Add(row);
                     rows.Add(row);
@@ -90,7 +90,7 @@ public static class CabalSyncEndpoint
         finally { gate.Release(); }
     }
 
-    // Forme d'une cabale du constructeur : trois rouages au plus, chacun identifié.
+    // Shape of a builder cabal: at most three cogs, each one identified.
     private static bool Valid(CabalExport cabal) =>
         cabal.Cogs is { Count: <= 3 } cogs && cogs.All(s => s?.Cog?.Id is { Length: > 0 });
 

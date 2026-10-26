@@ -2,25 +2,25 @@ using Olomoc.Models;
 
 namespace Olomoc.Tournaments;
 
-/// <summary>Ronde appariée, et les entorses qu'il a fallu consentir faute de mieux.</summary>
+/// <summary>Paired round, and the compromises that had to be made for lack of anything better.</summary>
 public sealed record PairingOutcome(Round Round, int Rematches, int SameAlignment);
 
 /// <summary>
-/// Appariement de la ronde suivante, entre les joueurs actifs (hors abandons).
+/// Pairing of the next round, between the active players (drops excluded).
 /// <list type="bullet">
-/// <item><b>Suisse</b> : ronde 1 au hasard ; ensuite par classement, chaque joueur contre le
-/// plus proche en points encore disponible (1 c. 2, 3 c. 4…), en descendant au groupe de
-/// points suivant si besoin. Option : à écart de points égal, préférer l'alignement opposé.</item>
-/// <item><b>Alignement</b> : Lumières contre Ténèbres, au hasard ; le surplus du camp le plus
-/// nombreux s'affronte entre lui.</item>
+/// <item><b>Swiss</b>: round 1 at random; then by standings, each player against the closest one
+/// in points still available (1 v. 2, 3 v. 4…), going down to the next points group if needed.
+/// Option: for an equal points gap, prefer the opposite alignment.</item>
+/// <item><b>Alignment</b>: Light against Darkness, at random; the surplus of the larger side
+/// plays among itself.</item>
 /// </list>
-/// Dans les deux cas, pas de revanche (recherche avec retour arrière) ; si c'est impossible,
-/// la revanche est admise et signalée. Exempt (bye) si le nombre est impair : le joueur le
-/// moins bien classé qui n'en a pas encore eu (en mode Alignement, dans le camp le plus nombreux).
+/// In both cases, no rematch (backtracking search); if that is impossible, the rematch is allowed
+/// and reported. A bye if the number is odd: the lowest-ranked player who has not had one yet (in
+/// Alignment mode, in the larger side).
 /// </summary>
 public static class Pairer
 {
-    private const int SearchBudget = 200_000;     // étapes de recherche ; au-delà, revanches admises
+    private const int SearchBudget = 200_000;     // search steps; beyond that, rematches allowed
 
     public static PairingOutcome Pair(Tournament t, Func<string, Alignment?> alignmentOf, int seed)
     {
@@ -41,11 +41,11 @@ public static class Pairer
         bool SameAlignment(string a, string b) => alignment[a] is { } x && alignment[b] == x;
         int CampSize(string id) => alignment[id] is { } a ? active.Count(o => alignment[o] == a) : 0;
 
-        // Du premier au dernier du classement (égalités départagées au hasard).
+        // From the first to the last of the standings (ties broken at random).
         var ranking = active.OrderByDescending(id => standing[id].Points).ThenByDescending(id => standing[id].Diff)
                             .ThenByDescending(id => standing[id].VpFor).ThenBy(id => random[id]).ToList();
 
-        // Ordre de traitement (chacun, à son tour, choisit son adversaire) et préférence entre adversaires.
+        // Processing order (each one, in turn, chooses their opponent) and preference between opponents.
         List<string> order;
         Func<string, string, (int, int)> preference;
         if (t.Pairing == PairingMode.Swiss)
@@ -56,13 +56,13 @@ public static class Pairer
         }
         else
         {
-            // Camp le moins nombreux d'abord : chacun de ses joueurs prend un adversaire d'en face.
+            // Smaller side first: each of its players takes an opponent from the other side.
             order = active.OrderBy(id => alignment[id] is null ? int.MaxValue : CampSize(id)).ThenBy(id => random[id]).ToList();
             preference = (p, q) => (SameAlignment(p, q) ? 1 : 0, 0);
         }
         var position = order.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
 
-        // Exempt : qui n'en a pas eu d'abord, (Alignement) dans le camp le plus nombreux, du bas du classement.
+        // Bye: whoever has not had one first, (Alignment) in the larger side, from the bottom of the standings.
         var rankPosition = ranking.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
         var byeCandidates = active.Count % 2 == 0
             ? new List<string?> { null }
@@ -90,11 +90,11 @@ public static class Pairer
                 return (met.Contains((p, q)) ? 1 : 0, first, second, position[q]);
             }
         }
-        throw new InvalidOperationException("Appariement impossible.");   // inatteignable : revanches admises
+        throw new InvalidOperationException("Pairing impossible.");   // unreachable: rematches allowed
     }
 
-    // Retour arrière : le premier joueur libre de l'ordre essaie ses adversaires possibles,
-    // du préféré au moins préféré, jusqu'à un appariement complet.
+    // Backtracking: the first free player in the order tries their possible opponents, from the
+    // preferred to the least preferred, until a complete pairing.
     private static bool Search(List<string> order, HashSet<string> used, List<(string, string)> pairs,
         Func<string, string, bool> allowed, Func<string, string, (int, int, int, int)> key, ref int budget)
     {

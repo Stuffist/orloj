@@ -6,10 +6,9 @@ using Olomoc.Models;
 namespace Olomoc.Services;
 
 /// <summary>
-/// Charge les deux JSON neutres (référentiel de cartes + référentiel de faction) servis
-/// comme ressources statiques dans wwwroot/data, et expose les requêtes de
-/// disponibilité et de légalité de cabale. Aucun texte n'est produit ici : les noms
-/// viennent de <see cref="LocalizationService"/>, les messages sont des <see cref="LegalityIssue"/>.
+/// Loads the two neutral JSON files (card catalog + faction reference) served as static resources
+/// in wwwroot/data, and exposes the cabal availability and legality queries. No text is produced
+/// here: names come from <see cref="LocalizationService"/>, messages are <see cref="LegalityIssue"/>.
 /// </summary>
 public sealed class CatalogService
 {
@@ -30,7 +29,7 @@ public sealed class CatalogService
     private Dictionary<string, Faction> _factionByCode = new();
     private Dictionary<string, HashSet<string>> _membersByFaction = new();
     private List<string> _allMinistries = new();
-    private List<Equipment> _recruitCards = new();      // cartes qui recrutent hors faction (Harmonium, Asservisseur mental)
+    private List<Equipment> _recruitCards = new();      // cards that recruit out of faction (Harmonium, Asservisseur mental)
 
     public CatalogService(HttpClient http, LocalizationService l)
     {
@@ -59,8 +58,8 @@ public sealed class CatalogService
     public Equipment? EquipmentById(string id) => _equipmentById.GetValueOrDefault(id);
 
     /// <summary>
-    /// Cartes supplémentaires proposables à un rouage qui en a la capacité (Medic Ruzicka),
-    /// hors cartes déjà portées dans la cabale (pas de doublon).
+    /// Extra cards that can be offered to a cog that has the ability (Medic Ruzicka), except the
+    /// cards already carried in the cabal (no duplicates).
     /// </summary>
     public List<Equipment> ExtraEquipmentOptions(Cog cog, IEnumerable<string> carriedIds)
     {
@@ -74,13 +73,13 @@ public sealed class CatalogService
 
     public IReadOnlyList<Faction> AllFactions => FactionReference.Factions;
 
-    /// <summary>Alignement d'une faction (Lumières / Ténèbres) ; null si le code est inconnu.</summary>
+    /// <summary>Alignment of a faction (Light / Darkness); null if the code is unknown.</summary>
     public Alignment? AlignmentOf(string factionCode) => AllFactions.FirstOrDefault(f => f.Code == factionCode)?.Alignment;
 
     /// <summary>
-    /// Cartes d'une cabale exportée ou sauvegardée, retrouvées par leurs ids dans le référentiel
-    /// actuel. Chaque rouage reprend l'emplacement de son rang ; ce qui est introuvable (carte
-    /// retirée, rang déjà occupé) est écarté et listé, sous le nom enregistré.
+    /// Cards of an exported or saved cabal, found again by their ids in the current card catalog.
+    /// Each cog takes back the slot of its rank; whatever cannot be found (removed card, rank
+    /// already taken) is set aside and listed, under the recorded name.
     /// </summary>
     public ResolvedCabal Resolve(CabalExport cabal)
     {
@@ -113,18 +112,18 @@ public sealed class CatalogService
         _membersByFaction.TryGetValue(faction, out var ids) && ids.Contains(cog.Id);
 
     /// <summary>
-    /// Ministères d'un rouage pendant la composition : ceux de sa carte, ou tous
-    /// s'il porte une carte ALL_MINISTRIES.
+    /// Ministries of a cog during the composition: those of its card, or all of them if it
+    /// carries an ALL_MINISTRIES card.
     /// </summary>
     private IReadOnlyCollection<string> EffectiveMinistries(Cog cog, Equipment? equipment) =>
         equipment?.GrantsAllMinistries == true ? _allMinistries : cog.Ministries;
 
-    /// <summary>Le rouage a sa place dans une cabale de la faction : membre, ou recrutable par une carte.</summary>
+    /// <summary>The cog fits in a cabal of the faction: member, or recruitable through a card.</summary>
     public bool Fits(Cog cog, string faction) => IsMember(cog, faction) || RecruitVia(cog, faction) is not null;
 
     /// <summary>
-    /// Factions (dans l'ordre du référentiel) où le rouage a sa place : membre, ou recrutable
-    /// hors faction par une carte (<see cref="RecruitVia"/>).
+    /// Factions (in the catalog's order) where the cog fits: member, or recruitable out of faction
+    /// through a card (<see cref="RecruitVia"/>).
     /// </summary>
     public List<FactionFit> FactionsOf(Cog cog) =>
         AllFactions
@@ -133,9 +132,9 @@ public sealed class CatalogService
             .ToList();
 
     /// <summary>
-    /// Factions (dans l'ordre du référentiel) où les rouages choisis ont leur place ensemble
-    /// (<see cref="RecruitmentFits"/>) ; toutes si aucun ne l'est. Sert à proposer la faction
-    /// après coup, sans défaire la composition.
+    /// Factions (in the catalog's order) where the chosen cogs fit together
+    /// (<see cref="RecruitmentFits"/>); all of them if none does. Used to suggest the faction
+    /// afterwards, without undoing the composition.
     /// </summary>
     public List<string> CompatibleFactions(IReadOnlyList<Cog?> cogs) =>
         AllFactions.Select(f => f.Code)
@@ -143,10 +142,10 @@ public sealed class CatalogService
             .ToList();
 
     /// <summary>
-    /// Le rouage peut-il rejoindre la cabale à l'emplacement <paramref name="slot"/> ? Non s'il
-    /// est hors faction et que les cartes qui pourraient le recruter couvrent déjà les autres
-    /// rouages hors faction (dans la faction choisie, ou dans aucune si elle ne l'est pas). Une
-    /// composition déjà impossible sans lui ne le fait pas refuser.
+    /// Can the cog join the cabal in slot <paramref name="slot"/>? Not if it is out of faction and
+    /// the cards that could recruit it already cover the other out-of-faction cogs (in the chosen
+    /// faction, or in none if it is not chosen). A composition already impossible without it does
+    /// not make it refused.
     /// </summary>
     public bool CanJoin(int slot, Cog candidate, IReadOnlyList<Cog?> cogs, string? faction)
     {
@@ -159,10 +158,9 @@ public sealed class CatalogService
     }
 
     /// <summary>
-    /// Échange qui permettrait au rouage de rejoindre la cabale quand <see cref="CanJoin"/> le
-    /// refuse : l'autre rouage à retirer (de préférence hors faction, celui dont il prendrait la
-    /// carte de recrutement). Null s'il peut la rejoindre sans échange ; aucun emplacement si
-    /// aucun retrait seul ne suffit.
+    /// Swap that would let the cog join the cabal when <see cref="CanJoin"/> refuses it: the other
+    /// cog to remove (preferably out of faction, the one whose recruitment card it would take).
+    /// Null if it can join without a swap; no slot if no single removal is enough.
     /// </summary>
     public Swap? CogConflict(int slot, Cog candidate, IReadOnlyList<Cog?> cogs, string? faction)
     {
@@ -183,10 +181,10 @@ public sealed class CatalogService
     }
 
     /// <summary>
-    /// Carte à équiper d'office au rouage hors faction de l'emplacement <paramref name="slot"/>
-    /// pour le recruter (Harmonium, Asservisseur mental), s'il n'est pas déjà couvert par une
-    /// carte portée ; null sinon. Une carte portée ailleurs sans y couvrir personne (Asservisseur
-    /// sur un membre) est proposée aussi : la choisir la déplace (<see cref="EquipmentConflict"/>).
+    /// Card to equip automatically on the out-of-faction cog of slot <paramref name="slot"/> to
+    /// recruit it (Harmonium, Asservisseur mental), if it is not already covered by a carried card; null
+    /// otherwise. A card carried elsewhere without covering anyone there (Asservisseur mental on a member) is
+    /// offered too: choosing it moves it (<see cref="EquipmentConflict"/>).
     /// </summary>
     public Equipment? RecruitCard(int slot, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment, string faction)
     {
@@ -205,8 +203,8 @@ public sealed class CatalogService
     }
 
     /// <summary>
-    /// Emplacements des rouages hors faction qu'aucune règle de composition des cartes portées
-    /// ne couvre (chaque règle couvre un rouage ; Asservisseur mental : seulement son porteur).
+    /// Slots of the out-of-faction cogs that no composition rule of the carried cards covers (each
+    /// rule covers one cog; Asservisseur mental: only its wearer).
     /// </summary>
     private List<int> UncoveredOutsiders(string faction, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
     {
@@ -221,8 +219,8 @@ public sealed class CatalogService
     }
 
     /// <summary>
-    /// Chaque rouage hors faction peut-il être recruté par une carte distincte (chaque carte
-    /// n'est prise qu'une fois) ? Cartes portées ou non : c'est ce que la composition permet encore.
+    /// Can each out-of-faction cog be recruited by a distinct card (each card is used only once)?
+    /// Carried cards or not: this is what the composition still allows.
     /// </summary>
     private bool RecruitmentFits(IReadOnlyList<Cog?> cogs, string faction)
     {
@@ -230,17 +228,17 @@ public sealed class CatalogService
         return outsiders.Count == 0 || Unmatched(outsiders, _recruitCards, (c, e) => Recruits(e, c, faction)).Count == 0;
     }
 
-    /// <summary>La carte permettrait-elle d'intégrer ce rouage hors faction à une cabale de la faction ?</summary>
+    /// <summary>Would the card allow this out-of-faction cog into a cabal of the faction?</summary>
     private static bool Recruits(Equipment e, Cog cog, string faction) =>
         (e.Faction == faction || e.IsMinistryAffiliated || e.CogId == cog.Id) &&
         e.BuildRules.Any(r => r.CanRecruit(cog, cog.Ministries));
 
     /// <summary>
-    /// Rouages recrutables pour un rang, filtrés par faction (si choisie), ministère et
-    /// recherche (texte + conditions sur les caractéristiques, voir <see cref="CogQuery"/>).
-    /// Avec une faction, inclut les rouages hors faction qu'une règle de composition
-    /// permettrait d'intégrer (voir <see cref="RecruitVia"/>). Sans faction, <paramref name="factions"/>
-    /// (si donné) limite aux rouages qui ont leur place dans l'une d'elles.
+    /// Cogs recruitable for a rank, filtered by faction (if chosen), Ministry and search (text +
+    /// conditions on the stats, see <see cref="CogQuery"/>). With a faction, includes the
+    /// out-of-faction cogs that a composition rule would allow (see <see cref="RecruitVia"/>).
+    /// Without a faction, <paramref name="factions"/> (if given) limits to the cogs that fit in
+    /// one of them.
     /// </summary>
     public List<Cog> AvailableCogs(int rank, string? faction, string? ministryFilter, CogQuery query,
                                    IReadOnlyCollection<string>? factions = null)
@@ -261,18 +259,18 @@ public sealed class CatalogService
     }
 
     /// <summary>
-    /// Carte dont une règle de recrutement permettrait d'intégrer ce rouage à une cabale
-    /// de la faction ; null s'il en est membre ou si aucune carte ne le permet.
+    /// Card whose recruitment rule would allow this cog into a cabal of the faction; null if it is
+    /// a member or if no card allows it.
     /// </summary>
     public Equipment? RecruitVia(Cog cog, string faction) =>
         IsMember(cog, faction) ? null : _recruitCards.FirstOrDefault(e => Recruits(e, cog, faction));
 
     /// <summary>
-    /// Équipements/dons proposables pour le rouage de l'emplacement <paramref name="slot"/>,
-    /// selon la règle du LDR p.32 : affilié à la faction de la cabale, OU à un ministère
-    /// présent parmi les rouages sélectionnés, OU au rouage équipé. Les ministères
-    /// conférés par une carte ALL_MINISTRIES portée ailleurs comptent ; ceux du rouage lui-même
-    /// non, puisque l'équipement qu'on lui choisit remplacerait cette carte.
+    /// Equipment/boons that can be offered to the cog of slot <paramref name="slot"/>, following
+    /// the rule of rulebook p.32: affiliated with the cabal's faction, OR with a Ministry present
+    /// among the selected cogs, OR with the equipped cog. Ministries granted by an ALL_MINISTRIES
+    /// card carried elsewhere count; those of the cog itself do not, since the equipment chosen
+    /// for it would replace that card.
     /// </summary>
     public List<Equipment> AvailableEquipment(int slot, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment, string? faction)
     {
@@ -291,9 +289,9 @@ public sealed class CatalogService
     }
 
     /// <summary>
-    /// Ids des équipements/dons qu'au moins un rouage de la cabale peut porter
-    /// (<see cref="AvailableEquipment"/>), et les cartes de la faction même sans rouage ; null si
-    /// la cabale n'a ni faction ni rouage (rien à quoi comparer).
+    /// Ids of the equipment/boons that at least one cog of the cabal can carry
+    /// (<see cref="AvailableEquipment"/>), and the faction's cards even without a cog; null if the
+    /// cabal has neither a faction nor a cog (nothing to compare to).
     /// </summary>
     public IReadOnlySet<string>? EquipableByCabal(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment, string? faction)
     {
@@ -306,7 +304,7 @@ public sealed class CatalogService
             .ToHashSet();
     }
 
-    /// <summary>Contrôle complet de légalité d'une cabale (cogs[i] porte equipment[i]).</summary>
+    /// <summary>Complete legality check of a cabal (cogs[i] carries equipment[i]).</summary>
     public LegalityResult CheckLegality(string? faction, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
     {
         var issues = new List<LegalityIssue>();
@@ -318,13 +316,13 @@ public sealed class CatalogService
         if (faction is null)
             issues.Add(new("noFaction"));
 
-        // Composition : un rouage de rang 1, un de rang 2, un de rang 3
+        // Composition: one cog of rank 1, one of rank 2, one of rank 3
         var ranks = picked.Select(c => c.Rank).OrderBy(r => r).ToList();
         if (picked.Count != 3 || !ranks.SequenceEqual(new[] { 1, 2, 3 }))
             issues.Add(new("composition"));
 
-        // Recrutement : chaque rouage hors faction doit être couvert par une règle de
-        // composition distincte (Harmonium, Asservisseur mental…).
+        // Recruitment: each out-of-faction cog must be covered by a distinct composition rule
+        // (Harmonium, Asservisseur mental…).
         if (faction is not null && _factionByCode.ContainsKey(faction))
         {
             var uncovered = UncoveredOutsiders(faction, cogs, equipment);
@@ -332,18 +330,18 @@ public sealed class CatalogService
                 issues.Add(new("outsideFaction", IssueArg.Faction(faction), IssueArg.Cogs(uncovered.Select(i => cogs[i]!.Id))));
         }
 
-        // Doublons de nom (rouages et équipements/dons), comparés dans la langue de référence
-        // pour que la règle ne dépende pas de la langue affichée.
+        // Duplicate names (cogs and equipment/boons), compared in the reference language so that
+        // the rule does not depend on the displayed language.
         var dupCogs = Duplicates(picked, _l.ReferenceName, c => c.Id);
         if (dupCogs.Count > 0) issues.Add(new("duplicateCog", IssueArg.Cogs(dupCogs)));
         var dupEquipment = Duplicates(pickedEquipment, _l.ReferenceName, e => e.Id);
         if (dupEquipment.Count > 0) issues.Add(new("duplicateEquipment", new IssueArg(IssueArgKind.Equipment, dupEquipment)));
 
-        // Chaque rouage doit être équipé
+        // Each cog must be equipped
         if (picked.Count == 3 && pickedEquipment.Count < 3)
             issues.Add(new("unequipped"));
 
-        // Affiliation de chaque équipement
+        // Affiliation of each piece of equipment
         foreach (var i in slots)
         {
             var e = equipment[i];
@@ -362,8 +360,8 @@ public sealed class CatalogService
             }
             else if (e.IsMinistryAffiliated)
             {
-                // Ministère absent : signalé ici, et exclu du couplage (MinistryOverflow) pour ne
-                // pas le faire passer à tort pour une sur-souscription.
+                // Missing Ministry: reported here, and left out of the matching (MinistryOverflow)
+                // so that it is not wrongly taken for an oversubscription.
                 if (!slots.Any(j => CanUnlock(cogs, equipment, j, i, e.Ministry!)))
                     issues.Add(new("ministryAbsent", IssueArg.Equipment(e.Id), IssueArg.Ministry(e.Ministry!)));
             }
@@ -376,11 +374,11 @@ public sealed class CatalogService
     }
 
     /// <summary>
-    /// Ce choix d'équipement/don pour l'emplacement <paramref name="slot"/> entre-t-il en conflit
-    /// avec le reste de la cabale (même carte portée par un autre rouage, ou Ministère dont les
-    /// rouages débloquent déjà chacun un équipement) ? Renvoie l'échange qui le rendrait possible :
-    /// le motif et les emplacements qui perdraient leur carte ; null sans conflit. Un débordement
-    /// qui existe déjà sans ce choix ne lui est pas imputé.
+    /// Does this equipment/boon choice for slot <paramref name="slot"/> conflict with the rest of
+    /// the cabal (same card carried by another cog, or a Ministry whose cogs each already unlock a
+    /// piece of equipment)? Returns the swap that would make it possible: the reason and the slots
+    /// that would lose their card; null without a conflict. An overflow that already exists
+    /// without this choice is not blamed on it.
     /// </summary>
     public Swap? EquipmentConflict(int slot, Equipment candidate, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
     {
@@ -397,7 +395,7 @@ public sealed class CatalogService
         without[slot] = null;
         if (!MinistryOverflow(cogs, with) || MinistryOverflow(cogs, without)) return null;
 
-        // La carte de Ministère d'un autre rouage qu'il suffit de retirer, de préférence du même Ministère.
+        // The Ministry card of another cog that is enough to remove, preferably of the same Ministry.
         var displaced = Enumerable.Range(0, with.Length)
             .Where(k => k != slot && with[k]?.IsMinistryAffiliated == true)
             .OrderBy(k => with[k]!.Ministry == candidate.Ministry ? 0 : 1)
@@ -411,9 +409,9 @@ public sealed class CatalogService
     }
 
     /// <summary>
-    /// Nombre d'équipements/dons de ce Ministère que la cabale peut encore prendre, la carte de
-    /// l'emplacement <paramref name="slot"/> mise à part (on la remplacerait) : ce que les rouages
-    /// qui débloquent ce Ministère n'ont pas déjà débloqué.
+    /// Number of equipment/boons of this Ministry that the cabal can still take, the card of slot
+    /// <paramref name="slot"/> set aside (it would be replaced): what the cogs that unlock this
+    /// Ministry have not unlocked yet.
     /// </summary>
     public int MinistryRemaining(int slot, string ministry, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
     {
@@ -426,19 +424,19 @@ public sealed class CatalogService
     }
 
     /// <summary>
-    /// Le rouage j peut-il rendre disponible un équipement/don de ce Ministère porté en
-    /// <paramref name="wearer"/> ? Par sa carte, ou par une carte ALL_MINISTRIES — mais pas celle
-    /// qu'il porte lui-même.
+    /// Can cog j make available an equipment/boon of this Ministry carried by
+    /// <paramref name="wearer"/>? Through its card, or through an ALL_MINISTRIES card, but not the
+    /// one it carries itself.
     /// </summary>
     private bool CanUnlock(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment, int j, int wearer, string ministry) =>
         cogs[j]!.Ministries.Contains(ministry) ||
         (j != wearer && EffectiveMinistries(cogs[j]!, equipment[j]).Contains(ministry));
 
     /// <summary>
-    /// Chaque rouage ne rend disponible qu'un seul équipement/don de son Ministère d'affiliation :
-    /// les équipements de Ministère s'affectent à des rouages distincts. Vrai si c'est impossible,
-    /// avec en plus les cartes <paramref name="extra"/> (porteur, Ministère) s'il y en a. Les
-    /// équipements portés dont le Ministère est absent (ministryAbsent) n'entrent pas dans le compte.
+    /// Each cog makes only one equipment/boon of its affiliated Ministry available: Ministry
+    /// equipment is assigned to distinct cogs. True if that is impossible, with the
+    /// <paramref name="extra"/> cards (wearer, Ministry) added if any. Carried equipment whose
+    /// Ministry is missing (ministryAbsent) does not count.
     /// </summary>
     private bool MinistryOverflow(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment,
                                   IEnumerable<(int Wearer, string Ministry)>? extra = null)
@@ -454,14 +452,14 @@ public sealed class CatalogService
         return Unmatched(needs, slots, (need, j) => Unlocks(j, need)).Count > 0;
     }
 
-    /// <summary>Un id par groupe d'éléments portant le même nom.</summary>
+    /// <summary>One id per group of items with the same name.</summary>
     private static List<string> Duplicates<T>(IEnumerable<T> items, Func<T, string> name, Func<T, string> id) =>
         items.GroupBy(name).Where(g => g.Count() > 1).Select(g => id(g.First())).ToList();
 
     /// <summary>
-    /// Couplage biparti maximum entre <paramref name="left"/> et <paramref name="right"/>
-    /// (chaque élément de droite sert au plus une fois) ; renvoie les éléments de gauche
-    /// restés sans partenaire. Au plus 3 éléments de chaque côté : un backtracking suffit.
+    /// Maximum bipartite matching between <paramref name="left"/> and <paramref name="right"/>
+    /// (each right item is used at most once); returns the left items left without a partner. At
+    /// most 3 items on each side: backtracking is enough.
     /// </summary>
     private static List<TL> Unmatched<TL, TR>(IReadOnlyList<TL> left, IReadOnlyList<TR> right, Func<TL, TR, bool> canPair)
     {
@@ -471,7 +469,7 @@ public sealed class CatalogService
 
         void Assign(int i)
         {
-            if (unmatched.Count >= best.Count) return;   // déjà pas mieux que la meilleure solution
+            if (unmatched.Count >= best.Count) return;   // already no better than the best solution
             if (i == left.Count) { best = unmatched.ToList(); return; }
 
             for (int j = 0; j < right.Count; j++)
@@ -494,14 +492,14 @@ public sealed class CatalogService
 public sealed record LegalityResult(bool IsLegal, IReadOnlyList<LegalityIssue> Issues);
 
 /// <summary>
-/// Échange qui rendrait possible un choix en conflit avec le reste de la cabale : clé du motif,
-/// et emplacements qui perdraient leur carte (équipement/don) ou leur rouage (vide si aucun
-/// retrait seul ne suffit).
+/// Swap that would make possible a choice conflicting with the rest of the cabal: reason key, and
+/// slots that would lose their card (equipment/boon) or their cog (empty if no single removal is
+/// enough).
 /// </summary>
 public sealed record Swap(string Reason, IReadOnlyList<int> Displaced);
 
-/// <summary>Faction où un rouage a sa place : membre, ou recrutable via la carte <paramref name="Via"/>.</summary>
+/// <summary>Faction where a cog fits: member, or recruitable through the card <paramref name="Via"/>.</summary>
 public sealed record FactionFit(string Faction, bool Member, Equipment? Via);
 
-/// <summary>Cabale relue : faction, rouages et équipements/dons par emplacement, cartes introuvables.</summary>
+/// <summary>Cabal read back: faction, cogs and equipment/boons per slot, cards not found.</summary>
 public sealed record ResolvedCabal(string? Faction, Cog?[] Cogs, Equipment?[] Equipment, IReadOnlyList<string> Missing);

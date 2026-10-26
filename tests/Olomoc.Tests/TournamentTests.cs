@@ -5,10 +5,10 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Tournoi : classement, appariements (suisse, alignement), règles des phases et inscriptions.</summary>
+/// <summary>Tournament: standings, pairings (Swiss, alignment), rules of the phases and registrations.</summary>
 public class TournamentTests
 {
-    // Factions de test : L = Lumières, D = Ténèbres (le référentiel n'est pas nécessaire ici).
+    // Test factions: L = Light, D = Darkness (the card catalog is not needed here).
     private static Alignment? AlignmentOf(string faction) => faction switch
     {
         "L" => Alignment.LIGHT,
@@ -18,7 +18,7 @@ public class TournamentTests
 
     private static Tournament NewTournament(PairingMode mode, params string[] factions)
     {
-        // Une cabale par joueur : la cabale jouée est implicite (voir Cabale_jouee_exigee_avec_deux_cabales).
+        // One cabal per player: the cabal played is implicit (see Cabal_played_optional_with_two_cabals).
         var t = new Tournament { Code = "TEST", Name = "Test", RoundCount = 10, CabalsPerPlayer = 1, Pairing = mode, Phase = TournamentPhase.Started };
         for (var i = 0; i < factions.Length; i++)
             t.Players.Add(new Player { Id = $"p{i}", Name = $"Joueur {i}", Faction = factions[i] });
@@ -27,7 +27,7 @@ public class TournamentTests
 
     private static Round Pair(Tournament t, int seed = 1) => TournamentRules.PairNext(t, AlignmentOf, seed).Round;
 
-    // Résultats : le joueur A de chaque table gagne si win(A, B), sinon perd ; PV 10 à 4.
+    // Results: player A of each table wins if win(A, B), otherwise loses; VP 10 to 4.
     private static void Play(Round round, Func<string, string, bool> aWins)
     {
         foreach (var table in round.Tables.Where(x => !x.IsBye))
@@ -57,10 +57,10 @@ public class TournamentTests
         Assert.Equal(t.ActivePlayers.Select(p => p.Id).OrderBy(x => x), ids.OrderBy(x => x));
     }
 
-    // ---- Classement ----
+    // ---- Standings ----
 
     [Fact]
-    public void Classement_points_puis_difference_puis_PV()
+    public void Standings_points_then_difference_then_VP()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D", "L");
         t.Rounds.Add(new Round
@@ -69,8 +69,8 @@ public class TournamentTests
             Tables =
             {
                 new Table { Number = 1, PlayerA = "p0", PlayerB = "p1", VpA = 12, VpB = 2 },   // p0 +10
-                new Table { Number = 2, PlayerA = "p2", PlayerB = "p3", VpA = 8, VpB = 8 },    // nul
-                new Table { Number = 3, PlayerA = "p4" },                                     // exempt : 7-0
+                new Table { Number = 2, PlayerA = "p2", PlayerB = "p3", VpA = 8, VpB = 8 },    // draw
+                new Table { Number = 3, PlayerA = "p4" },                                     // bye: 7-0
             },
         });
         var s = Standings.Compute(t);
@@ -79,14 +79,14 @@ public class TournamentTests
         Assert.Equal(new[] { 3, 3, 1, 1, 0 }, s.Select(x => x.Points));
         Assert.Equal(new[] { 10, 7, 0, 0, -10 }, s.Select(x => x.Diff));
         Assert.Equal(new[] { 12, 7, 8, 8, 2 }, s.Select(x => x.VpFor));
-        Assert.Equal(new[] { 1, 2, 3, 3, 5 }, s.Select(x => x.Rank));       // p2 et p3 à égalité parfaite
+        Assert.Equal(new[] { 1, 2, 3, 3, 5 }, s.Select(x => x.Rank));       // p2 and p3 perfectly tied
         Assert.Equal((1, 1), (s.Single(x => x.PlayerId == "p4").Byes, s.Single(x => x.PlayerId == "p4").Wins));
     }
 
     [Fact]
-    public void Abandons_en_fin_de_classement_classes_entre_eux()
+    public void Drops_at_the_end_of_the_standings_ranked_among_themselves()
     {
-        // p0 et p2 abandonnent avec plus de points que p1 et p3 : ils passent derrière, p0 devant p2.
+        // p0 and p2 drop with more points than p1 and p3: they go behind, p0 ahead of p2.
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D", "L");
         t.Rounds.Add(new Round
         {
@@ -104,11 +104,11 @@ public class TournamentTests
 
         Assert.Equal(new[] { "p4", "p3", "p1", "p0", "p2" }, s.Select(x => x.PlayerId));
         Assert.Equal(new[] { 1, 2, 3, 4, 5 }, s.Select(x => x.Rank));
-        Assert.Equal(new[] { 3, 0, 0, 3, 3 }, s.Select(x => x.Points));      // les points restent affichés
+        Assert.Equal(new[] { 3, 0, 0, 3, 3 }, s.Select(x => x.Points));      // the points stay displayed
     }
 
     [Fact]
-    public void Abandon_a_egalite_avec_un_joueur_en_lice_n_a_pas_son_rang()
+    public void Drop_tied_with_a_player_still_in_does_not_get_their_rank()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D");
         t.Rounds.Add(new Round
@@ -125,13 +125,13 @@ public class TournamentTests
         var s = Standings.Compute(t);
 
         Assert.Equal(new[] { "p0", "p2", "p1", "p3" }, s.Select(x => x.PlayerId));
-        Assert.Equal(new[] { 1, 1, 3, 3 }, s.Select(x => x.Rank));          // égalités : entre en lice, entre abandons
+        Assert.Equal(new[] { 1, 1, 3, 3 }, s.Select(x => x.Rank));          // ties: among players still in, among drops
     }
 
     [Fact]
-    public void Exempt_vaut_une_victoire_au_Fiel_7_0()
+    public void Bye_is_worth_a_7_0_win()
     {
-        // Victoire 6-2 (+4) contre exempt (+7) : l'exempt passe devant au départage.
+        // Win 6-2 (+4) against a bye (+7): the bye goes ahead on the tiebreaker.
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L");
         t.Rounds.Add(new Round
         {
@@ -144,19 +144,19 @@ public class TournamentTests
     }
 
     [Fact]
-    public void Table_sans_resultat_ne_compte_pas()
+    public void Table_without_a_result_does_not_count()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D");
         t.Rounds.Add(new Round { Number = 1, Tables = { new Table { Number = 1, PlayerA = "p0", PlayerB = "p1", VpA = 5 } } });
         Assert.All(Standings.Compute(t), s => Assert.Equal(0, s.Played));
     }
 
-    // ---- Suisse ----
+    // ---- Swiss ----
 
     [Fact]
-    public void Suisse_sans_revanche_sur_toutes_les_rondes_possibles()
+    public void Swiss_without_rematch_over_all_possible_rounds()
     {
-        // 8 joueurs, 7 rondes : chacun rencontre tous les autres exactement une fois.
+        // 8 players, 7 rounds: each one meets all the others exactly once.
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D", "L", "D", "L", "D");
         t.RoundCount = 7;
         for (var r = 0; r < 7; r++)
@@ -172,7 +172,7 @@ public class TournamentTests
     [Theory]
     [InlineData(PairingMode.Swiss)]
     [InlineData(PairingMode.Alignment)]
-    public void Gros_tournoi_rapide_et_sans_revanche(PairingMode mode)
+    public void Big_tournament_fast_and_without_rematch(PairingMode mode)
     {
         var rng = new Random(42);
         var t = NewTournament(mode, Enumerable.Range(0, 64).Select(i => i % 3 == 0 ? "D" : "L").ToArray());
@@ -190,22 +190,22 @@ public class TournamentTests
     }
 
     [Fact]
-    public void Suisse_apparie_par_groupe_de_points()
+    public void Swiss_pairs_by_points_group()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D", "L", "D", "L", "D");
         Play(Pair(t), (a, b) => Num(a) < Num(b));
         Play(Pair(t), (a, b) => Num(a) < Num(b));
 
-        // Après 2 rondes : 2 joueurs à 6 pts, 4 à 3, 2 à 0 ; chaque table oppose des joueurs à points égaux.
+        // After 2 rounds: 2 players at 6 pts, 4 at 3, 2 at 0; each table opposes players with equal points.
         var standing = Standings.Compute(t).ToDictionary(s => s.PlayerId, s => s.Points);
         Assert.Equal(new[] { 0, 0, 3, 3, 3, 3, 6, 6 }, standing.Values.OrderBy(x => x));
         var round3 = Pair(t);
         Assert.All(round3.Tables, x => Assert.Equal(standing[x.PlayerA], standing[x.PlayerB!]));
-        Assert.Equal(6, standing[round3.Tables[0].PlayerA]);         // table 1 : les deux premiers
+        Assert.Equal(6, standing[round3.Tables[0].PlayerA]);         // table 1: the first two
     }
 
     [Fact]
-    public void Exempt_au_dernier_classe_sans_exempt_puis_tournant()
+    public void Bye_to_the_lowest_ranked_without_a_bye_then_rotating()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D", "L");
         var exempts = new List<string>();
@@ -214,10 +214,10 @@ public class TournamentTests
             var round = Pair(t, seed: r);
             AssertEveryoneOnce(t, round);
             var bye = Assert.Single(round.Tables, x => x.IsBye);
-            Assert.Equal(round.Tables.Count, bye.Number);                // l'exempt en dernière table
+            Assert.Equal(round.Tables.Count, bye.Number);                // the bye at the last table
             if (r > 0)
             {
-                // Le moins bien classé parmi ceux qui n'ont pas encore été exemptés.
+                // The lowest ranked among those who have not had a bye yet.
                 var standing = Standings.Compute(new Tournament { Players = t.Players, Rounds = t.Rounds.Take(r).ToList() });
                 var expected = standing.Where(s => !exempts.Contains(s.PlayerId)).Last();
                 Assert.Equal(expected.Points, standing.Single(s => s.PlayerId == bye.PlayerA).Points);
@@ -230,19 +230,19 @@ public class TournamentTests
     }
 
     [Fact]
-    public void Revanche_admise_et_signalee_quand_elle_est_inevitable()
+    public void Rematch_allowed_and_reported_when_unavoidable()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D");
         for (var r = 0; r < 3; r++) Play(Pair(t, seed: r), (a, b) => Num(a) < Num(b));
         AssertNoRematch(t);
 
-        var outcome = TournamentRules.PairNext(t, AlignmentOf, seed: 9);  // 4e ronde à 4 joueurs
+        var outcome = TournamentRules.PairNext(t, AlignmentOf, seed: 9);  // 4th round with 4 players
         Assert.Equal(2, outcome.Rematches);
         AssertEveryoneOnce(t, outcome.Round);
     }
 
     [Fact]
-    public void Suisse_option_alignement_a_points_egaux()
+    public void Swiss_alignment_option_for_equal_points()
     {
         for (var seed = 0; seed < 20; seed++)
         {
@@ -254,7 +254,7 @@ public class TournamentTests
     }
 
     [Fact]
-    public void Abandon_n_est_plus_apparie()
+    public void Dropped_player_no_longer_paired()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D", "L");
         Assert.Null(TournamentRules.SetDropped(t, "p4", true));
@@ -264,14 +264,14 @@ public class TournamentTests
         Assert.DoesNotContain(round.Tables, x => x.IsBye);
     }
 
-    // ---- Alignement ----
+    // ---- Alignment ----
 
     [Theory]
     [InlineData(3, 3, 0, false)]
-    [InlineData(4, 2, 1, false)]     // surplus de Lumières : une table Lumières c. Lumières
-    [InlineData(4, 3, 0, true)]      // impair : exempt dans le camp le plus nombreux
+    [InlineData(4, 2, 1, false)]     // surplus of Light: one Light v. Light table
+    [InlineData(4, 3, 0, true)]      // odd: bye in the larger side
     [InlineData(5, 0, 2, true)]
-    public void Alignement_lumieres_contre_tenebres(int light, int dark, int sameAlignment, bool bye)
+    public void Alignment_light_against_darkness(int light, int dark, int sameAlignment, bool bye)
     {
         for (var seed = 0; seed < 10; seed++)
         {
@@ -287,7 +287,7 @@ public class TournamentTests
     }
 
     [Fact]
-    public void Alignement_sans_revanche_au_fil_des_rondes()
+    public void Alignment_without_rematch_over_the_rounds()
     {
         var t = NewTournament(PairingMode.Alignment, "L", "L", "L", "D", "D", "D");
         for (var r = 0; r < 3; r++)
@@ -296,13 +296,13 @@ public class TournamentTests
             Assert.Equal(0, outcome.SameAlignment);
             Play(outcome.Round, (a, b) => true);
         }
-        AssertNoRematch(t);     // 3 rondes : chaque Lumière a rencontré chaque Ténèbre
+        AssertNoRematch(t);     // 3 rounds: each Light player has met each Darkness player
     }
 
-    // ---- Règles des phases et des résultats ----
+    // ---- Rules of the phases and results ----
 
     [Fact]
-    public void Ronde_suivante_seulement_quand_la_precedente_est_complete()
+    public void Next_round_only_when_the_previous_one_is_complete()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D");
         t.Phase = TournamentPhase.Registration;
@@ -327,7 +327,7 @@ public class TournamentTests
     }
 
     [Fact]
-    public void Resultat_invalide_refuse()
+    public void Invalid_result_refused()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L");
         Pair(t);
@@ -336,33 +336,33 @@ public class TournamentTests
         Assert.Equal("unknownTable", TournamentRules.SetResult(t, 2, 1, 1, 2)?.Key);
         Assert.Equal("victoryPoints", TournamentRules.SetResult(t, 1, 1, 5, null)?.Key);
         Assert.Equal("victoryPoints", TournamentRules.SetResult(t, 1, 1, -1, 2)?.Key);
-        Assert.Null(TournamentRules.SetResult(t, 1, 1, null, null));                  // effacer
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, null, null));                  // clear
     }
 
     [Fact]
-    public void Cabale_jouee_facultative_avec_deux_cabales()
+    public void Cabal_played_optional_with_two_cabals()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D");
         t.CabalsPerPlayer = 2;
         Pair(t);
-        Assert.Equal("cabalPlayed", TournamentRules.SetResult(t, 1, 1, 7, 3, 0, 2)?.Key);     // hors bornes
+        Assert.Equal("cabalPlayed", TournamentRules.SetResult(t, 1, 1, 7, 3, 0, 2)?.Key);     // out of bounds
         Assert.Equal("cabalPlayed", TournamentRules.SetResult(t, 1, 1, 7, 3, -1, null)?.Key);
-        Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3));                                // inconnues
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3));                                // unknown
         Assert.Equal((null, null), (t.Rounds[0].Tables[0].CabalA, t.Rounds[0].Tables[0].CabalB));
-        Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3, null, 1));                       // une seule connue
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3, null, 1));                       // only one known
         Assert.Equal((null, 1), (t.Rounds[0].Tables[0].CabalA, t.Rounds[0].Tables[0].CabalB));
         Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3, 1, 0));
         Assert.Equal((1, 0), (t.Rounds[0].Tables[0].CabalA, t.Rounds[0].Tables[0].CabalB));
-        Assert.Null(TournamentRules.SetResult(t, 1, 1, null, null, 1, 0));                    // effacer : cabales aussi
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, null, null, 1, 0));                    // clear: cabals too
         Assert.Equal((null, null), (t.Rounds[0].Tables[0].CabalA, t.Rounds[0].Tables[0].CabalB));
 
-        t.CabalsPerPlayer = 1;                                                                // une seule : implicite
+        t.CabalsPerPlayer = 1;                                                                // only one: implicit
         Assert.Null(TournamentRules.SetResult(t, 1, 1, 4, 4));
         Assert.Equal((0, 0), (t.Rounds[0].Tables[0].CabalA, t.Rounds[0].Tables[0].CabalB));
     }
 
     [Fact]
-    public void Annuler_la_derniere_ronde_tant_qu_aucun_resultat()
+    public void Undo_the_last_round_as_long_as_there_is_no_result()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D");
         Assert.Equal("noRound", TournamentRules.UndoLastRound(t)?.Key);
@@ -375,7 +375,7 @@ public class TournamentTests
     }
 
     [Fact]
-    public void Echanger_deux_joueurs_de_la_ronde_en_cours()
+    public void Swap_two_players_of_the_current_round()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D", "L");
         var round = Pair(t);
@@ -384,12 +384,12 @@ public class TournamentTests
         var bye = round.Tables.Single(x => x.IsBye);
         var (a, b, c, d, e) = (t1.PlayerA, t1.PlayerB!, t2.PlayerA, t2.PlayerB!, bye.PlayerA);
 
-        // A et D échangent leur place : A rejoint la table 2, D la table 1.
+        // A and D swap places: A joins table 2, D table 1.
         Assert.Null(TournamentRules.SwapPlayers(t, 1, a, d));
         Assert.Equal((d, b), (t1.PlayerA, t1.PlayerB));
         Assert.Equal((c, a), (t2.PlayerA, t2.PlayerB));
 
-        // Avec l'exempt : l'exemption change de joueur.
+        // With the bye: the bye changes player.
         Assert.Null(TournamentRules.SwapPlayers(t, 1, e, b));
         Assert.Equal(b, bye.PlayerA);
         Assert.True(bye.IsBye);
@@ -400,14 +400,14 @@ public class TournamentTests
         Assert.Equal("unknownPlayer", TournamentRules.SwapPlayers(t, 1, d, "absent")?.Key);
         Assert.Equal("notCurrentRound", TournamentRules.SwapPlayers(t, 2, d, c)?.Key);
 
-        // Table avec un résultat (même partiel) : intouchable ; effacé, l'échange redevient possible.
+        // Table with a result (even partial): untouchable; cleared, the swap becomes possible again.
         Assert.Null(TournamentRules.SetResult(t, 1, t1.Number, 6, 2));
         Assert.Equal("tableHasResult", TournamentRules.SwapPlayers(t, 1, d, c)?.Key);
         Assert.Equal("tableHasResult", TournamentRules.SwapPlayers(t, 1, b, e)?.Key);
         Assert.Null(TournamentRules.SetResult(t, 1, t1.Number, null, null));
         Assert.Null(TournamentRules.SwapPlayers(t, 1, d, c));
 
-        // Ronde précédente : figée.
+        // Previous round: frozen.
         Play(round, (_, _) => true);
         Pair(t);
         Assert.Equal("notCurrentRound", TournamentRules.SwapPlayers(t, 1, a, c)?.Key);
@@ -417,7 +417,7 @@ public class TournamentTests
     }
 
     [Fact]
-    public void Revanche_reperee_dans_les_rondes_precedentes()
+    public void Rematch_found_in_the_previous_rounds()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D", "L", "D");
         var first = Pair(t);
@@ -426,32 +426,32 @@ public class TournamentTests
         Pair(t);
         Assert.Equal(1, TournamentRules.MetBefore(t.Rounds, 2, a, b));
         Assert.Equal(1, TournamentRules.MetBefore(t.Rounds, 2, b, a));
-        Assert.Null(TournamentRules.MetBefore(t.Rounds, 1, a, b));                    // pas avant la ronde 1
+        Assert.Null(TournamentRules.MetBefore(t.Rounds, 1, a, b));                    // not before round 1
         Assert.Null(TournamentRules.MetBefore(t.Rounds, 2, a, first.Tables[1].PlayerA));
     }
 
     [Fact]
-    public void Scenarios_des_rondes_prevus_a_l_avance()
+    public void Round_scenarios_planned_in_advance()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D");
         t.RoundCount = 3;
         Assert.Null(TournamentRules.SetScenarios(t, [new Scenario("SABOTAGE"), null, new Scenario(Agendas.Other, "  Le bal  ")]));
         Assert.Equal("SABOTAGE", t.ScenarioOf(1)!.Id);
         Assert.Null(t.ScenarioOf(2));
-        Assert.Equal(new Scenario(Agendas.Other, "Le bal"), t.ScenarioOf(3));              // nom nettoyé
+        Assert.Equal(new Scenario(Agendas.Other, "Le bal"), t.ScenarioOf(3));              // name cleaned up
         Assert.Null(t.ScenarioOf(4));
 
         Assert.Null(TournamentRules.SetScenarios(t, [new Scenario("VISITS", "ignoré"), null, null]));
-        Assert.Equal([new Scenario("VISITS")], t.Scenarios);                                 // nom d'un agenda ignoré, fin vide retirée
+        Assert.Equal([new Scenario("VISITS")], t.Scenarios);                                 // name of an agenda ignored, empty end removed
 
         Assert.Equal("scenario", TournamentRules.SetScenarios(t, [new Scenario("INCONNU")])?.Key);
         Assert.Equal("scenarioName", TournamentRules.SetScenarios(t, [new Scenario(Agendas.Other, " ")])?.Key);
         Assert.Equal("deck", TournamentRules.SetScenarios(t, [new Scenario("VISITS", null, "INCONNU")])?.Key);
-        Assert.Equal("deck", TournamentRules.SetScenarios(t, [new Scenario("VISITS", null, null, "ROGUE")])?.Key);   // pas un Ministère
+        Assert.Equal("deck", TournamentRules.SetScenarios(t, [new Scenario("VISITS", null, null, "ROGUE")])?.Key);   // not a Ministry
         Assert.Equal("scenarioCount", TournamentRules.SetScenarios(t, [null, null, null, new Scenario("VISITS")])?.Key);
-        Assert.Equal([new Scenario("VISITS")], t.Scenarios);                                 // refus : rien de changé
+        Assert.Equal([new Scenario("VISITS")], t.Scenarios);                                 // refused: nothing changed
 
-        // Decks gardés, avec un agenda comme avec un scénario maison ; chacun facultatif.
+        // Decks kept, with an agenda as with a custom scenario; each one optional.
         Assert.Null(TournamentRules.SetScenarios(t, [new Scenario("VISITS", null, "ROGUE", "INDOCTRINATION"), new Scenario(Agendas.Other, "Bal", null, "DISINFORMATION")]));
         Assert.Equal([new Scenario("VISITS", null, "ROGUE", "INDOCTRINATION"), new Scenario(Agendas.Other, "Bal", null, "DISINFORMATION")], t.Scenarios);
 
@@ -460,27 +460,27 @@ public class TournamentTests
     }
 
     [Fact]
-    public void Tirage_des_scenarios_sans_repetition_ni_scenario_maison()
+    public void Scenario_draw_without_repeats_or_custom_scenario()
     {
         for (var seed = 0; seed < 50; seed++)
         {
             var all = Agendas.Draw([], 10, 0, new Random(seed));
-            Assert.Equal(Agendas.All.Order(), all.Select(s => s!.Id).Order());               // 10 rondes : chaque agenda une fois
+            Assert.Equal(Agendas.All.Order(), all.Select(s => s!.Id).Order());               // 10 rounds: each agenda once
 
-            // Rondes 1 et 2 déjà appariées : gardées, et leurs agendas exclus du tirage ; scénario
-            // maison de la ronde 4 gardé aussi ; agenda officiel de la ronde 5 retiré au sort.
+            // Rounds 1 and 2 already paired: kept, and their agendas excluded from the draw; custom
+            // scenario of round 4 kept too; official agenda of round 5 drawn again.
             Scenario?[] current = [new Scenario("SABOTAGE"), new Scenario(Agendas.Other, "Maison"), null, new Scenario(Agendas.Other, "Bal"), new Scenario("VISITS")];
             var drawn = Agendas.Draw(current, 6, 2, new Random(seed));
             Assert.Equal(6, drawn.Count);
             Assert.Equal(current[0], drawn[0]);
             Assert.Equal(current[1], drawn[1]);
-            Assert.Equal(current[3], drawn[3]! with { Artifact = null, Ministry = null });       // maison gardé (decks tirés)
+            Assert.Equal(current[3], drawn[3]! with { Artifact = null, Ministry = null });       // custom one kept (decks drawn)
             var later = new[] { drawn[2], drawn[4], drawn[5] }.Select(s => s!.Id).ToList();
             Assert.Equal(later.Distinct(), later);
             Assert.All(later, id => Assert.Contains(id, Agendas.All));
             Assert.DoesNotContain("SABOTAGE", later);
 
-            // Decks tirés pour les rondes pas encore appariées (scénario maison compris), pas pour les autres.
+            // Decks drawn for the rounds not paired yet (custom scenario included), not for the others.
             Assert.All(drawn.Skip(2), s => Assert.True(Decks.IsArtifact(s!.Artifact) && Decks.IsMinistry(s.Ministry)));
             Assert.Equal("Bal", drawn[3]!.Name);
             Assert.All(all, s => Assert.True(Decks.IsArtifact(s!.Artifact) && Decks.IsMinistry(s.Ministry)));
@@ -488,21 +488,21 @@ public class TournamentTests
     }
 
     [Fact]
-    public void J1_et_fin_de_partie_notes_avec_le_resultat()
+    public void P1_and_end_of_game_recorded_with_the_result()
     {
         var t = NewTournament(PairingMode.Swiss, "L", "D");
         Pair(t);
         var table = t.Rounds[0].Tables[0];
         Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3, first: TableSide.B, end: GameEnd.PoliSec));
         Assert.Equal((TableSide.B, GameEnd.PoliSec), (table.First, table.End));
-        Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3));                                // facultatifs : retirés
+        Assert.Null(TournamentRules.SetResult(t, 1, 1, 7, 3));                                // optional: removed
         Assert.Equal((null, null), (table.First, table.End));
         Assert.Null(TournamentRules.SetResult(t, 1, 1, null, null, first: TableSide.A, end: GameEnd.Bile));
-        Assert.Equal((null, null), (table.First, table.End));                                // résultat effacé : rien
+        Assert.Equal((null, null), (table.First, table.End));                                // result cleared: nothing
     }
 
     [Fact]
-    public void Lancer_exige_deux_joueurs()
+    public void Starting_requires_two_players()
     {
         var t = NewTournament(PairingMode.Swiss, "L");
         t.Phase = TournamentPhase.Registration;
@@ -513,10 +513,10 @@ public class TournamentTests
     [InlineData("", 3, 2, "tournamentName")]
     [InlineData("Open", 0, 2, "roundCount")]
     [InlineData("Open", 3, 3, "cabalsPerPlayer")]
-    public void Reglages_invalides(string name, int rounds, int cabals, string key) =>
+    public void Invalid_settings(string name, int rounds, int cabals, string key) =>
         Assert.Equal(key, Assert.Single(TournamentRules.CheckSettings(name, rounds, cabals)).Key);
 
-    // ---- Inscriptions (référentiel réel) ----
+    // ---- Registrations (real card catalog) ----
 
     private static async Task<(AppData D, CabalExport A, CabalExport B)> MaiselCabals()
     {
@@ -531,7 +531,7 @@ public class TournamentTests
     }
 
     [Fact]
-    public async Task Inscription_legale_acceptee()
+    public async Task Legal_registration_accepted()
     {
         var (d, a, b) = await MaiselCabals();
         var t = new Tournament();
@@ -539,13 +539,13 @@ public class TournamentTests
     }
 
     [Fact]
-    public async Task Inscription_refusee_avec_ses_raisons()
+    public async Task Registration_refused_with_its_reasons()
     {
         var (d, a, b) = await MaiselCabals();
         var t = new Tournament();
         t.Players.Add(new Player { Id = "x", Name = "Ana", Faction = "MAISEL" });
 
-        var illegal = b with { Cogs = b.Cogs.Take(2).ToList() };                                   // un rouage manquant
+        var illegal = b with { Cogs = b.Cogs.Take(2).ToList() };                                   // one cog missing
         var other = a with { Faction = new CodeName("RUBIN", "Réseau Rubin") };
         var problems = TournamentRules.CheckRegistration(t, d.Catalog, " ana ", "MAISEL", new[] { other, illegal });
 
@@ -556,7 +556,7 @@ public class TournamentTests
         Assert.Equal("cabalCount", Assert.Single(TournamentRules.CheckRegistration(t, d.Catalog, "Bo", "MAISEL", new[] { a })).Key);
         Assert.Equal("faction", Assert.Single(TournamentRules.CheckRegistration(t, d.Catalog, "Bo", "NOPE", new[] { a, b })).Key);
 
-        // Modification de sa propre inscription : son nom n'est pas « déjà pris ».
+        // Change of one's own registration: one's name is not "already taken".
         Assert.Empty(TournamentRules.CheckRegistration(t, d.Catalog, "Ana", "MAISEL", new[] { a, b }, playerId: "x"));
 
         t.Phase = TournamentPhase.Started;
@@ -564,7 +564,7 @@ public class TournamentTests
     }
 
     [Fact]
-    public async Task Alignements_du_referentiel()
+    public async Task Catalog_alignments()
     {
         var d = await AppData.GetAsync();
         Assert.Equal(Alignment.LIGHT, d.Catalog.AlignmentOf("DYKOVIAN"));

@@ -7,10 +7,10 @@ using Olomoc.Tournaments;
 namespace Olomoc.Server.Online;
 
 /// <summary>
-/// Synchronisation des parties en ligne (/hubs/online). Une connexion rejoint une partie avec le
-/// jeton de son siège (ou sans jeton : spectateur), puis envoie ses commandes. Après chaque
-/// changement, la salle reçoit « Changed » et chaque client relit sa propre vue (GetView) :
-/// rien de secret ne transite vers une autre connexion que celle qui y a droit.
+/// Synchronization of online games (/hubs/online). A connection joins a game with its seat's
+/// token (or without a token: spectator), then sends its commands. After each change, the room
+/// receives "Changed" and each client re-reads its own view (GetView): nothing secret goes to a
+/// connection other than the one entitled to it.
 /// </summary>
 public sealed class OnlineHub(OnlineStore store, TournamentStore tournaments, ServerCatalog catalog, OnlinePresence presence) : Hub
 {
@@ -68,7 +68,7 @@ public sealed class OnlineHub(OnlineStore store, TournamentStore tournaments, Se
         await base.OnDisconnectedAsync(exception);
     }
 
-    // Quitte la partie rejointe (autre partie, ou déconnexion) ; prévient la salle si le siège n'a plus de connexion.
+    // Leaves the joined game (another game, or disconnection); tells the room if the seat has no connection left.
     private async Task Leave()
     {
         if (Code is not { } code) return;
@@ -79,7 +79,7 @@ public sealed class OnlineHub(OnlineStore store, TournamentStore tournaments, Se
         Context.Items.Remove("seat");
     }
 
-    // Partie libre : jeton du siège. Partie de tournoi : jeton du joueur inscrit qui occupe le siège.
+    // Free game: seat token. Tournament game: token of the registered player who holds the seat.
     private async Task<int?> SeatOf(OnlineGame game, string? token)
     {
         if (string.IsNullOrEmpty(token)) return null;
@@ -94,7 +94,7 @@ public sealed class OnlineHub(OnlineStore store, TournamentStore tournaments, Se
         return i < 0 ? null : i;
     }
 
-    // Partie de tournoi lancée : cabale jouée par chacun, notée à la table si l'organisateur ne l'a pas fait.
+    // Tournament game started: cabal played by each player, recorded on the table if the organizer did not do it.
     private async Task RecordCabals(OnlineGame game)
     {
         if (game.Tournament is not { } tr) return;
@@ -118,7 +118,7 @@ public sealed class OnlineHub(OnlineStore store, TournamentStore tournaments, Se
     }
 }
 
-/// <summary>Au plus <see cref="PerSecond"/> appels par seconde et par connexion.</summary>
+/// <summary>At most <see cref="PerSecond"/> calls per second and per connection.</summary>
 public sealed class OnlineRateFilter : IHubFilter
 {
     public const int PerSecond = 20;

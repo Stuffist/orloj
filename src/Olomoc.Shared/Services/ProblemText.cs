@@ -3,7 +3,7 @@ using Olomoc.Tournaments;
 
 namespace Olomoc.Services;
 
-/// <summary>Texte d'un problème renvoyé par l'API, dans la langue courante.</summary>
+/// <summary>Text of a problem returned by the API, in the current language.</summary>
 public static class ProblemText
 {
     public static string Describe(this LocalizationService l, Problem p)

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
-  <!-- Tournois (appariements, classements, statistiques) : pages sous /pairings/…, réunies
-       avec le constructeur dans l'app Olomoc.Web. -->
+  <!-- Tournaments (pairings, standings, statistics): pages under /pairings/…, brought together
+       with the builder in the Olomoc.Web app. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>

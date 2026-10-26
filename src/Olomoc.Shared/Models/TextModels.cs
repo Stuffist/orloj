@@ -1,7 +1,7 @@
 namespace Olomoc.Models;
 
-// Paquets de langue (wwwroot/i18n/<langue>/) : textes indexés par les ids et codes du
-// référentiel neutre. Tout est optionnel : un texte absent se replie sur la langue de référence.
+// Language packs (wwwroot/i18n/<language>/): texts indexed by the ids and codes of the
+// neutral card catalog. Everything is optional: a missing text falls back to the reference language.
 
 public sealed class LanguageInfo
 {
@@ -44,17 +44,17 @@ public sealed class CardTexts
     public Dictionary<string, EquipmentText> Equipment { get; init; } = new();
 }
 
-/// <summary>Texte résolu ; <see cref="IsFallback"/> s'il vient de la langue de référence faute de traduction.</summary>
+/// <summary>Resolved text; <see cref="IsFallback"/> if it comes from the reference language for lack of a translation.</summary>
 public sealed record Localized(string Text, bool IsFallback = false)
 {
     public override string ToString() => Text;
 }
 
-// ---- Messages de légalité, neutres en langue : rendus par l'interface ----
+// ---- Legality messages, language-neutral: rendered by the interface ----
 
 public enum IssueArgKind { Cog, Equipment, Faction, Ministry }
 
-/// <summary>Argument d'un message : un ou plusieurs ids/codes, traduits à l'affichage.</summary>
+/// <summary>Argument of a message: one or more ids/codes, translated at display time.</summary>
 public sealed record IssueArg(IssueArgKind Kind, IReadOnlyList<string> Values)
 {
     public static IssueArg Cogs(IEnumerable<string> ids) => new(IssueArgKind.Cog, ids.ToList());
@@ -64,5 +64,5 @@ public sealed record IssueArg(IssueArgKind Kind, IReadOnlyList<string> Values)
     public static IssueArg Ministry(string code) => new(IssueArgKind.Ministry, new[] { code });
 }
 
-/// <summary>Problème de légalité : clé de message (ui.json, préfixe « legality. ») et arguments.</summary>
+/// <summary>Legality problem: message key (ui.json, "legality." prefix) and arguments.</summary>
 public sealed record LegalityIssue(string Key, params IssueArg[] Args);

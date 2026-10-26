@@ -3,10 +3,9 @@ using Microsoft.Data.Sqlite;
 namespace Olomoc.Server.Data;
 
 /// <summary>
-/// Une fois par jour (vérifié au démarrage puis toutes les heures) : copie cohérente de la base dans
-/// DATA_DIR/backups/olomoc-AAAAMMJJ.db (VACUUM INTO), les <see cref="Keep"/> plus récentes
-/// gardées. Copier olomoc.db pendant que le serveur tourne ne donne pas une copie sûre ; ces
-/// fichiers-là, si.
+/// Once a day (checked at startup, then every hour): consistent copy of the database to
+/// DATA_DIR/backups/olomoc-YYYYMMDD.db (VACUUM INTO), the <see cref="Keep"/> most recent ones
+/// kept. Copying olomoc.db while the server runs does not give a safe copy; these files do.
 /// </summary>
 public sealed class DbBackup(string dataDirectory, ILogger<DbBackup> log) : BackgroundService
 {
@@ -20,13 +19,13 @@ public sealed class DbBackup(string dataDirectory, ILogger<DbBackup> log) : Back
         do
         {
             try { await BackupAsync(DateTime.UtcNow, stop); }
-            catch (Exception e) when (e is SqliteException or IOException) { log.LogWarning(e, "Sauvegarde de la base interrompue."); }
+            catch (Exception e) when (e is SqliteException or IOException) { log.LogWarning(e, "Database backup interrupted."); }
         } while (await timer.WaitForNextTickAsync(stop));
     }
 
     /// <summary>
-    /// Sauvegarde du jour, si elle n'existe pas encore (ou remplacée : <paramref name="overwrite"/>,
-    /// sauvegarde faite à la main) ; renvoie son chemin, ou null.
+    /// Today's backup, if it does not exist yet (or replaced: <paramref name="overwrite"/>, backup
+    /// made by hand); returns its path, or null.
     /// </summary>
     public async Task<string?> BackupAsync(DateTime now, CancellationToken stop = default, bool overwrite = false)
     {
@@ -37,7 +36,7 @@ public sealed class DbBackup(string dataDirectory, ILogger<DbBackup> log) : Back
             var path = Path.Combine(BackupDirectory, $"olomoc-{now:yyyyMMdd}.db");
             if (File.Exists(path) && !overwrite) return null;
 
-            // Copie à part, puis à sa place : la sauvegarde du jour reste intacte si la copie échoue.
+            // Copy aside, then moved into place: today's backup stays intact if the copy fails.
             var temporary = path + ".tmp";
             if (File.Exists(temporary)) File.Delete(temporary);
             await using (var connection = new SqliteConnection(OlomocDb.ConnectionString(dataDirectory)))
@@ -52,15 +51,15 @@ public sealed class DbBackup(string dataDirectory, ILogger<DbBackup> log) : Back
 
             foreach (var old in Directory.EnumerateFiles(BackupDirectory, "olomoc-*.db").OrderDescending().Skip(Keep))
                 File.Delete(old);
-            log.LogInformation("Base sauvegardée dans {Path}.", path);
+            log.LogInformation("Database backed up to {Path}.", path);
             return path;
         }
         finally { _gate.Release(); }
     }
 
-    private readonly SemaphoreSlim _gate = new(1, 1);     // tâche de fond et sauvegarde à la main
+    private readonly SemaphoreSlim _gate = new(1, 1);     // background task and backup made by hand
 
-    /// <summary>Sauvegardes présentes, la plus récente d'abord (heure de la dernière écriture, UTC).</summary>
+    /// <summary>Existing backups, most recent first (last write time, UTC).</summary>
     public IReadOnlyList<FileInfo> Backups() =>
         Directory.Exists(BackupDirectory)
             ? new DirectoryInfo(BackupDirectory).EnumerateFiles("olomoc-*.db").OrderByDescending(f => f.LastWriteTimeUtc).ToList()

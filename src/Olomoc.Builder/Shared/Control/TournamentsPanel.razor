@@ -1,6 +1,6 @@
-@* Panneau d'administration : tous les tournois, le plus récemment modifié d'abord. Actions limitées :
-   nouveau lien d'administration (organisateur qui a perdu le sien), statistiques, suppression.
-   La page d'administration du tournoi reste à son organisateur. *@
+@* Admin panel: all tournaments, most recently modified first. Limited actions: new admin link (for
+   an organizer who lost theirs), statistics, deletion. The tournament's admin page stays with its
+   organizer. *@
 @using Olomoc.Accounts
 @using Olomoc.Tournaments
 @inject AdminApi Api
@@ -91,7 +91,7 @@
     private string _filter = "";
     private List<AdminTournament>? _items;
     private (string Text, bool Ok)? _status;
-    private (string Code, string Url)? _link;      // nouveau lien d'administration, à transmettre
+    private (string Code, string Url)? _link;      // new admin link, to pass on
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
@@ -150,7 +150,7 @@
         RunAsync(() => Api.SetExcludeFromStatsAsync(t.Code, !t.ExcludeFromStats),
             _ => L.Ui(t.ExcludeFromStats ? "control.tournaments.included" : "control.tournaments.excludedDone", t.Name));
 
-    // Suppression confirmée en retapant le code, comme pour l'organisateur.
+    // Deletion confirmed by typing the code again, as for the organizer.
     private async Task DeleteAsync(AdminTournament t)
     {
         var typed = await JS.InvokeAsync<string?>("prompt", L.Ui("pairings.admin.delete.confirm", t.Name, t.Code));
@@ -171,6 +171,6 @@
             await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
             _copied = true;
         }
-        catch (JSException) { _copied = false; }   // presse-papiers indisponible : le lien reste sélectionnable
+        catch (JSException) { _copied = false; }   // clipboard unavailable: the link stays selectable
     }
 }

@@ -1,8 +1,8 @@
 namespace Olomoc.Server.Tournaments;
 
 /// <summary>
-/// Une fois par jour : suppression des tournois sans modification depuis 90 jours, dont la date
-/// est passée ou absente. Un tournoi daté d'aujourd'hui ou plus tard n'est jamais supprimé.
+/// Once a day: deletion of the tournaments unchanged for 90 days whose date has passed or is
+/// missing. A tournament dated today or later is never deleted.
 /// </summary>
 public sealed class TournamentPurge(TournamentStore store, ILogger<TournamentPurge> log) : BackgroundService
 {
@@ -16,9 +16,9 @@ public sealed class TournamentPurge(TournamentStore store, ILogger<TournamentPur
             try
             {
                 var removed = await store.PurgeAsync(MaxAge, DateOnly.FromDateTime(DateTime.UtcNow));
-                if (removed > 0) log.LogInformation("{Count} tournoi(s) inactif(s) depuis {Days} jours supprimé(s).", removed, MaxAge.Days);
+                if (removed > 0) log.LogInformation("{Count} inactive tournament(s) deleted after {Days} days.", removed, MaxAge.Days);
             }
-            catch (IOException e) { log.LogWarning(e, "Purge des tournois interrompue."); }
+            catch (IOException e) { log.LogWarning(e, "Tournament purge interrupted."); }
         } while (await timer.WaitForNextTickAsync(stop));
     }
 }

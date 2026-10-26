@@ -7,8 +7,8 @@ using Olomoc.Tournaments;
 namespace Olomoc.Builder.Shared;
 
 /// <summary>
-/// Panneau d'administration (admins) : /api/admin (vue d'ensemble, tournois, parties en ligne,
-/// maintenance, journal) et /api/admin/accounts (comptes). Problèmes : clés « account.problem. ».
+/// Admin panel (admins): /api/admin (overview, tournaments, online games, maintenance, log) and
+/// /api/admin/accounts (accounts). Problems: "account.problem." keys.
 /// </summary>
 public sealed class AdminApi(HttpClient http)
 {
@@ -16,9 +16,9 @@ public sealed class AdminApi(HttpClient http)
 
     public Task<AccountResult<AdminOverview>> OverviewAsync() => SendAsync<AdminOverview>(HttpMethod.Get, "overview", null);
 
-    // ---- Comptes ----
+    // ---- Accounts ----
 
-    /// <summary>Pseudo contenant la recherche ; sans recherche, les éditeurs et admins, ou les derniers créés.</summary>
+    /// <summary>Username containing the search; without a search, the editors and admins, or the newest accounts.</summary>
     public Task<AccountResult<List<AdminAccount>>> AccountsAsync(string search, bool recent = false) =>
         SendAsync<List<AdminAccount>>(HttpMethod.Get, $"accounts?search={Uri.EscapeDataString(search.Trim())}&recent={(recent ? "true" : "false")}", null);
 
@@ -34,11 +34,11 @@ public sealed class AdminApi(HttpClient http)
 
     public Task<AccountResult<bool>> DeleteAccountAsync(string userName) => SendAsync<bool>(HttpMethod.Delete, $"accounts/{Name(userName)}", null);
 
-    // ---- Tournois ----
+    // ---- Tournaments ----
 
     public Task<AccountResult<List<AdminTournament>>> TournamentsAsync() => SendAsync<List<AdminTournament>>(HttpMethod.Get, "tournaments", null);
 
-    /// <summary>Nouveau jeton organisateur (l'ancien lien d'administration cesse de marcher).</summary>
+    /// <summary>New organizer token (the old admin link stops working).</summary>
     public Task<AccountResult<TournamentCreated>> NewOrganizerLinkAsync(string code) =>
         SendAsync<TournamentCreated>(HttpMethod.Post, $"tournaments/{code}/organizer-link", null);
 
@@ -47,13 +47,13 @@ public sealed class AdminApi(HttpClient http)
 
     public Task<AccountResult<bool>> DeleteTournamentAsync(string code) => SendAsync<bool>(HttpMethod.Delete, $"tournaments/{code}", null);
 
-    // ---- Parties en ligne ----
+    // ---- Online games ----
 
     public Task<AccountResult<List<AdminOnlineGame>>> OnlineGamesAsync() => SendAsync<List<AdminOnlineGame>>(HttpMethod.Get, "online", null);
 
     public Task<AccountResult<bool>> DeleteOnlineGameAsync(string code) => SendAsync<bool>(HttpMethod.Delete, $"online/{code}", null);
 
-    // ---- Maintenance et journal ----
+    // ---- Maintenance and log ----
 
     public Task<AccountResult<BackupResult>> BackupAsync() => SendAsync<BackupResult>(HttpMethod.Post, "maintenance/backup", null);
 

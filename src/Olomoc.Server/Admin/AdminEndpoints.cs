@@ -12,14 +12,14 @@ using Olomoc.Tournaments;
 namespace Olomoc.Server.Admin;
 
 /// <summary>
-/// Panneau d'administration (/api/admin, admins seulement) : chiffres de la base, tournois et
-/// parties en ligne de tout le monde (actions limitées : nouveau lien d'administration,
-/// statistiques, suppression), maintenance (sauvegarde, purges), journal. Les comptes sont dans
-/// <see cref="AccountEndpoints"/> (/api/admin/accounts). Chaque action est journalisée.
+/// Admin panel (/api/admin, admins only): database figures, everyone's tournaments and online
+/// games (limited actions: new organizer link, statistics, deletion), maintenance (backup,
+/// purges), action log. Accounts are in
+/// <see cref="AccountEndpoints"/> (/api/admin/accounts). Every action is logged.
 /// </summary>
 public static class AdminEndpoints
 {
-    /// <summary>Démarrage du serveur (vue d'ensemble).</summary>
+    /// <summary>Server start time (overview).</summary>
     public static readonly DateTimeOffset StartedAt = DateTimeOffset.UtcNow;
 
     public static void MapAdmin(this WebApplication app, string dataDirectory)
@@ -43,14 +43,14 @@ public static class AdminEndpoints
         write.MapPost("maintenance/purge", Purge);
     }
 
-    // ---- Vue d'ensemble ----
+    // ---- Overview ----
 
     private static async Task<IResult> Overview(OlomocDb db, TournamentStore tournaments, OnlineStore online, CatalogStore catalog,
         DbBackup backup, IMailSender mail, IConfiguration config, string dataDirectory)
     {
         var now = DateTimeOffset.UtcNow;
         var month = now.UtcDateTime.AddDays(-30);
-        // Dates d'Identity (DateTimeOffset) : comparées ici, SQLite ne sait pas les comparer.
+        // Identity dates (DateTimeOffset): compared here, SQLite cannot compare them.
         var users = await db.Users.AsNoTracking().Select(u => new { u.CreatedAt, u.LastLoginAt, u.EmailConfirmed, u.LockoutEnd }).ToListAsync();
         var roles = await db.UserRoles.Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name }).ToListAsync();
         var admins = roles.Where(r => r.Name == Roles.Admin).Select(r => r.UserId).ToHashSet();
@@ -81,17 +81,17 @@ public static class AdminEndpoints
             StartedAt), TournamentJson.Options);
     }
 
-    // ---- Tournois ----
+    // ---- Tournaments ----
 
-    /// <summary>Tous les tournois, le plus récemment modifié d'abord.</summary>
+    /// <summary>All tournaments, most recently modified first.</summary>
     private static async Task<IResult> ListTournaments(TournamentStore store) =>
         Results.Json((await store.ListAsync()).OrderByDescending(t => t.UpdatedAt).Select(t => new AdminTournament(
             t.Code, t.Name, t.Date, t.Phase, t.Players.Count, t.Rounds.Count, t.RoundCount, t.OrganizerPasswordHash.Length > 0,
             t.ExcludeFromStats, t.CreatedAt, t.UpdatedAt)).ToList(), TournamentJson.Options);
 
     /// <summary>
-    /// Nouveau lien d'administration (organisateur qui a perdu le sien) : l'ancien cesse de marcher ;
-    /// les sessions ouvertes par mot de passe restent.
+    /// New admin link (for an organizer who lost theirs): the old one stops working; sessions
+    /// opened with the password stay.
     /// </summary>
     private static async Task<IResult> NewOrganizerLink(string code, HttpContext ctx, TournamentStore store, AdminAudit audit)
     {
@@ -119,7 +119,7 @@ public static class AdminEndpoints
         return Results.NoContent();
     }
 
-    /// <summary>Comme la suppression par l'organisateur : le tournoi et son archive de statistiques.</summary>
+    /// <summary>Like a deletion by the organizer: the tournament and its statistics archive.</summary>
     private static async Task<IResult> DeleteTournament(string code, HttpContext ctx, TournamentStore store, StatsArchive stats, AdminAudit audit)
     {
         var name = await store.DeleteAsync(code, t =>
@@ -132,14 +132,14 @@ public static class AdminEndpoints
         return Results.NoContent();
     }
 
-    // ---- Parties en ligne ----
+    // ---- Online games ----
 
     private static async Task<IResult> ListOnline(OnlineStore store) =>
         Results.Json((await store.ListAsync()).OrderByDescending(g => g.UpdatedAt).Select(g => new AdminOnlineGame(
             g.Code, g.Seats.Select(s => s.Name).ToList(), g.Step, g.Cycle, g.Tournament, g.CreatedAt, g.UpdatedAt)).ToList(),
             TournamentJson.Options);
 
-    /// <summary>Suppression ; les clients connectés relisent leur vue (partie introuvable).</summary>
+    /// <summary>Deletion; connected clients re-read their view (game not found).</summary>
     private static async Task<IResult> DeleteOnline(string code, HttpContext ctx, OnlineStore store, IHubContext<OnlineHub> hub, AdminAudit audit)
     {
         var seats = await store.DeleteAsync(code, g => (true, string.Join(" / ", g.Seats.Select(s => s.Name).Where(n => n.Length > 0))));
@@ -151,7 +151,7 @@ public static class AdminEndpoints
 
     // ---- Maintenance ----
 
-    /// <summary>Sauvegarde maintenant (remplace celle du jour).</summary>
+    /// <summary>Backup now (replaces today's).</summary>
     private static async Task<IResult> Backup(HttpContext ctx, DbBackup backup, AdminAudit audit)
     {
         var path = await backup.BackupAsync(DateTime.UtcNow, ctx.RequestAborted, overwrite: true);
@@ -160,7 +160,7 @@ public static class AdminEndpoints
         return Results.Json(new BackupResult(file.Name, file.Length), TournamentJson.Options);
     }
 
-    /// <summary>Purge maintenant, avec les règles des tâches de fond.</summary>
+    /// <summary>Purge now, with the background tasks' rules.</summary>
     private static async Task<IResult> Purge(PurgeRequest body, HttpContext ctx, TournamentStore tournaments, OnlineStore online, AdminAudit audit)
     {
         var removed = body.Kind switch
@@ -174,9 +174,9 @@ public static class AdminEndpoints
         return Results.Json(new PurgeResult(removed), TournamentJson.Options);
     }
 
-    // ---- Outils ----
+    // ---- Helpers ----
 
-    /// <summary>Pseudo de l'admin de la session (claim de nom d'Identity).</summary>
+    /// <summary>Username of the session's admin (Identity name claim).</summary>
     public static string AdminName(HttpContext ctx) => ctx.User.Identity?.Name ?? "?";
 
     private static string Code(string code) => code.Trim().ToUpperInvariant();

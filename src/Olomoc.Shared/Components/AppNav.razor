@@ -1,7 +1,7 @@
-@* Menu du site : constructeur, partie (point si une partie est en cours ; parties en ligne comprises), tournois, statistiques,
-   éditeur (éditeurs et admins), panneau d'administration (admins), compte. Ordinateur : onglets sous l'en-tête ; téléphone : barre
-   fixée en bas de l'écran, sans l'éditeur ni le panneau (dans « Mon compte »). Liens internes à l'app : pas de
-   rechargement. Icônes d'interface (pas les pictogrammes du livre de règles). *@
+@* Site menu: builder, play (dot if a game is in progress; online games included), tournaments, statistics,
+   editor (editors and admins), admin panel (admins), account. Desktop: tabs under the header; phone: bar
+   fixed at the bottom of the screen, without the editor or the panel (in "My account"). Links inside the app: no
+   reload. Interface icons (not the rulebook pictograms). *@
 @inject LocalizationService L
 @inject AccountService Accounts
 @inject GameStore Games
@@ -32,7 +32,7 @@
         {
             @Tab("control", "builder/control", L.Ui("nav.control"), L.Ui("nav.control"), ControlIcon, active, "editor")
         }
-        @* Sur téléphone, l'éditeur et le panneau d'administration passent par « Mon compte » : l'onglet du compte s'y allume. *@
+        @* On phones, the editor and the admin panel go through "My account": the account tab lights up there. *@
         @Tab("account", "builder/account", account?.UserName ?? L.Ui("account.signIn"), L.Ui("nav.account.short"), AccountIcon, active,
             (account is { CanEdit: true } ? "" : "push") + (active is "editor" or "control" ? " also-current" : ""))
     </nav>
@@ -50,7 +50,7 @@
         await L.EnsureLoadedAsync();
     }
 
-    // Onglet de la page affichée, d'après l'adresse.
+    // Tab of the displayed page, from the address.
     private string Active
     {
         get
@@ -60,7 +60,7 @@
             return segments.FirstOrDefault() switch
             {
                 "pairings" => page == "stats" ? "stats" : "pairings",
-                "online" => "play",                         // parties en ligne : sous « Partie »
+                "online" => "play",                         // online games: under "Play"
                 "builder" => page switch
                 {
                     "play" => "play",
@@ -85,7 +85,7 @@
 
     private const string Svg = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\">";
 
-    // Cartes empilées (cabale), dé (partie), coupe (tournois), barres (statistiques), crayon (éditeur), bouclier (admin), silhouette (compte).
+    // Stacked cards (cabal), die (play), cup (tournaments), bars (statistics), pencil (editor), shield (admin), silhouette (account).
     private static readonly MarkupString BuilderIcon = new(Svg + "<rect x=\"3.5\" y=\"6.5\" width=\"11\" height=\"14\" rx=\"2\"/><path d=\"M8 3.5h10a2 2 0 0 1 2 2V17\"/></svg>");
     private static readonly MarkupString PlayIcon = new(Svg + "<rect x=\"3.5\" y=\"3.5\" width=\"17\" height=\"17\" rx=\"3.5\"/><circle class=\"pip\" cx=\"8.5\" cy=\"8.5\" r=\"1.4\"/><circle class=\"pip\" cx=\"12\" cy=\"12\" r=\"1.4\"/><circle class=\"pip\" cx=\"15.5\" cy=\"15.5\" r=\"1.4\"/></svg>");
     private static readonly MarkupString TournamentIcon = new(Svg + "<path d=\"M7 4h10v5a5 5 0 0 1-10 0z\"/><path d=\"M17 5.5h3V7a3 3 0 0 1-3 3M7 5.5H4V7a3 3 0 0 0 3 3M12 14v4M8 20.5h8\"/></svg>");

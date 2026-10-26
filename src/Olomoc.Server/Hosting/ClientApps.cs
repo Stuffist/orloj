@@ -1,12 +1,11 @@
 namespace Olomoc.Server.Hosting;
 
 /// <summary>
-/// Le site dans le navigateur : une seule app Blazor WebAssembly (Olomoc.Web), servie à la racine
-/// (_framework/…, index.html), dont les pages vivent sous trois sections : le constructeur
-/// (/builder/…), les tournois (/pairings/…) et les parties en ligne (/online/…). Toute adresse
-/// d'une section sans fichier
-/// correspondant renvoie index.html : le routeur Blazor prend le relais, sans rechargement d'une
-/// section à l'autre.
+/// The site in the browser: a single Blazor WebAssembly app (Olomoc.Web), served at the root
+/// (_framework/…, index.html), whose pages live under three sections: the builder (/builder/…),
+/// the tournaments (/pairings/…) and the online games (/online/…). Any address in a section
+/// without a matching file returns index.html: the Blazor router takes over, without reloading
+/// from one section to another.
 /// </summary>
 public static class ClientApps
 {
@@ -14,7 +13,7 @@ public static class ClientApps
 
     public static void Map(WebApplication app)
     {
-        // « /builder » sans barre finale : redirigé vers « /builder/ », adresse canonique de la section.
+        // "/builder" without a trailing slash: redirected to "/builder/", the section's canonical address.
         app.Use((ctx, next) =>
         {
             foreach (var section in Sections)
@@ -25,10 +24,10 @@ public static class ClientApps
             }
             return next();
         });
-        app.UseBlazorFrameworkFiles();                  // _framework, fichiers précompressés compris
+        app.UseBlazorFrameworkFiles();                  // _framework, precompressed files included
     }
 
-    /// <summary>Routes de l'app (pas de fichier correspondant) : index.html.</summary>
+    /// <summary>App routes (no matching file): index.html.</summary>
     public static void MapFallbacks(WebApplication app)
     {
         foreach (var section in Sections)

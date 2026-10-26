@@ -4,11 +4,10 @@ using Olomoc.Models;
 namespace Olomoc.Services;
 
 /// <summary>
-/// Planche des cartes d'une cabale : une page A4 paysage, cartes à taille réelle (89 × 63 mm,
-/// format paysage des cartes du jeu), centrées. Rang 3 à 1 de gauche à droite (comme le
-/// constructeur), chaque rouage
-/// au-dessus de son équipement/don ; écart fin entre les rouages, plus fin entre un rouage et
-/// son équipement. Mêmes mesures pour l'impression (CSS, en %) et pour l'image PNG.
+/// Card sheet of a cabal: one landscape A4 page, cards at actual size (89 × 63 mm, the game's
+/// landscape card format), centered. Rank 3 to 1 from left to right (like the builder), each cog
+/// above its equipment/boon; a thin gap between cogs, thinner between a cog and its equipment.
+/// Same measurements for printing (CSS, in %) and for the PNG image.
 /// </summary>
 public static class CardSheet
 {
@@ -19,19 +18,19 @@ public static class CardSheet
     public static double LeftMm => (PageWidthMm - (3 * CardWidthMm + 2 * ColumnGapMm)) / 2;
     public static double TopMm => (PageHeightMm - (2 * CardHeightMm + RowGapMm)) / 2;
 
-    /// <summary>Image d'une carte (rouage ou équipement/don), d'après son id.</summary>
+    /// <summary>Image of a card (cog or equipment/boon), from its id.</summary>
     public static string ImagePath(string id) => $"{Assets.Base}img/cards/{id}.jpg";
 
-    /// <summary>Emplacement d'une carte : colonne (3 − rang), ligne (0 rouage, 1 équipement), position en mm.</summary>
+    /// <summary>Position of a card: column (3 − rank), row (0 cog, 1 equipment), position in mm.</summary>
     public sealed record Cell(int Column, int Row, double XMm, double YMm, string Id);
 
-    /// <summary>Emplacement (colonne 0 à 2, ligne 0 ou 1), avec la carte qu'on y pose (id, ou "" s'il est vide).</summary>
+    /// <summary>Slot (column 0 to 2, row 0 or 1), with the card placed there (id, or "" if it is empty).</summary>
     public static Cell Slot(int column, int row, string id = "") =>
         new(column, row, LeftMm + column * (CardWidthMm + ColumnGapMm), TopMm + row * (CardHeightMm + RowGapMm), id);
 
     /// <summary>
-    /// Cartes à poser, de gauche à droite : rang 3, 2, 1 (emplacements 2, 1, 0 des tableaux,
-    /// rangés par rang) ; les vides sont omis.
+    /// Cards to place, from left to right: rank 3, 2, 1 (slots 2, 1, 0 of the arrays, sorted by
+    /// rank); empty ones are omitted.
     /// </summary>
     public static IReadOnlyList<Cell> Cells(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
     {
@@ -45,12 +44,12 @@ public static class CardSheet
         return cells;
     }
 
-    /// <summary>Position et taille en % de la page (affichage à toute échelle, impression comprise).</summary>
+    /// <summary>Position and size in % of the page (display at any scale, printing included).</summary>
     public static string Style(Cell c) => string.Create(CultureInfo.InvariantCulture,
         $"left:{c.XMm / PageWidthMm * 100:0.###}%;top:{c.YMm / PageHeightMm * 100:0.###}%;" +
         $"width:{CardWidthMm / PageWidthMm * 100:0.###}%;height:{CardHeightMm / PageHeightMm * 100:0.###}%");
 
-    // ---- Cabale dans l'adresse de la planche : « c=3R05.E11,2R04,1R01.E38 » (rang 1, 2, 3) ----
+    // ---- Cabal in the card sheet's address: "c=3R05.E11,2R04,1R01.E38" (rank 1, 2, 3) ----
 
     public static string Encode(IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment) =>
         string.Join(',', Enumerable.Range(0, 3).Select(i =>
@@ -58,7 +57,7 @@ public static class CardSheet
                 ? cog + (i < equipment.Count && equipment[i] is { } e ? "." + e.Id : "")
                 : ""));
 
-    /// <summary>Rouages et équipements/dons par emplacement ; ids inconnus ignorés.</summary>
+    /// <summary>Cogs and equipment/boons per slot; unknown ids ignored.</summary>
     public static (Cog?[] Cogs, Equipment?[] Equipment) Decode(string? value, CatalogService catalog)
     {
         var cogs = new Cog?[3];

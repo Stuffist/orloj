@@ -1,8 +1,7 @@
 @namespace Olomoc.Web
 
-@* Une seule app pour tout le site : pages du constructeur (/builder/…), des tournois
-   (/pairings/…) et des parties en ligne (/online/…) ; la navigation de l'une à l'autre se fait
-   sans rechargement. *@
+@* A single app for the whole site: pages of the builder (/builder/…), the tournaments
+   (/pairings/…) and the online games (/online/…); navigating from one to another needs no reload. *@
 <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="@Pages">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />

@@ -1,7 +1,6 @@
-@* Choix d'une cabale à inscrire : parmi « Mes cabales » (sauvegardées par le constructeur sur
-   cet appareil, ou dans le compte), composée dans le constructeur (« Composer… », nouvel onglet), ou collée (export
-   texte ou JSON). Légalité vérifiée aussitôt, avec les règles du constructeur (le serveur la
-   revérifie à l'inscription). *@
+@* Choice of a cabal to register: among "My cabals" (saved by the builder on this device, or in the
+   account), composed in the builder ("Compose…", new tab), or pasted (text or JSON export). Legality
+   checked at once, with the builder's rules (the server checks it again at registration). *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 @inject CabalLibrary Library
@@ -51,7 +50,7 @@
             }
             @if (result.Cabal is { } read)
             {
-                @* Texte sans faction, valable dans plusieurs : au joueur de choisir. *@
+                @* Text without a faction, valid in several: up to the player to choose. *@
                 @if (string.IsNullOrEmpty(Faction) && result.Factions.Count > 1)
                 {
                     <div class="field">
@@ -80,23 +79,23 @@
     [Parameter] public string? Faction { get; set; }
     [Parameter] public CabalExport? Value { get; set; }
     [Parameter] public EventCallback<CabalExport?> ValueChanged { get; set; }
-    /// <summary>Code du tournoi : le constructeur, ouvert par « Composer… », l'indique.</summary>
+    /// <summary>Tournament code: the builder, opened by "Compose…", shows it.</summary>
     [Parameter] public string TournamentCode { get; set; } = "";
-    /// <summary>Change quand « Mes cabales » a été relu : la liste est redessinée.</summary>
+    /// <summary>Changes when "My cabals" has been read again: the list is redrawn.</summary>
     [Parameter] public int LibraryVersion { get; set; }
 
-    // Constructeur dans un nouvel onglet, sur la faction choisie, avec un rappel du tournoi.
+    // Builder in a new tab, on the chosen faction, with a reminder of the tournament.
     private string ComposeLink => $"/builder/?tournament={Uri.EscapeDataString(TournamentCode)}"
         + (Faction is { Length: > 0 } f ? $"&faction={Uri.EscapeDataString(f)}" : "");
 
     private bool _pasting;
     private string _text = "";
     private ImportResult? _result;
-    private string? _pasteFaction;           // faction choisie dans la fenêtre (texte sans faction)
+    private string? _pasteFaction;           // faction chosen in the window (text without a faction)
 
     protected override Task OnInitializedAsync()
     {
-        Library.Changed += OnLibraryChanged;           // cabales du compte arrivées après l'affichage
+        Library.Changed += OnLibraryChanged;           // account cabals arriving after the display
         return Library.EnsureLoadedAsync();
     }
 
@@ -104,7 +103,7 @@
 
     public void Dispose() => Library.Changed -= OnLibraryChanged;
 
-    // Sauvegarde choisie : celle dont le contenu est la cabale affichée (même après relecture).
+    // Chosen save: the one whose content is the displayed cabal (even after reading again).
     private string SelectedSaved
     {
         get
@@ -132,7 +131,7 @@
         _pasting = true;
     }
 
-    // Lecture à chaque frappe : aperçu immédiat des cartes reconnues et de la légalité.
+    // Read on every keystroke: immediate preview of the recognized cards and of the legality.
     private void OnTextChanged(ChangeEventArgs e)
     {
         _text = e.Value?.ToString() ?? "";
@@ -145,12 +144,12 @@
         Read();
     }
 
-    // Faction du joueur si elle est choisie, sinon celle choisie dans la fenêtre (parmi les possibles).
+    // The player's faction if it is chosen, otherwise the one chosen in the window (among the possible ones).
     private void Read()
     {
         var faction = string.IsNullOrEmpty(Faction) ? _pasteFaction : Faction;
         _result = _text.Trim().Length == 0 ? null : Import.Parse(_text, faction);
-        // Liste des possibles : celle de la lecture sans préférence, pour pouvoir changer d'avis.
+        // List of the possible ones: that of the reading without preference, to allow changing one's mind.
         if (_result is { Cabal: not null } && string.IsNullOrEmpty(Faction) && _pasteFaction is not null)
             _result = _result with { Factions = Import.Parse(_text, null).Factions };
     }

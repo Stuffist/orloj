@@ -1,16 +1,16 @@
 namespace Olomoc.Server.Hosting;
 
 /// <summary>
-/// En-têtes de sécurité de toutes les réponses :
+/// Security headers of every response:
 /// <list type="bullet">
-/// <item>CSP : scripts, styles, données du site seulement (Blazor WebAssembly : 'wasm-unsafe-eval'
-/// pour compiler le runtime, styles en ligne pour les attributs style=) ; images data:/blob:
-/// (QR codes, planche de cartes en PNG) ;</item>
-/// <item>pas d'affichage dans un cadre (frame-ancestors, X-Frame-Options) : pas de clic piégé
-/// sur la page d'administration ;</item>
-/// <item>pas de Referer : les liens sortants ne révèlent pas les pages consultées ;</item>
-/// <item>HSTS sur les réponses HTTPS : le navigateur ne repasse plus en HTTP pour cet hôte (derrière
-/// le reverse proxy, HTTPS reconnu par X-Forwarded-Proto).</item>
+/// <item>CSP: the site's scripts, styles and data only (Blazor WebAssembly: 'wasm-unsafe-eval'
+/// to compile the runtime, inline styles for style= attributes); data:/blob: images
+/// (QR codes, PNG card sheet);</item>
+/// <item>no display in a frame (frame-ancestors, X-Frame-Options): no clickjacking on the
+/// admin page;</item>
+/// <item>no Referer: outgoing links do not reveal the pages visited;</item>
+/// <item>HSTS on HTTPS responses: the browser never goes back to HTTP for this host (behind
+/// the reverse proxy, HTTPS recognized through X-Forwarded-Proto).</item>
 /// </list>
 /// </summary>
 public static class SecurityHeaders

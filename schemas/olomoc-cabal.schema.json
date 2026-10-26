@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://occicat.com/schemas/olomoc-cabal.schema.json",
-  "title": "Olomòc — export d'une cabale",
-  "description": "Cabale exportée par le constructeur : rouages dans l'ordre des rangs, avec leur équipement/don. Les ids et codes renvoient au référentiel (olomoc.schema.json, olomoc-factions.schema.json) ; les noms sont donnés dans la langue de l'export, pour lecture humaine.",
+  "title": "Olomòc — cabal export",
+  "description": "Cabal exported by the builder: cogs in rank order, with their equipment/boon. Ids and codes refer to the card catalog (olomoc.schema.json, olomoc-factions.schema.json); names are given in the export's language, for human reading.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -17,17 +17,17 @@
     },
     "version": {
       "const": 1,
-      "description": "Version du format, incrémentée en cas de changement incompatible."
+      "description": "Format version, increased on an incompatible change."
     },
     "language": {
       "type": "string",
       "pattern": "^[a-z]{2}$",
-      "description": "Langue des noms (code ISO 639-1)."
+      "description": "Language of the names (ISO 639-1 code)."
     },
     "name": {
       "type": "string",
       "minLength": 1,
-      "description": "Nom de la cabale, facultatif."
+      "description": "Name of the cabal, optional."
     },
     "faction": {
       "type": "object",
@@ -49,7 +49,7 @@
     },
     "cogs": {
       "type": "array",
-      "description": "Rouages recrutés, dans l'ordre des rangs (3 pour une cabale complète).",
+      "description": "Recruited cogs, in rank order (3 for a complete cabal).",
       "maxItems": 3,
       "items": {
         "$ref": "#/$defs/slot"
@@ -94,7 +94,7 @@
         },
         "equipment": {
           "$ref": "#/$defs/idName",
-          "description": "Équipement/don du rouage ; absent s'il n'est pas encore équipé."
+          "description": "Equipment/boon of the cog; missing if it is not equipped yet."
         }
       }
     }

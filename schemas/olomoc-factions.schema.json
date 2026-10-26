@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://occicat.com/schemas/olomoc-factions.schema.json",
-  "title": "Olomòc — référentiel de faction",
-  "description": "Appartenances aux factions (Référentiel de faction, LDR p.32), neutres en langue : les noms des factions sont dans les paquets de langue. C'est la faction qui déclare ses membres, donc un rouage peut appartenir à plusieurs factions sans redondance.",
+  "title": "Olomòc — faction reference",
+  "description": "Faction memberships (faction reference, rulebook p.32), language-neutral: the names of the factions are in the language packs. The faction declares its members, so a cog can belong to several factions without redundancy.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,15 +12,15 @@
   "properties": {
     "$schema": {
       "type": "string",
-      "description": "Chemin vers ce schéma, pour l'autocomplétion dans l'éditeur."
+      "description": "Path to this schema, for autocompletion in the editor."
     },
     "version": {
       "type": "string",
-      "description": "Version du référentiel de faction. Évolue indépendamment du référentiel de cartes."
+      "description": "Version of the faction reference. Evolves independently of the card catalog."
     },
     "source": {
       "type": "string",
-      "description": "Provenance du document Occicat retranscrit ici (URL, date d'édition)."
+      "description": "Source of the Occicat document transcribed here (URL, edition date)."
     },
     "factions": {
       "type": "array",
@@ -34,15 +34,15 @@
   "$defs": {
     "factionCode": {
       "type": "string",
-      "description": "Code de faction : identifiant interne en anglais (le nom affiché est dans name). Aucun code n'est imprimé sur les cartes.",
+      "description": "Faction code: internal identifier in English (the displayed name is in name). No code is printed on the cards.",
       "pattern": "^[A-Z0-9_]{2,32}$"
     },
     "cardId": {
       "type": "string",
-      "description": "Identifiant d'un rouage du référentiel de cartes (code imprimé au verso de la carte).",
+      "description": "Identifier of a cog of the card catalog (code printed on the back of the card).",
       "minLength": 1,
       "maxLength": 64,
-      "$comment": "Doit rester aligné sur $defs/id de olomoc.schema.json."
+      "$comment": "Must stay aligned with $defs/id of olomoc.schema.json."
     },
     "faction": {
       "type": "object",
@@ -61,11 +61,11 @@
             "LIGHT",
             "DARK"
           ],
-          "description": "Alignement de la faction : Lumières (LIGHT) ou Ténèbres (DARK). Sert aux appariements de tournoi qui évitent les affrontements de même alignement."
+          "description": "Alignment of the faction: Light (LIGHT) or Darkness (DARK). Used by tournament pairings that avoid matches of the same alignment."
         },
         "cogIds": {
           "type": "array",
-          "description": "Rouages recrutables dans cette faction. Une cabale se compose entièrement au sein d'une même faction.",
+          "description": "Cogs recruitable in this faction. A cabal is composed entirely within a single faction.",
           "items": {
             "$ref": "#/$defs/cardId"
           },

@@ -57,7 +57,7 @@ else
         </section>
     }
 
-    @* Programme : scénarios annoncés par l'organisateur. *@
+    @* Schedule: scenarios announced by the organizer. *@
     @if (v.Scenarios is { Count: > 0 } scenarios && scenarios.Any(s => s is not null))
     {
         <section class="panel">
@@ -84,7 +84,7 @@ else
         <section class="panel">
             <h3>@L.Ui("pairings.roundOf", round.Number, v.RoundCount)<ScenarioTag Scenario="v.ScenarioOf(round.Number)" /></h3>
             <RoundTables View="v" Round="round" />
-            @* Sa table de la ronde en cours, contre un adversaire et sans résultat : partie en ligne. *@
+            @* Their table in the current round, against an opponent and without a result: online game. *@
             @if (v.Phase == TournamentPhase.Started && Entry?.PlayerToken is not null && v.MyPlayerId is { } myId
                  && round.Tables.FirstOrDefault(t => t.Involves(myId)) is { IsBye: false, HasResult: false } myTable)
             {
@@ -123,7 +123,7 @@ else
     private bool _opening;
     private IReadOnlyList<Problem>? _onlineProblems;
 
-    // Partie en ligne de sa table : ouverte (ou retrouvée) par le serveur, puis rejointe avec son jeton de joueur.
+    // Online game of their table: opened (or found again) by the server, then joined with their player token.
     private async Task PlayOnlineAsync(int round, int table)
     {
         if (Entry?.PlayerToken is not { } token) return;
@@ -157,7 +157,7 @@ else
             await Mine.RememberAsync(v.Code, v.Name, playerId: r.PlayerId, playerToken: r.PlayerToken);
         }
         await RefreshAsync();
-        StateHasChanged();                  // envoi depuis le formulaire (composant enfant) : la page change
+        StateHasChanged();                  // sent from the form (child component): the page changes
         return Array.Empty<Problem>();
     }
 

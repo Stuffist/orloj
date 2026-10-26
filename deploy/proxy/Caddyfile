@@ -1,26 +1,32 @@
-# Reverse proxy du VPS (Caddy) : seul à tenir les ports 80/443. Il obtient et renouvelle les
-# certificats Let's Encrypt de chaque nom ci-dessous (validation sur le port 80), redirige HTTP
-# vers HTTPS, puis transmet au conteneur voulu sur le réseau Docker « web » (X-Forwarded-For
-# et -Proto ajoutés ; WebSocket pris en charge).
+# SPECIFIC TO ORLOJ.TOP: reverse proxy of the author's VPS, shared with another project (B5T).
+# Not needed to run Orloj elsewhere; for another instance, two lines are enough:
+#   your-domain.example {
+#   	reverse_proxy olomoc:8080
+#   }
+#
+# Caddy is the only one holding ports 80/443. It obtains and renews the Let's Encrypt
+# certificates of each name below (validation on port 80), redirects HTTP to HTTPS, then forwards
+# to the right container on the "web" Docker network (X-Forwarded-For and -Proto added;
+# WebSocket supported).
 
-# Orloj : constructeur et tournois.
+# Orloj: builder and tournaments.
 orloj.top {
 	reverse_proxy olomoc:8080
 }
 
-# B5T (Blazor Server : SignalR en WebSocket). X-Real-IP : comme l'ancien nginx de B5T.
+# B5T (Blazor Server: SignalR over WebSocket). X-Real-IP: like B5T's old nginx.
 dauphine.orloj.top {
 	reverse_proxy b5tweb:8080 {
 		header_up X-Real-IP {remote_host}
 	}
 }
 
-# Autres noms d'Orloj, et ses anciennes adresses en :8443 (liens déjà partagés).
+# Other names of Orloj, and its old addresses on :8443 (links already shared).
 www.orloj.top, orloj.top:8443, www.orloj.top:8443, vps-24cf4978.vps.ovh.net:8443 {
 	redir https://orloj.top{uri} permanent
 }
 
-# Ancienne adresse de B5T.
+# Old address of B5T.
 vps-24cf4978.vps.ovh.net {
 	redir https://dauphine.orloj.top{uri} permanent
 }

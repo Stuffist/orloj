@@ -4,10 +4,9 @@ using Olomoc.Models;
 namespace Olomoc.Services;
 
 /// <summary>
-/// Partie courante de l'appareil : une seule, locale (<see cref="Session"/>, sauvegardée dans le
-/// localStorage après chaque modification pour survivre à un rechargement ou à la mise en veille
-/// du téléphone) ou en ligne (<see cref="OnlineCode"/> : l'état est sur le serveur). L'historique
-/// d'annulation de la partie locale reste en mémoire.
+/// The device's current game: only one, local (<see cref="Session"/>, saved in localStorage after
+/// each change to survive a reload or the phone going to sleep) or online (<see cref="OnlineCode"/>:
+/// the state is on the server). The local game's undo history stays in memory.
 /// </summary>
 public sealed class GameStore
 {
@@ -19,16 +18,16 @@ public sealed class GameStore
 
     public GameStore(IJSRuntime js) => _js = js;
 
-    /// <summary>Partie locale en cours, ou null.</summary>
+    /// <summary>Local game in progress, or null.</summary>
     public GameSession? Session { get; private set; }
 
-    /// <summary>Code de la partie en ligne courante, ou null.</summary>
+    /// <summary>Code of the current online game, or null.</summary>
     public string? OnlineCode { get; private set; }
 
-    /// <summary>Une partie est en cours sur l'appareil, locale ou en ligne (menu : point « partie en cours »).</summary>
+    /// <summary>A game is in progress on the device, local or online (menu: "game in progress" dot).</summary>
     public bool HasGame => Session is not null || OnlineCode is not null;
 
-    /// <summary>Partie lue, lancée, ouverte en ligne ou terminée.</summary>
+    /// <summary>Game read, started, opened online or finished.</summary>
     public event Action? Changed;
 
     public Task EnsureLoadedAsync() => _loading ??= LoadAsync();
@@ -41,11 +40,11 @@ public sealed class GameStore
             if (state is not null) Session = new GameSession(state);
             OnlineCode = await _js.InvokeAsync<string?>("localStorage.getItem", OnlineKey) is { Length: > 0 } code ? code : null;
         }
-        catch (JSException) { /* stockage indisponible : pas de partie à reprendre */ }
+        catch (JSException) { /* storage unavailable: no game to resume */ }
         Changed?.Invoke();
     }
 
-    /// <summary>Nouvelle partie locale : remplace la partie courante, locale ou en ligne.</summary>
+    /// <summary>New local game: replaces the current game, local or online.</summary>
     public async Task StartAsync(GameState state)
     {
         Session = new GameSession(state);
@@ -58,17 +57,17 @@ public sealed class GameStore
     {
         if (Session is null) return;
         try { await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, GameSession.ToJson(Session.State)); }
-        catch (JSException) { /* navigation privée… : la partie vit le temps de l'onglet */ }
+        catch (JSException) { /* private browsing…: the game lives as long as the tab */ }
     }
 
-    /// <summary>Fin de la partie locale.</summary>
+    /// <summary>End of the local game.</summary>
     public async Task ClearAsync()
     {
         await RemoveLocalAsync();
         Changed?.Invoke();
     }
 
-    /// <summary>Partie en ligne devenue la partie courante : la partie locale est effacée.</summary>
+    /// <summary>Online game became the current game: the local game is erased.</summary>
     public async Task OpenOnlineAsync(string code)
     {
         await RemoveLocalAsync();
@@ -76,7 +75,7 @@ public sealed class GameStore
         Changed?.Invoke();
     }
 
-    /// <summary>Partie en ligne quittée sur cet appareil (elle reste sur le serveur, reprise possible).</summary>
+    /// <summary>Online game left on this device (it stays on the server, can be resumed).</summary>
     public async Task LeaveOnlineAsync()
     {
         await SetOnlineAsync(null);

@@ -7,8 +7,8 @@ using Olomoc.Models;
 namespace Olomoc.Services;
 
 /// <summary>
-/// Exports d'une cabale (emplacements dans l'ordre rang 1, 2, 3) : texte au format du builder
-/// bwaaaanegamesdb.fr, ou JSON (<see cref="CabalExport"/>). Les noms sont ceux de la langue courante.
+/// Exports of a cabal (slots in the order rank 1, 2, 3): text in the format of the
+/// bwaaaanegamesdb.fr builder, or JSON (<see cref="CabalExport"/>). Names are in the current language.
 /// </summary>
 public sealed class CabalExporter
 {
@@ -17,7 +17,7 @@ public sealed class CabalExporter
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,   // accents lisibles dans le fichier
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,   // readable accents in the file
     };
 
     private readonly LocalizationService _l;
@@ -25,9 +25,9 @@ public sealed class CabalExporter
     public CabalExporter(LocalizationService l) => _l = l;
 
     /// <summary>
-    /// Format du builder bwaaaanegamesdb.fr : nom de la cabale (ligne omise s'il est vide), puis une
-    /// ligne par rouage « NOM ROUAGE - NOM ÉQUIPEMENT/DON » (« NOM ROUAGE » seul s'il n'est pas équipé),
-    /// en majuscules sans accents, lignes séparées par CRLF.
+    /// Format of the bwaaaanegamesdb.fr builder: name of the cabal (line omitted if it is empty),
+    /// then one line per cog "COG NAME - EQUIPMENT/BOON NAME" ("COG NAME" alone if it is not
+    /// equipped), in uppercase without accents, lines separated by CRLF.
     /// </summary>
     public string ToText(string? cabalName, IReadOnlyList<Cog?> cogs, IReadOnlyList<Equipment?> equipment)
     {
@@ -58,9 +58,8 @@ public sealed class CabalExporter
             .ToList());
 
     /// <summary>
-    /// Cabale d'une partie (ouvrir en ligne une partie locale) : rouages du rang 1 au rang 3 et leur
-    /// carte de départ. La carte supplémentaire (Medic Ruzicka) n'en fait pas partie : elle se
-    /// choisit en partie.
+    /// Cabal of a game (opening a local game online): cogs from rank 1 to rank 3 and their starting
+    /// card. The extra card (Medic Ruzicka) is not part of it: it is chosen during the game.
     /// </summary>
     public CabalExport FromGame(GameState state, CatalogService catalog)
     {
@@ -74,8 +73,8 @@ public sealed class CabalExporter
         JsonSerializer.Serialize(ToModel(cabalName, faction, cogs, equipment), JsonOpts);
 
     /// <summary>
-    /// Relit un export JSON (fichier ou sauvegarde) ; null si le texte n'en est pas un, ou d'une
-    /// version plus récente que celle que l'app sait lire.
+    /// Reads back a JSON export (file or save); null if the text is not one, or of a version newer
+    /// than the one the app can read.
     /// </summary>
     public static CabalExport? FromJson(string? json)
     {
@@ -92,7 +91,7 @@ public sealed class CabalExporter
 
     private static readonly JsonSerializerOptions ReadOpts = new() { PropertyNameCaseInsensitive = true };
 
-    /// <summary>Nom de fichier tiré du nom de la cabale : « ma-cabale.txt », ou « cabale.txt » sans nom.</summary>
+    /// <summary>File name taken from the cabal's name: "my-cabal.txt", or "cabale.txt" without a name.</summary>
     public static string FileName(string? cabalName, string extension)
     {
         var slug = new StringBuilder();
@@ -102,7 +101,7 @@ public sealed class CabalExporter
         return (name.Length == 0 ? "cabale" : name) + "." + extension;
     }
 
-    // Majuscules sans accents, comme le builder de référence : « Opérateur Sikora » -> « OPERATEUR SIKORA ».
+    // Uppercase without accents, like the reference builder: "Opérateur Sikora" -> "OPERATEUR SIKORA".
     private static string Shout(string s) => RemoveDiacritics(s).ToUpperInvariant();
 
     private static string RemoveDiacritics(string s)

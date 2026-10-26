@@ -1,129 +1,164 @@
-# Orloj — Constructeur de cabale et tournois pour Olomòc (Blazor WebAssembly)
+# Orloj — Cabal builder and tournaments for Olomòc (Blazor WebAssembly)
 
-Une app Blazor WebAssembly : constructeur de cabale et mode partie (`/builder/`, la racine
-`/` y renvoie), tournois et statistiques (`/pairings/`), parties en ligne à deux
-(`/online/`, synchronisées par SignalR), comptes facultatifs et éditeur du référentiel. Elle
-est servie par un hôte ASP.NET Core (`src/Olomoc.Server`) : API, hub des parties en ligne,
-base SQLite, e-mails. Le référentiel (rouages, équipements, factions, textes) est en JSON
-dans le dépôt (`src/Olomoc.Shared/wwwroot/`).
+A Blazor WebAssembly app: cabal builder and play mode (`/builder/`, the root `/` redirects
+there), tournaments and statistics (`/pairings/`), two-player online games (`/online/`,
+synchronized by SignalR), optional accounts and a card catalog editor. It is served by an
+ASP.NET Core host (`src/Olomoc.Server`): API, online games hub, SQLite database, emails. The
+card catalog (cogs, equipment, factions, texts) is JSON in the repository
+(`src/Olomoc.Shared/wwwroot/`).
 
-**Architecture, technos, onglets et leurs données, limites connues :
+**Architecture, technologies, tabs and their data, known limits:
 [docs/architecture.md](docs/architecture.md).**
 
-Olomòc est un jeu d'Occicat Games : le contenu du jeu repris ici leur appartient et n'est pas
-sous la licence du code (voir [Licence](#licence)).
+Olomòc is a game by Occicat Games: the game content used here belongs to them and is not
+covered by the code's license (see [License](#license)).
 
-## Lancer
+The site's interface is in French and English; French is the reference language of the game
+texts.
 
-Nécessite le SDK .NET 10.
+## Running
+
+Requires the .NET 10 SDK.
 
 ```bash
 dotnet run --project src/Olomoc.Server
 ```
 
-Puis ouvrir `http://localhost:5180/` (renvoie vers `/builder/`).
+Then open `http://localhost:5180/` (redirects to `/builder/`).
 
-**Devenir admin en local** : créer son compte (« Mon compte »), arrêter le serveur, puis le
-relancer une fois avec son pseudo dans `OLOMOC_ADMINS` ; le rôle est alors dans la base
-(`src/Olomoc.Server/App_Data/olomoc.db`, non versionné), la variable n'est plus utile :
+**Becoming admin locally**: create your account ("Mon compte" / "My account"), stop the server,
+then start it once with your username in `OLOMOC_ADMINS`; the role is then in the database
+(`src/Olomoc.Server/App_Data/olomoc.db`, not versioned), and the variable is no longer needed:
 
 ```powershell
-$env:OLOMOC_ADMINS = "MonPseudo"; dotnet run --project src/Olomoc.Server
+$env:OLOMOC_ADMINS = "MyUsername"; dotnet run --project src/Olomoc.Server
 ```
 
-Tests : `dotnet test` à la racine (solution `Olomoc.slnx`).
+Tests: `dotnet test` at the root (`Olomoc.slnx` solution).
 
-## Déploiement (Docker, VPS)
+## Deployment (Docker)
 
-Une seule image (`Dockerfile`, multi-étapes) : publication avec le SDK .NET, puis
-l'hôte `Olomoc.Server` sur le runtime ASP.NET (Alpine, ≈ 140 Mo), en HTTP sur le port
-8080, sous un utilisateur sans privilèges (`app`, uid 1654). Il sert l'app (constructeur
-`/builder/`, tournois `/pairings/` ; fichiers `_framework` précompressés en Brotli/gzip),
-les fichiers communs (`/_content/Olomoc.Shared/`) et l'API, redirige `/` vers `/builder/`,
-et répond à `/healthz`. Les données (tournois, statistiques, comptes, cabales des comptes)
-sont dans une base **SQLite**, `/data/olomoc.db` du conteneur, monté sur le dossier `./data`
-à côté du `docker-compose.yml` : conservées par `down`/`up`, `--force-recreate` et
-`--build`. Le serveur en fait chaque jour une copie cohérente dans `data/backups/` (les 7
-dernières sont gardées) ; c'est le dossier à sauvegarder (`tar czf olomoc-data.tgz data`).
-Copier `olomoc.db` lui-même pendant que le serveur tourne ne donne pas une copie sûre.
+This section has two parts:
 
-Passage aux versions avec base : au premier démarrage, les anciens fichiers
-`data/tournaments/*.json` et `data/stats/*.json` sont importés dans la base, puis leurs
-dossiers renommés `tournaments.imported` et `stats.imported` (gardés tels quels, jamais
-réimportés ; un fichier illisible y reste, signalé dans le journal du conteneur).
+- **[Generic](#generic-any-instance)**: what anyone hosting Orloj needs (image, data,
+  settings, reverse proxy). Valid for any server and any domain.
+- **[Specific to orloj.top](#specific-to-orlojtop-the-authors-server)**: how the public
+  instance `https://orloj.top/` runs on its author's VPS. Given for reference; not needed to run
+  Orloj elsewhere.
 
-→ `https://orloj.top/`
+In the files, the same distinction is written in the comments: `deploy/proxy/` is entirely
+specific to orloj.top; `Dockerfile` is generic; `docker-compose.yml` is generic except the
+values marked "orloj.top" (image name, host names, email sender, public address), to override
+in `.env`.
 
-### Reverse proxy (`deploy/proxy`)
+### Generic (any instance)
 
-Sur le VPS, un conteneur **Caddy** (`deploy/proxy/docker-compose.yml` et `Caddyfile`, copiés
-dans `/var/www/proxy/`) est seul à tenir les ports 80/443. Il obtient et renouvelle lui-même
-les certificats Let's Encrypt (validation sur le port 80 : ni certbot, ni arrêt d'un
-autre conteneur), redirige HTTP vers HTTPS et répartit par nom d'hôte, sur le réseau
-Docker `web` commun aux projets :
+A single image (`Dockerfile`, multi-stage): publish with the .NET SDK, then the
+`Olomoc.Server` host on the ASP.NET runtime (Alpine, ≈ 140 MB), HTTP on port 8080, under an
+unprivileged user (`app`, uid 1654). It serves the app (builder `/builder/`, tournaments
+`/pairings/`; `_framework` files precompressed with Brotli/gzip), the shared files
+(`/_content/Olomoc.Shared/`) and the API, redirects `/` to `/builder/`, and answers
+`/healthz`. The data (tournaments, statistics, accounts, account cabals) lives in a **SQLite**
+database, `/data/olomoc.db` in the container, mounted on the `./data` folder next to
+`docker-compose.yml`: kept across `down`/`up`, `--force-recreate` and `--build`. The server
+makes a consistent copy of it every day in `data/backups/` (the last 7 are kept); that is the
+folder to back up (`tar czf olomoc-data.tgz data`). Copying `olomoc.db` itself while the server
+runs does not give a safe copy.
 
-| Nom                                   | Destination                                   |
-|---------------------------------------|-----------------------------------------------|
-| `orloj.top`                           | Orloj (`olomoc:8080`)                         |
-| `dauphine.orloj.top`                  | B5T (`b5tweb:8080`)                           |
-| `www.orloj.top`, `…:8443` (anciennes adresses d'Orloj) | redirection vers `https://orloj.top` |
-| `vps-24cf4978.vps.ovh.net` (ancienne adresse de B5T) | redirection vers `https://dauphine.orloj.top` |
+Moving to the versions with a database: at the first start, the old
+`data/tournaments/*.json` and `data/stats/*.json` files are imported into the database, then
+their folders are renamed `tournaments.imported` and `stats.imported` (kept as they are, never
+imported again; an unreadable file stays there, reported in the container's log).
 
-Orloj n'ouvre aucun port public. Il lit l'adresse IP et le schéma du visiteur transmis par
-Caddy (`X-Forwarded-For` / `-Proto`, `ASPNETCORE_FORWARDEDHEADERS_ENABLED`) : limites de
-requêtes par visiteur, HSTS. Noms acceptés : `AllowedHosts` du `docker-compose.yml`.
+**HTTPS**: the container only speaks HTTP and opens no public port. Put a reverse proxy in
+front of it (Caddy, nginx, Traefik…) on the same Docker network, `web` in
+`docker-compose.yml`. The proxy must pass on the visitor's IP address and scheme
+(`X-Forwarded-For` / `-Proto`); Orloj reads them (`ASPNETCORE_FORWARDEDHEADERS_ENABLED`) for the
+per-visitor request limits and HSTS. With Caddy, two lines are enough:
 
-### Installation et mises à jour
+```
+your-domain.example {
+	reverse_proxy olomoc:8080
+}
+```
 
-Une fois par machine : `docker network create web`. Dossier des tournois : il doit
-appartenir à l'utilisateur du conteneur (`sudo chown -R 1654:1654 data`).
+**Installation**: once per machine, `docker network create web`. The data folder must belong to
+the container's user (`sudo chown -R 1654:1654 data`). Then, from the sources:
 
 ```bash
-docker compose up -d --build                     # depuis les sources
+docker compose up -d --build
 ```
 
-Sans les sources sur le VPS, comme pour B5T : `docker compose build && docker compose push`
-sur le poste (image `stuffist/olomoc` sur Docker Hub), puis sur le VPS, avec le seul
-`docker-compose.yml` : `docker compose pull && docker compose up -d`. Proxy :
-`docker compose up -d` dans `/var/www/proxy/` ; après une modification du `Caddyfile`,
-`docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`.
+**Settings**: `.env` file next to `docker-compose.yml`, **not versioned** (it contains the SMTP
+credentials). The defaults marked *orloj.top* are those of the public instance: **another
+instance must set them** to its own domain.
 
-Réglages (fichier `.env` à côté du `docker-compose.yml`, **non versionné** : il contient les
-identifiants SMTP) :
-
-| Variable           | Défaut                          | Rôle                                         |
+| Variable           | Default                         | Role                                         |
 |--------------------|---------------------------------|----------------------------------------------|
-| `OLOMOC_HOSTS`     | `orloj.top;localhost;127.0.0.1` | noms d'hôte acceptés (les autres : 400)      |
-| `OLOMOC_HTTP_PORT` | `8090`                          | port HTTP de diagnostic, sur 127.0.0.1 seulement |
-| `OLOMOC_ADMINS`    | (aucun)                         | pseudos à faire admins au démarrage, séparés par `;` (comptes existants ; premier admin ou secours, jamais retiré) |
-| `SMTP_HOST`        | (aucun)                         | relais SMTP des e-mails (Brevo…) ; sans lui, e-mails écrits dans `data/mail` |
-| `SMTP_PORT`        | `587`                           | port du relais (STARTTLS ; 465 : TLS)        |
-| `SMTP_USER`, `SMTP_PASSWORD` | (aucun)               | identifiants du relais (secrets : dans `.env` seulement) |
-| `MAIL_FROM`        | `Orloj <noreply@orloj.top>`     | expéditeur des e-mails                       |
-| `MAIL_CHECK_TO`    | (aucun)                         | e-mail de contrôle tous les 60 jours (garde la clé SMTP active) |
+| `OLOMOC_HOSTS`     | *orloj.top:* `orloj.top;localhost;127.0.0.1` | accepted host names (others: 400); keep `localhost;127.0.0.1` for the healthcheck |
+| `PUBLIC_URL`       | *orloj.top:* `https://orloj.top` | public address of the site, base of the email links (without it: the request's host, only safe with a restricted `OLOMOC_HOSTS`) |
+| `MAIL_FROM`        | *orloj.top:* `Orloj <noreply@orloj.top>` | sender of the emails (an address of a domain your SMTP relay is allowed to send for) |
+| `OLOMOC_HTTP_PORT` | `8090`                          | diagnostic HTTP port, on 127.0.0.1 only      |
+| `OLOMOC_ADMINS`    | (none)                          | usernames to make admins at startup, separated by `;` (existing accounts; first admin or fallback, never removed) |
+| `SMTP_HOST`        | (none)                          | SMTP relay for emails (Brevo…); without it, emails are written to `data/mail` |
+| `SMTP_PORT`        | `587`                           | relay port (STARTTLS; 465: TLS)              |
+| `SMTP_USER`, `SMTP_PASSWORD` | (none)                | relay credentials (secrets: in `.env` only)  |
+| `MAIL_CHECK_TO`    | (none)                          | check email every 60 days (keeps the SMTP key active) |
 
-Diagnostic : `curl -I http://127.0.0.1:8090/healthz` ; état : `docker ps` (healthcheck
-`/healthz`) ; journaux : `docker logs olomoc`, `docker logs caddy`.
+The `image:` line of `docker-compose.yml` (`stuffist/olomoc`) is the orloj.top image on Docker
+Hub; with `--build`, the image is built from the sources under that local name, nothing is
+downloaded. To publish your own image, change that name.
 
-**En local (Docker Desktop)** : `docker network create web`, puis le même
-`docker compose up -d --build` → `http://localhost:8090/`. Arrêt : `docker compose down`.
-Pour le développement courant, `dotnet run --project src/Olomoc.Server` reste plus rapide
-(pas de reconstruction d'image).
-## Vocabulaire
+Diagnostics: `curl -I http://127.0.0.1:8090/healthz`; state: `docker ps` (`/healthz`
+healthcheck); logs: `docker logs olomoc`.
 
-- **Tout ce qui est affiché** (interface, messages, noms et effets de jeu) suit le
-  [livre de règles V1.1](https://www.occicat.com/wp-content/uploads/2026/01/LDR_V1.1.pdf).
-- **Tout ce qui est caché** (code, clés et codes des JSON, classes CSS, fichiers)
-  suit le [livre de règles anglais](https://www.occicat.com/wp-content/uploads/2026/08/LDR_EN_olomoc.pdf).
+**Locally (Docker Desktop)**: `docker network create web`, then the same
+`docker compose up -d --build` → `http://localhost:8090/`. Stop: `docker compose down`. For
+day-to-day development, `dotnet run --project src/Olomoc.Server` stays faster (no image
+rebuild).
 
-| Livre V1.1 (affichage)            | Livre EN (identifiants)                 |
+### Specific to orloj.top (the author's server)
+
+How the public instance `https://orloj.top/` is hosted. Nothing here is needed to run Orloj
+elsewhere.
+
+- **Server**: a VPS shared with another project, B5T.
+- **Reverse proxy**: a **Caddy** container (`deploy/proxy/docker-compose.yml` and `Caddyfile`,
+  copied to `/var/www/proxy/` on the VPS) is the only one holding ports 80/443. It obtains and
+  renews the Let's Encrypt certificates itself (validation on port 80), redirects HTTP to HTTPS
+  and routes by host name on the `web` network:
+
+  | Name                                  | Destination                                   |
+  |---------------------------------------|-----------------------------------------------|
+  | `orloj.top`                           | Orloj (`olomoc:8080`)                         |
+  | `dauphine.orloj.top`                  | B5T (`b5tweb:8080`)                           |
+  | `www.orloj.top`, `…:8443` (old Orloj addresses) | redirect to `https://orloj.top`     |
+  | `vps-24cf4978.vps.ovh.net` (old B5T address) | redirect to `https://dauphine.orloj.top` |
+
+- **Updates** (no sources on the VPS, as for B5T): `docker compose build && docker compose push`
+  on the workstation (`stuffist/olomoc` image on Docker Hub), then on the VPS, with only
+  `docker-compose.yml` and `.env`: `docker compose pull && docker compose up -d`.
+- **Proxy**: `docker compose up -d` in `/var/www/proxy/`; after changing the `Caddyfile`,
+  `docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`. Logs:
+  `docker logs caddy`.
+- **Emails**: Brevo relay, DNS records (SPF, DKIM, DMARC) of `orloj.top`, credentials in the
+  VPS's `.env`.
+
+## Vocabulary
+
+- **Everything displayed** (interface, messages, game names and effects) follows the
+  [French rulebook V1.1](https://www.occicat.com/wp-content/uploads/2026/01/LDR_V1.1.pdf).
+- **Everything hidden** (code, JSON keys and codes, CSS classes, files) follows the
+  [English rulebook](https://www.occicat.com/wp-content/uploads/2026/08/LDR_EN_olomoc.pdf).
+
+| French rulebook V1.1 (display)    | English rulebook (identifiers)          |
 |-----------------------------------|-----------------------------------------|
 | rouage, cabale                    | `Cog`, cabal                            |
 | équipement / don                  | `Equipment`, `EquipmentKind.EQUIPMENT` / `BOON` |
 | Technique, Combat, Tir, Esquive   | `tech`, `melee`, `ranged`, `dodge`      |
 | ligne de vie                      | `lifeLine`                              |
 | PV standard / renforcé (Protection) / teinté | `S` / `R` / `T` (*standard / reinforced / tainted*) |
-| temporalité : Active / Permanente | `timing` : `Active` / `Permanent`       |
+| temporalité : Active / Permanente | `timing`: `Active` / `Permanent`        |
 | effet de jeu                      | `gameEffect`                            |
 | pion d'action, pion de Noirceur   | `actionCost`, `darknessCost`            |
 | Sain / Teinté / Corrompu, Fiel, hors de combat, sonné | `Sane` / `Tainted` / `Corrupted`, `Bile`, `OutOfAction`, `Stunned` |
@@ -134,190 +169,187 @@ Pour le développement courant, `dotnet run --project src/Olomoc.Server` reste p
 | Référentiel de faction            | `FactionReference`                      |
 | Ministère de la Coordination, de l'Intégrité, de l'Effort, du Progrès, de l'Harmonie, de l'Édification, de la Sécurité ; la Frange, l'Axe (Ministères dévoyés) | `COORDINATION`, `INTEGRITY`, `EFFORT`, `PROGRESS`, `HARMONY`, `EDIFICATION`, `SECURITY`, `FRINGE`, `AXIS` |
 
-Les noms des factions suivent le [référentiel de faction](https://www.occicat.com/wp-content/uploads/2026/09/FACTIONS_FR.pdf)
-(septembre 2026) : Les Autres, Blockhaus Devet, Cabale Dykovienne, Ligue de Maisel,
-Famille Urkaras, Loups de Libus, Réseau Rubin ; repris tels quels en anglais, faute de
-référentiel anglais. Codes : `OTHERS`, `BLOCKHAUS`, `DYKOVIAN`, `MAISEL`, `URKARAS`,
-`LIBUS`, `RUBIN`.
+In the code and comments, the French game terms are written with the English rulebook's words:
+cog, cabal, equipment/boon, Ministry, HP, Darkness, Bile, hunt, rank, card catalog (the French
+"référentiel").
 
-## Données
+Faction names follow the [faction reference](https://www.occicat.com/wp-content/uploads/2026/09/FACTIONS_FR.pdf)
+(September 2026): Les Autres, Blockhaus Devet, Cabale Dykovienne, Ligue de Maisel, Famille
+Urkaras, Loups de Libus, Réseau Rubin; kept as they are in English, for lack of an English
+reference. Codes: `OTHERS`, `BLOCKHAUS`, `DYKOVIAN`, `MAISEL`, `URKARAS`, `LIBUS`, `RUBIN`.
 
-Le référentiel est **neutre en langue** ; les textes vivent dans des paquets par langue.
+## Data
 
-- `src/Olomoc.Shared/wwwroot/data/olomoc-catalog.json` — rouages, équipements/dons, ministères : ids,
-  codes, caractéristiques, lignes de vie, coûts, fréquences, règles de composition
-  (schéma `schemas/olomoc.schema.json`).
-- `src/Olomoc.Shared/wwwroot/data/olomoc-factions.json` — appartenances aux factions
-  (schéma `schemas/olomoc-factions.schema.json`).
-- `src/Olomoc.Shared/wwwroot/i18n/<langue>/cards.json` — textes des cartes : noms, titres, noms et
-  effets de jeu des capacités, noms des Ministères et des factions
-  (schéma `schemas/olomoc-texts.schema.json`).
-- `src/Olomoc.Shared/wwwroot/i18n/<langue>/ui.json` — libellés de l'interface
-  (schéma `schemas/olomoc-ui.schema.json`).
-- `src/Olomoc.Shared/wwwroot/img/cards/<id>.jpg` — images des cartes (recto), une par
-  rouage et équipement/don, nommées par leur id : 1051 × 744 px, soit 300 ppp à la taille
-  réelle (89 × 63 mm). Relevées sur bwaaaanegamesdb.fr et recompressées ; ce sont les
-  illustrations d'Occicat Games, utilisées avec leur permission (voir [Licence](#licence)).
-- `src/Olomoc.Shared/wwwroot/img/emblems/factions|ministries/<code>.png` — logos des
-  factions (Référentiel de faction, septembre 2026) et emblèmes des Ministères (LDR p.25,
-  disque central seulement : l'anneau texturé ne se lit pas en petit), un par code.
-  Masques 96 × 96 px (blanc, la forme dans l'alpha) teintés en CSS, comme les
-  pictogrammes : logos à la couleur du texte, emblèmes en rouille. Extraits des PDF
-  d'Occicat (images intégrées ; rendu à 600 ppp pour les logos vectoriels de Dykovie
-  et de Maisel).
+The card catalog is **language-neutral**; texts live in per-language packs.
 
-Chaque fichier référence son schéma via `$schema` (validation et autocomplétion
-dans l'éditeur). Le dossier `schemas/` contient aussi des exemples minimaux
-(`referentiel.example.json`, `factions.example.json`, `textes.example.json`) ;
-il n'est ni copié dans le build ni publié. Validation en ligne de commande :
+- `src/Olomoc.Shared/wwwroot/data/olomoc-catalog.json` — cogs, equipment/boons, ministries: ids,
+  codes, stats, life lines, costs, frequencies, composition rules
+  (schema `schemas/olomoc.schema.json`).
+- `src/Olomoc.Shared/wwwroot/data/olomoc-factions.json` — faction memberships
+  (schema `schemas/olomoc-factions.schema.json`).
+- `src/Olomoc.Shared/wwwroot/i18n/<language>/cards.json` — card texts: names, titles, ability
+  names and game effects, Ministry and faction names
+  (schema `schemas/olomoc-texts.schema.json`).
+- `src/Olomoc.Shared/wwwroot/i18n/<language>/ui.json` — interface labels
+  (schema `schemas/olomoc-ui.schema.json`).
+- `src/Olomoc.Shared/wwwroot/img/cards/<id>.jpg` — card images (front), one per cog and
+  equipment/boon, named by their id: 1051 × 744 px, i.e. 300 dpi at actual size (89 × 63 mm).
+  Taken from bwaaaanegamesdb.fr and recompressed; these are Occicat Games' illustrations, used
+  with their permission (see [License](#license)).
+- `src/Olomoc.Shared/wwwroot/img/emblems/factions|ministries/<code>.png` — faction logos
+  (faction reference, September 2026) and Ministry emblems (rulebook p.25, central disc only:
+  the textured ring is unreadable when small), one per code. 96 × 96 px masks (white, the shape
+  in the alpha channel) tinted in CSS, like the pictograms: logos in the text color, emblems in
+  rust. Extracted from Occicat's PDFs (embedded images; rendered at 600 dpi for the vector logos
+  of Dykovia and Maisel).
+
+Each file references its schema through `$schema` (validation and autocompletion in the
+editor). The `schemas/` folder also contains minimal examples (`referentiel.example.json`,
+`factions.example.json`, `textes.example.json`); it is neither copied into the build nor
+published. Command-line validation:
 
 ```bash
 npx ajv-cli@5 validate --spec=draft2020 --strict=false   -s schemas/olomoc.schema.json -d src/Olomoc.Shared/wwwroot/data/olomoc-catalog.json
 npx ajv-cli@5 validate --spec=draft2020 --strict=false   -s schemas/olomoc-texts.schema.json -d "src/Olomoc.Shared/wwwroot/i18n/*/cards.json"
 ```
 
-Remplacer ces fichiers suffit à mettre l'app à jour ; aucun code à toucher. Les
-tests (`dotnet test`) vérifient aussi la cohérence entre référentiel et paquets.
+Replacing these files is enough to update the app; no code to touch. The tests
+(`dotnet test`) also check the consistency between the catalog and the packs.
 
-Contenu actuel (relevé du 2026-10-08) : 28 rouages, 53 équipements/dons, 7 factions.
-Les rattachements (factions, ministères, rangs) viennent des filtres du builder
-[bwaaaanegamesdb.fr](https://bwaaaanegamesdb.fr/builder_olomoc/index_builder_olomoc.php) ;
-les caractéristiques, lignes de vie et capacités ont été transcrites depuis les
-images des cartes. Conventions de transcription (pictogrammes : LDR p.20) :
+Current content (taken on 2026-10-08): 28 cogs, 53 equipment/boons, 7 factions. Affiliations
+(factions, ministries, ranks) come from the filters of the
+[bwaaaanegamesdb.fr](https://bwaaaanegamesdb.fr/builder_olomoc/index_builder_olomoc.php)
+builder; stats, life lines and abilities were transcribed from the card images. Transcription
+conventions (pictograms: rulebook p.20):
 
-- Le rang est celui du site, **pas** le préfixe du code (`1R01` est un rang 3).
-- PV gris (uni ou hachuré selon l'édition) → `R` (renforcé).
-- Cube blanc ×N → `actionCost: N` ; cube noir ×N → `darknessCost: N`.
-- Fréquences : couronne N → `{count: N, per: PLANNING_PHASE}`, pentagone N →
-  `{count: N, per: CYCLE}`, cercle N → `{count: N, per: GAME}` (cumulables).
-- `baseSize` est imprimée au verso des cartes, absent du relevé : elle reste vide.
+- The rank is the site's, **not** the code prefix (`1R01` is a rank 3).
+- Grey HP (plain or hatched depending on the edition) → `R` (reinforced).
+- White cube ×N → `actionCost: N`; black cube ×N → `darknessCost: N`.
+- Frequencies: crown N → `{count: N, per: PLANNING_PHASE}`, pentagon N →
+  `{count: N, per: CYCLE}`, circle N → `{count: N, per: GAME}` (cumulative).
+- `baseSize` is printed on the back of the cards, missing from the source: it stays empty.
 
-### Éditeur du référentiel (éditeurs et admins)
+### Card catalog editor (editors and admins)
 
-`/builder/admin` (lien dans « Mon compte », section « Référentiel des cartes ») : rouages, équipements et dons,
-factions, avec leurs textes dans chaque langue de `languages.json` (nom obligatoire en français ;
-les autres langues se replient dessus).
+`/builder/admin` (link in "My account", "Card catalog" section): cogs, equipment and boons,
+factions, with their texts in each language of `languages.json` (French name required; the
+other languages fall back on it).
 
-- **Rouages** : rang, Ministères, **factions** (référentiel de faction), caractéristiques, ligne
-  de vie (lettres S, R, T), socle, carte supplémentaire, image, capacités (moment, coûts,
-  fréquences ; nom et effet par langue), nom, titre, instinct.
-- **Équipements et dons** : type, affiliation exclusive (Ministère, faction ou rouage), points de
-  vie ajoutés, règles de composition, image, capacités, nom.
-- **Factions** : alignement, nom et description par langue.
-- **Publication** : seule une entrée `"published": true` est publiée. Sans ce champ (ou à
-  `false`), c'est un brouillon, servi aux seuls éditeurs et admins (marqué « brouillon » dans le
-  constructeur), retiré pour les autres avec ses textes et sa place dans les factions, et refusé
-  aux inscriptions de tournoi. Une entrée nouvelle est donc un brouillon tant qu'elle n'est pas
-  publiée ; une PR qui ajoute une carte visible de tous met `"published": true`.
-- **Stockage** : les fichiers du dépôt restent la base (PR bienvenues) ; les modifications faites
-  dans l'éditeur sont des JSON au même format, avec les seules entrées modifiées ou créées, dans
+- **Cogs**: rank, Ministries, **factions** (faction reference), stats, life line (letters S, R,
+  T), base, extra card, image, abilities (timing, costs, frequencies; name and effect per
+  language), name, title, instinct.
+- **Equipment and boons**: type, exclusive affiliation (Ministry, faction or cog), added health
+  points, composition rules, image, abilities, name.
+- **Factions**: alignment, name and description per language.
+- **Publication**: only an entry with `"published": true` is published. Without this field (or
+  with `false`), it is a draft, served to editors and admins only (marked "draft" in the
+  builder), removed for everyone else with its texts and its place in the factions, and refused
+  for tournament registrations. A new entry is therefore a draft until it is published; a PR
+  that adds a card visible to all sets `"published": true`.
+- **Storage**: the repository files stay the base (PRs welcome); the changes made in the editor
+  are JSON files in the same format, with only the changed or created entries, in
   `data/catalog/` (`data/olomoc-catalog.json`, `data/olomoc-factions.json`,
-  `i18n/<langue>/cards.json`), fusionnés par id ou code avec ceux du dépôt. Les fichiers du
-  référentiel sont servis aux mêmes adresses (`/_content/Olomoc.Shared/…`), fusionnés.
-- **Export** : onglet « Exporter », zip des fichiers complets aux chemins du dépôt, à dézipper à sa
-  racine puis commiter. Au démarrage suivant, les modifications devenues identiques au dépôt sont
-  retirées de `data/catalog/` ; « Revenir à la version du dépôt » annule celles d'une entrée
-  (une entrée nouvelle est alors supprimée).
-- Les identifiants ne changent jamais (les cabales sauvegardées y font référence) ; les images
-  (`img/cards/`) restent à ajouter au dépôt.
+  `i18n/<language>/cards.json`), merged by id or code with the repository's. The catalog files
+  are served, merged, at the same addresses (`/_content/Olomoc.Shared/…`).
+- **Export**: "Export" tab, a zip of the complete files at the repository paths, to unzip at
+  its root then commit. At the next start, the changes that have become identical to the
+  repository are removed from `data/catalog/`; "Back to the repository version" cancels those
+  of an entry (a new entry is then deleted).
+- Identifiers never change (saved cabals refer to them); images (`img/cards/`) have to be added
+  to the repository.
 
-## Multilingue
+## Languages
 
-- `src/Olomoc.Shared/wwwroot/i18n/languages.json` liste les langues proposées (sélecteur dans
-  l'en-tête). La langue est détectée depuis le navigateur, puis mémorisée.
-- `fr` est la **langue de référence**, complète. Les autres paquets peuvent être
-  partiels : tout texte manquant se replie sur `fr` (affiché en italique souligné).
-  Les règles indépendantes de la langue (doublons de nom) comparent les noms `fr`.
-- **Ajouter une langue** : créer `src/Olomoc.Shared/wwwroot/i18n/<code>/ui.json` et `cards.json`, puis
-  l'ajouter à `languages.json`. Les clés de `ui.json` sont celles de `fr` ; les
-  trigrammes et noms de stats (`stat.*.abbr`, `stat.*.name`) deviennent aussi des
-  mots-clés de recherche, valables quelle que soit la langue affichée.
-- **Pictogrammes** : identiques dans toutes les langues, jamais traduits. Dans les
-  effets de jeu, ce sont des jetons neutres rendus par les icônes du livre de règles
-  (`src/Olomoc.Shared/wwwroot/img/icons/`, `src/Olomoc.Shared/wwwroot/img/stats/`) :
-  `{tech}` `{melee}` `{ranged}` `{dodge}` `{active}` `{permanent}` `{action}` `{darkness}`
-  `{stunned}` (pion sonné) et `{freq:planning|cycle|game:N}`. Liste centrale :
-  `Models/GameTokens.cs`, reprise par le lexique « ⓘ Mots-clés » de l'éditeur du référentiel.
-- **Factions** : sans nom anglais officiel, `en/cards.json` reprend les noms
-  français (noms propres assumés, donc pas signalés comme non traduits).
-- Les tests vérifient que chaque carte a ses textes `fr`, qu'aucune langue ne
-  contient d'id ou de clé inconnus, et que les pictogrammes d'un effet de jeu sont
-  les mêmes dans toutes les langues.
+- `src/Olomoc.Shared/wwwroot/i18n/languages.json` lists the offered languages (selector in the
+  header). The language is detected from the browser, then remembered.
+- `fr` is the **reference language**, complete. The other packs can be partial: any missing
+  text falls back to `fr` (shown in underlined italics). Language-independent rules (duplicate
+  names) compare the `fr` names.
+- **Adding a language**: create `src/Olomoc.Shared/wwwroot/i18n/<code>/ui.json` and
+  `cards.json`, then add it to `languages.json`. The `ui.json` keys are those of `fr`; the stat
+  codes and names (`stat.*.abbr`, `stat.*.name`) also become search keywords, valid whatever
+  the displayed language.
+- **Pictograms**: identical in every language, never translated. In game effects, they are
+  neutral tokens rendered with the rulebook's icons (`src/Olomoc.Shared/wwwroot/img/icons/`,
+  `src/Olomoc.Shared/wwwroot/img/stats/`): `{tech}` `{melee}` `{ranged}` `{dodge}` `{active}`
+  `{permanent}` `{action}` `{darkness}` `{stunned}` (stunned token) and
+  `{freq:planning|cycle|game:N}`. Central list: `Models/GameTokens.cs`, used by the card
+  catalog editor's "ⓘ Keywords" glossary.
+- **Factions**: without an official English name, `en/cards.json` keeps the French names
+  (assumed proper nouns, so not flagged as untranslated).
+- The tests check that each card has its `fr` texts, that no language contains an unknown id or
+  key, and that the pictograms of a game effect are the same in every language.
 
-## Règles appliquées (LDR p.32)
+## Rules applied (rulebook p.32)
 
-- Une cabale doit être constituée de 3 rouages : un rang 1, un rang 2 et un
-  rang 3, appartenant tous à la **même faction**.
-- Chaque rouage doit être équipé d'**un** équipement/don, affilié à un Ministère
-  d'un des rouages de la cabale, ou à la faction, ou au rouage équipé.
-- **Chaque rouage ne rend disponible qu'un seul équipement/don de son Ministère
-  d'affiliation** : les équipements de Ministère sont affectés à des rouages
-  distincts (couplage biparti). Le panneau de légalité signale le dépassement.
-- Pas de doublon : deux rouages ou deux équipements/dons de même nom.
-- **Règles de composition portées par les cartes** (`buildRules` dans le
-  référentiel, interprétées par `CheckLegality`) :
-  - `RECRUIT_MINISTRY` — *Harmonium* : la cabale peut recruter **un** rouage hors
-    faction affilié à l'Axe, de rang 1 ou 2.
-  - `RECRUIT_WEARER` — *Asservisseur mental* : le rouage équipé, de rang 1 ou 2,
-    peut être recruté hors faction (chez les Autres).
-  - `ALL_MINISTRIES` — aucune carte actuellement (le *Passe-droit du Census* la
-    portait avant sa mise à jour) : le rouage équipé compte comme affilié à tous
-    les Ministères (équipements/dons disponibles, recrutement). Il ne rend pas
-    disponible sa propre carte : un rouage du Ministère de celle-ci reste nécessaire.
+- A cabal must consist of 3 cogs: one rank 1, one rank 2 and one rank 3, all belonging to the
+  **same faction**.
+- Each cog must be equipped with **one** equipment/boon, affiliated with a Ministry of one of
+  the cabal's cogs, or with the faction, or with the equipped cog.
+- **Each cog makes only one equipment/boon of its affiliated Ministry available**: Ministry
+  equipment is assigned to distinct cogs (bipartite matching). The legality panel reports the
+  overflow.
+- No duplicates: two cogs or two equipment/boons with the same name.
+- **Composition rules carried by the cards** (`buildRules` in the catalog, interpreted by
+  `CheckLegality`):
+  - `RECRUIT_MINISTRY` — *Harmonium*: the cabal can recruit **one** out-of-faction cog
+    affiliated with the Axis, of rank 1 or 2.
+  - `RECRUIT_WEARER` — *Asservisseur mental*: the equipped cog, of rank 1 or 2, can be recruited
+    out of faction (in Les Autres).
+  - `ALL_MINISTRIES` — no card at the moment (*Passe-droit du Census* carried it before its
+    update): the equipped cog counts as affiliated with every Ministry (available
+    equipment/boons, recruitment). It does not make its own card available: a cog of that
+    card's Ministry is still needed.
 
-  Les rouages hors faction ainsi recrutables apparaissent dans la liste avec la
-  mention « via … ». La fiche d'un rouage choisi donne ses factions (logo et nom),
-  puis celles où une carte permet de le recruter (« Via une carte ») ; dans la liste
-  de choix, les logos des factions dont il est membre.
-- **Choix déjà pris** :
-  - Rouage hors faction dont la carte de recrutement couvre déjà un autre rouage
-    (`CanJoin`, `CogConflict`) : marqué 🔃 « remplace … ». Le choisir retire de la cabale
-    l'autre rouage (échange) ; grisé seulement si aucun retrait ne suffit. La liste des
-    factions grise celles où les rouages choisis ne tiennent pas **ensemble** (deux rouages
-    de l'Axe pour un seul Harmonium).
-  - Rouage hors faction choisi sans carte portée qui le couvre : sa carte de recrutement lui
-    est équipée d'office (`RecruitCard` : Harmonium, Asservisseur mental), et retirée au
-    rouage qui la portait sans en profiter ; une note le rappelle sous sa liste d'équipement.
-  - Équipement/don déjà porté, ou d'un Ministère dont les rouages débloquent déjà chacun
-    un équipement (`EquipmentConflict`) : marqué 🔃 dans la liste. Le choisir fait
-    l'**échange** : la carte en conflit est retirée à l'autre rouage (infobulle, puis rappel
-    sous la liste). Les flèches ‹ › sautent ces options.
-  - Chaque catégorie de Ministère de la liste indique combien la cabale peut encore en
-    prendre (`MinistryRemaining`), la carte du rouage mise à part.
+  The out-of-faction cogs recruitable this way appear in the list with a "via …" mention. The
+  details of a chosen cog give its factions (logo and name), then those where a card allows
+  recruiting it ("Via a card"); in the choice list, the logos of the factions it is a member of.
+- **Choices already taken**:
+  - Out-of-faction cog whose recruitment card already covers another cog (`CanJoin`,
+    `CogConflict`): marked 🔃 "replaces …". Choosing it removes the other cog from the cabal
+    (swap); greyed out only if no removal is enough. The faction list greys out those where the
+    chosen cogs do not fit **together** (two Axis cogs for a single Harmonium).
+  - Out-of-faction cog chosen without a carried card covering it: its recruitment card is
+    equipped on it automatically (`RecruitCard`: Harmonium, Asservisseur mental), and removed
+    from the cog that carried it without benefiting from it; a note recalls it under its
+    equipment list.
+  - Equipment/boon already carried, or of a Ministry whose cogs each already unlock a piece of
+    equipment (`EquipmentConflict`): marked 🔃 in the list. Choosing it makes the **swap**: the
+    conflicting card is removed from the other cog (tooltip, then a reminder under the list).
+    The ‹ › arrows skip these options.
+  - Each Ministry category of the list shows how many more the cabal can take
+    (`MinistryRemaining`), the cog's card set aside.
 
-  Rien n'est imputé à un choix si la cabale est déjà illégale sans lui.
-- **Medic Ruzicka** (« au début du premier cycle », `extraEquipment` dans le
-  référentiel) : l'équipement supplémentaire de l'Intégrité se choisit en mode
-  partie, pas dans la composition.
+  Nothing is blamed on a choice if the cabal is already illegal without it.
+- **Medic Ruzicka** ("at the start of the first cycle", `extraEquipment` in the catalog): the
+  extra Integrity equipment is chosen in play mode, not in the composition.
 
-## Recherche
+## Search
 
-Le champ de recherche combine des mots libres (nom ou titre, sans tenir compte
-des accents ni de la casse) et des conditions cumulables sur les caractéristiques :
-trigramme ou nom d'une stat, dans n'importe quelle langue (`tec`, `cbt`, `tir`,
-`esq`, `mel`, `rng`, `dod`, `combat`, `ranged`…), suivi de `>`, `<`, `>=`, `<=` ou
-`=` et d'un nombre, par exemple `kantor tir>4 esq<=3` ou `rng>4 dod<=3`.
+The search field combines free words (name or title, ignoring accents and case) and cumulative
+conditions on the stats: three-letter code or name of a stat, in any language (`tec`, `cbt`,
+`tir`, `esq`, `mel`, `rng`, `dod`, `combat`, `ranged`…), followed by `>`, `<`, `>=`, `<=` or
+`=` and a number, for example `kantor tir>4 esq<=3` or `rng>4 dod<=3`.
 
-## Catalogue des équipements et dons
+## Equipment and boon catalog
 
-Sous le constructeur, ou dans une fenêtre détachée (`/builder/equipment?window=true`) à
-garder à côté (`Shared/EquipmentPanel.razor`) : filtre par Ministère ou faction, recherche
-dans les noms et les effets, tri par Ministère ou par nom. **« Équipables seulement »** ne
-garde que ce qu'au moins un rouage de la cabale en cours peut porter (`EquipableByCabal` :
-faction, Ministères présents, cartes des rouages choisis). La fenêtre détachée est une autre
-instance de l'app : le constructeur y publie la cabale dans le localStorage
-(`CabalDraft.ShareKey`), et elle suit ses changements par l'événement `storage`.
+Under the builder, or in a detached window (`/builder/equipment?window=true`) to keep alongside
+(`Shared/EquipmentPanel.razor`): filter by Ministry or faction, search in names and effects,
+sort by Ministry or by name. **"Equippable only"** keeps only what at least one cog of the
+current cabal can carry (`EquipableByCabal`: faction, Ministries present, cards of the chosen
+cogs). The detached window is another instance of the app: the builder publishes the cabal in
+localStorage (`CabalDraft.ShareKey`), and it follows its changes through the `storage` event.
 
 ## Export
 
-Sous le panneau de légalité, avec le nom de la cabale (facultatif pour l'export) ; copie dans le
-presse-papiers ou téléchargement (`<nom-de-la-cabale>.txt` / `.json`). L'export
-reflète la composition en cours, même incomplète (un avertissement le signale).
+Under the legality panel, with the cabal's name (optional for the export); copy to the
+clipboard or download (`<cabal-name>.txt` / `.json`). The export reflects the current
+composition, even incomplete (a warning says so).
 
-- **Texte** — format du builder [bwaaaanegamesdb.fr](https://bwaaaanegamesdb.fr/builder_olomoc/index_builder_olomoc.php),
-  vérifié à l'identique : nom de la cabale (ligne omise s'il est vide), puis une
-  ligne par rouage du rang 1 au rang 3, `NOM ROUAGE - NOM ÉQUIPEMENT/DON` (nom seul
-  s'il n'est pas équipé), en majuscules sans accents, lignes séparées par CRLF.
+- **Text** — format of the [bwaaaanegamesdb.fr](https://bwaaaanegamesdb.fr/builder_olomoc/index_builder_olomoc.php)
+  builder, checked to be identical: cabal name (line omitted if it is empty), then one line per
+  cog from rank 1 to rank 3, `COG NAME - EQUIPMENT/BOON NAME` (name alone if it is not
+  equipped), in uppercase without accents, lines separated by CRLF.
 
   ```text
   Ma Cabale Test
@@ -326,9 +358,8 @@ reflète la composition en cours, même incomplète (un avertissement le signale
   PETRA KANTOR - ASSERVISSEUR MENTAL
   ```
 
-- **JSON** — schéma `schemas/olomoc-cabal.schema.json` : ids et codes du
-  référentiel (réimportables), noms dans la langue courante (lisibles), champs
-  facultatifs omis.
+- **JSON** — schema `schemas/olomoc-cabal.schema.json`: catalog ids and codes (can be
+  imported again), names in the current language (readable), optional fields omitted.
 
   ```json
   { "format": "olomoc-cabal", "version": 1, "language": "fr",
@@ -338,450 +369,456 @@ reflète la composition en cours, même incomplète (un avertissement le signale
                 "equipment": { "id": "E11", "name": "Harmonium" } }, … ] }
   ```
 
-- **Cartes (PDF / PNG)** — planche des cartes de la cabale, ouverte dans un nouvel onglet
-  (`/builder/cards?c=3R05.E11,2R04,1R01.E38&name=…` : la cabale passe dans l'adresse, le
-  lien se partage ; `c` donne les rangs 1, 2, 3). Une page A4 paysage, cartes à taille réelle
-  (89 × 63 mm) centrées : rang 3 à 1 de gauche à droite comme dans le constructeur, chaque
-  rouage au-dessus de son équipement/don, 4 mm entre les
-  rouages, 1,5 mm entre un rouage et son équipement (`Services/CardSheet.cs`).
-  « Imprimer / PDF » passe par l'impression du navigateur (« Enregistrer au format PDF »,
-  échelle 100 %) ; « Télécharger PNG » produit la même page en 2339 × 1654 px (200 ppp).
+- **Cards (PDF / PNG)** — card sheet of the cabal, opened in a new tab
+  (`/builder/cards?c=3R05.E11,2R04,1R01.E38&name=…`: the cabal goes in the address, the link
+  can be shared; `c` gives ranks 1, 2, 3). One landscape A4 page, cards at actual size
+  (89 × 63 mm) centered: rank 3 to 1 from left to right as in the builder, each cog above its
+  equipment/boon, 4 mm between cogs, 1.5 mm between a cog and its equipment
+  (`Services/CardSheet.cs`). "Print / PDF" goes through the browser's printing ("Save as PDF",
+  100% scale); "Download PNG" produces the same page at 2339 × 1654 px (200 dpi).
 
-## Cabales sauvegardées
+## Saved cabals
 
-« Sauvegarder », à côté du nom de la cabale (section « Sauvegarde et export »),
-garde la composition sur l'appareil (`localStorage`, clé `olomoc.cabals`), au
-format de l'export JSON. Le nom est requis et identifie la cabale : sauvegarder sous
-un nom déjà pris la remplace, après confirmation. Le bouton indique « Sauvegardée ✓ »
-tant que la composition affichée est celle sauvegardée sous ce nom.
+"Save", next to the cabal's name ("Save and export" section), keeps the composition on the
+device (`localStorage`, `olomoc.cabals` key), in the JSON export format. The name is required
+and identifies the cabal: saving under a name already taken replaces it, after confirmation.
+The button shows "Saved ✓" as long as the displayed composition is the one saved under that
+name.
 
-« Mes cabales », en haut du constructeur, liste les cabales sauvegardées (la plus
-récente d'abord) : charger, supprimer, ou **importer** un export JSON (d'un autre
-appareil, par exemple ; la cabale importée est chargée, à sauvegarder ensuite).
-Charger par-dessus une composition non sauvegardée demande confirmation. Les cartes
-sont retrouvées par leurs ids, chaque rouage à l'emplacement de son rang ; une carte
-absente du référentiel actuel est écartée et signalée sous le nom enregistré.
+"My cabals", at the top of the builder, lists the saved cabals (most recent first): load,
+delete, or **import** a JSON export (from another device, for example; the imported cabal is
+loaded, to be saved afterwards). Loading over an unsaved composition asks for confirmation.
+Cards are found again by their ids, each cog in the slot of its rank; a card missing from the
+current catalog is set aside and reported under the recorded name.
 
-**Avec un compte**, les mêmes cabales sur tous les appareils (`CabalLibrary`,
-`POST /api/account/cabals/sync`) :
+**With an account**, the same cabals on every device (`CabalLibrary`,
+`POST /api/account/cabals/sync`):
 
-- chaque appareil garde sa copie (`olomoc.cabals`) : tout marche hors connexion ;
-- connecté, chaque sauvegarde ou suppression part aussitôt ; sans réseau, elle attend le
-  prochain chargement (« N changements pas encore envoyés » dans « Mes cabales ») ;
-- à nom égal (sans tenir compte de la casse), **le plus récent l'emporte**, suppression
-  comprise : le compte garde la trace des suppressions, une vieille copie ne les annule pas ;
-- **première connexion** d'un appareil : ses cabales partent dans le compte (« N cabales de
-  cet appareil ajoutées à votre compte ») ; un **autre compte** ensuite sur le même appareil :
-  seules les cabales faites ici hors compte le suivent, les autres laissent la place aux siennes
-  (`olomoc.cabals.account` : compte de la copie) ;
-- déconnecté, la copie reste sur l'appareil ;
-- 200 cabales au plus par compte (au-delà, la cabale reste sur l'appareil, signalée) ; envoi
-  par paquets de 10 ; supprimer le compte efface ses cabales.
+- each device keeps its copy (`olomoc.cabals`): everything works offline;
+- signed in, each save or deletion is sent at once; without network, it waits for the next load
+  ("N changes not sent yet" in "My cabals");
+- for the same name (case-insensitive), **the most recent wins**, deletion included: the
+  account keeps track of deletions, an old copy does not cancel them;
+- **first sign-in** of a device: its cabals go to the account ("N cabals of this device added
+  to your account"); **another account** afterwards on the same device: only the cabals made
+  here without an account follow it, the others make way for its own (`olomoc.cabals.account`:
+  account of the copy);
+- signed out, the copy stays on the device;
+- 200 cabals at most per account (beyond that, the cabal stays on the device, reported); upload
+  in batches of 10; deleting the account erases its cabals.
 
-## Mode partie
+## Play mode
 
-Depuis le constructeur, « Lancer une partie » ouvre `/play` avec la cabale en cours
-(trois rouages requis ; une cabale illégale est acceptée, avec un avertissement).
-Pensé pour un téléphone ou une tablette, utilisable sur PC. Une seule partie par
-appareil, sauvegardée dans le `localStorage` (clé `olomoc.game`) après chaque
-modification ; « Annuler » remonte l'historique de la session (100 étapes, non sauvegardé).
+From the builder, "Start a game" opens `/play` with the current cabal (three cogs required; an
+illegal cabal is accepted, with a warning). Designed for a phone or a tablet, usable on
+desktop. A single game per device, saved in `localStorage` (`olomoc.game` key) after each
+change; "Undo" goes back through the session's history (100 steps, not saved).
 
-Règles appliquées (`Services/GameSession.cs`) :
+Rules applied (`Services/GameSession.cs`):
 
-- **Ligne de vie** (LDR p.16) : blessures cochées de gauche à droite. Suite à une
-  attaque, une blessure de moins s'il reste au moins un PV renforcé à cocher (sauf
-  blessures qui ignorent la protection), et arrêt au premier PV teinté coché. Tout
-  PV teinté coché donne un pion de Noirceur (p.17), attaque ou non. Soin = décocher
-  les derniers PV cochés (les plus à droite) ; toucher un PV le coche ou le décoche, lui
-  seul (correction, ou capacité qui vise un PV précis, comme Jakub Myasnik qui coche un PV
-  teinté de sa cible) ; un PV teinté ainsi coché donne aussi un pion de Noirceur (le
-  décocher ne le retire pas) ; les blessures suivantes sautent les PV déjà cochés.
-- **Carte supplémentaire** (Medic Ruzicka, `extraEquipment`) : choisie sur la carte
-  du rouage pendant le premier cycle, parmi les équipements de l'Intégrité que la
-  cabale ne porte pas déjà ; ses capacités sont suivies comme les autres.
-- **Équipements qui modifient la ligne de vie** : `lifeLinePrefix` dans le
-  référentiel (Carapace : deux PV renforcés en tête). Interrupteur « PV renforcés »
-  (PV standards renforcés jusqu'à la fin du cycle, p. ex. Anabolisant).
-- **Noirceur et Fiel** (p.17) : statut Sain (0), Teinté (1-2), Corrompu (3) ; un
-  pion au-delà de 3 va sur le Fiel ; Fiel à 3 = partie perdue.
-- **Pions d'action** (p.33) : 4 par rouage et par cycle ; **sonné** (p.18) :
-  interdit les capacités actives.
-- **Capacités suivies** : celles qui ont un coût ou une limite par partie (cercle).
-  « Utiliser » paie les pions d'action, donne les pions de Noirceur et décompte
-  l'usage par partie. Les limites par planification ou par cycle ne sont pas suivies.
-- **Traque** (p.16, p.26) : +1 quand un de vos rouages est mis hors de combat (une
-  correction qui le remet en jeu retire ce pion) ; les rouages adverses s'ajoutent
-  à la main. À 3, la partie prend fin. **Points de victoire** : compteur manuel.
-- **Fin du cycle** (p.35) : +1 Fiel par rouage corrompu encore en jeu, fin des PV
-  renforcés temporaires, 4 pions d'action ; partie terminée après le cycle 4.
+- **Life line** (rulebook p.16): wounds marked from left to right. From an attack, one wound
+  fewer if at least one reinforced HP is left to mark (except wounds that ignore protection),
+  and stop at the first tainted HP marked. Every tainted HP marked gives a Darkness token
+  (p.17), attack or not. Healing = unmarking the last marked HP (the rightmost ones); tapping an
+  HP marks or unmarks it alone (correction, or an ability that targets a specific HP, like
+  Jakub Myasnik marking a tainted HP of his target); a tainted HP marked this way also gives a
+  Darkness token (unmarking it does not remove it); the following wounds skip the HP already
+  marked.
+- **Extra card** (Medic Ruzicka, `extraEquipment`): chosen on the cog's card during the first
+  cycle, among the Integrity equipment the cabal does not carry yet; its abilities are tracked
+  like the others.
+- **Equipment that changes the life line**: `lifeLinePrefix` in the catalog (Carapace: two
+  reinforced HP at the start). "Reinforced HP" switch (standard HP reinforced until the end of
+  the cycle, e.g. Anabolisant).
+- **Darkness and Bile** (p.17): Sane (0), Tainted (1-2), Corrupted (3) status; a token beyond
+  3 goes to the Bile; Bile at 3 = game lost.
+- **Action tokens** (p.33): 4 per cog and per cycle; **stunned** (p.18): forbids active
+  abilities.
+- **Tracked abilities**: those with a cost or a limit per game (circle). "Use" pays the action
+  tokens, gives the Darkness tokens and counts the use per game. Limits per planning or per
+  cycle are not tracked.
+- **Hunt** (p.16, p.26): +1 when one of your cogs is taken out of action (a correction that
+  puts it back in play removes that token); enemy cogs are added by hand. At 3, the game ends.
+  **Victory points**: manual counter.
+- **End of the cycle** (p.35): +1 Bile per corrupted cog still in play, end of the temporary
+  reinforced HP, 4 action tokens; game over after cycle 4.
 
-Le reste (effets des cartes, adversaire) se fait à la main avec les actions génériques. Blessures et soins s'ouvrent dans une fenêtre
-superposée et leur compte rendu s'affiche en notification, avec un bouton
-« Annuler » : les boutons des cartes ne bougent jamais. Cycle, Fiel, traque et points
-de victoire sont dans la barre du haut (fixée à l'écran, sauf sur téléphone).
+Everything else (card effects, opponent) is done by hand with the generic actions. Wounds and
+healing open in an overlay window and their report is shown as a notification, with an "Undo"
+button: the cards' buttons never move. Cycle, Bile, hunt and victory points are in the top bar
+(fixed on screen, except on phones).
 
-## Comptes
+## Accounts
 
-Facultatifs : sans compte, tout marche comme avant, sur l'appareil. `/builder/account` (lien
-« Se connecter » du menu, le pseudo une fois connecté, partout sur le site) :
+Optional: without an account, everything works as before, on the device. `/builder/account`
+(the menu's "Sign in" link, the username once signed in, everywhere on the site):
 
-- **Création** : pseudo (3 à 24 caractères : lettres sans accent, chiffres, `-`, `_` ; unique
-  sans tenir compte de la casse), e-mail, mot de passe (8 caractères au moins, sans règle de
-  composition). Connexion par pseudo ou par e-mail ; session d'au moins 3 mois par appareil
-  (cookie `olomoc_session` : HttpOnly, SameSite=Strict, Secure en HTTPS), renouvelée pour 3 mois à une visite passé la moitié.
-- **E-mail** : ne sert qu'à récupérer le compte. Lien de confirmation (2 jours) à l'inscription
-  et à chaque changement d'adresse ; **mot de passe oublié** seulement pour une adresse confirmée
-  (lien d'une heure, à usage unique ; même réponse que le compte existe ou non). Au plus 3
-  e-mails par heure et par compte. Liens vers `/builder/account/confirm` et `/reset`, compte et
-  jeton dans l'ancre (retirés de l'adresse dès leur lecture).
-- **Sécurité** : ASP.NET Core Identity (PBKDF2, verrouillage 15 minutes après 5 échecs).
-  Changer de mot de passe, le réinitialiser ou « Déconnecter les autres appareils » ferme les
-  autres sessions (tampon de sécurité relu chaque minute). Clés de chiffrement des cookies dans
-  la base : un redéploiement ne déconnecte personne.
-- **Rôles**, enregistrés dans la base (rôles d'Identity) :
-  - **joueur** (par défaut) : tout le site, sauf l'éditeur ;
-  - **éditeur** : en plus, l'éditeur du référentiel (et ses brouillons) ;
-  - **admin** : tout, dont le **panneau d'administration** (voir plus bas). Un admin ne change
-    jamais son propre rôle : il en reste toujours un. Un changement de rôle vaut tout de suite
-    pour l'API, dans la minute pour les brouillons servis.
-  - **Premier admin** : créer son compte, puis redémarrer avec son pseudo dans `OLOMOC_ADMINS`
-    (seuls des comptes existants le reçoivent). La variable donne le rôle à chaque démarrage
-    sans jamais le retirer : à vider ensuite, ou à garder comme secours.
-- **Cabales** : les mêmes sur tous les appareils (voir « Cabales sauvegardées »).
-- **Suppression** du compte (mot de passe redemandé) et page **Données personnelles**
-  (`/builder/privacy`).
+- **Creation**: username (3 to 24 characters: letters without accents, digits, `-`, `_`;
+  unique, case-insensitive), email, password (8 characters at least, no composition rule).
+  Sign-in by username or by email; a session of at least 3 months per device (`olomoc_session`
+  cookie: HttpOnly, SameSite=Strict, Secure over HTTPS), renewed for 3 months on a visit past
+  halfway.
+- **Email**: only used to recover the account. Confirmation link (2 days) at registration and on
+  each address change; **forgotten password** only for a confirmed address (one-hour,
+  single-use link; same answer whether the account exists or not). At most 3 emails per hour and
+  per account. Links to `/builder/account/confirm` and `/reset`, account and token in the
+  fragment (removed from the address as soon as they are read); base address: `PUBLIC_URL`
+  (see [Deployment](#generic-any-instance)).
+- **Security**: ASP.NET Core Identity (PBKDF2, 15-minute lockout after 5 failures). Changing
+  the password, resetting it or "Sign out other devices" closes the other sessions (security
+  stamp re-read every minute). Cookie encryption keys in the database: a redeployment signs
+  nobody out.
+- **Roles**, stored in the database (Identity roles):
+  - **player** (default): the whole site, except the editor;
+  - **editor**: in addition, the card catalog editor (and its drafts);
+  - **admin**: everything, including the **admin panel** (see below). An admin never changes
+    their own role: there is always one left. A role change applies at once for the API, within
+    a minute for the served drafts.
+  - **First admin**: create your account, then restart with your username in `OLOMOC_ADMINS`
+    (only existing accounts receive it). The variable grants the role at each start without
+    ever removing it: empty it afterwards, or keep it as a fallback.
+- **Cabals**: the same on every device (see "Saved cabals").
+- Account **deletion** (password asked again) and **Personal data** page (`/builder/privacy`).
 
-### Panneau d'administration (admins)
+### Admin panel (admins)
 
-`/builder/control` (onglet « Admin » sur ordinateur, lien dans « Mon compte ») :
-- **vue d'ensemble** : comptes (confirmés, éditeurs, admins, nouveaux et connectés sur 30 jours,
-  verrouillés), cabales sauvegardées, tournois par phase, parties en ligne, archives de stats,
-  entrées modifiées du référentiel, taille de la base, dernière sauvegarde, envoi des e-mails ;
-- **comptes** (recherche par pseudo, éditeurs et admins, ou derniers créés ; jamais l'e-mail) :
-  rôle, mot de passe temporaire (joueur sans e-mail confirmé), déverrouillage, déconnexion
-  partout, suppression avec ses cabales (pas son propre compte, ni un admin) ;
-- **tournois** de tout le monde : nouveau lien d'administration (l'ancien cesse de marcher ;
-  pour l'organisateur qui l'a perdu), inclure ou exclure des stats, suppression. La page
-  d'administration d'un tournoi reste à son organisateur ;
-- **parties en ligne** : liste et suppression ;
-- **maintenance** : sauvegarde maintenant (remplace celle du jour), purges des tournois et des
-  parties avec les règles des tâches de fond ;
-- **journal** des actions des admins (table `AdminActions`, gardé un an), 100 dernières affichées.
+`/builder/control` ("Admin" tab on desktop, link in "My account"):
+- **overview**: accounts (confirmed, editors, admins, new and signed in over 30 days, locked),
+  saved cabals, tournaments by phase, online games, statistics archives, changed catalog
+  entries, database size, last backup, email sending;
+- **accounts** (search by username, editors and admins, or newest; never the email): role,
+  temporary password (player without a confirmed email), unlock, sign out everywhere, deletion
+  with its cabals (not one's own account, nor an admin);
+- everyone's **tournaments**: new admin link (the old one stops working; for an organizer who
+  lost theirs), include in or exclude from the stats, deletion. A tournament's admin page stays
+  with its organizer;
+- **online games**: list and deletion;
+- **maintenance**: backup now (replaces today's), purges of tournaments and games with the
+  background tasks' rules;
+- **log** of the admins' actions (`AdminActions` table, kept for a year), last 100 shown.
 
-Mise en service des e-mails, une fois : compte chez un relais SMTP (Brevo : gratuit jusqu'à 300
-e-mails par jour), enregistrements DNS SPF, DKIM et DMARC de `orloj.top` (donnés par le relais),
-puis `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` dans le `.env` du VPS. Brevo désactive une clé
-SMTP restée 90 jours sans servir : `MAIL_CHECK_TO` (ton adresse) envoie un court e-mail de contrôle
-tous les 60 jours, qui la garde active et montre que l'envoi marche.
+Enabling emails, once (generic): an account with an SMTP relay (Brevo, for example: free up to
+300 emails per day), SPF, DKIM and DMARC DNS records for your domain (given by the relay), then
+`SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` and `MAIL_FROM` in the `.env`. Brevo disables an SMTP
+key unused for 90 days: `MAIL_CHECK_TO` (the admin's address) sends a short check email every 60
+days, which keeps it active and shows that sending works. (orloj.top uses Brevo, with the DNS
+records of `orloj.top`.)
 
-## Tournois
+## Tournaments
 
-`/pairings/` : l'organisateur crée un tournoi (nom, date, nombre de rondes, 1 ou 2 cabales
-par joueur, mode d'appariement) et reçoit un **code** à 6 caractères à donner aux joueurs,
-ainsi qu'un **lien d'administration**. Pas de compte : chaque tournoi est un document JSON
-dans la base du serveur ; jetons et mot de passe ne sont conservés que hachés.
-L'organisateur peut **supprimer** son tournoi (en bas de l'administration, en retapant le
-code). Sinon, un tournoi est supprimé automatiquement après 90 jours sans
-modification, si sa date est passée ou s'il n'en a pas ; un tournoi daté d'aujourd'hui ou
-plus tard ne l'est **jamais** (contrôle quotidien).
+`/pairings/`: the organizer creates a tournament (name, date, number of rounds, 1 or 2 cabals
+per player, pairing mode) and receives a 6-character **code** to give to the players, along
+with an **admin link**. No account: each tournament is a JSON document in the server's
+database; tokens and password are only kept hashed. The organizer can **delete** their
+tournament (at the bottom of the administration, by typing the code again). Otherwise, a
+tournament is deleted automatically after 90 days without changes, if its date has passed or
+if it has none; a tournament dated today or later **never** is (daily check).
 
-- **Administrer depuis plusieurs appareils** (créer le tournoi sur PC, le gérer sur
-  téléphone le jour J), deux clés au choix :
-  - le **lien d'administration** (jeton secret dans l'adresse), mis en avant juste après la
-    création avec son **QR code** : on le scanne avec le téléphone, ou on le copie. Il
-    reste dans « Partage » (QR sur demande, pour ne pas l'afficher par mégarde) ;
-  - un **mot de passe** facultatif (8 caractères au moins), choisi à la création ou plus
-    tard dans « Accès organisateur » : sur un appareil sans le lien, la page
-    d'administration le demande et ouvre une session propre à cet appareil. Le changer ou
-    le retirer ferme les autres sessions (pas celle de l'appareil qui le change ; le lien
-    reste valable). Haché côté serveur (PBKDF2), 10 essais par quart d'heure et par adresse.
-  Le lien public a aussi son QR code, à afficher sur place pour les inscriptions.
-- **Inscriptions** : nom, faction, cabales choisies dans « Mes cabales » (sauvegardes du
-  constructeur sur l'appareil, même site), composées sur le moment (« Composer… » ouvre le
-  constructeur dans un nouvel onglet, sur la faction choisie ; la cabale sauvegardée apparaît
-  dans la liste au retour sur l'onglet, sans perdre la saisie) ou **collées** (« Coller… ») :
-  liste au format texte de l'export (une ligne par rouage, « ROUAGE - ÉQUIPEMENT/DON », nom
-  en première ligne facultatif ; format du builder bwaaaanegamesdb aussi), tapée à la main ou
-  copiée, sans souci de casse, d'accents ni de tiret, ou export JSON (`Services/CabalImport.cs`).
-  Aperçu immédiat (cartes reconnues, lignes inconnues, légalité) ; un texte valable dans
-  plusieurs factions fait choisir la sienne. Faction
-  commune et légalité vérifiées dans le navigateur, puis par le serveur avec les mêmes
-  règles que le constructeur. Chacun peut modifier ou retirer son inscription (jeton
-  joueur, gardé sur son appareil) tant qu'elles sont ouvertes. Les listes des autres
-  restent masquées jusqu'à la clôture, qui les révèle à tous. L'organisateur peut aussi
-  **inscrire lui-même** un joueur (joueur sans téléphone, listes reçues à l'avance), avec le
-  même formulaire depuis l'administration, et modifier ou retirer toute inscription ; le
-  jeton d'un joueur qu'il inscrit n'est pas gardé, son appareil reste celui de l'organisateur.
-- **Appariements** (`Tournaments/Pairer.cs`), entre les joueurs actifs (hors abandons) :
-  - *Ronde suisse* : ronde 1 au hasard, puis par classement, chacun contre le plus
-    proche en points (1 c. 2, 3 c. 4…) ; option : à points égaux, préférer l'alignement
-    opposé ;
-  - *Lumières contre Ténèbres* : au hasard, alignements opposés, le surplus d'un camp
-    s'affrontant entre lui.
-  Jamais de revanche si c'est possible (recherche avec retour arrière) ; sinon elle est
-  admise et signalée. Nombre impair : exempt au moins bien classé qui n'en a pas eu (camp
-  le plus nombreux en mode Alignement). Alignements (`olomoc-factions.json`) : Lumières
-  — Cabale Dykovienne, Famille Urkaras, Loups de Libus, Réseau Rubin ; Ténèbres — Les
-  Autres, Blockhaus Devet, Ligue de Maisel.
-- **Résultats et classement** (feuille de ronde officielle) : l'organisateur saisit les
-  PV de chaque table ; points de tournoi 3/1/0 (exempt : victoire au Fiel 7-0, soit 3 points, +7), classement par
-  points, puis différence de PV cumulée, puis PV marqués. Les joueurs qui ont abandonné
-  passent en fin de classement, derrière tous ceux encore en lice, et sont classés entre eux
-  selon les mêmes critères. La ronde suivante s'apparie
-  quand la précédente est complète ; la dernière ronde s'annule tant qu'aucun résultat
-  n'y est saisi. Les pages se mettent à jour toutes les 30 secondes.
-- **Cabale jouée** (facultative, pour les statistiques) : avec deux cabales par joueur, l'orga
-  peut indiquer à la saisie des PV laquelle chacun a jouée (« C1 » / « C2 » sous chaque nom,
-  un second clic retire le choix ; le nom de la cabale en info-bulle). Inconnue, la partie
-  compte pour les victoires par faction, pas pour celles par rouage de rang 3.
-- **J1 et fin de partie** (facultatifs, pour les statistiques) : à la saisie des PV, « J1 » sous
-  le joueur qui a commencé, et la cause de la fin (Fiel, 4ᵉ cycle, PoliSec) ; affichés dans
-  les tables.
-- **Scénarios** (`Tournaments/Agendas.cs`) : l'orga prévoit à l'avance celui de chaque ronde,
-  parmi les 10 agendas du recueil officiel (Occicat, janvier 2026 ; version anglaise de
-  septembre 2026), ou « Autre » pour un scénario maison à nommer. Tirage au sort possible :
-  agendas officiels, sans répétition, pour les rondes pas encore appariées (scénarios maison
-  et rondes appariées gardés). Pour chaque ronde, decks Artefact (Rogue, Parasite) et Ministère
-  (Désinformation, Endoctrinement) facultatifs, tirés au sort eux aussi (scénarios maison
-  compris). Programme visible sur la page publique, scénario et decks à côté du
-  titre de chaque ronde.
-- **Correction d'un appariement** : ⇄ sur deux joueurs de la ronde en cours (tables sans
-  résultat, exempt compris) les échange, après confirmation ; une revanche créée est signalée.
-- **Garde-fous** : 128 joueurs par tournoi, requêtes de 64 Ko au plus, 10 créations de
-  tournoi par heure, 10 essais de mot de passe par quart d'heure et 120 écritures par
-  minute par adresse IP (`RATE_CREATE_PER_HOUR`, `RATE_LOGINS_PER_15_MINUTES`,
-  `RATE_WRITES_PER_MINUTE`).
+- **Administering from several devices** (create the tournament on a PC, run it on a phone on
+  the day), two keys to choose from:
+  - the **admin link** (secret token in the address), highlighted right after creation with its
+    **QR code**: scan it with the phone, or copy it. It stays in "Share" (QR on demand, so as
+    not to show it by mistake);
+  - an optional **password** (8 characters at least), chosen at creation or later in "Organizer
+    access": on a device without the link, the admin page asks for it and opens a session
+    specific to that device. Changing or removing it closes the other sessions (not the one of
+    the device changing it; the link stays valid). Hashed on the server (PBKDF2), 10 attempts
+    per quarter of an hour and per address.
+  The public link also has its QR code, to show on site for registrations.
+- **Registrations**: name, faction, cabals chosen in "My cabals" (builder saves on the device,
+  same site), composed on the spot ("Compose…" opens the builder in a new tab, on the chosen
+  faction; the saved cabal appears in the list when coming back to the tab, without losing what
+  was typed) or **pasted** ("Paste…"): a list in the export's text format (one line per cog,
+  "COG - EQUIPMENT/BOON", optional name on the first line; bwaaaanegamesdb builder format too),
+  typed by hand or copied, regardless of case, accents or dash, or a JSON export
+  (`Services/CabalImport.cs`). Immediate preview (recognized cards, unknown lines, legality); a
+  text valid in several factions makes the player choose theirs. Shared faction and legality
+  checked in the browser, then by the server with the same rules as the builder. Everyone can
+  change or withdraw their registration (player token, kept on their device) while
+  registrations are open. The others' lists stay hidden until registrations close, which
+  reveals them to all. The organizer can also **register a player themselves** (player without
+  a phone, lists received in advance), with the same form from the administration, and change
+  or withdraw any registration; the token of a player they register is not kept, their device
+  stays the organizer's.
+- **Pairings** (`Tournaments/Pairer.cs`), between the active players (drops excluded):
+  - *Swiss rounds*: round 1 at random, then by standings, each one against the closest in
+    points (1 v. 2, 3 v. 4…); option: for equal points, prefer the opposite alignment;
+  - *Light against Darkness*: at random, opposite alignments, the surplus of one side playing
+    among itself.
+  Never a rematch if possible (backtracking search); otherwise it is allowed and reported. Odd
+  number: a bye to the lowest-ranked player who has not had one (larger side in Alignment
+  mode). Alignments (`olomoc-factions.json`): Light — Cabale Dykovienne, Famille Urkaras, Loups
+  de Libus, Réseau Rubin; Darkness — Les Autres, Blockhaus Devet, Ligue de Maisel.
+- **Results and standings** (official round sheet): the organizer enters each table's VP;
+  tournament points 3/1/0 (bye: a 7-0 win, i.e. 3 points, +7), standings by points, then
+  cumulative VP difference, then VP scored. Players who dropped go to the end of the standings,
+  behind all those still in, and are ranked among themselves by the same criteria. The next
+  round can be paired when the previous one is complete; the last round can be undone as long
+  as no result is entered in it. Pages refresh every 30 seconds.
+- **Cabal played** (optional, for the statistics): with two cabals per player, the organizer can
+  say when entering the VP which one each player played ("C1" / "C2" under each name, a second
+  click removes the choice; the cabal's name in the tooltip). If unknown, the game counts for
+  the wins per faction, not for those per rank 3 cog.
+- **P1 and end of the game** (optional, for the statistics): when entering the VP, "J1" (P1)
+  under the player who started, and the cause of the end (Bile, 4th cycle, PoliSec); shown in
+  the tables.
+- **Scenarios** (`Tournaments/Agendas.cs`): the organizer plans each round's scenario in
+  advance, among the 10 agendas of the official collection (Occicat, January 2026; English
+  version of September 2026), or "Other" for a custom scenario to name. Random draw possible:
+  official agendas, without repeats, for the rounds not paired yet (custom scenarios and paired
+  rounds kept). For each round, optional Artifact (Rogue, Parasite) and Ministry
+  (Disinformation, Indoctrination) decks, also drawn at random (custom scenarios included).
+  Schedule visible on the public page, scenario and decks next to each round's title.
+- **Correcting a pairing**: ⇄ on two players of the current round (tables without a result,
+  bye included) swaps them, after confirmation; a rematch created is reported.
+- **Safeguards**: 128 players per tournament, requests of 64 KB at most, 10 tournament creations
+  per hour, 10 password attempts per quarter of an hour and 120 writes per minute per IP address
+  (`RATE_CREATE_PER_HOUR`, `RATE_LOGINS_PER_15_MINUTES`, `RATE_WRITES_PER_MINUTE`).
 
-## Parties en ligne
+## Online games
 
-`/online/` : une partie à deux, synchronisée en direct (SignalR, WebSocket). Le **serveur fait
-autorité** : chaque joueur envoie des commandes, que `Online/OnlineRules.cs` vérifie selon
-l'étape et le siège ; chacun ne reçoit que **sa** vue (`OnlineRules.View`). Après chaque
-changement, la salle reçoit « Changed » et chaque client relit sa vue : rien de secret ne
-transite vers une autre connexion.
+`/online/`: a two-player game, synchronized live (SignalR, WebSocket). The **server is the
+authority**: each player sends commands, which `Online/OnlineRules.cs` checks according to the
+step and the seat; each one only receives **their** view (`OnlineRules.View`). After each change,
+the room receives "Changed" and each client reads its view again: nothing secret goes to another
+connection.
 
-- **Une partie courante par appareil**, locale ou en ligne (`GameStore` : `olomoc.game`, ou le
-  code de la partie en ligne dans `olomoc.game.online`). L'onglet **Partie** montre la partie
-  locale, ou mène à la partie en ligne courante ; « Quitter la partie » l'en retire (elle reste
-  sur le serveur et dans « Mes parties en ligne »). Lancer une partie depuis le constructeur
-  remplace la partie courante (après confirmation).
-- **Accès** sans compte, depuis l'onglet **Partie** (l'ancienne adresse `/online/` y renvoie) :
-  - **ouvrir en ligne une partie locale** : « Ouvrir en ligne » (barre de la partie) crée un
-    salon avec sa cabale (reconstruite de la partie : `CabalExporter.FromGame`), vérifiée par
-    le serveur et **prête** d'office ; la partie en ligne commence au début (numéro des joueurs,
-    agenda) et remplace la partie locale. Une cabale illégale est refusée (message) ;
-  - **partie libre** : sans partie en cours, le cadre « Jouer en ligne » ; « Créer un salon »
-    donne le lien du créateur et un **lien d'invitation** (jeton du second siège, dans l'ancre
-    `#…`, gardé sur l'appareil puis retiré de l'adresse), cabale choisie au salon. L'invité qui
-    rejoint sans partie en cours sur son appareil en fait sa partie courante ;
-  - **nom du joueur** : celui du compte s'il est connecté, sinon le dernier utilisé sur
-    l'appareil (`olomoc.online.name`), sinon tiré au sort (« Joueur 4821 ») ; l'invité qui ouvre
-    son lien est nommé de même, et peut changer de nom au salon ;
-  - **table de tournoi** : « Jouer en ligne » sur sa table de la ronde en cours (tournoi
-    lancé). La partie est créée au premier appel puis retrouvée. Chaque joueur s'y identifie
-    avec son jeton de joueur du tournoi et choisit l'une de ses cabales inscrites, qui est
-    notée à la table au lancement. La table affiche un lien « en ligne » pour la suivre ;
-  - **spectateurs** : le lien sans jeton suit la partie sans pouvoir jouer.
-- **Étapes guidées** (`OnlineStep`) :
-  - **salon** : nom (envoyé en quittant le champ ou avec « Prêt », sans le valider ; modifiable
-    tout le salon, même une fois prêt), cabale (« Mes cabales »,
-    composer, coller), « Prêt » dès qu'il y a un nom et une cabale. La cabale
-    adverse reste secrète jusqu'à ce que les deux soient prêts (LDR p.32) ;
-  - **numéro des joueurs** : 5 D6 lancés par le serveur, réussite à 5+, le plus de réussites
-    devient J1, égalité : on relance (LDR p.31). Après le second jet, les deux jets et le verdict
-    restent affichés 2 s avant l'étape suivante (`SetupPanel`, relus dans le journal) ;
-  - **agenda** : choisi ou tiré au sort par J1 ; le tirage est proposé, à confirmer ou à
-    relancer (rien n'est envoyé avant « Confirmer ») ;
-  - **cycles** : chacun suit son camp avec les fiches du mode partie (`PlayCogCard`, en
-    lecture seule pour le camp adverse ; celui-ci se masque, ou se détache dans une fenêtre à
-    part pour un autre écran : `Pages/OnlineCamp.razor`, `/online/g/{code}/camp/{siège}?window=true`,
-    suivie en spectateur). La fin de cycle s'applique aux deux camps quand les
-    deux l'ont confirmée ; la partie se termine après le 4ᵉ cycle, ou dès qu'un Fiel (propre à
-    chaque joueur) ou la traque atteint 3.
-- **Traque commune** : un seul niveau pour les deux joueurs, affiché dans l'en-tête de la partie.
-  Chaque camp garde sa part (ses rouages mis hors de combat, comptés automatiquement, et les
-  pions ajoutés à la main) ; la traque est leur somme (`OnlineRules.Hunt`), 3 au plus. Ainsi
-  l'annulation d'un joueur retire bien ses propres pions, et deux envois simultanés ne se gênent pas.
-- **Suivi d'un camp** : comme sur une vraie table, le joueur a la main sur sa fiche. Il envoie
-  l'état de son camp avec la révision dont il part (`UpdateState`) : le serveur refuse un
-  état dépassé (le client recharge), ou incohérent (autres cartes, ligne de vie qui ne découle
-  pas des cartes, compteurs hors bornes). Il impose le cycle commun. Annulation : les 30
-  derniers états de son camp, jusqu'à la fin de cycle.
-- **Journal** : arrivées, dés, agenda, comptes rendus des fiches, fins de cycle.
-- **Stockage** : un document par partie dans la base (table `Documents`, sorte `online`), supprimé après 7 jours sans
-  activité. La présence (siège connecté) est gardée en mémoire. Reconnexion automatique :
-  le client rejoint la partie de nouveau et relit sa vue. Quitter la page de la partie (vers un
-  autre onglet du site) ferme la connexion : le joueur n'est plus compté comme présent.
-- **Garde-fous** : 2 000 parties, messages de 32 Ko au plus, 20 appels par seconde et par
-  connexion, créations limitées comme les tournois (`RATE_CREATE_PER_HOUR`).
+- **One current game per device**, local or online (`GameStore`: `olomoc.game`, or the online
+  game's code in `olomoc.game.online`). The **Play** tab shows the local game, or leads to the
+  current online game; "Leave the game" removes it from there (it stays on the server and in
+  "My online games"). Starting a game from the builder replaces the current game (after
+  confirmation).
+- **Access** without an account, from the **Play** tab (the old `/online/` address redirects
+  there):
+  - **opening a local game online**: "Open online" (game bar) creates a lobby with its cabal
+    (rebuilt from the game: `CabalExporter.FromGame`), checked by the server and **ready**
+    right away; the online game starts from the beginning (player numbers, agenda) and replaces
+    the local game. An illegal cabal is refused (message);
+  - **free game**: without a game in progress, the "Play online" box; "Create a lobby" gives the
+    creator's link and an **invitation link** (token of the second seat, in the `#…` fragment,
+    kept on the device then removed from the address), cabal chosen in the lobby. A guest who
+    joins without a game in progress on their device makes it their current game;
+  - **player name**: the account's if signed in, otherwise the last one used on the device
+    (`olomoc.online.name`), otherwise random ("Joueur 4821"); a guest opening their link is
+    named the same way, and can change name in the lobby;
+  - **tournament table**: "Play online" on one's table of the current round (tournament
+    started). The game is created on the first call then found again. Each player identifies
+    with their tournament player token and chooses one of their registered cabals, which is
+    recorded on the table at the start. The table shows an "online" link to follow it;
+  - **spectators**: the link without a token follows the game without being able to play.
+- **Guided steps** (`OnlineStep`):
+  - **lobby**: name (sent when leaving the field or with "Ready", without validating it; can be
+    changed throughout the lobby, even once ready), cabal ("My cabals", compose, paste), "Ready"
+    as soon as there is a name and a cabal. The opponent's cabal stays secret until both are
+    ready (rulebook p.32);
+  - **player numbers**: 5 D6 rolled by the server, success on 5+, the most successes becomes P1,
+    tie: roll again (rulebook p.31). After the second roll, both rolls and the verdict stay on
+    screen for 2 s before the next step (`SetupPanel`, read back from the log);
+  - **agenda**: chosen or drawn at random by P1; the draw is offered, to confirm or redraw
+    (nothing is sent before "Confirm");
+  - **cycles**: each player tracks their side with the play mode cards (`PlayCogCard`, read-only
+    for the opponent's side; it can be hidden, or detached into a separate window for another
+    screen: `Pages/OnlineCamp.razor`, `/online/g/{code}/camp/{seat}?window=true`, followed as a
+    spectator). The end of the cycle applies to both sides once both confirmed it; the game ends
+    after the 4th cycle, or as soon as a Bile (specific to each player) or the hunt reaches 3.
+- **Shared hunt**: a single level for both players, shown in the game's header. Each side keeps
+  its share (its cogs taken out of action, counted automatically, and the tokens added by hand);
+  the hunt is their sum (`OnlineRules.Hunt`), 3 at most. This way a player's undo removes their
+  own tokens, and two simultaneous uploads do not get in each other's way.
+- **Tracking a side**: as on a real table, the player has control over their sheet. They send
+  the state of their side with the revision it starts from (`UpdateState`): the server refuses
+  an outdated state (the client reloads), or an inconsistent one (other cards, a life line that
+  does not follow from the cards, counters out of bounds). It enforces the shared cycle. Undo:
+  the last 30 states of one's side, until the end of the cycle.
+- **Log**: arrivals, dice, agenda, card reports, ends of cycle.
+- **Storage**: one document per game in the database (`Documents` table, kind `online`),
+  deleted after 7 days without activity. Presence (connected seat) is kept in memory. Automatic
+  reconnection: the client joins the game again and reads its view again. Leaving the game page
+  (to another tab of the site) closes the connection: the player is no longer counted as
+  present.
+- **Safeguards**: 2,000 games, messages of 32 KB at most, 20 calls per second and per
+  connection, creations limited like tournaments (`RATE_CREATE_PER_HOUR`).
 
-Étapes suivantes prévues : le Bloc (plateau de 16″, décors, figurines, mesures), puis les
-cartes (Ministères, Artefact, planification révélée simultanément).
+Planned next steps: the Block (16″ board, terrain, miniatures, measurements), then the cards
+(Ministries, Artifact, planning revealed simultaneously).
 
-## Statistiques
+## Statistics
 
-`/pairings/stats` (onglet « Statistiques »), publiques, sur les tournois **terminés**
-— sauf ceux que leur orga exclut (« Ne pas compter dans les statistiques », à la création ou
-à tout moment dans l'administration) :
+`/pairings/stats` ("Statistics" tab), public, on the **finished** tournaments — except those
+their organizer excludes ("Do not count in the statistics", at creation or at any time in the
+administration):
 
-- **factions jouées** : part des joueurs ;
-- **choix des rouages**, par faction (sélecteur) et par rang : part des cabales inscrites de la
-  faction qui contiennent le rouage (les deux cabales d'un joueur comptent) ;
-- **victoires par faction** et **par rouage de rang 3** de la cabale jouée : victoires / parties,
-  chaque camp d'une partie comptant (affrontement de même faction : des deux côtés ; exempts
-  exclus), avec V/N/D et le nombre de parties ; estompé en dessous de 10 parties ;
-- sur les parties où l'orga les a notés : **victoires de J1**, **fins de partie** (Fiel, 4ᵉ cycle,
-  PoliSec), **scénarios joués** (avec les victoires de J1 par scénario ; scénarios maison
-  regroupés, sans leur nom), **decks Artefact et Ministère joués** (de même ; archives v3).
+- **factions played**: share of the players;
+- **cog choices**, per faction (selector) and per rank: share of the faction's registered
+  cabals that contain the cog (both of a player's cabals count);
+- **wins per faction** and **per rank 3 cog** of the cabal played: wins / games, each side of a
+  game counting (mirror match: on both sides; byes excluded), with W/D/L and the number of
+  games; faded below 10 games;
+- on the games where the organizer recorded them: **P1 wins**, **game endings** (Bile, 4th
+  cycle, PoliSec), **scenarios played** (with P1 wins per scenario; custom scenarios grouped,
+  without their name), **Artifact and Ministry decks played** (likewise; v3 archives).
 
-À la fin d'un tournoi, une **archive anonyme** (factions, cabales en ids, parties ; ni noms
-ni jetons) est enregistrée dans la base (document « stats » du code du tournoi), que la purge
-des tournois ne touche pas : les statistiques couvrent tout l'historique. Elles sont calculées en mémoire
-(`Tournaments/Stats/TournamentStats.cs`) et recalculées à chaque archive ajoutée ou retirée
-(`GET /api/stats`). Supprimer un tournoi, ou l'exclure, retire son archive ; au démarrage, un
-tournoi terminé sans archive en reçoit une.
+At the end of a tournament, an **anonymous archive** (factions, cabals as ids, games; neither
+names nor tokens) is stored in the database ("stats" document with the tournament's code),
+which the tournament purge does not touch: the statistics cover the whole history. They are
+computed in memory (`Tournaments/Stats/TournamentStats.cs`) and computed again for each archive
+added or removed (`GET /api/stats`). Deleting a tournament, or excluding it, removes its
+archive; at startup, a finished tournament without an archive gets one.
 
-## Fichiers
+## Files
 
-Vue d'ensemble : [docs/architecture.md](docs/architecture.md). Fichiers principaux :
+Overview: [docs/architecture.md](docs/architecture.md). Main files:
 
 ```
 Olomoc.slnx
-src/Olomoc.Shared/    bibliothèque Razor commune : modèles, règles, composants des cartes,
-                      fichiers statiques servis sous /_content/Olomoc.Shared/ (Assets.Base)
-src/Olomoc.Web/       app Blazor WebAssembly du site (servie à la racine) : routeur, démarrage,
-                      layout ; réunit les trois bibliothèques de pages ci-dessous, sans
-                      rechargement de l'une à l'autre
-src/Olomoc.Builder/   pages du constructeur, du mode partie, du compte et de l'éditeur (/builder/…)
-src/Olomoc.Pairings/  pages des tournois et des statistiques (/pairings/…)
-src/Olomoc.Online/    pages des parties en ligne (/online/…)
-src/Olomoc.Server/    hôte ASP.NET Core : app, fichiers communs, API, hub des parties en ligne, HTTPS
+src/Olomoc.Shared/    shared Razor library: models, rules, card components,
+                      static files served under /_content/Olomoc.Shared/ (Assets.Base)
+src/Olomoc.Web/       the site's Blazor WebAssembly app (served at the root): router, startup,
+                      layout; brings together the three page libraries below, without
+                      reloading from one to another
+src/Olomoc.Builder/   pages of the builder, play mode, account, editor and admin panel (/builder/…)
+src/Olomoc.Pairings/  pages of the tournaments and statistics (/pairings/…)
+src/Olomoc.Online/    pages of the online games (/online/…)
+src/Olomoc.Server/    ASP.NET Core host: app, shared files, API, online games hub
 tests/Olomoc.Tests/   xUnit
 ```
 
 **`src/Olomoc.Shared`**
-- `Models/CatalogModels.cs` — référentiel neutre (`Cog`, `Equipment`, `Ministry`,
-  `Faction`…), désérialisé en insensible à la casse ; enums `HealthPointType`
-  (S/R/T), `Timing`, `EquipmentKind`, `BuildRuleType`.
-- `Models/TextModels.cs` — paquets de langue, `Localized` (texte + repli), et
-  `LegalityIssue` (messages de légalité neutres : clé + ids).
-- `Services/LocalizationService.cs` — langue courante, libellés (`Ui`), textes des
-  cartes avec repli sur `fr`, mots-clés de stats de toutes les langues.
-- `Services/CatalogService.cs` — chargement + `AvailableCogs`,
-  `AvailableEquipment`, `RecruitVia`, `CheckLegality` (dont le couplage biparti).
-- `Services/CogQuery.cs` — analyse de la recherche (mots + conditions sur les stats).
-- `Services/CabalExporter.cs` — exports texte (format bwaaaanegamesdb.fr) et JSON, relecture du JSON.
-- `Services/CabalLibrary.cs` — cabales sauvegardées dans le navigateur, synchronisées avec le compte
-  (`Accounts/CabalSyncModels.cs`) ; `CatalogService.Resolve` les relit.
-- `Models/GameModels.cs`, `Services/GameSession.cs`, `Services/GameStore.cs` — mode
-  partie : état sauvegardable, règles et annulation, sauvegarde dans le navigateur.
-- `Online/` — partie en ligne (`OnlineModels.cs`), règles des étapes, des commandes et des
-  vues (`OnlineRules.cs`), échanges avec le hub (`OnlineApiModels.cs`).
-- `Services/CabalDraft.cs` — cabale en cours de composition, conservée en naviguant.
-- `Components/StatLine.razor`, `AbilityList.razor`, `GameEffect.razor`,
-  `Pictogram.razor` — caractéristiques, capacités et pictogrammes du livre ;
-  `Emblem.razor` (logo de faction, emblème de Ministère) ;
-  `TokenTrack.razor` (réserve de pions), `Sheet.razor` (fenêtre superposée).
-- `Components/PlayCogCard.razor` — fiche d'un rouage en partie (mode partie, parties en ligne).
+- `Models/CatalogModels.cs` — neutral card catalog (`Cog`, `Equipment`, `Ministry`,
+  `Faction`…), deserialized case-insensitively; enums `HealthPointType` (S/R/T), `Timing`,
+  `EquipmentKind`, `BuildRuleType`.
+- `Models/TextModels.cs` — language packs, `Localized` (text + fallback), and `LegalityIssue`
+  (neutral legality messages: key + ids).
+- `Services/LocalizationService.cs` — current language, labels (`Ui`), card texts with `fr`
+  fallback, stat keywords of every language.
+- `Services/CatalogService.cs` — loading + `AvailableCogs`, `AvailableEquipment`, `RecruitVia`,
+  `CheckLegality` (including the bipartite matching).
+- `Services/CogQuery.cs` — search parsing (words + conditions on the stats).
+- `Services/CabalExporter.cs` — text (bwaaaanegamesdb.fr format) and JSON exports, reading the
+  JSON back.
+- `Services/CabalLibrary.cs` — cabals saved in the browser, synchronized with the account
+  (`Accounts/CabalSyncModels.cs`); `CatalogService.Resolve` reads them back.
+- `Models/GameModels.cs`, `Services/GameSession.cs`, `Services/GameStore.cs` — play mode:
+  savable state, rules and undo, saving in the browser.
+- `Online/` — online game (`OnlineModels.cs`), rules of the steps, commands and views
+  (`OnlineRules.cs`), exchanges with the hub (`OnlineApiModels.cs`).
+- `Services/CabalDraft.cs` — cabal being composed, kept while navigating.
+- `Components/StatLine.razor`, `AbilityList.razor`, `GameEffect.razor`, `Pictogram.razor` —
+  stats, abilities and rulebook pictograms; `Emblem.razor` (faction logo, Ministry emblem);
+  `TokenTrack.razor` (token reserve), `Sheet.razor` (overlay window).
+- `Components/PlayCogCard.razor` — a cog's card in a game (play mode, online games).
 - `Components/CabalPicker.razor`, `CabalSummary.razor`, `LegalityStatus.razor`,
-  `Problems.razor`, `FactionBadge.razor`, `ScenarioTag.razor` — choix et résumé d'une
-  cabale, problèmes renvoyés par le serveur (tournois, parties en ligne).
-- `Components/AppNav.razor` — menu du site : onglets sous l'en-tête (ordinateur), barre fixée en bas
-  (téléphone) ; constructeur, partie (point si une partie est en cours ; parties en ligne comprises), tournois,
-  statistiques, éditeur (éditeurs et admins), panneau d'administration (admins), compte. `Components/HeaderTools.razor` — choix de la langue.
-- `Accounts/AccountApiModels.cs` (règles et échanges de l'API des comptes), `Services/AccountService.cs`
-  (session du site).
-- `Tournaments/` — tournoi (`TournamentModels.cs`), classement (`Standings.cs`),
-  appariements (`Pairer.cs`), règles des phases et des inscriptions (`TournamentRules.cs`),
-  échanges avec l'API (`TournamentApiModels.cs`).
-- `wwwroot/` — référentiel (`data/`), langues (`i18n/`), pictogrammes (`img/`), styles
-  (`css/app.css`), téléchargement de fichier et enregistrement du service worker
-  (`js/olomoc.js`), application installable (`manifest.webmanifest`, icônes dans `img/app/`).
+  `Problems.razor`, `FactionBadge.razor`, `ScenarioTag.razor` — choice and summary of a cabal,
+  problems returned by the server (tournaments, online games).
+- `Components/AppNav.razor` — site menu: tabs under the header (desktop), bar fixed at the
+  bottom (phone); builder, play (dot if a game is in progress; online games included),
+  tournaments, statistics, editor (editors and admins), admin panel (admins), account.
+  `Components/HeaderTools.razor` — language choice.
+- `Accounts/AccountApiModels.cs` (rules and exchanges of the accounts API),
+  `Accounts/AdminApiModels.cs` (admin panel), `Services/AccountService.cs` (the site's session).
+- `Tournaments/` — tournament (`TournamentModels.cs`), standings (`Standings.cs`), pairings
+  (`Pairer.cs`), rules of the phases and registrations (`TournamentRules.cs`), exchanges with
+  the API (`TournamentApiModels.cs`).
+- `wwwroot/` — card catalog (`data/`), languages (`i18n/`), pictograms (`img/`), styles
+  (`css/app.css`), file download and service worker registration (`js/olomoc.js`), installable
+  app (`manifest.webmanifest`, icons in `img/app/`).
 
 **`src/Olomoc.Web`**
-- `App.razor` (routeur : pages de Builder, Pairings et Online), `Program.cs` (services),
-  `Layout/MainLayout.razor` (en-tête de la section, langue, menu), `wwwroot/index.html` (`<base href="/">`).
+- `App.razor` (router: Builder, Pairings and Online pages), `Program.cs` (services),
+  `Layout/MainLayout.razor` (section header, language, menu), `wwwroot/index.html`
+  (`<base href="/">`).
 
-**`src/Olomoc.Builder`** (bibliothèque Razor, routes `/builder/…`)
-- `Pages/Home.razor` — constructeur : composition, légalité, sauvegarde et export, lancement d'une partie.
-- `Pages/Play.razor` — mode partie.
-- `Pages/AdminCatalog.razor`, `Shared/CogEditor.razor`, `EquipmentEditor.razor`, `AbilitiesEditor.razor`,
-  `CatalogDrafts.cs`, `AdminCatalogApi.cs` — éditeur du référentiel (éditeurs et admins).
-- `Pages/Control.razor`, `Shared/Control/` (`AccountsPanel`, `TournamentsPanel`, `OnlineGamesPanel`),
-  `Shared/AdminApi.cs` — panneau d'administration (admins).
-- `Pages/Account.razor`, `AccountConfirm.razor`, `AccountReset.razor`, `Privacy.razor` — compte,
-  liens reçus par e-mail, données personnelles.
+**`src/Olomoc.Builder`** (Razor library, `/builder/…` routes)
+- `Pages/Home.razor` — builder: composition, legality, save and export, starting a game.
+- `Pages/Play.razor` — play mode.
+- `Pages/AdminCatalog.razor`, `Shared/CogEditor.razor`, `EquipmentEditor.razor`,
+  `AbilitiesEditor.razor`, `CatalogDrafts.cs`, `AdminCatalogApi.cs` — card catalog editor
+  (editors and admins).
+- `Pages/Control.razor`, `Shared/Control/` (`AccountsPanel`, `TournamentsPanel`,
+  `OnlineGamesPanel`), `Shared/AdminApi.cs` — admin panel (admins).
+- `Pages/Account.razor`, `AccountConfirm.razor`, `AccountReset.razor`, `Privacy.razor` —
+  account, links received by email, personal data.
 
-**`src/Olomoc.Pairings`** (bibliothèque Razor, routes `/pairings/…`)
-- `Pages/Index.razor` — créer un tournoi, en rejoindre un, « Mes tournois » (localStorage).
-- `Pages/TournamentPage.razor` — page publique : inscription, ronde, classement, joueurs.
-- `Pages/Admin.razor`, `Shared/ResultEditor.razor` — administration : clôture, rondes,
-  saisie des PV, abandons, export, liens de partage.
-- `Services/TournamentApi.cs` (appels à l'API), `Services/MyTournaments.cs` (jetons gardés
-  sur l'appareil).
+**`src/Olomoc.Pairings`** (Razor library, `/pairings/…` routes)
+- `Pages/Index.razor` — create a tournament, join one, "My tournaments" (localStorage).
+- `Pages/TournamentPage.razor` — public page: registration, round, standings, players.
+- `Pages/Admin.razor`, `Shared/ResultEditor.razor` — administration: closing registrations,
+  rounds, VP entry, drops, export, share links.
+- `Services/TournamentApi.cs` (API calls), `Services/MyTournaments.cs` (tokens kept on the
+  device).
 
-**`src/Olomoc.Online`** (bibliothèque Razor, routes `/online/…`)
-- `Shared/OnlineStart.razor` — cadre « Jouer en ligne » de la page Partie : créer un salon, parties
-  suivies sur l'appareil et nom du joueur (`Services/MyGames.cs`) ; `Pages/Home.razor` : `/online/` → page Partie.
-- `Pages/Game.razor` — une partie : salon (`Shared/LobbyPanel.razor`), mise en place
-  (`Shared/SetupPanel.razor`), camps (`Shared/CampPanel.razor`), journal (`Shared/GameLog.razor`).
-- `Services/OnlineConnection.cs` — connexion au hub, reconnexion automatique.
-- `Services/OnlineLauncher.cs` — ouvre un salon (avec ou sans cabale) et en fait la partie courante.
+**`src/Olomoc.Online`** (Razor library, `/online/…` routes)
+- `Shared/OnlineStart.razor` — "Play online" box of the Play page: create a lobby, games followed
+  on the device and player name (`Services/MyGames.cs`); `Pages/Home.razor`: `/online/` → Play
+  page.
+- `Pages/Game.razor` — a game: lobby (`Shared/LobbyPanel.razor`), setup
+  (`Shared/SetupPanel.razor`), sides (`Shared/CampPanel.razor`), log (`Shared/GameLog.razor`).
+- `Services/OnlineConnection.cs` — hub connection, automatic reconnection.
+- `Services/OnlineLauncher.cs` — opens a lobby (with or without a cabal) and makes it the
+  current game.
 
 **`src/Olomoc.Server`**
-- `Program.cs` — en-têtes (`Cache-Control: no-cache`, `nosniff`), `/` → `/builder/`,
-  `/healthz`, limites de débit et de taille des requêtes.
-- `Tournaments/TournamentEndpoints.cs` — API `/api/tournaments` (droits par jeton) ;
-  `TournamentStore.cs` (un document par tournoi, verrou par tournoi), `StatsArchive.cs`,
-  `ServerCatalog.cs` (référentiel côté serveur), `TournamentPurge.cs` (90 jours sans modification, date passée ou absente).
-- `Accounts/AccountEndpoints.cs` — API `/api/account` (Identity, cookie de session) et
-  `/api/admin/accounts` (rôles, mot de passe temporaire, déverrouillage, déconnexion, suppression) ; `Roles.cs` (joueur, éditeur, admin ;
-  filtre des API, `OLOMOC_ADMINS`) ; `CabalSyncEndpoint.cs` (cabales du compte) ; `Mail.cs` (relais SMTP par MailKit, ou fichiers ; file d'envoi),
-  `AccountMails.cs` (textes des e-mails).
-- `Admin/AdminEndpoints.cs` — API `/api/admin` du panneau d'administration (vue d'ensemble,
-  tournois, parties en ligne, sauvegarde, purges, journal) ; `AdminAudit.cs` (journal des actions).
-- `CardCatalog/CatalogStore.cs` — référentiel servi : fichiers du dépôt + modifications de l'éditeur
-  (`DATA_DIR/catalog`), brouillons cachés aux visiteurs, export ; `CatalogEndpoints.cs` (fichiers
-  servis, API `/api/admin/catalog`).
-- `Data/OlomocDb.cs` — base SQLite (EF Core) : table `Documents` (sorte, code, dates,
-  JSON), comptes (tables d'Identity), cabales des comptes (`SavedCabals`), journal des admins (`AdminActions`), clés des cookies ; schéma par migrations (`Data/Migrations`, appliquées au démarrage ; nouvelle
-  migration : `dotnet dotnet-ef migrations add <Nom> --project src/Olomoc.Server
-  --output-dir Data/Migrations`). `JsonImport.cs` (reprise des anciens fichiers),
-  `DbBackup.cs` (copie quotidienne, `VACUUM INTO`).
-- `Hosting/DocumentStore.cs` — documents JSON sous un code public de 6 caractères (création,
-  modification et suppression sous verrou, purge des inactifs).
-- `Online/` — création des parties (`OnlineEndpoints.cs` : `/api/online`, table de tournoi),
-  hub SignalR `/hubs/online` (`OnlineHub.cs`, limite d'appels par connexion), stockage et purge
-  (`OnlineStore.cs` : un document par partie, sorte `online`), présence des joueurs (`OnlinePresence.cs`).
-- `Hosting/ClientApps.cs` — l'app WebAssembly à la racine (`_framework/`) ; routes des sections
-  `/builder/…`, `/pairings/…` et `/online/…` renvoyées vers `index.html`.
-- `Hosting/SecurityHeaders.cs` — CSP, cadres interdits, Referrer-Policy, HSTS en HTTPS.
-- `wwwroot/service-worker.js` — hors connexion : réseau d'abord, copie en cache si le réseau
-  manque (jamais l'API) ; à la racine pour couvrir l'app et `/_content/` (voir `docs/pwa.md`).
+- `Program.cs` — headers (`Cache-Control: no-cache`, `nosniff`), `/` → `/builder/`, `/healthz`,
+  rate and request size limits.
+- `Tournaments/TournamentEndpoints.cs` — `/api/tournaments` API (rights by token);
+  `TournamentStore.cs` (one document per tournament, one lock per tournament),
+  `StatsArchive.cs`, `ServerCatalog.cs` (server-side card catalog), `TournamentPurge.cs` (90 days
+  without changes, date passed or missing).
+- `Accounts/AccountEndpoints.cs` — `/api/account` API (Identity, session cookie) and
+  `/api/admin/accounts` (roles, temporary password, unlock, sign out, deletion); `Roles.cs`
+  (player, editor, admin; API filter, `OLOMOC_ADMINS`); `CabalSyncEndpoint.cs` (account cabals);
+  `Mail.cs` (SMTP relay through MailKit, or files; sending queue), `AccountMails.cs` (email
+  texts).
+- `Admin/AdminEndpoints.cs` — `/api/admin` API of the admin panel (overview, tournaments, online
+  games, backup, purges, log); `AdminAudit.cs` (action log).
+- `CardCatalog/CatalogStore.cs` — served card catalog: repository files + editor changes
+  (`DATA_DIR/catalog`), drafts hidden from visitors, export; `CatalogEndpoints.cs` (served
+  files, `/api/admin/catalog` API).
+- `Data/OlomocDb.cs` — SQLite database (EF Core): `Documents` table (kind, code, dates, JSON),
+  accounts (Identity tables), account cabals (`SavedCabals`), admin log (`AdminActions`), cookie
+  keys; schema through migrations (`Data/Migrations`, applied at startup; new migration:
+  `dotnet dotnet-ef migrations add <Name> --project src/Olomoc.Server
+  --output-dir Data/Migrations`). `JsonImport.cs` (import of the old files), `DbBackup.cs`
+  (daily copy, `VACUUM INTO`).
+- `Hosting/DocumentStore.cs` — JSON documents under a public 6-character code (creation, change
+  and deletion under lock, purge of inactive ones).
+- `Online/` — creation of games (`OnlineEndpoints.cs`: `/api/online`, tournament table), SignalR
+  hub `/hubs/online` (`OnlineHub.cs`, call limit per connection), storage and purge
+  (`OnlineStore.cs`: one document per game, kind `online`), players' presence
+  (`OnlinePresence.cs`).
+- `Hosting/ClientApps.cs` — the WebAssembly app at the root (`_framework/`); routes of the
+  `/builder/…`, `/pairings/…` and `/online/…` sections sent to `index.html`.
+- `Hosting/SecurityHeaders.cs` — CSP, frames forbidden, Referrer-Policy, HSTS over HTTPS.
+- `wwwroot/service-worker.js` — offline: network first, cached copy if the network is missing
+  (never the API); at the root to cover the app and `/_content/` (see `docs/pwa.md`).
 
-**`deploy/proxy`** — reverse proxy du VPS (Caddy) : HTTPS et certificats, répartition par
-nom d'hôte entre Orloj et B5T.
+**`Dockerfile`, `docker-compose.yml`** — generic: image and container of any instance
+(`docker-compose.yml`: defaults marked "orloj.top" to override in `.env`).
 
-**`tests/Olomoc.Tests`** — légalité, recherche, export, sauvegarde, mode partie, cohérence
-des langues, tournois (classement, appariements, règles), parties en ligne (règles, hub) ; référence `Olomoc.Shared` et lit
-ses fichiers statiques sur le disque ; hôte démarré en mémoire (`WebApplicationFactory`)
-pour les routes du site et les API (tournois, comptes, référentiel ; dossier de données
-temporaire, e-mails écrits sur le disque).
+**`deploy/proxy`** — specific to orloj.top: the author's VPS reverse proxy (Caddy), HTTPS and
+certificates, routing by host name between Orloj and B5T. Not needed elsewhere; a generic
+two-line Caddy example is in [Deployment](#generic-any-instance).
 
-## Licence
+**`tests/Olomoc.Tests`** — legality, search, export, save, play mode, language consistency,
+tournaments (standings, pairings, rules), online games (rules, hub), admin panel; references
+`Olomoc.Shared` and reads its static files from disk; host started in memory
+(`WebApplicationFactory`) for the site's routes and the APIs (tournaments, accounts, card
+catalog, admin; temporary data folder, emails written to disk).
 
-**Code** : GNU GPL v2 (fichier `LICENSE`).
+## License
 
-**Contenu du jeu : © Occicat Games, utilisé avec permission, hors licence GPL.** Olomòc, ses
-noms, textes, illustrations, logos et pictogrammes appartiennent à Occicat Games ; la licence
-du code ne s'applique pas à eux et ne donne aucun droit de les réutiliser. Sont concernés :
+**Code**: GNU GPL v2 (`LICENSE` file).
 
-- `src/Olomoc.Shared/wwwroot/img/` — images des cartes, logos des factions, emblèmes des
-  Ministères, pictogrammes et icônes des caractéristiques ;
-- `src/Olomoc.Shared/wwwroot/i18n/*/cards.json` — noms et effets de jeu des cartes, noms des
-  Ministères et des factions ;
-- `src/Olomoc.Shared/wwwroot/data/` — référentiel des cartes et référentiel de faction ;
-- les noms des agendas et le vocabulaire du jeu repris dans `i18n/*/ui.json`.
+**Game content: © Occicat Games, used with permission, outside the GPL license.** Olomòc, its
+names, texts, illustrations, logos and pictograms belong to Occicat Games; the code's license
+does not apply to them and grants no right to reuse them. This covers:
 
-Pour réutiliser ce contenu ailleurs, demandez l'accord d'Occicat Games
+- `src/Olomoc.Shared/wwwroot/img/` — card images, faction logos, Ministry emblems, pictograms
+  and stat icons;
+- `src/Olomoc.Shared/wwwroot/i18n/*/cards.json` — card names and game effects, Ministry and
+  faction names;
+- `src/Olomoc.Shared/wwwroot/data/` — card catalog and faction reference;
+- the agenda names and the game vocabulary used in `i18n/*/ui.json`.
+
+To reuse this content elsewhere, ask Occicat Games for permission
 ([occicat.com](https://www.occicat.com/)).

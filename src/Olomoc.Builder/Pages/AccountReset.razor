@@ -6,9 +6,9 @@
 @inject LocalizationService L
 @inject NavigationManager Nav
 
-@* Lien « mot de passe oublié » reçu par e-mail (/builder/account/reset#user=…&token=…) :
-   nouveau mot de passe (deux fois), puis connexion sur cet appareil ; les autres sessions sont
-   fermées. Le jeton est retiré de l'adresse dès sa lecture. *@
+@* "Forgotten password" link received by email (/builder/account/reset#user=…&token=…): new
+   password (twice), then sign-in on this device; other sessions are closed. The token is removed
+   from the address as soon as it is read. *@
 
 <section class="panel account-panel">
     <h2>@(L.Loaded ? L.Ui("account.resetPage.title") : "…")</h2>

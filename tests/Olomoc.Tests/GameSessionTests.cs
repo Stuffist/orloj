@@ -4,10 +4,10 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Mode partie : ligne de vie (LDR p.16), Noirceur et Fiel (p.17), sonné (p.18), capacités (p.20), cycles (p.33-35).</summary>
+/// <summary>Play mode: life line (rulebook p.16), Darkness and Bile (p.17), stunned (p.18), abilities (p.20), cycles (p.33-35).</summary>
 public class GameSessionTests
 {
-    // Cabale Maisel légale : rang 1 Petra Kantor (RRRRSTSSSSSS), rang 2 Le Chasseur, rang 3 Bohdan Gross.
+    // Legal Maisel cabal: rank 1 Petra Kantor (RRRRSTSSSSSS), rank 2 Le Chasseur, rank 3 Bohdan Gross.
     private static async Task<GameSession> NewGame(string rank1Equipment = "E11" /* Harmonium */, string rank2Equipment = "D01" /* Carapace */, string rank3Equipment = "E03" /* Phéromones */)
     {
         var d = await AppData.GetAsync();
@@ -20,7 +20,7 @@ public class GameSessionTests
     private static int SlotOf(GameSession g, string cogId) => g.State.Cogs.FindIndex(c => c.CogId == cogId);
 
     [Fact]
-    public async Task Nouvelle_partie_rangs_3_2_1_et_4_pions_d_action()
+    public async Task New_game_ranks_3_2_1_and_4_action_tokens()
     {
         var g = await NewGame();
         Assert.Equal(new[] { 3, 2, 1 }, g.State.Cogs.Select(c => c.Rank));
@@ -30,7 +30,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Carapace_ajoute_deux_PV_renforces_en_tete()
+    public async Task Carapace_adds_two_reinforced_HP_at_the_start()
     {
         var d = await AppData.GetAsync();
         var g = await NewGame();
@@ -39,17 +39,17 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Exemples_du_livre_de_regles_Petra_Kantor()
+    public async Task Rulebook_examples_Petra_Kantor()
     {
         var g = await NewGame();
         var petra = SlotOf(g, "1R01");
 
-        // 5 blessures, un PV renforcé reste à cocher : 4 PV cochés.
+        // 5 wounds, one reinforced HP left to mark: 4 HP marked.
         var first = g.Wound(petra, 5, attack: true, ignoreProtection: false);
         Assert.True(first.Protected);
         Assert.Equal(4, first.Marked);
 
-        // 3 blessures : le deuxième PV à cocher est teinté, la troisième blessure est ignorée, +1 Noirceur.
+        // 3 wounds: the second HP to mark is tainted, the third wound is ignored, +1 Darkness.
         var second = g.Wound(petra, 3, attack: true, ignoreProtection: false);
         Assert.False(second.Protected);
         Assert.Equal(2, second.Marked);
@@ -61,7 +61,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Blessures_hors_attaque_ni_protection_ni_arret_mais_Noirceur()
+    public async Task Wounds_outside_an_attack_no_protection_no_stop_but_Darkness()
     {
         var g = await NewGame();
         var bohdan = SlotOf(g, "3R06");     // SSTSSSSSSSSS
@@ -72,7 +72,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Attaque_qui_ignore_la_protection()
+    public async Task Attack_that_ignores_protection()
     {
         var g = await NewGame();
         var petra = SlotOf(g, "1R01");
@@ -82,10 +82,10 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task PV_standards_renforces_jusqu_a_la_fin_du_cycle()
+    public async Task Standard_HP_reinforced_until_the_end_of_the_cycle()
     {
         var g = await NewGame();
-        var bohdan = SlotOf(g, "3R06");     // SSTSSSSSSSSS : aucun PV renforcé
+        var bohdan = SlotOf(g, "3R06");     // SSTSSSSSSSSS: no reinforced HP
         Assert.False(g.PreviewWound(bohdan, 2, attack: true, ignoreProtection: false).Protected);
 
         g.SetFortified(bohdan, true);
@@ -98,7 +98,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Apercu_sans_effet_et_hors_de_combat()
+    public async Task Preview_without_effect_and_out_of_action()
     {
         var g = await NewGame();
         var bohdan = SlotOf(g, "3R06");
@@ -113,46 +113,46 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Soin_et_correction_manuelle()
+    public async Task Healing_and_manual_correction()
     {
         var g = await NewGame();
         var bohdan = SlotOf(g, "3R06");
         g.Wound(bohdan, 5, attack: false, ignoreProtection: false);
         Assert.Equal(2, g.Heal(bohdan, 2));
         Assert.Equal(3, g.State.Cogs[bohdan].Marked);
-        Assert.Equal(3, g.Heal(bohdan, 10));                 // pas plus que les PV cochés
+        Assert.Equal(3, g.Heal(bohdan, 10));                 // no more than the marked HP
 
         var cog = g.State.Cogs[bohdan];
-        g.TogglePoint(bohdan, 4);                            // coche le 5e PV, lui seul
+        g.TogglePoint(bohdan, 4);                            // marks the 5th HP, on its own
         Assert.Equal(1, cog.Marked);
         Assert.True(cog.IsChecked(4));
         Assert.False(cog.IsChecked(3));
-        g.TogglePoint(bohdan, 4);                            // et le décoche
+        g.TogglePoint(bohdan, 4);                            // and unmarks it
         Assert.Equal(0, cog.Marked);
     }
 
     [Fact]
-    public async Task PV_coche_seul_puis_blessures_et_soins()
+    public async Task HP_marked_alone_then_wounds_and_healing()
     {
         var g = await NewGame();
         var bohdan = SlotOf(g, "3R06");
         var cog = g.State.Cogs[bohdan];
-        g.TogglePoint(bohdan, 2);                            // ex. Jakub Myasnik : un PV précis
+        g.TogglePoint(bohdan, 2);                            // e.g. Jakub Myasnik: a specific HP
         g.Wound(bohdan, 3, attack: false, ignoreProtection: false);
-        Assert.Equal(new[] { true, true, true, true }, Enumerable.Range(0, 4).Select(cog.IsChecked));   // le 3e PV est sauté
+        Assert.Equal(new[] { true, true, true, true }, Enumerable.Range(0, 4).Select(cog.IsChecked));   // the 3rd HP is skipped
         Assert.False(cog.IsChecked(4));
 
         g.TogglePoint(bohdan, 6);
-        Assert.Equal(1, g.Heal(bohdan, 1));                  // soin : le PV coché le plus à droite
+        Assert.Equal(1, g.Heal(bohdan, 1));                  // healing: the rightmost marked HP
         Assert.False(cog.IsChecked(6));
         Assert.Equal(4, cog.Marked);
 
         g.Undo();
-        Assert.True(g.State.Cogs[bohdan].IsChecked(6));      // annulation : état relu
+        Assert.True(g.State.Cogs[bohdan].IsChecked(6));      // undo: state read back
     }
 
     [Fact]
-    public async Task PV_teinte_coche_a_la_main_donne_une_Noirceur()
+    public async Task Tainted_HP_marked_by_hand_gives_a_Darkness()
     {
         var g = await NewGame();
         var bohdan = SlotOf(g, "3R06");
@@ -160,24 +160,24 @@ public class GameSessionTests
         var t = cog.LifeLine.IndexOf(HealthPointType.T);
         var s = cog.LifeLine.IndexOf(HealthPointType.S);
 
-        var o = g.TogglePoint(bohdan, t)!;                   // Jakub Myasnik : « cochez 1 PV teinté »
+        var o = g.TogglePoint(bohdan, t)!;                   // Jakub Myasnik: "mark 1 tainted HP"
         Assert.Equal(1, o.TaintedMarked);
         Assert.Equal(1, cog.Darkness);
-        Assert.Null(g.TogglePoint(bohdan, t));               // décoché : la Noirceur reste
+        Assert.Null(g.TogglePoint(bohdan, t));               // unmarked: the Darkness stays
         Assert.Equal(1, cog.Darkness);
-        Assert.Equal(0, g.TogglePoint(bohdan, s)!.TaintedMarked);   // PV standard : rien de plus
+        Assert.Equal(0, g.TogglePoint(bohdan, s)!.TaintedMarked);   // standard HP: nothing more
         Assert.Equal(1, cog.Darkness);
 
-        g.AdjustDarkness(bohdan, 2);                         // Noirceur au maximum : le pion va sur le Fiel
+        g.AdjustDarkness(bohdan, 2);                         // Darkness at its maximum: the token goes to the Bile
         g.TogglePoint(bohdan, t);
         Assert.Equal(3, cog.Darkness);
         Assert.Equal(1, g.State.Bile);
     }
 
     [Fact]
-    public void Partie_sauvegardee_dans_l_ancien_format()
+    public void Game_saved_in_the_old_format()
     {
-        // Avant : « marked » = nombre de PV cochés depuis la gauche.
+        // Before: "marked" = number of HP marked from the left.
         var state = GameSession.FromJson("""{"version":1,"cogs":[{"rank":1,"cogId":"1R01","lifeLine":["S","S","T","S"],"marked":2}]}""")!;
         var cog = state.Cogs[0];
         Assert.Equal(new[] { true, true, false, false }, cog.Checked);
@@ -186,7 +186,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Noirceur_au_dela_de_3_vers_le_Fiel_et_defaite_a_3()
+    public async Task Darkness_beyond_3_goes_to_the_Bile_and_defeat_at_3()
     {
         var g = await NewGame();
         var petra = SlotOf(g, "1R01");
@@ -199,45 +199,45 @@ public class GameSessionTests
         g.AdjustDarkness(petra, 2);
         Assert.Equal(GameSession.MaxBile, g.State.Bile);
         Assert.True(g.IsLost);
-        Assert.Equal(0, g.EndCycle());                       // partie finie : plus de fin de cycle
+        Assert.Equal(0, g.EndCycle());                       // game over: no more end of cycle
     }
 
     [Fact]
-    public async Task Fin_de_cycle_Fiel_par_rouage_corrompu_et_pions_d_action()
+    public async Task End_of_cycle_Bile_per_corrupted_cog_and_action_tokens()
     {
         var g = await NewGame();
         var petra = SlotOf(g, "1R01");
         var bohdan = SlotOf(g, "3R06");
         g.AdjustDarkness(petra, 3);
         g.AdjustDarkness(bohdan, 3);
-        g.State.Cogs[bohdan].Checked = g.State.Cogs[bohdan].LifeLine.Select(_ => true).ToList();   // hors de combat : ne compte plus
+        g.State.Cogs[bohdan].Checked = g.State.Cogs[bohdan].LifeLine.Select(_ => true).ToList();   // out of action: no longer counts
         g.AdjustActions(petra, -3);
 
         Assert.Equal(1, g.EndCycle());
         Assert.Equal(1, g.State.Bile);
         Assert.Equal(2, g.State.Cycle);
         Assert.Equal(GameSession.ActionsPerCycle, g.State.Cogs[petra].Actions);
-        Assert.Equal(3, g.State.Cogs[petra].Darkness);      // la Noirceur reste d'un cycle à l'autre
+        Assert.Equal(3, g.State.Cogs[petra].Darkness);      // Darkness stays from one cycle to the next
     }
 
     [Fact]
-    public async Task Traque_plus_1_par_rouage_hors_de_combat_et_fin_a_3()
+    public async Task Hunt_plus_1_per_cog_out_of_action_and_end_at_3()
     {
         var g = await NewGame();
         var bohdan = SlotOf(g, "3R06");
         var o = g.Wound(bohdan, 50, attack: false, ignoreProtection: false);
         Assert.True(o.HuntGained);
         Assert.Equal(1, g.State.Hunt);
-        Assert.False(g.PreviewWound(bohdan, 1, attack: false, ignoreProtection: false).HuntGained);   // déjà hors de combat
+        Assert.False(g.PreviewWound(bohdan, 1, attack: false, ignoreProtection: false).HuntGained);   // already out of action
 
-        g.TogglePoint(bohdan, 0);                             // correction (1er PV décoché) : de retour en jeu, pion retiré
+        g.TogglePoint(bohdan, 0);                             // correction (1st HP unmarked): back in play, token removed
         Assert.Equal(0, g.State.Hunt);
         g.TogglePoint(bohdan, 0);
         Assert.Equal(1, g.State.Hunt);
-        g.Heal(bohdan, 1);                                    // décoche le 12e PV
+        g.Heal(bohdan, 1);                                    // unmarks the 12th HP
         Assert.Equal(0, g.State.Hunt);
 
-        g.AdjustHunt(2);                                      // rouages adverses : à la main
+        g.AdjustHunt(2);                                      // enemy cogs: by hand
         Assert.False(g.IsOver);
         g.TogglePoint(bohdan, 11);
         Assert.True(g.IsHunted);
@@ -248,11 +248,11 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Points_de_victoire()
+    public async Task Victory_points()
     {
         var g = await NewGame();
         g.AdjustVictoryPoints(-1);
-        Assert.False(g.CanUndo);                              // jamais négatifs : rien à annuler
+        Assert.False(g.CanUndo);                              // never negative: nothing to undo
         g.AdjustVictoryPoints(3);
         g.AdjustVictoryPoints(-1);
         Assert.Equal(2, g.State.VictoryPoints);
@@ -262,7 +262,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Partie_terminee_apres_4_cycles()
+    public async Task Game_over_after_4_cycles()
     {
         var g = await NewGame();
         for (var i = 0; i < GameSession.Cycles; i++) g.EndCycle();
@@ -271,7 +271,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Capacite_limitee_par_partie_Pilules_stabilisantes()
+    public async Task Ability_limited_per_game_Pilules_stabilisantes()
     {
         var d = await AppData.GetAsync();
         var g = await NewGame(rank3Equipment: "E15" /* Pilules stabilisantes */);
@@ -286,37 +286,37 @@ public class GameSessionTests
         Assert.Equal(0, g.UsesLeft(bohdan, key, ability));
         Assert.Equal(AbilityBlock.Exhausted, g.CanUse(bohdan, key, ability));
         Assert.False(g.Use(bohdan, key, ability));
-        Assert.Equal(GameSession.ActionsPerCycle, g.State.Cogs[bohdan].Actions);   // sans coût
+        Assert.Equal(GameSession.ActionsPerCycle, g.State.Cogs[bohdan].Actions);   // without a cost
 
-        g.EndCycle();                                         // limite par partie : pas remise à zéro
+        g.EndCycle();                                         // limit per game: not reset
         Assert.Equal(0, g.UsesLeft(bohdan, key, ability));
     }
 
     [Fact]
-    public async Task Capacite_payee_en_pions_d_action_et_de_Noirceur()
+    public async Task Ability_paid_with_action_and_Darkness_tokens()
     {
         var d = await AppData.GetAsync();
         var g = await NewGame();
         var petra = SlotOf(g, "1R01");
-        var veteran = d.Cog("1R01").Abilities[0];            // Vétéran brisée : active, 1 pion de Noirceur
+        var veteran = d.Cog("1R01").Abilities[0];            // Vétéran brisée: active, 1 Darkness token
         var key = GameSession.AbilityKey("1R01", 0);
 
         Assert.True(g.Use(petra, key, veteran));
         Assert.Equal(1, g.State.Cogs[petra].Darkness);
-        Assert.True(g.Use(petra, key, veteran));             // limite par cycle : non suivie
+        Assert.True(g.Use(petra, key, veteran));             // limit per cycle: not tracked
 
         g.SetStunned(petra, true);
         Assert.Equal(AbilityBlock.Stunned, g.CanUse(petra, key, veteran));
         g.SetStunned(petra, false);
 
-        var demolition = d.Equipment("E18" /* Avis de démolition */).Abilities[0];   // 1 pion d'action
+        var demolition = d.Equipment("E18" /* Avis de démolition */).Abilities[0];   // 1 action token
         var dKey = GameSession.AbilityKey("E18", 0);
         g.AdjustActions(petra, -GameSession.ActionsPerCycle);
         Assert.Equal(AbilityBlock.NoActions, g.CanUse(petra, dKey, demolition));
     }
 
     [Fact]
-    public async Task Medic_Ruzicka_equipement_supplementaire_de_l_Integrite_au_premier_cycle()
+    public async Task Medic_Ruzicka_extra_Integrity_equipment_in_the_first_cycle()
     {
         var d = await AppData.GetAsync();
         var ruzicka = d.Cog("3R27");
@@ -327,14 +327,14 @@ public class GameSessionTests
             new Equipment?[] { kit, d.Equipment("D01" /* Carapace */), d.Equipment("E11" /* Harmonium */) }));
         var slot = SlotOf(g, "3R27");
 
-        // Équipements de l'Intégrité seulement, sans doublon avec ceux de la cabale.
+        // Integrity equipment only, without duplicates with the cabal's.
         var options = d.Catalog.ExtraEquipmentOptions(ruzicka, g.State.Cogs.Select(c => c.EquipmentId!));
         Assert.Contains(options, e => e.Id == hazmat.Id);
         Assert.DoesNotContain(options, e => e.Id == kit.Id);
         Assert.All(options, e => Assert.True(e.Ministry == "INTEGRITY" && e.Kind == EquipmentKind.EQUIPMENT));
         Assert.Empty(d.Catalog.ExtraEquipmentOptions(d.Cog("1R01"), Array.Empty<string>()));
 
-        Assert.False(g.SetExtraEquipment(slot, ruzicka, kit, d.Equipment("D01" /* Carapace */)));     // hors Intégrité
+        Assert.False(g.SetExtraEquipment(slot, ruzicka, kit, d.Equipment("D01" /* Carapace */)));     // not Integrity
         Assert.True(g.SetExtraEquipment(slot, ruzicka, kit, hazmat));
         Assert.Equal(hazmat.Id, g.State.Cogs[slot].ExtraEquipmentId);
         Assert.Equal(ruzicka.LifeLine, g.State.Cogs[slot].LifeLine);
@@ -343,7 +343,7 @@ public class GameSessionTests
         Assert.Null(g.State.Cogs[slot].ExtraEquipmentId);
         g.SetExtraEquipment(slot, ruzicka, kit, hazmat);
 
-        g.EndCycle();                                         // « au début du premier cycle » seulement
+        g.EndCycle();                                         // "at the start of the first cycle" only
         Assert.False(g.CanChooseExtraEquipment(ruzicka));
         Assert.False(g.SetExtraEquipment(slot, ruzicka, kit, null));
         Assert.Equal(hazmat.Id, g.State.Cogs[slot].ExtraEquipmentId);
@@ -351,7 +351,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Annuler_restaure_l_etat_precedent()
+    public async Task Undo_restores_the_previous_state()
     {
         var g = await NewGame();
         var petra = SlotOf(g, "1R01");
@@ -370,7 +370,7 @@ public class GameSessionTests
     }
 
     [Fact]
-    public async Task Sauvegarde_JSON_aller_retour()
+    public async Task JSON_save_round_trip()
     {
         var g = await NewGame(rank3Equipment: "E15" /* Pilules stabilisantes */);
         g.Wound(0, 3, attack: true, ignoreProtection: false);
@@ -381,7 +381,7 @@ public class GameSessionTests
         var back = GameSession.FromJson(json);
         Assert.NotNull(back);
         Assert.Equal(json, GameSession.ToJson(back!));
-        Assert.Contains("\"lifeLine\":[\"S\"", json);         // énumérations en clair
+        Assert.Contains("\"lifeLine\":[\"S\"", json);         // enums as plain text
 
         Assert.Null(GameSession.FromJson("{ pas du json"));
         Assert.Null(GameSession.FromJson("{\"version\":99,\"cogs\":[]}"));

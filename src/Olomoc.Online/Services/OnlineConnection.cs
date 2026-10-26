@@ -7,19 +7,19 @@ using Olomoc.Tournaments;
 namespace Olomoc.Online.Services;
 
 /// <summary>
-/// Connexion au hub des parties en ligne (/hubs/online, WebSocket). Reconnexion automatique :
-/// la partie est rejointe de nouveau, puis <see cref="Changed"/> fait relire la vue (rien n'est
-/// perdu, l'état est sur le serveur).
+/// Connection to the online games hub (/hubs/online, WebSocket). Automatic reconnection: the game
+/// is joined again, then <see cref="Changed"/> makes the view be read again (nothing is lost, the
+/// state is on the server).
 /// </summary>
 public sealed class OnlineConnection(NavigationManager nav) : IAsyncDisposable
 {
     private HubConnection? _hub;
     private string? _code, _token;
 
-    /// <summary>La partie a changé (ou la connexion est revenue) : relire la vue.</summary>
+    /// <summary>The game changed (or the connection came back): read the view again.</summary>
     public event Func<Task>? Changed;
 
-    /// <summary>Connexion perdue, en cours de reprise, ou rétablie.</summary>
+    /// <summary>Connection lost, being restored, or restored.</summary>
     public event Action? StatusChanged;
 
     public HubConnectionState Status => _hub?.State ?? HubConnectionState.Disconnected;
@@ -53,8 +53,8 @@ public sealed class OnlineConnection(NavigationManager nav) : IAsyncDisposable
     }
 
     /// <summary>
-    /// Page de la partie quittée (l'app continue, sans rechargement) : connexion fermée, le joueur
-    /// n'est plus compté comme présent. La prochaine partie ouverte la rouvre.
+    /// Game page left (the app goes on, without a reload): connection closed, the player is no
+    /// longer counted as present. The next game opened reopens it.
     /// </summary>
     public async Task LeaveAsync()
     {
@@ -62,7 +62,7 @@ public sealed class OnlineConnection(NavigationManager nav) : IAsyncDisposable
         if (_hub is { State: not HubConnectionState.Disconnected })
         {
             try { await _hub.StopAsync(); }
-            catch (Exception e) when (e is InvalidOperationException or HttpRequestException) { /* déjà fermée */ }
+            catch (Exception e) when (e is InvalidOperationException or HttpRequestException) { /* already closed */ }
         }
     }
 

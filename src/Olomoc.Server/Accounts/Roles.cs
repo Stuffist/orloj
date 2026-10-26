@@ -7,9 +7,9 @@ using Olomoc.Tournaments;
 namespace Olomoc.Server.Accounts;
 
 /// <summary>
-/// Rôles des comptes, enregistrés dans la base (rôles Identity) : joueur (aucun rôle), éditeur
-/// (éditeur du référentiel), admin (tout, dont les rôles des autres comptes). Un compte a au plus
-/// un des deux rôles ; admin comprend éditeur.
+/// Account roles, stored in the database (Identity roles): player (no role), editor (card catalog
+/// editor), admin (everything, including other accounts' roles). An account has at most one of the
+/// two roles; admin includes editor.
 /// </summary>
 public static class Roles
 {
@@ -37,12 +37,12 @@ public static class Roles
         _ => null,
     };
 
-    /// <summary>Rôle de la session (cookie, revérifié avec le tampon de sécurité) : brouillons du référentiel visibles.</summary>
+    /// <summary>Session role (cookie, rechecked with the security stamp): card catalog drafts visible.</summary>
     public static bool CanEdit(ClaimsPrincipal user) => user.IsInRole(Admin) || user.IsInRole(Editor);
 
     /// <summary>
-    /// Filtre d'API : compte connecté dont le rôle, lu dans la base (changé à l'instant peut-être),
-    /// atteint <paramref name="minimum"/>. 401 sans session, 403 sinon.
+    /// API filter: signed-in account whose role, read from the database (maybe changed a moment
+    /// ago), reaches <paramref name="minimum"/>. 401 without a session, 403 otherwise.
     /// </summary>
     public static Func<EndpointFilterInvocationContext, EndpointFilterDelegate, ValueTask<object?>> Require(AccountRole minimum) =>
         async (ctx, next) =>
@@ -55,10 +55,10 @@ public static class Roles
         };
 
     /// <summary>
-    /// Au démarrage : rôles créés ; rôle admin donné aux comptes listés dans OLOMOC_ADMINS (pseudos
-    /// séparés par « ; »), pour le premier admin ou en secours. Jamais retiré : les rôles se gèrent
-    /// ensuite dans « Mon compte ». Seuls des comptes existants le reçoivent (on crée son compte,
-    /// puis on l'ajoute à la liste : personne ne devient admin en prenant un pseudo le premier).
+    /// At startup: roles created; admin role given to the accounts listed in OLOMOC_ADMINS (usernames
+    /// separated by ";"), for the first admin or as a fallback. Never removed: roles are then managed
+    /// in the admin panel. Only existing accounts receive it (create your account, then add it to the
+    /// list: nobody becomes admin by grabbing a username first).
     /// </summary>
     public static async Task SeedAsync(IServiceProvider services, string? admins, ILogger log)
     {
@@ -70,11 +70,11 @@ public static class Roles
 
         foreach (var name in (admins ?? "").Split(';', ',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
-            if (await users.FindByNameAsync(name) is not { } user) log.LogWarning("Admin {Name} : aucun compte de ce nom.", name);
+            if (await users.FindByNameAsync(name) is not { } user) log.LogWarning("Admin {Name}: no account with this name.", name);
             else if (await OfAsync(users, user) != AccountRole.Admin)
             {
                 await SetAsync(users, user, AccountRole.Admin);
-                log.LogInformation("Admin {Name} : rôle donné (OLOMOC_ADMINS).", user.UserName);
+                log.LogInformation("Admin {Name}: role granted (OLOMOC_ADMINS).", user.UserName);
             }
         }
     }

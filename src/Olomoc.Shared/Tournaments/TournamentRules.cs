@@ -4,9 +4,9 @@ using Olomoc.Services;
 namespace Olomoc.Tournaments;
 
 /// <summary>
-/// Problème signalé à l'utilisateur : clé de message (ui.json, préfixe « pairings.problem. ») et
-/// arguments ; pour une cabale, son numéro (à partir de 0) et, le cas échéant, le problème de
-/// légalité (messages « legality. » du constructeur).
+/// Problem reported to the user: message key (ui.json, "pairings.problem." prefix) and arguments;
+/// for a cabal, its number (from 0) and, where applicable, the legality problem (the builder's
+/// "legality." messages).
 /// </summary>
 public sealed record Problem(string Key, IReadOnlyList<string>? Args = null, int? Cabal = null, LegalityIssue? Legality = null)
 {
@@ -14,15 +14,15 @@ public sealed record Problem(string Key, IReadOnlyList<string>? Args = null, int
 }
 
 /// <summary>
-/// Règles du tournoi : chaque opération vérifie qu'elle est permise (phase, résultats saisis…)
-/// et ne modifie le tournoi que si c'est le cas. Renvoie null, ou le problème qui l'empêche.
+/// Tournament rules: each operation checks that it is allowed (phase, results entered…) and only
+/// changes the tournament if so. Returns null, or the problem that prevents it.
 /// </summary>
 public static class TournamentRules
 {
     public const int MaxPlayers = 128, MaxNameLength = 80, MaxRounds = 10, MaxVictoryPoints = 999;
     public const int MinPasswordLength = 8, MaxPasswordLength = 128;
 
-    /// <summary>Mot de passe organisateur : absent, ou de longueur raisonnable.</summary>
+    /// <summary>Organizer password: missing, or of a reasonable length.</summary>
     public static Problem? CheckPassword(string? password) =>
         password is null || password.Length is >= MinPasswordLength and <= MaxPasswordLength
             ? null : Problem.Of("password", MinPasswordLength.ToString());
@@ -37,9 +37,9 @@ public static class TournamentRules
     }
 
     /// <summary>
-    /// Inscription (ou modification, <paramref name="playerId"/> donné) : nom libre et unique,
-    /// faction connue, nombre de cabales du tournoi, toutes de cette faction et légales
-    /// (mêmes règles que le constructeur).
+    /// Registration (or change, <paramref name="playerId"/> given): free and unique name, known
+    /// faction, the tournament's number of cabals, all of that faction and legal (same rules as
+    /// the builder).
     /// </summary>
     public static IReadOnlyList<Problem> CheckRegistration(Tournament t, CatalogService catalog,
         string? name, string? faction, IReadOnlyList<CabalExport>? cabals, string? playerId = null)
@@ -84,7 +84,7 @@ public static class TournamentRules
     public static Problem? CanEditRegistrations(Tournament t) =>
         t.Phase == TournamentPhase.Registration ? null : Problem.Of("registrationClosed");
 
-    /// <summary>Clôt les inscriptions et révèle les listes.</summary>
+    /// <summary>Closes the registrations and reveals the lists.</summary>
     public static Problem? Start(Tournament t)
     {
         if (t.Phase != TournamentPhase.Registration) return Problem.Of("alreadyStarted");
@@ -103,7 +103,7 @@ public static class TournamentRules
         return null;
     }
 
-    /// <summary>Apparie et ajoute la ronde suivante ; <see cref="CanPair"/> doit l'avoir permis.</summary>
+    /// <summary>Pairs and adds the next round; <see cref="CanPair"/> must have allowed it.</summary>
     public static PairingOutcome PairNext(Tournament t, Func<string, Alignment?> alignmentOf, int seed)
     {
         if (CanPair(t) is { } problem) throw new InvalidOperationException(problem.Key);
@@ -112,7 +112,7 @@ public static class TournamentRules
         return outcome;
     }
 
-    /// <summary>Retire la dernière ronde, tant qu'aucun résultat n'y est saisi.</summary>
+    /// <summary>Removes the last round, as long as no result is entered in it.</summary>
     public static Problem? UndoLastRound(Tournament t)
     {
         if (t.Phase == TournamentPhase.Finished) return Problem.Of("finished");
@@ -123,9 +123,9 @@ public static class TournamentRules
     }
 
     /// <summary>
-    /// Correction à la main d'un appariement : échange deux joueurs de la ronde en cours, assis à
-    /// des tables différentes sans résultat saisi (l'exempt compris : l'exemption change de
-    /// joueur). Une revanche n'est pas interdite, l'organisateur décide (voir <see cref="MetBefore"/>).
+    /// Manual correction of a pairing: swaps two players of the current round, seated at different
+    /// tables without a result entered (the bye included: the bye changes player). A rematch is not
+    /// forbidden, the organizer decides (see <see cref="MetBefore"/>).
     /// </summary>
     public static Problem? SwapPlayers(Tournament t, int roundNumber, string playerX, string playerY)
     {
@@ -148,15 +148,15 @@ public static class TournamentRules
         }
     }
 
-    /// <summary>Ronde (la plus récente) où deux joueurs se sont déjà affrontés avant la ronde donnée ; null sinon.</summary>
+    /// <summary>Round (the most recent) where two players already met before the given round; null otherwise.</summary>
     public static int? MetBefore(IEnumerable<Round> rounds, int beforeRound, string a, string b) =>
         rounds.Where(r => r.Number < beforeRound && r.Tables.Any(x => !x.IsBye && x.Involves(a) && x.Involves(b)))
               .Select(r => (int?)r.Number).LastOrDefault();
 
     /// <summary>
-    /// Scénarios des rondes, prévus à l'avance (modifiables jusqu'à la fin du tournoi) : un par
-    /// ronde au plus, agenda officiel ou scénario maison nommé (<see cref="Agendas.Other"/>), ou
-    /// null (pas encore choisi).
+    /// Scenarios of the rounds, planned in advance (can be changed until the end of the tournament):
+    /// at most one per round, official agenda or named custom scenario (<see cref="Agendas.Other"/>),
+    /// or null (not chosen yet).
     /// </summary>
     public static Problem? SetScenarios(Tournament t, IReadOnlyList<Scenario?>? scenarios)
     {
@@ -181,9 +181,9 @@ public static class TournamentRules
     }
 
     /// <summary>
-    /// PV d'une table (deux valeurs, ou aucune pour effacer le résultat). Facultatifs, pour les
-    /// statistiques : la cabale jouée par chacun (avec une seule cabale par joueur, c'est la
-    /// première ; avec deux, celle indiquée, ou inconnue), qui était J1, et la cause de la fin de partie.
+    /// VP of a table (two values, or none to clear the result). Optional, for the statistics: the
+    /// cabal played by each one (with a single cabal per player, it is the first; with two, the one
+    /// given, or unknown), who was P1, and the cause of the end of the game.
     /// </summary>
     public static Problem? SetResult(Tournament t, int roundNumber, int tableNumber, int? vpA, int? vpB,
         int? cabalA = null, int? cabalB = null, TableSide? first = null, GameEnd? end = null)
@@ -212,7 +212,7 @@ public static class TournamentRules
         return null;
     }
 
-    /// <summary>Termine le tournoi : la dernière ronde doit être complète.</summary>
+    /// <summary>Finishes the tournament: the last round must be complete.</summary>
     public static Problem? Finish(Tournament t)
     {
         if (t.Phase != TournamentPhase.Started) return Problem.Of(t.Phase == TournamentPhase.Finished ? "finished" : "notStarted");

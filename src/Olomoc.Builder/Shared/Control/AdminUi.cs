@@ -3,7 +3,7 @@ using Olomoc.Services;
 
 namespace Olomoc.Builder.Shared.Control;
 
-/// <summary>Mise en forme du panneau d'administration : dates à l'heure de l'appareil, tailles.</summary>
+/// <summary>Formatting for the admin panel: dates in the device's time zone, sizes.</summary>
 public static class AdminUi
 {
     public static string Date(DateTimeOffset? at) =>

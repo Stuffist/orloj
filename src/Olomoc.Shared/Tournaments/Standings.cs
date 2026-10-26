@@ -1,15 +1,15 @@
 namespace Olomoc.Tournaments;
 
-/// <summary>Ligne du classement d'un joueur.</summary>
+/// <summary>A player's line in the standings.</summary>
 public sealed record Standing(
     string PlayerId, int Rank, int Points, int Diff, int VpFor,
     int Played, int Wins, int Draws, int Losses, int Byes);
 
 /// <summary>
-/// Classement (feuille de ronde) : points de tournoi (victoire 3, nul 1, défaite 0), puis
-/// différence de PV cumulée, puis PV marqués. Un exempt (bye) vaut une victoire au Fiel 7-0 :
-/// 3 points, +7 de différence, 7 PV marqués. Seules les tables dont le résultat est saisi comptent.
-/// Les joueurs qui ont abandonné viennent après tous ceux encore en lice, classés entre eux de la même façon.
+/// Standings (round sheet): tournament points (win 3, draw 1, loss 0), then cumulative VP
+/// difference, then VP scored. A bye is worth a 7-0 win: 3 points, +7 difference, 7 VP scored.
+/// Only tables whose result is entered count. Players who dropped come after all those still in,
+/// ranked among themselves the same way.
 /// </summary>
 public static class Standings
 {
@@ -31,14 +31,14 @@ public static class Standings
 
         var order = t.Players.Select((p, i) => (lines[p.Id], i))
             .OrderBy(x => x.Item1.Dropped).ThenByDescending(x => x.Item1.Points).ThenByDescending(x => x.Item1.Diff)
-            .ThenByDescending(x => x.Item1.VpFor).ThenBy(x => x.i)       // égalité parfaite : ordre d'inscription
+            .ThenByDescending(x => x.Item1.VpFor).ThenBy(x => x.i)       // perfect tie: registration order
             .Select(x => x.Item1).ToList();
 
         var result = new List<Standing>(order.Count);
         for (var i = 0; i < order.Count; i++)
         {
             var l = order[i];
-            // Égalité sur les trois critères (entre joueurs en lice, ou entre abandons) : même rang (1, 2, 2, 4).
+            // Tie on the three criteria (between players still in, or between drops): same rank (1, 2, 2, 4).
             var rank = i > 0 && l.SameScore(order[i - 1]) ? result[i - 1].Rank : i + 1;
             result.Add(new Standing(l.Id, rank, l.Points, l.Diff, l.VpFor, l.Played, l.Wins, l.Draws, l.Losses, l.Byes));
         }

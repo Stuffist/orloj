@@ -10,17 +10,17 @@ using Microsoft.Extensions.FileProviders;
 namespace Olomoc.Server.CardCatalog;
 
 /// <summary>
-/// Référentiel servi au site : les fichiers JSON du dépôt (livrés dans l'image, base des PR)
-/// et, par-dessus, les modifications faites dans l'éditeur, au même format, dans DATA_DIR/catalog (seules
-/// les entrées modifiées ou créées). Fusion entrée par entrée (id ou code) :
+/// Card catalog served to the site: the repository's JSON files (shipped in the image, the base
+/// for PRs) and, on top of them, the changes made in the editor, in the same format, in
+/// DATA_DIR/catalog (only the changed or created entries). Merged entry by entry (id or code):
 /// <list type="bullet">
-/// <item><c>data/olomoc-catalog.json</c> : rouages (cogs) et équipements/dons (equipment) ;</item>
-/// <item><c>data/olomoc-factions.json</c> : factions (alignement, rouages membres) ;</item>
-/// <item><c>i18n/&lt;langue&gt;/cards.json</c> : textes (cogs, equipment, factions, ministries).</item>
+/// <item><c>data/olomoc-catalog.json</c>: cogs and equipment/boons (equipment);</item>
+/// <item><c>data/olomoc-factions.json</c>: factions (alignment, member cogs);</item>
+/// <item><c>i18n/&lt;language&gt;/cards.json</c>: texts (cogs, equipment, factions, ministries).</item>
 /// </list>
-/// Une entrée sans <c>"published": true</c> (brouillon) n'est servie qu'aux éditeurs et aux admins : retirée pour les
-/// autres, avec ses textes et sa place dans les factions. Au démarrage, une modification devenue
-/// identique au dépôt (fichiers exportés puis recommités) est retirée de DATA_DIR/catalog.
+/// An entry without <c>"published": true</c> (draft) is only served to editors and admins: removed
+/// for everyone else, with its texts and its place in the factions. At startup, a change that has
+/// become identical to the repository (files exported then committed) is removed from DATA_DIR/catalog.
 /// </summary>
 public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory, ILogger<CatalogStore> log)
 {
@@ -28,7 +28,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
     public const string CatalogPath = "data/olomoc-catalog.json", FactionsPath = "data/olomoc-factions.json";
     public static string CardsPath(string language) => $"i18n/{language}/cards.json";
 
-    /// <summary>Écriture des fichiers : comme ceux du dépôt (indentation de 2, accents en clair, fin de ligne \n).</summary>
+    /// <summary>File writing: like the repository's (indent of 2, unescaped accents, \n line endings).</summary>
     public static readonly JsonSerializerOptions WriteOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true,
@@ -38,7 +38,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
         Converters = { new JsonStringEnumConverter() },
     };
 
-    // Tableaux toujours écrits, même vides ; les autres, vides, sont omis (comme dans le dépôt).
+    // Arrays always written, even empty; other empty values are omitted (as in the repository).
     private static readonly HashSet<string> KeptEmptyArrays = ["abilities", "lifeLine", "ministries", "cogIds"];
 
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -50,15 +50,15 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
 
     public sealed record Served(byte[] Body, string ETag);
 
-    /// <summary>Référentiel modifié (éditeur) : référentiel du serveur à recharger.</summary>
+    /// <summary>Card catalog changed (editor): the server's catalog must be reloaded.</summary>
     public event Action? Changed;
 
     public IReadOnlyList<string> Languages => _languages;
 
-    /// <summary>Fichiers fusionnés : référentiel, factions, textes de chaque langue.</summary>
+    /// <summary>Merged files: catalog, factions, texts of each language.</summary>
     public IEnumerable<string> Paths => new[] { CatalogPath, FactionsPath }.Concat(_languages.Select(CardsPath));
 
-    // ---- Chargement ----
+    // ---- Loading ----
 
     public async Task InitializeAsync()
     {
@@ -73,13 +73,13 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
             {
                 if (JsonNode.Parse(await File.ReadAllTextAsync(file)) is JsonObject overlay) _overlay[path] = overlay;
             }
-            catch (JsonException e) { log.LogWarning(e, "Référentiel : {File} illisible, ignoré.", file); }
+            catch (JsonException e) { log.LogWarning(e, "Card catalog: {File} unreadable, ignored.", file); }
         }
-        // Modifications intégrées au dépôt depuis : retirées.
+        // Changes merged into the repository since: removed.
         foreach (var path in _overlay.Keys.ToList())
             if (Prune(path))
             {
-                log.LogInformation("Référentiel : modifications de {Path} déjà dans le dépôt, retirées de DATA_DIR/catalog.", path);
+                log.LogInformation("Card catalog: changes of {Path} already in the repository, removed from DATA_DIR/catalog.", path);
                 await WriteOverlayAsync(path, _overlay[path].Count > 0 ? Text(_overlay[path]) : null);
             }
         lock (_servedLock) _served.Clear();
@@ -94,15 +94,15 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
         return await reader.ReadToEndAsync();
     }
 
-    // ---- Lecture ----
+    // ---- Reading ----
 
-    /// <summary>Document fusionné (copie), brouillons compris.</summary>
+    /// <summary>Merged document (copy), drafts included.</summary>
     public JsonObject Merged(string path)
     {
         lock (_servedLock) return Merge(_base.GetValueOrDefault(path) ?? new JsonObject(), _overlay.GetValueOrDefault(path));
     }
 
-    /// <summary>Fichier servi (brouillons compris pour un éditeur ou un admin), ou null s'il n'est pas du référentiel.</summary>
+    /// <summary>Served file (drafts included for an editor or an admin), or null if it is not part of the catalog.</summary>
     public Served? Serve(string path, bool drafts)
     {
         if (!Paths.Contains(path)) return null;
@@ -116,7 +116,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
         }
     }
 
-    /// <summary>Entrées modifiées (dans le dépôt) ou nouvelles, par collection : cogs, equipment, factions.</summary>
+    /// <summary>Changed (in the repository) or new entries, by collection: cogs, equipment, factions.</summary>
     public Dictionary<string, Dictionary<string, string>> Status()
     {
         lock (_servedLock) return StatusUnlocked();
@@ -124,7 +124,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
 
     private Dictionary<string, Dictionary<string, string>> StatusUnlocked()
     {
-        // Entrée modifiée (dans son document ou ses textes) ; nouvelle si son document du dépôt ne l'a pas.
+        // Entry changed (in its document or its texts); new if its repository document does not have it.
         var status = new Dictionary<string, Dictionary<string, string>>();
         foreach (var (collection, main) in new[] { ("cogs", CatalogPath), ("equipment", CatalogPath), ("factions", FactionsPath) })
         {
@@ -136,7 +136,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
         return status;
     }
 
-    /// <summary>Fichiers fusionnés complets (brouillons compris), aux chemins du dépôt : à recommiter.</summary>
+    /// <summary>Complete merged files (drafts included), at the repository paths: to commit back.</summary>
     public byte[] ExportZip()
     {
         lock (_servedLock) return ExportZipUnlocked();
@@ -155,15 +155,15 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
         return buffer.ToArray();
     }
 
-    // ---- Modifications (éditeur) ----
+    // ---- Changes (editor) ----
 
-    /// <summary>Applique des modifications au référentiel (sous verrou), puis les enregistre.</summary>
+    /// <summary>Applies changes to the catalog (under lock), then saves them.</summary>
     public async Task EditAsync(Action<Editor> edit)
     {
         await _lock.WaitAsync();
         try
         {
-            // Modifications en mémoire sous le verrou des lectures ; fichiers écrits ensuite.
+            // Changes in memory under the reads' lock; files written afterwards.
             var files = new Dictionary<string, string?>();
             lock (_servedLock)
             {
@@ -183,7 +183,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
         Changed?.Invoke();
     }
 
-    /// <summary>Modifications d'entrées, appliquées par <see cref="EditAsync"/>.</summary>
+    /// <summary>Entry changes, applied by <see cref="EditAsync"/>.</summary>
     public sealed class Editor(CatalogStore store)
     {
         internal HashSet<string> Touched { get; } = new();
@@ -192,7 +192,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
 
         public JsonNode? Base(string path, string collection, string key) => Find(store._base.GetValueOrDefault(path)?[collection], key);
 
-        /// <summary>Remplace (ou ajoute) une entrée ; écrite sous sa forme du dépôt.</summary>
+        /// <summary>Replaces (or adds) an entry; written in its repository form.</summary>
         public void Set(string path, string collection, string key, JsonNode entry)
         {
             var overlay = store._overlay.TryGetValue(path, out var o) ? o : store._overlay[path] = new JsonObject();
@@ -212,7 +212,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
             Touched.Add(path);
         }
 
-        /// <summary>Retire la modification d'une entrée : celle du dépôt revient (ou l'entrée disparaît, si elle est nouvelle).</summary>
+        /// <summary>Removes the change of an entry: the repository's version comes back (or the entry disappears, if it is new).</summary>
         public void Revert(string path, string collection, string key)
         {
             if (store._overlay.GetValueOrDefault(path)?[collection] is not { } values) return;
@@ -222,7 +222,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
         }
     }
 
-    // ---- Fusion et filtre ----
+    // ---- Merge and filter ----
 
     private static JsonObject Merge(JsonObject baseDoc, JsonObject? overlay)
     {
@@ -249,7 +249,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
         return merged;
     }
 
-    // Brouillons retirés pour les visiteurs : entrées, textes, places dans les factions.
+    // Drafts removed for visitors: entries, texts, places in the factions.
     private void HideDrafts(string path, JsonObject doc)
     {
         var catalog = Merged(CatalogPath);
@@ -277,7 +277,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
             .Where(e => !(e["published"] is JsonValue v && v.TryGetValue<bool>(out var published) && published))
             .Select(KeyOf).ToHashSet();
 
-    // Retire les modifications identiques au dépôt ; true si quelque chose a changé.
+    // Removes the changes identical to the repository; true if something changed.
     private bool Prune(string path)
     {
         if (!_overlay.TryGetValue(path, out var overlay)) return false;
@@ -308,9 +308,9 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
         return changed;
     }
 
-    // ---- Outils ----
+    // ---- Helpers ----
 
-    /// <summary>Fichier de textes (dictionnaires par id) ; les autres sont des tableaux d'entrées.</summary>
+    /// <summary>Texts file (dictionaries by id); the others are arrays of entries.</summary>
     public static bool IsTexts(string path) => path.StartsWith("i18n/", StringComparison.Ordinal);
 
     private static string KeyOf(JsonNode entry) =>
@@ -337,7 +337,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
         _ => [],
     };
 
-    /// <summary>Entrée sous sa forme du dépôt : sans valeurs nulles ni tableaux vides facultatifs.</summary>
+    /// <summary>Entry in its repository form: no null values nor optional empty arrays.</summary>
     public static JsonNode? Clean(JsonNode? node)
     {
         if (node is JsonObject obj)
@@ -355,7 +355,7 @@ public sealed class CatalogStore(IFileProvider webRoot, string overlayDirectory,
 
     private string OverlayFile(string path) => Path.Combine(overlayDirectory, path.Replace('/', Path.DirectorySeparatorChar));
 
-    // Fichier des modifications d'un document ; null : plus aucune, fichier supprimé.
+    // Changes file of a document; null: no more changes, file deleted.
     private async Task WriteOverlayAsync(string path, string? text)
     {
         var file = OverlayFile(path);

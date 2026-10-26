@@ -5,9 +5,9 @@
 @inject LocalizationService L
 @inject IJSRuntime JS
 
-@* Catalogue des équipements et dons seul : fenêtre détachée depuis le constructeur
-   (?window=true, en-tête compact), à garder à côté pendant le choix des rouages. Elle suit la
-   cabale que le constructeur publie dans le localStorage (filtre « équipables seulement »). *@
+@* Equipment and boon catalog alone: window detached from the builder (?window=true, compact
+   header), to keep alongside while choosing cogs. It follows the cabal the builder publishes in
+   localStorage ("equippable only" filter). *@
 
 @if (!Catalog.Loaded || !L.Loaded)
 {
@@ -36,10 +36,10 @@ else
             _self = DotNetObjectReference.Create(this);
             _storageHandler = await JS.InvokeAsync<int>("olomoc.onStorage", _self, CabalDraft.ShareKey, nameof(OnDraftChanged));
         }
-        catch (JSException) { }            // stockage indisponible : catalogue sans filtre
+        catch (JSException) { }            // storage unavailable: catalog without filter
     }
 
-    /// <summary>Le constructeur a changé la cabale (autre fenêtre).</summary>
+    /// <summary>The builder changed the cabal (other window).</summary>
     [JSInvokable]
     public void OnDraftChanged(string? value)
     {

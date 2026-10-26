@@ -1,10 +1,10 @@
-// Service worker du site (portée « / » : l'app, ses sections /builder/, /pairings/ et /online/, et /_content/) :
-// l'app reste utilisable hors connexion. Réseau d'abord : en ligne, tout vient du serveur comme
-// sans service worker (un redéploiement est vu aussitôt) ; la copie gardée en cache ne sert que
-// si le réseau manque, ou tarde à répondre. Enregistré par olomoc.js.
+// The site's service worker (scope "/": the app, its /builder/, /pairings/ and /online/ sections, and /_content/):
+// the app stays usable offline. Network first: online, everything comes from the server as without a
+// service worker (a redeployment is seen at once); the cached copy is only used when the network is
+// missing, or slow to answer. Registered by olomoc.js.
 
 const CACHE = "olomoc";
-const NETWORK_TIMEOUT_MS = 4000;            // réseau trop lent (salle de jeu mal couverte) : copie en cache
+const NETWORK_TIMEOUT_MS = 4000;            // network too slow (game venue with poor coverage): cached copy
 const SECTIONS = ["builder", "pairings", "online"];
 
 self.addEventListener("install", () => self.skipWaiting());
@@ -17,11 +17,11 @@ self.addEventListener("fetch", event => {
     event.respondWith(networkFirst(event, cacheKey(url, request.mode === "navigate")));
 });
 
-// Fichiers du site (pas les blob: des téléchargements), hors API (tournois, statistiques :
-// données vivantes, jetons d'organisateur) et hub des parties en ligne (/hubs/).
+// The site's files (not the blob: of downloads), except the API (tournaments, statistics: live
+// data, organizer tokens) and the online games hub (/hubs/).
 const cacheable = url => url.protocol === location.protocol && url.origin === location.origin && !url.pathname.startsWith("/api/") && !url.pathname.startsWith("/hubs/");
 
-// Toutes les routes des sections renvoient le même index.html : une seule copie.
+// All section routes return the same index.html: a single copy.
 function cacheKey(url, page) {
     const section = url.pathname.split("/")[1];
     return page && SECTIONS.includes(section) ? `${url.origin}/index.html` : url.href;
@@ -33,22 +33,22 @@ async function networkFirst(event, key) {
         if (complete(response)) event.waitUntil(cache.put(key, response.clone()));
         return response;
     });
-    network.catch(() => { });                  // échec traité ci-dessous, ou copie en cache déjà rendue
+    network.catch(() => { });                  // failure handled below, or cached copy already returned
     try {
         return await Promise.race([network, timeout(NETWORK_TIMEOUT_MS)]);
     } catch {
-        // Pas de copie : on attend le réseau (ou son erreur), comme sans service worker.
+        // No copy: wait for the network (or its error), as without a service worker.
         return (await cache.match(key)) ?? network;
     }
 }
 
-// Réponses complètes du site seulement (pas les redirections ni les erreurs).
+// Complete responses from the site only (no redirects, no errors).
 const complete = response => response.ok && response.type === "basic";
 
 const timeout = ms => new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms));
 
-// Première visite : la page et les fichiers chargés avant que le service worker ne prenne la main
-// ne sont pas passés par lui. La page en envoie la liste (olomoc.js) : mis en cache à leur tour.
+// First visit: the page and the files loaded before the service worker takes over did not go
+// through it. The page sends their list (olomoc.js): they are cached in turn.
 self.addEventListener("message", event => {
     if (event.data?.type !== "loaded") return;
     event.waitUntil(cacheMissing([
@@ -66,6 +66,6 @@ async function cacheMissing(entries) {
         try {
             const response = await fetch(url);
             if (complete(response)) await cache.put(key, response);
-        } catch { }                             // réseau perdu entre-temps : ce sera pour une autre visite
+        } catch { }                             // network lost in the meantime: it will be for another visit
     }
 }

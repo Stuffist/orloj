@@ -7,13 +7,13 @@ using Olomoc.Server.Data;
 namespace Olomoc.Server.Hosting;
 
 /// <summary>
-/// Documents JSON enregistrés dans la base (table Documents), sous un code public de 6 caractères
-/// et une sorte propre à chaque store. Une seule instance du serveur : un verrou par document
-/// sérialise les modifications (lecture, changement, écriture).
+/// JSON documents stored in the database (Documents table), under a public 6-character code and a
+/// kind specific to each store. A single server instance: one lock per document serializes the
+/// changes (read, change, write).
 /// </summary>
 public class DocumentStore<T> where T : class, IStoredDocument, new()
 {
-    // Codes publics lisibles : ni 0/O, ni 1/I/L.
+    // Readable public codes: no 0/O, no 1/I/L.
     private const string Alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
     public const int CodeLength = 6;
 
@@ -37,17 +37,17 @@ public class DocumentStore<T> where T : class, IStoredDocument, new()
         return upper is { Length: CodeLength } && upper.All(Alphabet.Contains) ? upper : null;
     }
 
-    /// <summary>Nombre maximal de documents de cette sorte.</summary>
+    /// <summary>Maximum number of documents of this kind.</summary>
     public int MaxDocuments => _maxDocuments;
 
-    /// <summary>Codes des documents enregistrés.</summary>
+    /// <summary>Codes of the stored documents.</summary>
     public IEnumerable<string> Codes()
     {
         using var db = _db.CreateDbContext();
         return db.Documents.Where(d => d.Kind == _kind).Select(d => d.Code).ToList();
     }
 
-    /// <summary>Tous les documents de cette sorte (panneau d'administration) ; les illisibles sont ignorés.</summary>
+    /// <summary>All documents of this kind (admin panel); unreadable ones are skipped.</summary>
     public async Task<List<T>> ListAsync()
     {
         await using var db = await _db.CreateDbContextAsync();
@@ -59,7 +59,7 @@ public class DocumentStore<T> where T : class, IStoredDocument, new()
             {
                 if (JsonSerializer.Deserialize<T>(json, _json) is { } doc) docs.Add(doc);
             }
-            catch (JsonException) { /* document illisible : laissé tel quel, à examiner */ }
+            catch (JsonException) { /* unreadable document: left as is, to be examined */ }
         }
         return docs;
     }
@@ -72,7 +72,7 @@ public class DocumentStore<T> where T : class, IStoredDocument, new()
         return json is null ? null : JsonSerializer.Deserialize<T>(json, _json);
     }
 
-    /// <summary>Nouveau document sous un code inédit ; null si le nombre maximal est atteint.</summary>
+    /// <summary>New document under an unused code; null if the maximum number is reached.</summary>
     public async Task<T?> CreateAsync(Action<T> init)
     {
         await using var db = await _db.CreateDbContextAsync();
@@ -98,8 +98,8 @@ public class DocumentStore<T> where T : class, IStoredDocument, new()
     }
 
     /// <summary>
-    /// Modification sous verrou : <paramref name="change"/> reçoit le document à jour et dit s'il
-    /// faut l'enregistrer. Null si le document n'existe pas.
+    /// Change under lock: <paramref name="change"/> receives the up-to-date document and says whether
+    /// to save it. Null if the document does not exist.
     /// </summary>
     public async Task<TResult?> UpdateAsync<TResult>(string code, Func<T, (bool Save, TResult Result)> change) where TResult : class
     {
@@ -122,8 +122,8 @@ public class DocumentStore<T> where T : class, IStoredDocument, new()
     }
 
     /// <summary>
-    /// Suppression sous verrou, si <paramref name="decide"/> l'accepte (droits vérifiés sur le
-    /// document à jour). Null si le document n'existe pas.
+    /// Deletion under lock, if <paramref name="decide"/> accepts it (rights checked on the
+    /// up-to-date document). Null if the document does not exist.
     /// </summary>
     public async Task<TResult?> DeleteAsync<TResult>(string code, Func<T, (bool Delete, TResult Result)> decide) where TResult : class
     {
@@ -146,8 +146,8 @@ public class DocumentStore<T> where T : class, IStoredDocument, new()
     }
 
     /// <summary>
-    /// Supprime les documents sans modification depuis <paramref name="maxAge"/> que
-    /// <paramref name="removable"/> accepte ; renvoie leur nombre.
+    /// Deletes the documents unchanged since <paramref name="maxAge"/> that
+    /// <paramref name="removable"/> accepts; returns their number.
     /// </summary>
     public async Task<int> PurgeAsync(TimeSpan maxAge, Func<T, bool> removable)
     {
@@ -162,12 +162,12 @@ public class DocumentStore<T> where T : class, IStoredDocument, new()
             {
                 if (await DeleteAsync(code, doc => removable(doc) ? (true, Removed) : (false, Kept)) == Removed) removed++;
             }
-            catch (JsonException) { /* document illisible : laissé tel quel, à examiner */ }
+            catch (JsonException) { /* unreadable document: left as is, to be examined */ }
         }
         return removed;
     }
 
-    // Résultat de DeleteAsync quand la purge a supprimé le document (Kept sinon).
+    // DeleteAsync result when the purge deleted the document (Kept otherwise).
     private static readonly object Removed = new(), Kept = new();
 
     private T? Read(StoredDocumentRow row) => JsonSerializer.Deserialize<T>(row.Json, _json);

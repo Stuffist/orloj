@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Relecture des exports JSON et cabales sauvegardées sur l'appareil.</summary>
+/// <summary>Reading back JSON exports and cabals saved on the device.</summary>
 public class CabalSaveTests
 {
     private static async Task<(AppData D, CabalExport Cabal)> Export(string? name = "Ma Cabale")
@@ -17,7 +17,7 @@ public class CabalSaveTests
     }
 
     [Fact]
-    public async Task Export_relu_a_l_identique()
+    public async Task Export_read_back_identically()
     {
         var (d, cabal) = await Export();
         var json = new CabalExporter(d.L).ToJson(cabal.Name, "MAISEL",
@@ -44,10 +44,10 @@ public class CabalSaveTests
     [InlineData("{\"format\":\"olomoc-cabal\",\"version\":2,\"language\":\"fr\",\"cogs\":[]}")]
     [InlineData("{\"format\":\"olomoc-cabal\",\"version\":1,\"language\":\"fr\"}")]
     [InlineData("{\"format\":\"olomoc-cabal\",\"version\":1,\"language\":\"fr\",\"cogs\":[{\"rank\":1}]}")]
-    public void Fichier_qui_n_est_pas_un_export_refuse(string? json) => Assert.Null(CabalExporter.FromJson(json));
+    public void File_that_is_not_an_export_refused(string? json) => Assert.Null(CabalExporter.FromJson(json));
 
     [Fact]
-    public async Task Cartes_introuvables_ecartees_sous_leur_nom_enregistre()
+    public async Task Cards_not_found_set_aside_under_their_recorded_name()
     {
         var (d, cabal) = await Export();
         var slots = cabal.Cogs.ToList();
@@ -57,17 +57,17 @@ public class CabalSaveTests
 
         Assert.Null(resolved.Faction);
         Assert.Null(resolved.Cogs[0]);
-        Assert.Null(resolved.Equipment[0]);                     // carte du rouage disparu écartée avec lui
+        Assert.Null(resolved.Equipment[0]);                     // card of the missing cog set aside with it
         Assert.Equal("1R01", resolved.Cogs[2]?.Id);
         Assert.Null(resolved.Equipment[2]);
         Assert.Equal(new[] { "Faction disparue", "Rouage disparu", "Harmonium", "Carte disparue" }, resolved.Missing);
     }
 
     [Fact]
-    public async Task Rouage_place_selon_son_rang_et_rang_deja_pris_ecarte()
+    public async Task Cog_placed_by_its_rank_and_rank_already_taken_set_aside()
     {
         var (d, cabal) = await Export();
-        // Rangs enregistrés faux et deux rouages de rang 2 : le rang du référentiel fait foi.
+        // Wrong recorded ranks and two rank 2 cogs: the catalog's rank prevails.
         var slots = new List<CabalSlot>
         {
             new(3, new IdName("2R04", "Hynek Novotny"), null),
@@ -79,7 +79,7 @@ public class CabalSaveTests
     }
 
     [Fact]
-    public async Task Sauvegarde_remplace_le_meme_nom_et_survit_au_rechargement()
+    public async Task Save_replaces_the_same_name_and_survives_a_reload()
     {
         var (_, cabal) = await Export();
         var storage = new FakeStorage();
@@ -110,7 +110,7 @@ public class CabalSaveTests
     }
 
     [Fact]
-    public async Task Sauvegarde_sans_nom_refusee()
+    public async Task Save_without_a_name_refused()
     {
         var (_, cabal) = await Export(name: null);
         var library = new CabalLibrary(new FakeStorage());
@@ -118,7 +118,7 @@ public class CabalSaveTests
     }
 
     [Fact]
-    public async Task Stockage_illisible_ignore()
+    public async Task Unreadable_storage_ignored()
     {
         var storage = new FakeStorage();
         storage.Items["olomoc.cabals"] = "{ cassé";
@@ -127,7 +127,7 @@ public class CabalSaveTests
         Assert.Empty(library.Cabals);
     }
 
-    /// <summary>localStorage en mémoire.</summary>
+    /// <summary>In-memory localStorage.</summary>
     private sealed class FakeStorage : IJSRuntime
     {
         public Dictionary<string, string> Items { get; } = new();

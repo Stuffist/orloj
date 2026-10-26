@@ -5,8 +5,8 @@ using Olomoc.Server.Data;
 namespace Olomoc.Server.Admin;
 
 /// <summary>
-/// Journal des actions des admins (table AdminActions) : qui, quoi, sur quoi, quand. Les entrées
-/// de plus d'un an sont supprimées à chaque écriture.
+/// Log of the admins' actions (AdminActions table): who, what, on what, when. Entries older than
+/// a year are deleted on every write.
 /// </summary>
 public sealed class AdminAudit(IDbContextFactory<OlomocDb> factory)
 {
@@ -23,7 +23,7 @@ public sealed class AdminAudit(IDbContextFactory<OlomocDb> factory)
         await db.AdminActions.Where(a => a.At < limit).ExecuteDeleteAsync();
     }
 
-    /// <summary>Les plus récentes d'abord.</summary>
+    /// <summary>Most recent first.</summary>
     public async Task<List<AdminAction>> RecentAsync(int count = Shown)
     {
         await using var db = await factory.CreateDbContextAsync();

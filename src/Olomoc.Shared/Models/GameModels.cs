@@ -2,10 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace Olomoc.Models;
 
-// État d'une partie en cours (mode partie), sauvegardé tel quel dans le navigateur.
-// Neutre en langue : ids du référentiel, textes résolus à l'affichage.
+// State of a game in progress (play mode), saved as is in the browser.
+// Language-neutral: card catalog ids, texts resolved at display time.
 
-/// <summary>Statut de Noirceur d'un rouage (LDR p.17).</summary>
+/// <summary>Darkness status of a cog (rulebook p.17).</summary>
 public enum DarknessStatus { Sane, Tainted, Corrupted }
 
 public sealed class GameState
@@ -15,11 +15,11 @@ public sealed class GameState
     public int Version { get; set; } = CurrentVersion;
     public string? Name { get; set; }
     public string? Faction { get; set; }
-    public int Cycle { get; set; } = 1;          // 1 à 4 ; 5 = partie terminée
-    public int Bile { get; set; }                // 3 = partie perdue
-    public int Hunt { get; set; }                // niveau de traque (pions de la PoliSec) ; 3 = fin de partie
+    public int Cycle { get; set; } = 1;          // 1 to 4; 5 = game over
+    public int Bile { get; set; }                // 3 = game lost
+    public int Hunt { get; set; }                // hunt level (PoliSec tokens); 3 = end of the game
     public int VictoryPoints { get; set; }
-    public List<CogState> Cogs { get; set; } = new();   // ordre d'affichage : rang 3, 2, 1
+    public List<CogState> Cogs { get; set; } = new();   // display order: rank 3, 2, 1
 }
 
 public sealed class CogState
@@ -27,33 +27,33 @@ public sealed class CogState
     public int Rank { get; set; }
     public string CogId { get; set; } = "";
     public string? EquipmentId { get; set; }
-    public string? ExtraEquipmentId { get; set; }     // carte supplémentaire (Medic Ruzicka)
+    public string? ExtraEquipmentId { get; set; }     // extra card (Medic Ruzicka)
 
-    /// <summary>Ligne de vie de la partie : celle de la carte, précédée des PV ajoutés par ses équipements/dons.</summary>
+    /// <summary>Life line of the game: the card's, preceded by the HP added by its equipment/boons.</summary>
     public List<HealthPointType> LifeLine { get; set; } = new();
 
     /// <summary>
-    /// PV cochés, un par PV de la ligne de vie. Les blessures cochent de gauche à droite, mais un
-    /// PV peut être coché seul (correction, ou capacité comme celle de Jakub Myasnik : « cochez
-    /// 1 PV teinté »).
+    /// Marked HP, one per HP of the life line. Wounds mark from left to right, but an HP can be
+    /// marked on its own (correction, or an ability like Jakub Myasnik's: "mark 1 tainted
+    /// HP").
     /// </summary>
     public List<bool> Checked { get; set; } = new();
 
-    /// <summary>Ancien format (nombre de PV cochés depuis la gauche) : relu par <see cref="Normalize"/>, jamais écrit.</summary>
+    /// <summary>Old format (number of HP marked from the left): read by <see cref="Normalize"/>, never written.</summary>
     [JsonPropertyName("marked"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int LegacyMarked { get; set; }
 
-    /// <summary>PV standards renforcés jusqu'à la fin du cycle (Anabolisant…).</summary>
+    /// <summary>Standard HP reinforced until the end of the cycle (Anabolisant…).</summary>
     public bool Fortified { get; set; }
 
-    public int Darkness { get; set; }            // 0 à 3
+    public int Darkness { get; set; }            // 0 to 3
     public bool Stunned { get; set; }
-    public int Actions { get; set; }             // pions d'action restants ce cycle
+    public int Actions { get; set; }             // action tokens left this cycle
 
-    /// <summary>Utilisations des capacités limitées par partie, par clé de capacité.</summary>
+    /// <summary>Uses of the abilities limited per game, by ability key.</summary>
     public Dictionary<string, int> Uses { get; set; } = new();
 
-    /// <summary>Nombre de PV cochés.</summary>
+    /// <summary>Number of marked HP.</summary>
     [JsonIgnore] public int Marked => Checked.Take(LifeLine.Count).Count(c => c);
     [JsonIgnore] public bool OutOfAction => Marked >= LifeLine.Count;
     [JsonIgnore] public int Remaining => Math.Max(0, LifeLine.Count - Marked);
@@ -66,12 +66,12 @@ public sealed class CogState
         Checked[i] = on;
     }
 
-    /// <summary>PV non cochés, de gauche à droite.</summary>
+    /// <summary>Unmarked HP, from left to right.</summary>
     public IEnumerable<int> Unchecked() => Enumerable.Range(0, LifeLine.Count).Where(i => !IsChecked(i));
 
     /// <summary>
-    /// Un booléen par PV de la ligne de vie ; une partie de l'ancien format reprend ses PV cochés
-    /// depuis la gauche.
+    /// One boolean per HP of the life line; a game in the old format gets back its HP marked from
+    /// the left.
     /// </summary>
     public void Normalize()
     {
@@ -90,17 +90,17 @@ public sealed class CogState
         _ => DarknessStatus.Corrupted,
     };
 
-    /// <summary>Type effectif d'un PV : un PV standard est renforcé tant que <see cref="Fortified"/>.</summary>
+    /// <summary>Effective type of an HP: a standard HP is reinforced while <see cref="Fortified"/>.</summary>
     public HealthPointType PointAt(int i) =>
         Fortified && LifeLine[i] == HealthPointType.S ? HealthPointType.R : LifeLine[i];
 }
 
-/// <summary>Bilan de blessures subies, pour l'aperçu et le compte rendu.</summary>
+/// <summary>Summary of the wounds taken, for the preview and the report.</summary>
 public sealed record WoundOutcome(
-    int Marked,          // PV cochés
-    bool Protected,      // une blessure de moins grâce à un PV renforcé restant (attaque)
-    int TaintedMarked,   // PV teintés cochés : un pion de Noirceur chacun
-    bool Stopped,        // attaque arrêtée par un PV teinté
-    int BileGained,      // pions de Noirceur au-delà de 3, passés sur la carte Fiel
+    int Marked,          // marked HP
+    bool Protected,      // one wound fewer thanks to a remaining reinforced HP (attack)
+    int TaintedMarked,   // tainted HP marked: one Darkness token each
+    bool Stopped,        // attack stopped by a tainted HP
+    int BileGained,      // Darkness tokens beyond 3, moved to the Bile card
     bool OutOfAction,
-    bool HuntGained);    // rouage mis hors de combat : +1 traque
+    bool HuntGained);    // cog taken out of action: +1 hunt

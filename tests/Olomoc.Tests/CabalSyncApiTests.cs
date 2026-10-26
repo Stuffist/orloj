@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Cabales du compte (/api/account/cabals/sync) : à nom égal, le plus récent l'emporte.</summary>
+/// <summary>Account cabals (/api/account/cabals/sync): for the same name, the most recent one wins.</summary>
 public sealed class CabalSyncApiTests : IDisposable
 {
     private readonly string _data = Path.Combine(Path.GetTempPath(), "olomoc-cabals-" + Guid.NewGuid().ToString("N"));
@@ -37,7 +37,7 @@ public sealed class CabalSyncApiTests : IDisposable
     private static CabalChange Save(string name, DateTimeOffset at, string cog = "3R06") => new(name, at, Cabal(name, cog));
     private static CabalChange Delete(string name, DateTimeOffset at) => new(name, at, null);
 
-    /// <summary>Nouvel appareil connecté au compte (créé s'il n'existe pas).</summary>
+    /// <summary>New device signed in to the account (created if it does not exist).</summary>
     private async Task<HttpClient> Device(string user = "Bohdan")
     {
         var http = _server.CreateClient();
@@ -58,19 +58,19 @@ public sealed class CabalSyncApiTests : IDisposable
     private static string[] Names(CabalSyncResult r) => r.Cabals.Select(c => c.Cabal.Name!).ToArray();
 
     [Fact]
-    public async Task Sans_session_refuse()
+    public async Task Refused_without_a_session()
     {
         var response = await _server.CreateClient().PostAsJsonAsync("/api/account/cabals/sync", new CabalSyncRequest([]), TournamentJson.Options);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task Sauvegardee_sur_un_appareil_retrouvee_sur_l_autre()
+    public async Task Saved_on_one_device_found_on_the_other()
     {
         var phone = await Device();
         var saved = await Sync(phone, Save("Ma cabale", T0), Save("Autre", T0.AddMinutes(1)));
         Assert.Equal(2, saved.Applied);
-        Assert.Equal(["Autre", "Ma cabale"], Names(saved));                 // la plus récente d'abord
+        Assert.Equal(["Autre", "Ma cabale"], Names(saved));                 // most recent first
 
         var computer = await Device();
         var read = await Sync(computer);
@@ -79,18 +79,18 @@ public sealed class CabalSyncApiTests : IDisposable
         Assert.Equal(T0, read.Cabals[1].SavedAt);
         Assert.False(read.Cabals[0].Pending);
 
-        // Un autre compte ne voit rien.
+        // Another account sees nothing.
         Assert.Empty((await Sync(await Device("Autre"))).Cabals);
     }
 
     [Fact]
-    public async Task A_nom_egal_le_plus_recent_l_emporte()
+    public async Task For_the_same_name_the_most_recent_wins()
     {
         var phone = await Device();
         var computer = await Device();
         await Sync(phone, Save("Ma cabale", T0.AddHours(2), "3R06"));
 
-        // Plus ancienne (même nom, autre casse) : ignorée.
+        // Older (same name, different case): ignored.
         var older = await Sync(computer, Save("MA CABALE ", T0.AddHours(1), "3R05"));
         Assert.Equal(0, older.Applied);
         Assert.Equal("3R06", older.Cabals.Single().Cabal.Cogs[0].Cog.Id);
@@ -101,7 +101,7 @@ public sealed class CabalSyncApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Suppression_propagee_et_pas_de_retour_d_une_version_plus_ancienne()
+    public async Task Deletion_propagated_and_no_return_of_an_older_version()
     {
         var phone = await Device();
         var computer = await Device();
@@ -109,17 +109,17 @@ public sealed class CabalSyncApiTests : IDisposable
         Assert.Empty((await Sync(computer, Delete("Ma cabale", T0.AddHours(1)))).Cabals);
         Assert.Empty((await Sync(phone)).Cabals);
 
-        // L'appareil hors ligne renvoie sa vieille version : la suppression, plus récente, tient.
+        // The offline device sends back its old version: the deletion, more recent, holds.
         Assert.Empty((await Sync(phone, Save("Ma cabale", T0.AddMinutes(30)))).Cabals);
-        // Une sauvegarde plus récente la fait revenir.
+        // A more recent save brings it back.
         Assert.Single((await Sync(phone, Save("Ma cabale", T0.AddHours(2)))).Cabals);
-        // Suppression d'une cabale que le compte n'a jamais eue : retenue aussi.
+        // Deletion of a cabal the account never had: kept too.
         await Sync(phone, Delete("Fantôme", T0.AddHours(5)));
         Assert.Equal(["Ma cabale"], Names(await Sync(computer, Save("Fantôme", T0.AddHours(4)))));
     }
 
     [Fact]
-    public async Task Cabales_invalides_et_trop_de_changements_refuses()
+    public async Task Invalid_cabals_and_too_many_changes_refused()
     {
         var phone = await Device();
         var result = await Sync(phone, new CabalChange("Quatre", T0, Cabal("Quatre", cogs: 4)), new CabalChange("  ", T0, Cabal(" ")), Save("Bonne", T0));
@@ -133,7 +133,7 @@ public sealed class CabalSyncApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Deux_cents_cabales_au_plus()
+    public async Task Two_hundred_cabals_at_most()
     {
         var phone = await Device();
         for (var i = 0; i < CabalSyncRules.MaxCabals; i += CabalSyncRules.MaxChanges)
@@ -143,19 +143,19 @@ public sealed class CabalSyncApiTests : IDisposable
         Assert.Equal(("cabalLimit", "De trop"), (refused.Problems.Single().Key, refused.Problems.Single().Args![1]));
         Assert.Equal(CabalSyncRules.MaxCabals, refused.Cabals.Count);
 
-        // Remplacer une cabale existante reste possible ; en supprimer une libère une place.
+        // Replacing an existing cabal is still possible; deleting one frees a place.
         Assert.Equal(1, (await Sync(phone, Save("C0", T0.AddHours(1), "3R05"))).Applied);
         await Sync(phone, Delete("C1", T0.AddHours(1)));
         Assert.Equal(1, (await Sync(phone, Save("De trop", T0.AddHours(1)))).Applied);
     }
 
     [Fact]
-    public async Task Compte_supprime_ses_cabales_aussi()
+    public async Task Deleted_account_deletes_its_cabals_too()
     {
         var phone = await Device();
         await Sync(phone, Save("Ma cabale", T0));
         (await phone.PostAsJsonAsync("/api/account/delete", new DeleteAccountRequest("motdepasse"), TournamentJson.Options)).EnsureSuccessStatusCode();
-        Assert.Empty((await Sync(await Device())).Cabals);                   // même pseudo, nouveau compte
+        Assert.Empty((await Sync(await Device())).Cabals);                   // same username, new account
         using var db = (await TestDb.OpenAsync(_data)).CreateDbContext();
         Assert.Empty(db.SavedCabals);
     }

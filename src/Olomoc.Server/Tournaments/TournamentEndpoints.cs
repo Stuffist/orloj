@@ -4,16 +4,16 @@ using Olomoc.Tournaments;
 namespace Olomoc.Server.Tournaments;
 
 /// <summary>
-/// API des tournois (/api/tournaments). Lecture publique ; inscription par quiconque a le code ;
-/// modification d'une inscription par son joueur (jeton joueur) ou l'organisateur ; tout le
-/// reste par l'organisateur (jeton organisateur). Les règles sont celles de TournamentRules.
+/// Tournaments API (/api/tournaments). Public reading; registration by anyone who has the code;
+/// a registration changed by its player (player token) or the organizer; everything else by the
+/// organizer (organizer token). The rules are those of TournamentRules.
 /// </summary>
 public static class TournamentEndpoints
 {
     public const string WritePolicy = "tournament-write", CreatePolicy = "tournament-create", LoginPolicy = "tournament-login",
         ReadPolicy = "tournament-read";
 
-    /// <summary>Sessions ouvertes par mot de passe, par tournoi : au-delà, les plus anciennes sont fermées.</summary>
+    /// <summary>Sessions opened with the password, per tournament: beyond that, the oldest are closed.</summary>
     private const int MaxSessions = 20;
 
     public static void MapTournaments(this WebApplication app)
@@ -44,7 +44,7 @@ public static class TournamentEndpoints
             Organizer(code, ctx, store, t => Done(TournamentRules.SetResult(t, round, table, body.VpA, body.VpB, body.CabalA, body.CabalB, body.First, body.End), status: 400)));
         write.MapPut("scenarios", (string code, ScenariosRequest body, HttpContext ctx, TournamentStore store) =>
             Organizer(code, ctx, store, t => Done(TournamentRules.SetScenarios(t, body.Scenarios), status: 400)));
-        // Fin du tournoi : archive anonyme pour les statistiques (s'il est compté).
+        // End of the tournament: anonymous archive for the statistics (if it is counted).
         write.MapPost("finish", (string code, HttpContext ctx, TournamentStore store, StatsArchive stats) =>
             Organizer(code, ctx, store, t =>
             {
@@ -52,7 +52,7 @@ public static class TournamentEndpoints
                 if (result.Item1) stats.Update(t, DateTimeOffset.UtcNow);
                 return result;
             }));
-        // Compter ou non le tournoi dans les statistiques, à tout moment.
+        // Count the tournament in the statistics or not, at any time.
         write.MapPut("stats", (string code, StatsRequest body, HttpContext ctx, TournamentStore store, StatsArchive stats) =>
             Organizer(code, ctx, store, t =>
             {
@@ -65,7 +65,7 @@ public static class TournamentEndpoints
             .RequireRateLimiting(ReadPolicy);
     }
 
-    // ---- Création et lecture ----
+    // ---- Creation and reading ----
 
     private static async Task<IResult> Create(CreateTournamentRequest body, TournamentStore store)
     {
@@ -97,7 +97,7 @@ public static class TournamentEndpoints
         return Results.Json(View(t, IsOrganizer(ctx, t), PlayerOf(ctx, t)), TournamentJson.Options);
     }
 
-    /// <summary>Tournoi complet (sauvegarde de l'organisateur), sans les secrets.</summary>
+    /// <summary>Complete tournament (organizer's backup), without the secrets.</summary>
     private static async Task<IResult> Export(string code, HttpContext ctx, TournamentStore store)
     {
         if (await store.LoadAsync(code) is not { } t) return NotFound();
@@ -109,9 +109,9 @@ public static class TournamentEndpoints
         return Results.Json(t, TournamentJson.Options);
     }
 
-    // ---- Accès organisateur sur un autre appareil : mot de passe ----
+    // ---- Organizer access on another device: password ----
 
-    /// <summary>Mot de passe juste : nouveau jeton organisateur pour cet appareil (le lien d'administration reste valable).</summary>
+    /// <summary>Right password: new organizer token for this device (the admin link stays valid).</summary>
     private static async Task<IResult> Login(string code, PasswordRequest body, TournamentStore store) =>
         await store.UpdateAsync(code, t =>
         {
@@ -124,8 +124,8 @@ public static class TournamentEndpoints
         }) ?? NotFound();
 
     /// <summary>
-    /// Définit, change ou retire (vide) le mot de passe ; les sessions ouvertes par l'ancien sont
-    /// fermées, sauf celle de l'appareil qui fait le changement.
+    /// Sets, changes or removes (empty) the password; the sessions opened with the old one are
+    /// closed, except the one of the device making the change.
     /// </summary>
     private static (bool, IResult) SetPassword(Tournament t, string? password, string? currentToken)
     {
@@ -138,8 +138,7 @@ public static class TournamentEndpoints
 
     private static string? NullIfEmpty(string? s) => string.IsNullOrEmpty(s) ? null : s;
 
-    /// <summary>Suppression définitive du tournoi par son organisateur.</summary>
-    /// <summary>Suppression par l'organisateur : le tournoi et son archive de statistiques.</summary>
+    /// <summary>Deletion by the organizer: the tournament and its statistics archive.</summary>
     private static async Task<IResult> Delete(string code, HttpContext ctx, TournamentStore store, StatsArchive stats) =>
         await store.DeleteAsync(code, t =>
         {
@@ -148,7 +147,7 @@ public static class TournamentEndpoints
             return (true, Results.NoContent());
         }) ?? NotFound();
 
-    // ---- Inscriptions ----
+    // ---- Registrations ----
 
     private static async Task<IResult> Register(string code, RegistrationRequest body, TournamentStore store, ServerCatalog catalog)
     {
@@ -203,19 +202,19 @@ public static class TournamentEndpoints
     private static Task<IResult> SetDropped(string code, string id, DroppedRequest body, HttpContext ctx, TournamentStore store) =>
         Organizer(code, ctx, store, t => Done(TournamentRules.SetDropped(t, id, body.Dropped)));
 
-    // ---- Rondes ----
+    // ---- Rounds ----
 
     private static Task<IResult> PairNext(string code, HttpContext ctx, TournamentStore store, ServerCatalog catalog) =>
         OrganizerAsync(code, ctx, store, async () => await catalog.GetAsync(), (t, cat) =>
         {
             if (TournamentRules.CanPair(t) is { } problem) return (false, Problems(new[] { problem }, 409));
-            // Graine tirée à chaque fois : annuler puis réapparier donne un nouveau tirage.
+            // Seed drawn every time: undoing then pairing again gives a new draw.
             var outcome = TournamentRules.PairNext(t, cat.AlignmentOf, RandomNumberGenerator.GetInt32(int.MaxValue));
             return (true, Results.Json(new PairingSummary(outcome.Round.Number, outcome.Rematches, outcome.SameAlignment),
                 TournamentJson.Options, statusCode: 201));
         });
 
-    // ---- Outils ----
+    // ---- Helpers ----
 
     private static TournamentView View(Tournament t, bool organizer, Player? me) => new(
         t.Code, t.Name, t.Date, t.RoundCount, t.CabalsPerPlayer, t.Pairing, t.AvoidSameAlignment, t.Phase,
@@ -223,7 +222,7 @@ public static class TournamentEndpoints
             t.Phase != TournamentPhase.Registration || organizer || p == me ? p.Cabals : null)).ToList(),
         t.Rounds, Standings.Compute(t), organizer, me?.Id, t.OrganizerPasswordHash.Length > 0, t.ExcludeFromStats, t.Scenarios);
 
-    // Jeton du lien d'administration, ou d'une session ouverte par mot de passe.
+    // Token of the admin link, or of a session opened with the password.
     private static bool IsOrganizer(HttpContext ctx, Tournament t)
     {
         string? token = ctx.Request.Headers[TournamentHeaders.Organizer];
@@ -243,7 +242,7 @@ public static class TournamentEndpoints
         return id;
     }
 
-    // Opération réservée à l'organisateur, enregistrée si elle réussit.
+    // Operation reserved to the organizer, saved if it succeeds.
     private static async Task<IResult> Organizer(string code, HttpContext ctx, TournamentStore store, Func<Tournament, (bool, IResult)> action) =>
         await store.UpdateAsync(code, t => IsOrganizer(ctx, t) ? action(t) : (false, Forbidden())) ?? NotFound();
 

@@ -4,9 +4,9 @@ using Olomoc.Models;
 
 namespace Olomoc.Tournaments;
 
-// Échanges entre l'app /pairings/ et l'API /api/tournaments (Olomoc.Server).
+// Exchanges between the /pairings/ app and the /api/tournaments API (Olomoc.Server).
 
-/// <summary>Format JSON commun au serveur (API, fichiers) et au client : camelCase, énumérations en texte.</summary>
+/// <summary>JSON format shared by the server (API, files) and the client: camelCase, enums as text.</summary>
 public static class TournamentJson
 {
     public static readonly JsonSerializerOptions Options = Configure(new JsonSerializerOptions(JsonSerializerDefaults.Web));
@@ -19,46 +19,46 @@ public static class TournamentJson
     }
 }
 
-/// <summary>En-têtes porteurs des jetons (organisateur, joueur).</summary>
+/// <summary>Headers carrying the tokens (organizer, player).</summary>
 public static class TournamentHeaders
 {
     public const string Organizer = "X-Olomoc-Organizer";
     public const string Player = "X-Olomoc-Player";
 }
 
-/// <summary>Mot de passe facultatif : donne l'administration sur un autre appareil, sans le lien.</summary>
+/// <summary>Optional password: gives admin access on another device, without the link.</summary>
 public sealed record CreateTournamentRequest(
     string Name, DateOnly? Date, int RoundCount, int CabalsPerPlayer, PairingMode Pairing, bool AvoidSameAlignment,
     string? Password = null, bool ExcludeFromStats = false);
 
-/// <summary>Jeton organisateur : renvoyé une seule fois, à garder par l'organisateur.</summary>
+/// <summary>Organizer token: returned only once, to be kept by the organizer.</summary>
 public sealed record TournamentCreated(string Code, string OrganizerToken);
 
 public sealed record RegistrationRequest(string Name, string Faction, List<CabalExport> Cabals);
 
-/// <summary>Jeton joueur : pour modifier ou retirer son inscription tant qu'elles sont ouvertes.</summary>
+/// <summary>Player token: to change or withdraw one's registration while registrations are open.</summary>
 public sealed record PlayerRegistered(string PlayerId, string PlayerToken);
 
 /// <summary>
-/// PV de chacun et cabale jouée (index), exigée avec deux cabales par joueur ; facultatifs : J1,
-/// cause de la fin de partie.
+/// VP of each player and cabal played (index), required with two cabals per player; optional: P1,
+/// cause of the end of the game.
 /// </summary>
 public sealed record ResultRequest(int? VpA, int? VpB, int? CabalA = null, int? CabalB = null,
     TableSide? First = null, GameEnd? End = null);
 
-/// <summary>Scénario de chaque ronde (index = n° de ronde − 1), null si pas encore choisi.</summary>
+/// <summary>Scenario of each round (index = round number − 1), null if not chosen yet.</summary>
 public sealed record ScenariosRequest(List<Scenario?> Scenarios);
 
 public sealed record StatsRequest(bool Exclude);
 
 public sealed record PasswordRequest(string? Password);
 
-/// <summary>Jeton organisateur ouvert par le mot de passe, propre à l'appareil.</summary>
+/// <summary>Organizer token opened with the password, specific to the device.</summary>
 public sealed record OrganizerLogin(string OrganizerToken);
 
 public sealed record DroppedRequest(bool Dropped);
 
-/// <summary>Deux joueurs de la ronde en cours à échanger (correction d'un appariement).</summary>
+/// <summary>Two players of the current round to swap (correction of a pairing).</summary>
 public sealed record SwapRequest(string First, string Second);
 
 public sealed record ProblemList(IReadOnlyList<Problem> Problems);
@@ -66,8 +66,8 @@ public sealed record ProblemList(IReadOnlyList<Problem> Problems);
 public sealed record PairingSummary(int Round, int Rematches, int SameAlignment);
 
 /// <summary>
-/// Tournoi tel que le voit le demandeur : listes masquées tant que les inscriptions sont ouvertes.
-/// <see cref="HasPassword"/> : l'administration peut s'ouvrir par mot de passe.
+/// Tournament as the requester sees it: lists hidden while registrations are open.
+/// <see cref="HasPassword"/>: admin access can be opened with a password.
 /// </summary>
 public sealed record TournamentView(
     string Code, string Name, DateOnly? Date, int RoundCount, int CabalsPerPlayer,
@@ -81,5 +81,5 @@ public sealed record TournamentView(
     public Round? LastRound => Rounds.Count == 0 ? null : Rounds[^1];
 }
 
-/// <summary>Joueur ; <see cref="Cabals"/> null tant qu'elles sont masquées au demandeur.</summary>
+/// <summary>Player; <see cref="Cabals"/> null while they are hidden from the requester.</summary>
 public sealed record PlayerView(string Id, string Name, string Faction, bool Dropped, IReadOnlyList<CabalExport>? Cabals);

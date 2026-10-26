@@ -5,11 +5,11 @@ using Olomoc.Tournaments;
 namespace Olomoc.Online;
 
 /// <summary>
-/// Règles de la partie en ligne : chaque commande n'est permise qu'à certaines étapes et pour
-/// le siège de celui qui l'envoie. Une commande acceptée modifie la partie (et sa révision) ;
-/// refusée, elle ne change rien et renvoie les problèmes. Le suivi d'un camp (PV, pions, Fiel…)
-/// reste à son joueur, comme sur une vraie table : il envoie l'état de son camp, dont le serveur
-/// vérifie la cohérence (mêmes cartes, compteurs dans leurs bornes, cycle commun).
+/// Rules of the online game: each command is only allowed at certain steps and for the seat of
+/// the one who sends it. An accepted command changes the game (and its revision); a refused one
+/// changes nothing and returns the problems. The tracking of a side (HP, tokens, Bile…) stays with
+/// its player, as on a real table: they send the state of their side, whose consistency the server
+/// checks (same cards, counters within their bounds, shared cycle).
 /// </summary>
 public static class OnlineRules
 {
@@ -18,7 +18,7 @@ public static class OnlineRules
     public const int MaxLog = 200;
     public const int UndoDepth = 30;
     public const int InitiativeDice = 5;
-    public const int Success = 5;               // seuil de réussite des D6 (LDR p.10)
+    public const int Success = 5;               // success threshold of the D6 (rulebook p.10)
     public const int MaxVictoryPoints = 99;
 
     public static OnlineResult Apply(OnlineGame g, int seat, OnlineCommand c, CatalogService catalog, Random random, DateTimeOffset now)
@@ -45,7 +45,7 @@ public static class OnlineRules
 
     private static Problem? NotAt(OnlineGame g, OnlineStep step) => g.Step == step ? null : Problem.Of("onlineStep");
 
-    // ---- Salon ----
+    // ---- Lobby ----
 
     public static Problem? SetName(OnlineGame g, int seat, string? name, DateTimeOffset now)
     {
@@ -61,7 +61,7 @@ public static class OnlineRules
         return null;
     }
 
-    /// <summary>Cabale du siège (null : retirée) : légale ; pour un tournoi, l'une de celles inscrites.</summary>
+    /// <summary>The seat's cabal (null: removed): legal; for a tournament, one of those registered.</summary>
     public static IReadOnlyList<Problem> SetCabal(OnlineGame g, int seat, CabalExport? cabal, CatalogService catalog)
     {
         if (NotAt(g, OnlineStep.Lobby) is { } p) return new[] { p };
@@ -89,7 +89,7 @@ public static class OnlineRules
             .Select(issue => new Problem("cabalIllegal", null, null, issue)).ToList();
     }
 
-    /// <summary>Prêt (nom et cabale choisis) ; quand les deux le sont, les cabales sont révélées et la mise en place commence.</summary>
+    /// <summary>Ready (name and cabal chosen); when both are, the cabals are revealed and the setup starts.</summary>
     public static Problem? SetReady(OnlineGame g, int seat, bool ready, CatalogService catalog, DateTimeOffset now)
     {
         if (NotAt(g, OnlineStep.Lobby) is { } p) return p;
@@ -114,11 +114,11 @@ public static class OnlineRules
         Log(g, null, now, "start");
     }
 
-    // ---- Mise en place (LDR p.31) ----
+    // ---- Setup (rulebook p.31) ----
 
     /// <summary>
-    /// Numéro des joueurs : chacun lance 5 D6 au seuil de 5+ ; le plus de réussites devient J1.
-    /// Égalité : on relance tous les deux.
+    /// Player numbers: each one rolls 5 D6 at a 5+ threshold; the most successes becomes P1. Tie:
+    /// both roll again.
     /// </summary>
     public static Problem? RollInitiative(OnlineGame g, int seat, Random random, DateTimeOffset now)
     {
@@ -145,7 +145,7 @@ public static class OnlineRules
 
     public static int Successes(IEnumerable<int> dice) => dice.Count(d => d >= Success);
 
-    /// <summary>Agenda de la partie (LDR p.31, étape 2), choisi ou tiré au sort par J1.</summary>
+    /// <summary>Agenda of the game (rulebook p.31, step 2), chosen or drawn at random by P1.</summary>
     public static Problem? ChooseAgenda(OnlineGame g, int seat, string? id, DateTimeOffset now)
     {
         if (NotAt(g, OnlineStep.Agenda) is { } p) return p;
@@ -159,7 +159,7 @@ public static class OnlineRules
 
     // ---- Cycles ----
 
-    /// <summary>Nouvel état du camp du joueur, à partir de la dernière révision qu'il a reçue.</summary>
+    /// <summary>New state of the player's side, from the last revision they received.</summary>
     public static Problem? UpdateState(OnlineGame g, int seat, GameState? next, int? basedOn, string? note,
         CatalogService catalog, DateTimeOffset now)
     {
@@ -172,7 +172,7 @@ public static class OnlineRules
         next.Name = s.State.Name;
         next.Faction = s.State.Faction;
         next.Cycle = g.Cycle;
-        foreach (var cog in next.Cogs) cog.Normalize();     // un booléen par PV (ancien format : nombre de PV cochés)
+        foreach (var cog in next.Cogs) cog.Normalize();     // one boolean per HP (old format: number of marked HP)
         Remember(s);
         s.State = next;
         s.StateRevision++;
@@ -181,8 +181,8 @@ public static class OnlineRules
     }
 
     /// <summary>
-    /// Cohérence d'un état envoyé : mêmes rouages et cartes, carte supplémentaire permise (cycle 1),
-    /// ligne de vie qui en découle, compteurs dans leurs bornes.
+    /// Consistency of a sent state: same cogs and cards, extra card allowed (cycle 1), life line
+    /// that follows from it, counters within their bounds.
     /// </summary>
     public static Problem? CheckState(OnlineGame g, GameState current, GameState next, CatalogService catalog)
     {
@@ -226,8 +226,8 @@ public static class OnlineRules
     }
 
     /// <summary>
-    /// Fin du cycle, quand les deux joueurs l'ont confirmée (LDR p.35) : appliquée aux deux camps,
-    /// puis cycle suivant ; après le 4ᵉ, la partie est terminée.
+    /// End of the cycle, once both players confirmed it (rulebook p.35): applied to both sides, then
+    /// next cycle; after the 4th, the game is over.
     /// </summary>
     public static Problem? SetEndCycle(OnlineGame g, int seat, bool ready, DateTimeOffset now)
     {
@@ -252,17 +252,17 @@ public static class OnlineRules
         return null;
     }
 
-    /// <summary>Camp perdu : Fiel à 3 (propre à chaque joueur).</summary>
+    /// <summary>Side lost: Bile at 3 (specific to each player).</summary>
     public static bool IsOver(Seat s) => s.State is { } st && st.Bile >= GameSession.MaxBile;
 
     /// <summary>
-    /// Traque de la partie : un seul niveau pour les deux joueurs (pions de la PoliSec). Chaque camp
-    /// garde sa part (State.Hunt : ses rouages mis hors de combat, ses ajustements) ; la traque est
-    /// leur somme, 3 au plus. À 3, la partie prend fin pour les deux.
+    /// Hunt of the game: a single level for both players (PoliSec tokens). Each side keeps its share
+    /// (State.Hunt: its cogs taken out of action, its adjustments); the hunt is their sum, 3 at most.
+    /// At 3, the game ends for both.
     /// </summary>
     public static int Hunt(OnlineGame g) => Math.Min(GameSession.MaxHunt, g.Seats.Sum(s => s.State?.Hunt ?? 0));
 
-    /// <summary>Partie arrêtée avant la fin du 4ᵉ cycle : un Fiel à 3, ou la traque à 3.</summary>
+    /// <summary>Game stopped before the end of the 4th cycle: a Bile at 3, or the hunt at 3.</summary>
     public static bool IsOver(OnlineGame g) => g.Seats.Any(IsOver) || Hunt(g) >= GameSession.MaxHunt;
 
     private static void Remember(Seat s)
@@ -277,11 +277,11 @@ public static class OnlineRules
         if (g.Log.Count > MaxLog) g.Log.RemoveRange(0, g.Log.Count - MaxLog);
     }
 
-    // ---- Vues ----
+    // ---- Views ----
 
     /// <summary>
-    /// La partie vue par une connexion (<paramref name="me"/> : son siège, null pour un spectateur).
-    /// Au salon, la cabale des autres sièges reste secrète.
+    /// The game as seen by a connection (<paramref name="me"/>: its seat, null for a spectator). In
+    /// the lobby, the other seats' cabals stay secret.
     /// </summary>
     public static OnlineView View(OnlineGame g, int? me, IReadOnlySet<int> connected, int logSize = 100) => new(
         g.Code, g.Revision, g.Step, g.Cycle, g.First, g.Agenda, Hunt(g), me,

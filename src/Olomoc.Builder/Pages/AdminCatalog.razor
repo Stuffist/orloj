@@ -8,9 +8,9 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
-@* Éditeur du référentiel (éditeurs et admins) : rouages, équipements et dons, factions ; textes dans chaque
-   langue ; publication (une nouvelle entrée est un brouillon, visible des seuls admins) ; export
-   des fichiers JSON complets, à recommiter dans le dépôt. *@
+@* Card catalog editor (editors and admins): cogs, equipment and boons, factions; texts in each
+   language; publication (a new entry is a draft, visible to admins only); export of the complete
+   JSON files, to commit back to the repository. *@
 
 @if (!L.Loaded || !Accounts.Loaded)
 {
@@ -200,7 +200,7 @@ else
         string.IsNullOrWhiteSpace(_search) || id.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase)
         || name.Contains(_search.Trim(), StringComparison.CurrentCultureIgnoreCase);
 
-    // ---- Morceaux de page ----
+    // ---- Page fragments ----
 
     private RenderFragment ListHead(string newLabel, Action create) =>
         @<div class="admin-toolbar">
@@ -317,10 +317,10 @@ else
         finally { _busy = false; }
     }
 
-    // Le constructeur garde le référentiel chargé à l'ouverture : rechargement complet pour y voir les changements.
+    // The builder keeps the catalog loaded at startup: full reload to see the changes there.
     private void ReloadSite() => Nav.NavigateTo(Nav.Uri, forceLoad: true);
 
-    // ---- Textes ----
+    // ---- Texts ----
 
     private string CogName(string id) => Name(t => t.Cogs.GetValueOrDefault(id)?.Name) ?? id;
     private string EquipmentName(string id) => Name(t => t.Equipment.GetValueOrDefault(id)?.Name) ?? id;
@@ -333,7 +333,7 @@ else
         _ => FactionName(key),
     };
 
-    // Langue courante, à défaut langue de référence (textes relus par l'éditeur, à jour).
+    // Current language, otherwise reference language (texts read again by the editor, up to date).
     private string? Name(Func<CardTexts, string?> pick) =>
         (Api.Texts.GetValueOrDefault(L.Current) is { } current ? pick(current) : null)
         ?? (Api.Texts.GetValueOrDefault(LocalizationService.ReferenceLanguage) is { } reference ? pick(reference) : null);

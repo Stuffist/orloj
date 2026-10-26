@@ -7,8 +7,8 @@
 @inject AdminApi Api
 @inject LocalizationService L
 
-@* Panneau d'administration (admins) : chiffres de la base, comptes, tournois et parties en ligne de
-   tout le monde, maintenance (sauvegarde, purges), journal des actions des admins. *@
+@* Admin panel (admins): database figures, everyone's accounts, tournaments and online games,
+   maintenance (backup, purges), log of the admins' actions. *@
 
 @if (!L.Loaded || !Accounts.Loaded)
 {
@@ -130,7 +130,7 @@ else
             @if (detail is not null) { <span class="control-tile-detail">@detail</span> }
         </div>;
 
-    // Chiffres et journal relus (au chargement, puis après chaque action).
+    // Figures and log read again (on load, then after each action).
     private async Task RefreshAsync()
     {
         _loaded = true;
@@ -179,7 +179,7 @@ else
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
-    // Connexion depuis cette page (ou session fermée) : chiffres chargés ou masqués.
+    // Sign-in from this page (or session closed): figures loaded or hidden.
     private void OnAccountChanged() => InvokeAsync(async () =>
     {
         if (Accounts.Current is { IsAdmin: true } && !_loaded) await RefreshAsync();

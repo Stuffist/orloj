@@ -1,8 +1,8 @@
 @page "/online"
 @inject NavigationManager Nav
 
-@* Ancienne adresse de l'accueil des parties en ligne : tout part maintenant de la page Partie
-   (cadre « Jouer en ligne »). *@
+@* Old address of the online games home page: everything now starts from the Play page ("Play
+   online" box). *@
 
 @code {
     protected override void OnInitialized() => Nav.NavigateTo("builder/play", replace: true);

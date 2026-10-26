@@ -1,4 +1,4 @@
-# Contexte de construction : seul le nécessaire à « dotnet publish ».
+# Build context: only what "dotnet publish" needs.
 **/bin/
 **/obj/
 .git/

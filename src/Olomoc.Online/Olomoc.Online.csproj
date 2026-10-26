@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
-  <!-- Parties en ligne à deux (salon, mise en place, suivi), synchronisées par SignalR : pages
-       sous /online/…, réunies avec le constructeur et les tournois dans l'app Olomoc.Web. -->
+  <!-- Two-player online games (lobby, setup, tracking), synchronized by SignalR: pages under
+       /online/…, brought together with the builder and the tournaments in the Olomoc.Web app. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>

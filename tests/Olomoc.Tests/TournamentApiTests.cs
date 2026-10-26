@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>API des tournois, serveur en mémoire sur un dossier de données temporaire.</summary>
+/// <summary>Tournaments API, in-memory server on a temporary data folder.</summary>
 public sealed class TournamentApiTests : IDisposable
 {
     private readonly string _data = Path.Combine(Path.GetTempPath(), "olomoc-tests-" + Guid.NewGuid().ToString("N"));
@@ -77,7 +77,7 @@ public sealed class TournamentApiTests : IDisposable
         await Read<TournamentView>(await http.SendAsync(Request(HttpMethod.Get, $"/api/tournaments/{code}", organizer: organizer, player: player)));
 
     [Fact]
-    public async Task Tournoi_de_bout_en_bout()
+    public async Task Tournament_end_to_end()
     {
         var http = Server();
         var (a, b) = await MaiselCabals();
@@ -85,7 +85,7 @@ public sealed class TournamentApiTests : IDisposable
         Assert.Equal(6, t.Code.Length);
         var url = $"/api/tournaments/{t.Code}";
 
-        // Inscriptions : 3 joueurs ; une liste illégale est refusée avec ses raisons.
+        // Registrations: 3 players; an illegal list is refused with its reasons.
         var ana = await Register(http, t.Code, "Ana", a, b);
         await Register(http, t.Code, "Bo", a, b);
         await Register(http, t.Code, "Cy", a, b);
@@ -96,7 +96,7 @@ public sealed class TournamentApiTests : IDisposable
         Assert.All(problems, p => Assert.Equal(("cabalIllegal", 1), (p.Key, p.Cabal)));
         Assert.Contains(problems, p => p.Legality?.Key == "composition");
 
-        // Listes masquées au public tant que les inscriptions sont ouvertes ; visibles du joueur et de l'orga.
+        // Lists hidden from the public while registrations are open; visible to the player and the organizer.
         var anonymous = await View(http, t.Code);
         Assert.Equal(3, anonymous.Players.Count);
         Assert.All(anonymous.Players, p => Assert.Null(p.Cabals));
@@ -107,17 +107,17 @@ public sealed class TournamentApiTests : IDisposable
         Assert.Null(mine.Players.First(p => p.Id != ana.PlayerId).Cabals);
         Assert.All((await View(http, t.Code, organizer: t.OrganizerToken)).Players, p => Assert.Equal(2, p.Cabals!.Count));
 
-        // Actions d'organisateur : jeton obligatoire.
+        // Organizer actions: token required.
         Assert.Equal(HttpStatusCode.Forbidden, (await http.PostAsync($"{url}/start", null)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/start", player: ana.PlayerToken))).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/start", organizer: t.OrganizerToken))).StatusCode);
         Assert.All((await View(http, t.Code)).Players, p => Assert.NotNull(p.Cabals));
 
-        // Inscriptions closes.
+        // Registrations closed.
         var late = await http.PostAsJsonAsync($"{url}/players", new RegistrationRequest("Eve", "MAISEL", new List<CabalExport> { a, b }), TournamentJson.Options);
         Assert.Equal("registrationClosed", Assert.Single((await Read<ProblemList>(late)).Problems).Key);
 
-        // Ronde 1 : 3 joueurs, un exempt.
+        // Round 1: 3 players, one bye.
         var paired = await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken));
         Assert.Equal(HttpStatusCode.Created, paired.StatusCode);
         Assert.Equal(1, (await Read<PairingSummary>(paired)).Round);
@@ -125,7 +125,7 @@ public sealed class TournamentApiTests : IDisposable
         var game = Assert.Single(round.Tables, x => !x.IsBye);
         Assert.Single(round.Tables, x => x.IsBye);
 
-        // Ronde 2 refusée tant que la 1 n'est pas complète.
+        // Round 2 refused as long as round 1 is not complete.
         var tooSoon = await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken));
         Assert.Equal(HttpStatusCode.Conflict, tooSoon.StatusCode);
         Assert.Equal("roundIncomplete", Assert.Single((await Read<ProblemList>(tooSoon)).Problems).Key);
@@ -140,14 +140,14 @@ public sealed class TournamentApiTests : IDisposable
         Assert.Equal((3, 7), (leader.Points, leader.Diff));
         Assert.Equal(game.PlayerA, leader.PlayerId);
 
-        // Abandon, puis ronde 2 entre les deux restants.
+        // Drop, then round 2 between the two remaining players.
         Assert.Equal(HttpStatusCode.NoContent,
             (await http.SendAsync(Request(HttpMethod.Put, $"{url}/players/{game.PlayerB}/dropped", new DroppedRequest(true), t.OrganizerToken))).StatusCode);
         Assert.Equal(HttpStatusCode.Created, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken))).StatusCode);
         var round2 = (await View(http, t.Code)).Rounds[1];
         Assert.DoesNotContain(round2.Tables, x => x.Involves(game.PlayerB!));
 
-        // Annuler la ronde 2 (sans résultat), la refaire, la jouer, terminer.
+        // Undo round 2 (without a result), pair it again, play it, finish.
         Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Delete, $"{url}/rounds/last", organizer: t.OrganizerToken))).StatusCode);
         Assert.Single((await View(http, t.Code)).Rounds);
         await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken));
@@ -156,7 +156,7 @@ public sealed class TournamentApiTests : IDisposable
         Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/finish", organizer: t.OrganizerToken))).StatusCode);
         Assert.Equal(TournamentPhase.Finished, (await View(http, t.Code)).Phase);
 
-        // Export : tournoi complet sans les secrets.
+        // Export: complete tournament without the secrets.
         Assert.Equal(HttpStatusCode.Forbidden, (await http.GetAsync($"{url}/export")).StatusCode);
         var export = await (await http.SendAsync(Request(HttpMethod.Get, $"{url}/export", organizer: t.OrganizerToken))).Content.ReadAsStringAsync();
         Assert.Contains("\"name\":\"Open de Lyon\"", export);
@@ -166,7 +166,7 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Organisateur_echange_deux_joueurs_de_la_ronde_en_cours()
+    public async Task Organizer_swaps_two_players_of_the_current_round()
     {
         var http = Server();
         var (a, b) = await MaiselCabals();
@@ -179,24 +179,24 @@ public sealed class TournamentApiTests : IDisposable
         var game = round.Tables.Single(x => !x.IsBye);
         var exempt = round.Tables.Single(x => x.IsBye).PlayerA;
 
-        // Réservé à l'organisateur.
+        // Reserved to the organizer.
         var swap = new SwapRequest(game.PlayerA, exempt);
         Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds/1/swap", swap))).StatusCode);
 
-        // L'exempt prend la place du joueur A, qui devient exempt.
+        // The bye takes the place of player A, who becomes the bye.
         Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds/1/swap", swap, t.OrganizerToken))).StatusCode);
         var after = (await View(http, t.Code)).Rounds[0];
         Assert.Equal((exempt, game.PlayerB), (after.Tables.Single(x => !x.IsBye).PlayerA, after.Tables.Single(x => !x.IsBye).PlayerB));
         Assert.Equal(game.PlayerA, after.Tables.Single(x => x.IsBye).PlayerA);
 
-        // Même table : refusé, avec la raison.
+        // Same table: refused, with the reason.
         var refused = await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds/1/swap", new SwapRequest(exempt, game.PlayerB!), t.OrganizerToken));
         Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
         Assert.Equal("sameTable", Assert.Single((await Read<ProblemList>(refused)).Problems).Key);
     }
 
     [Fact]
-    public async Task Scenarios_publics_J1_et_fin_de_partie()
+    public async Task Public_scenarios_P1_and_end_of_game()
     {
         var http = Server();
         var (a, b) = await MaiselCabals();
@@ -208,7 +208,7 @@ public sealed class TournamentApiTests : IDisposable
         var bad = await http.SendAsync(Request(HttpMethod.Put, $"{url}/scenarios", new ScenariosRequest([new Scenario("INCONNU")]), t.OrganizerToken));
         Assert.Equal("scenario", Assert.Single((await Read<ProblemList>(bad)).Problems).Key);
 
-        // Visibles de tous, dès les inscriptions.
+        // Visible to all, from the registrations.
         var view = await View(http, t.Code);
         Assert.Equal(new Scenario("SABOTAGE", null, "ROGUE", "INDOCTRINATION"), view.ScenarioOf(1));
         Assert.Equal(new Scenario(Agendas.Other, "Le bal", null, "DISINFORMATION"), view.ScenarioOf(2));
@@ -224,7 +224,7 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Joueur_modifie_ou_retire_seulement_sa_propre_inscription()
+    public async Task Player_changes_or_withdraws_only_their_own_registration()
     {
         var http = Server();
         var (a, b) = await MaiselCabals();
@@ -248,7 +248,7 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Mot_de_passe_ouvre_l_administration_sur_un_autre_appareil()
+    public async Task Password_opens_the_administration_on_another_device()
     {
         var http = Server();
         var created = await http.PostAsJsonAsync("/api/tournaments",
@@ -257,7 +257,7 @@ public sealed class TournamentApiTests : IDisposable
         var url = $"/api/tournaments/{t.Code}";
         Assert.True((await View(http, t.Code)).HasPassword);
 
-        // Mauvais mot de passe, puis le bon : nouveau jeton, différent du lien d'administration.
+        // Wrong password, then the right one: new token, different from the admin link.
         var wrong = await http.PostAsJsonAsync($"{url}/organizer/login", new PasswordRequest("devine"), TournamentJson.Options);
         Assert.Equal(HttpStatusCode.Forbidden, wrong.StatusCode);
         Assert.Equal("wrongPassword", Assert.Single((await Read<ProblemList>(wrong)).Problems).Key);
@@ -266,7 +266,7 @@ public sealed class TournamentApiTests : IDisposable
         Assert.True((await View(http, t.Code, organizer: phone.OrganizerToken)).IsOrganizer);
         var tablet = await Read<OrganizerLogin>(await http.PostAsJsonAsync($"{url}/organizer/login", new PasswordRequest("secret-du-club"), TournamentJson.Options));
 
-        // Changement depuis le téléphone : il reste ouvert, la tablette est fermée, le lien reste valable.
+        // Change from the phone: it stays open, the tablet is closed, the link stays valid.
         var tooShort = await http.SendAsync(Request(HttpMethod.Put, $"{url}/organizer/password", new PasswordRequest("court"), phone.OrganizerToken));
         Assert.Equal("password", Assert.Single((await Read<ProblemList>(tooShort)).Problems).Key);
         Assert.Equal(HttpStatusCode.NoContent,
@@ -277,7 +277,7 @@ public sealed class TournamentApiTests : IDisposable
         Assert.Equal(HttpStatusCode.Forbidden,
             (await http.PostAsJsonAsync($"{url}/organizer/login", new PasswordRequest("secret-du-club"), TournamentJson.Options)).StatusCode);
 
-        // Sans jeton organisateur : changement refusé. Retrait : plus de connexion par mot de passe.
+        // Without an organizer token: change refused. Removal: no more sign-in with a password.
         Assert.Equal(HttpStatusCode.Forbidden, (await http.PutAsJsonAsync($"{url}/organizer/password", new PasswordRequest("pirate-pirate"), TournamentJson.Options)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent,
             (await http.SendAsync(Request(HttpMethod.Put, $"{url}/organizer/password", new PasswordRequest(null), t.OrganizerToken))).StatusCode);
@@ -285,14 +285,14 @@ public sealed class TournamentApiTests : IDisposable
         var none = await http.PostAsJsonAsync($"{url}/organizer/login", new PasswordRequest("nouveau-secret"), TournamentJson.Options);
         Assert.Equal("noPassword", Assert.Single((await Read<ProblemList>(none)).Problems).Key);
 
-        // Export : ni hash de mot de passe, ni sessions.
+        // Export: no password hash, no sessions.
         var export = await (await http.SendAsync(Request(HttpMethod.Get, $"{url}/export", organizer: t.OrganizerToken))).Content.ReadAsStringAsync();
         Assert.Contains("\"organizerPasswordHash\":\"\"", export);
         Assert.Contains("\"organizerSessionHashes\":[]", export);
     }
 
     [Fact]
-    public async Task Mot_de_passe_trop_court_refuse_a_la_creation()
+    public async Task Password_too_short_refused_at_creation()
     {
         var response = await Server().PostAsJsonAsync("/api/tournaments",
             new CreateTournamentRequest("Open", null, 3, 2, PairingMode.Swiss, false, "1234"), TournamentJson.Options);
@@ -300,7 +300,7 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Essais_de_mot_de_passe_limites()
+    public async Task Password_attempts_limited()
     {
         var http = Server();
         var t = await Read<TournamentCreated>(await http.PostAsJsonAsync("/api/tournaments",
@@ -311,7 +311,7 @@ public sealed class TournamentApiTests : IDisposable
         Assert.Equal(Enumerable.Repeat(HttpStatusCode.Forbidden, 10).Append(HttpStatusCode.TooManyRequests), statuses);
     }
 
-    // Tournoi de deux joueurs, une ronde jouée (cabales 0 et 1), terminé.
+    // Tournament of two players, one round played (cabals 0 and 1), finished.
     private static async Task<(TournamentCreated T, string Url)> FinishedTournament(HttpClient http, bool exclude = false)
     {
         var (a, b) = await MaiselCabals();
@@ -333,7 +333,7 @@ public sealed class TournamentApiTests : IDisposable
         (await http.GetFromJsonAsync<Olomoc.Tournaments.Stats.StatsView>("/api/stats", TournamentJson.Options))!;
 
     [Fact]
-    public async Task Statistiques_des_tournois_termines_et_comptes()
+    public async Task Statistics_of_finished_and_counted_tournaments()
     {
         var http = Server();
         Assert.Equal(0, (await Stats(http)).Tournaments);
@@ -343,10 +343,10 @@ public sealed class TournamentApiTests : IDisposable
         Assert.Equal((1, 2, 1), (stats.Tournaments, stats.Players, stats.Games));
         Assert.Equal(("MAISEL", 100.0), (stats.Factions[0].Key, stats.Factions[0].Percent));
         Assert.Equal((2, 1, 0), (stats.FactionWins[0].Games, stats.FactionWins[0].Wins, stats.FactionWins[0].Draws));
-        Assert.Equal(2, stats.Rank3Wins.Sum(r => r.Games));                       // cabales jouées connues
+        Assert.Equal(2, stats.Rank3Wins.Sum(r => r.Games));                       // known cabals played
         Assert.True(await Archived(t.Code));
 
-        // Exclu puis réinclus par l'orga ; puis supprimé : l'archive suit.
+        // Excluded then included again by the organizer; then deleted: the archive follows.
         Assert.Equal(HttpStatusCode.Forbidden, (await http.PutAsJsonAsync($"{url}/stats", new StatsRequest(true), TournamentJson.Options)).StatusCode);
         await http.SendAsync(Request(HttpMethod.Put, $"{url}/stats", new StatsRequest(true), t.OrganizerToken));
         Assert.Equal(0, (await Stats(http)).Tournaments);
@@ -358,7 +358,7 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Tournoi_exclu_des_la_creation_non_archive()
+    public async Task Tournament_excluded_at_creation_not_archived()
     {
         var http = Server();
         await FinishedTournament(http, exclude: true);
@@ -366,7 +366,7 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Archive_manquante_recreee_au_demarrage()
+    public async Task Missing_archive_recreated_at_startup()
     {
         var first = Server();
         var (t, _) = await FinishedTournament(first);
@@ -383,9 +383,9 @@ public sealed class TournamentApiTests : IDisposable
         (await TestDb.OpenAsync(_data)).Find(StatsArchive.Kind, code) is not null;
 
     [Fact]
-    public async Task Anciens_fichiers_json_importes_au_demarrage()
+    public async Task Old_json_files_imported_at_startup()
     {
-        // Données d'avant la base : un dossier par sorte, un fichier par document.
+        // Data from before the database: one folder per kind, one file per document.
         var first = Server();
         var (t, url) = await FinishedTournament(first);
         var before = (await View(first, t.Code), await Stats(first));
@@ -407,7 +407,7 @@ public sealed class TournamentApiTests : IDisposable
                          System.Text.Json.JsonSerializer.Serialize(after, TournamentJson.Options));
             Assert.Equal(TournamentPhase.Finished, after.Item1.Phase);
 
-            // Dossiers renommés, gardés comme sauvegarde ; le fichier illisible y reste.
+            // Folders renamed, kept as a backup; the unreadable file stays in them.
             Assert.False(Directory.Exists(Path.Combine(old, "tournaments")));
             Assert.True(File.Exists(Path.Combine(old, "tournaments.imported", "ZZZZZZ.json")));
             Assert.True(File.Exists(Path.Combine(old, "stats.imported", t.Code + ".json")));
@@ -415,7 +415,7 @@ public sealed class TournamentApiTests : IDisposable
             Assert.Equal(db.Find(TournamentStore.Kind, t.Code)!.CreatedAt, imported.Find(TournamentStore.Kind, t.Code)!.CreatedAt);
             Assert.Null(imported.Find(TournamentStore.Kind, "ZZZZZZ"));
 
-            // Pas de second import : un dossier recréé n'écrase pas ce qui est en base.
+            // No second import: a recreated folder does not overwrite what is in the database.
             Directory.CreateDirectory(Path.Combine(old, "tournaments"));
             File.WriteAllText(Path.Combine(old, "tournaments", t.Code + ".json"), "{\"name\":\"Écrasé\"}");
             using var again = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("DATA_DIR", old));
@@ -426,7 +426,7 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Suppression_par_l_organisateur_seulement()
+    public async Task Deletion_by_the_organizer_only()
     {
         var http = Server();
         var (a, b) = await MaiselCabals();
@@ -442,7 +442,7 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Tournoi_conserve_apres_redemarrage()
+    public async Task Tournament_kept_after_a_restart()
     {
         var (a, b) = await MaiselCabals();
         var first = Server();
@@ -450,21 +450,21 @@ public sealed class TournamentApiTests : IDisposable
         await Register(first, t.Code, "Ana", a, b);
 
         var second = Server();
-        var view = await View(second, t.Code.ToLowerInvariant());      // code insensible à la casse
+        var view = await View(second, t.Code.ToLowerInvariant());      // case-insensitive code
         Assert.Equal("Persistant", view.Name);
         Assert.Equal("Ana", Assert.Single(view.Players).Name);
         Assert.Equal(new DateOnly(2026, 11, 7), view.Date);
     }
 
     [Theory]
-    [InlineData("/api/tournaments/ABCDEF")]       // code bien formé, inconnu
+    [InlineData("/api/tournaments/ABCDEF")]       // well-formed code, unknown
     [InlineData("/api/tournaments/../x")]
-    [InlineData("/api/tournaments/O0O0O0")]       // caractères exclus des codes
-    public async Task Tournoi_inconnu(string url) =>
+    [InlineData("/api/tournaments/O0O0O0")]       // characters excluded from codes
+    public async Task Unknown_tournament(string url) =>
         Assert.Equal(HttpStatusCode.NotFound, (await Server().GetAsync(url)).StatusCode);
 
     [Fact]
-    public async Task Reglages_invalides_refuses()
+    public async Task Invalid_settings_refused()
     {
         var response = await Server().PostAsJsonAsync("/api/tournaments",
             new CreateTournamentRequest(" ", null, 0, 2, PairingMode.Alignment, false), TournamentJson.Options);
@@ -473,7 +473,7 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Creations_limitees_par_adresse()
+    public async Task Creations_limited_per_address()
     {
         var http = Server(createPerHour: 2);
         await Create(http);
@@ -484,9 +484,9 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Lectures_limitees_par_adresse()
+    public async Task Reads_limited_per_address()
     {
-        // Essai de codes en série : au-delà de la limite, refusé, que le code existe ou non.
+        // Trying codes in bulk: beyond the limit, refused, whether the code exists or not.
         var http = Server(readsPerMinute: 3);
         var t = await Create(http);
         var statuses = new List<HttpStatusCode>();

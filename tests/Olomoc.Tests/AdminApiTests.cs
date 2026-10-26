@@ -11,8 +11,8 @@ using Xunit;
 namespace Olomoc.Tests;
 
 /// <summary>
-/// Panneau d'administration (/api/admin et /api/admin/accounts), serveur en mémoire sur un dossier
-/// de données temporaire. « Root » est admin (OLOMOC_ADMINS, au démarrage), « Bob » joueur.
+/// Admin panel (/api/admin and /api/admin/accounts), in-memory server on a temporary data folder.
+/// "Root" is admin (OLOMOC_ADMINS, at startup), "Bob" a player.
 /// </summary>
 public sealed class AdminApiTests : IDisposable
 {
@@ -65,7 +65,7 @@ public sealed class AdminApiTests : IDisposable
         return response.StatusCode == HttpStatusCode.NoContent ? null : await Read<AccountView>(response);
     }
 
-    /// <summary>Comptes Root et Bob créés, puis serveur redémarré avec Root admin ; clients connectés.</summary>
+    /// <summary>Root and Bob accounts created, then server restarted with Root as admin; clients signed in.</summary>
     private async Task<(WebApplicationFactory<Program> Server, HttpClient Root, HttpClient Bob)> StartAsync()
     {
         var first = Server();
@@ -88,7 +88,7 @@ public sealed class AdminApiTests : IDisposable
     private static async Task<AdminAction[]> Audit(HttpClient http) => await Read<AdminAction[]>(await http.GetAsync("/api/admin/audit"));
 
     [Fact]
-    public async Task Reserve_aux_admins()
+    public async Task Restricted_to_admins()
     {
         var (server, _, bob) = await StartAsync();
         var anonymous = server.CreateClient();
@@ -103,7 +103,7 @@ public sealed class AdminApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Vue_d_ensemble()
+    public async Task Overview()
     {
         var (_, root, bob) = await StartAsync();
         await CreateTournament(bob);
@@ -121,13 +121,13 @@ public sealed class AdminApiTests : IDisposable
         Assert.True(o.DatabaseBytes > 0);
 
         var tournaments = await Read<AdminTournament[]>(await root.GetAsync("/api/admin/tournaments"));
-        Assert.Equal(["Coupe", "Open de Lyon"], tournaments.Select(t => t.Name));       // dernier modifié d'abord
+        Assert.Equal(["Coupe", "Open de Lyon"], tournaments.Select(t => t.Name));       // last modified first
         var games = await Read<AdminOnlineGame[]>(await root.GetAsync("/api/admin/online"));
         Assert.Equal(["Ana", ""], Assert.Single(games).Seats);
     }
 
     [Fact]
-    public async Task Nouveau_lien_d_administration_stats_et_suppression_d_un_tournoi()
+    public async Task New_admin_link_stats_and_deletion_of_a_tournament()
     {
         var (_, root, bob) = await StartAsync();
         var created = await CreateTournament(bob);
@@ -141,7 +141,7 @@ public sealed class AdminApiTests : IDisposable
             request.Headers.Add(TournamentHeaders.Organizer, token);
             return (await Read<TournamentView>(await bob.SendAsync(request))).IsOrganizer;
         }
-        Assert.False(await IsOrganizer(created.OrganizerToken));     // ancien lien : refusé
+        Assert.False(await IsOrganizer(created.OrganizerToken));     // old link: refused
         Assert.True(await IsOrganizer(link.OrganizerToken));
 
         Assert.Equal(HttpStatusCode.NoContent, (await Send(root, HttpMethod.Put, $"/api/admin/tournaments/{code}/stats", new StatsRequest(true))).StatusCode);
@@ -156,7 +156,7 @@ public sealed class AdminApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Suppression_d_une_partie_en_ligne()
+    public async Task Deletion_of_an_online_game()
     {
         var (_, root, bob) = await StartAsync();
         var game = await Read<OnlineCreated>(await bob.PostAsJsonAsync("/api/online", new CreateOnlineRequest("Ana"), TournamentJson.Options));
@@ -167,11 +167,11 @@ public sealed class AdminApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Comptes_details_deverrouillage_deconnexion_suppression()
+    public async Task Accounts_details_unlock_sign_out_deletion()
     {
         var (server, root, bob) = await StartAsync();
 
-        // Détails : jamais l'e-mail.
+        // Details: never the email.
         var listed = await root.GetAsync("/api/admin/accounts?search=bo");
         Assert.DoesNotContain("@example.org", await listed.Content.ReadAsStringAsync());
         var details = Assert.Single(await Read<AdminAccount[]>(listed));
@@ -179,7 +179,7 @@ public sealed class AdminApiTests : IDisposable
         Assert.NotNull(details.LastLoginAt);
         Assert.Equal(["Bob", "Root"], (await Read<AdminAccount[]>(await root.GetAsync("/api/admin/accounts?recent=true"))).Select(a => a.UserName));
 
-        // Verrouillé après 5 essais, déverrouillé par l'admin.
+        // Locked after 5 attempts, unlocked by the admin.
         var other = server.CreateClient();
         for (var i = 0; i < 5; i++) await Login(other, "Bob", "mauvais!!");
         Assert.Equal(["lockedOut"], await Keys(await Login(other, "Bob")));
@@ -187,13 +187,13 @@ public sealed class AdminApiTests : IDisposable
         Assert.Equal(HttpStatusCode.NoContent, (await Post(root, "/api/admin/accounts/bob/unlock")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await Login(other, "Bob")).StatusCode);
 
-        // Déconnexion partout : jamais soi-même.
+        // Sign out everywhere: never oneself.
         Assert.Equal(["ownAccount"], await Keys(await Post(root, "/api/admin/accounts/Root/logout")));
         Assert.Equal(HttpStatusCode.NoContent, (await Post(root, "/api/admin/accounts/Bob/logout")).StatusCode);
         Assert.Null(await Me(bob));
         Assert.Null(await Me(other));
 
-        // Suppression : jamais soi-même ni un admin ; les cabales partent avec le compte.
+        // Deletion: never oneself nor an admin; the cabals go with the account.
         var db = await TestDb.OpenAsync(_data);
         using (var ctx = db.CreateDbContext())
         {
@@ -217,13 +217,13 @@ public sealed class AdminApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Sauvegarde_et_purges()
+    public async Task Backup_and_purges()
     {
         var (_, root, _) = await StartAsync();
         var backup = await Read<BackupResult>(await Post(root, "/api/admin/maintenance/backup"));
         Assert.True(File.Exists(Path.Combine(_data, "backups", backup.File)));
         Assert.True(backup.Bytes > 0);
-        var again = await Read<BackupResult>(await Post(root, "/api/admin/maintenance/backup"));    // remplace celle du jour
+        var again = await Read<BackupResult>(await Post(root, "/api/admin/maintenance/backup"));    // replaces today's
         Assert.Equal(backup.File, again.File);
         var o = await Read<AdminOverview>(await root.GetAsync("/api/admin/overview"));
         Assert.Equal(1, o.Backups);

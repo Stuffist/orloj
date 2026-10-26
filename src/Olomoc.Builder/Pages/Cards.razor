@@ -5,9 +5,9 @@
 @inject LocalizationService L
 @inject IJSRuntime JS
 
-@* Planche des cartes d'une cabale (A4 paysage, taille réelle) : à imprimer ou enregistrer en
-   PDF depuis le navigateur, ou à télécharger en PNG. La cabale vient de l'adresse
-   (?c=…&name=…) : la page s'ouvre dans son propre onglet et se partage. *@
+@* Card sheet of a cabal (landscape A4, actual size): to print or save as PDF from the browser, or
+   to download as PNG. The cabal comes from the address (?c=…&name=…): the page opens in its own
+   tab and can be shared. *@
 
 @if (!Catalog.Loaded || !L.Loaded)
 {
@@ -36,7 +36,7 @@ else
     }
     else
     {
-        @* Page à l'échelle de l'écran à l'affichage, à 297 × 210 mm à l'impression : positions en %. *@
+        @* Page at screen scale when displayed, at 297 × 210 mm when printed: positions in %. *@
         <div class="card-sheet" role="img" aria-label="@L.Ui("cards.title")">
             @for (var column = 0; column < 3; column++)
             {
@@ -58,7 +58,7 @@ else
 }
 
 @code {
-    private const int PngDpi = 200;            // 2339 × 1654 px : net à l'écran comme à l'impression
+    private const int PngDpi = 200;            // 2339 × 1654 px: sharp on screen as in print
 
     [SupplyParameterFromQuery(Name = "c")] public string? Slots { get; set; }
     [SupplyParameterFromQuery(Name = "name")] public string? Name { get; set; }

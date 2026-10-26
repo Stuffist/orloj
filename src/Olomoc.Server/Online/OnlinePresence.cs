@@ -1,15 +1,15 @@
 namespace Olomoc.Server.Online;
 
 /// <summary>
-/// Sièges connectés, par partie (en mémoire : une seule instance du serveur). Un joueur peut
-/// avoir plusieurs connexions (onglets, appareils) : son siège est connecté tant qu'il en reste une.
+/// Connected seats, per game (in memory: a single server instance). A player can have several
+/// connections (tabs, devices): their seat is connected as long as one remains.
 /// </summary>
 public sealed class OnlinePresence
 {
     private readonly Dictionary<(string Code, int Seat), HashSet<string>> _connections = new();
     private readonly object _gate = new();
 
-    /// <summary>Ajoute une connexion ; vrai si le siège vient de se connecter.</summary>
+    /// <summary>Adds a connection; true if the seat just connected.</summary>
     public bool Connect(string code, int seat, string connectionId)
     {
         lock (_gate)
@@ -19,7 +19,7 @@ public sealed class OnlinePresence
         }
     }
 
-    /// <summary>Retire une connexion ; vrai si le siège n'en a plus.</summary>
+    /// <summary>Removes a connection; true if the seat has none left.</summary>
     public bool Disconnect(string code, int seat, string connectionId)
     {
         lock (_gate)

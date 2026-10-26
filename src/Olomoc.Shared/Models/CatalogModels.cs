@@ -2,14 +2,14 @@ using System.Text.Json.Serialization;
 
 namespace Olomoc.Models;
 
-// Référentiel neutre en langue, identifiants alignés sur le livre de règles anglais.
-// Les textes (noms, titres, effets de jeu) sont dans les paquets de langue (TextModels.cs).
+// Language-neutral card catalog, identifiers aligned with the English rulebook.
+// Texts (names, titles, game effects) are in the language packs (TextModels.cs).
 
 public enum HealthPointType { S, R, T }     // Standard, Reinforced (Protection), Tainted
 public enum Timing { Active, Permanent }
 public enum EquipmentKind { EQUIPMENT, BOON }
 public enum BuildRuleType { ALL_MINISTRIES, RECRUIT_WEARER, RECRUIT_MINISTRY }
-public enum Alignment { LIGHT, DARK }       // Lumières, Ténèbres (référentiel de faction)
+public enum Alignment { LIGHT, DARK }       // Light, Darkness (faction reference)
 
 public sealed class Ministry
 {
@@ -31,13 +31,13 @@ public sealed class Frequency
     public string Per { get; init; } = "";   // PLANNING_PHASE | CYCLE | GAME
 }
 
-/// <summary>Capacité ; son nom et son effet de jeu sont au même rang dans les paquets de langue.</summary>
+/// <summary>Ability; its name and game effect are at the same rank in the language packs.</summary>
 public sealed class Ability
 {
     public Timing Timing { get; init; }
     public int ActionCost { get; init; }
     public int DarknessCost { get; init; }
-    public List<Frequency> Frequencies { get; init; } = new();   // limites cumulatives ; vide = illimitée
+    public List<Frequency> Frequencies { get; init; } = new();   // cumulative limits; empty = unlimited
 }
 
 public sealed class Art
@@ -51,18 +51,18 @@ public sealed class Cog
     public string Id { get; init; } = "";
     public List<string> Ministries { get; init; } = new();
     public int Rank { get; init; }
-    public int? BaseSize { get; init; }       // imprimée au verso, absente du relevé
+    public int? BaseSize { get; init; }       // printed on the back, missing from the stat line
     public Stats Stats { get; init; } = new();
     public List<HealthPointType> LifeLine { get; init; } = new();
     public List<Ability> Abilities { get; init; } = new();
-    public ExtraEquipmentRule? ExtraEquipment { get; init; }    // carte supplémentaire au début de la partie
+    public ExtraEquipmentRule? ExtraEquipment { get; init; }    // extra card at the start of the game
     public Art? Art { get; init; }
     public string? Set { get; init; }
-    /// <summary>true : publié ; absent ou false : brouillon, visible des seuls admins.</summary>
+    /// <summary>true: published; missing or false: draft, visible to admins only.</summary>
     public bool Published { get; init; }
 }
 
-/// <summary>Carte supplémentaire qu'un rouage peut porter dès le début du premier cycle (Medic Ruzicka).</summary>
+/// <summary>Extra card a cog can carry from the start of the first cycle (Medic Ruzicka).</summary>
 public sealed class ExtraEquipmentRule
 {
     public string Ministry { get; init; } = "";
@@ -71,20 +71,20 @@ public sealed class ExtraEquipmentRule
     public bool Allows(Equipment e) => e.Ministry == Ministry && e.Kind == Kind;
 }
 
-/// <summary>Carte équipement ou don.</summary>
+/// <summary>Equipment or boon card.</summary>
 public sealed class Equipment
 {
     public string Id { get; init; } = "";
     public EquipmentKind Kind { get; init; }
-    public string? Ministry { get; init; }   // affiliation exclusive :
-    public string? Faction { get; init; }     //   Ministère, faction,
-    public string? CogId { get; init; }       //   ou rouage équipé
+    public string? Ministry { get; init; }   // exclusive affiliation:
+    public string? Faction { get; init; }     //   Ministry, faction,
+    public string? CogId { get; init; }       //   or equipped cog
     public List<Ability> Abilities { get; init; } = new();
-    public List<HealthPointType> LifeLinePrefix { get; init; } = new();   // PV ajoutés en tête de ligne de vie
+    public List<HealthPointType> LifeLinePrefix { get; init; } = new();   // HP added at the start of the life line
     public Art? Art { get; init; }
     public string? Set { get; init; }
     public List<BuildRule> BuildRules { get; init; } = new();
-    /// <summary>true : publié ; absent ou false : brouillon, visible des seuls admins.</summary>
+    /// <summary>true: published; missing or false: draft, visible to admins only.</summary>
     public bool Published { get; init; }
 
     [JsonIgnore] public bool IsFactionAffiliated  => Faction  is not null;
@@ -93,14 +93,14 @@ public sealed class Equipment
     [JsonIgnore] public bool GrantsAllMinistries => BuildRules.Any(r => r.Type == BuildRuleType.ALL_MINISTRIES);
 }
 
-/// <summary>Effet d'une carte sur la composition de la cabale (voir $defs/buildRule du schéma).</summary>
+/// <summary>Effect of a card on the cabal's composition (see $defs/buildRule of the schema).</summary>
 public sealed class BuildRule
 {
     public BuildRuleType Type { get; init; }
     public List<int> Ranks { get; init; } = new();
     public string? Ministry { get; init; }
 
-    /// <summary>Le rouage satisfait-il les conditions de recrutement hors faction de cette règle ?</summary>
+    /// <summary>Does the cog meet this rule's out-of-faction recruitment conditions?</summary>
     public bool CanRecruit(Cog cog, IReadOnlyCollection<string> ministries) => Type switch
     {
         BuildRuleType.RECRUIT_WEARER   => Ranks.Contains(cog.Rank),
@@ -117,7 +117,7 @@ public sealed class Catalog
     public List<Equipment> Equipment { get; init; } = new();
 }
 
-// ---- Référentiel de faction (document distinct) ----
+// ---- Faction reference (separate document) ----
 
 public sealed class Faction
 {

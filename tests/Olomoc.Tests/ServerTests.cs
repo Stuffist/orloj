@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Hôte du site, démarré en mémoire : redirections, app et ses sections, fichiers communs.</summary>
+/// <summary>The site's host, started in memory: redirects, the app and its sections, shared files.</summary>
 public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
 {
     private HttpClient Client() => factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
@@ -24,8 +24,8 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
         Assert.Equal(location, response.Headers.Location?.OriginalString);
     }
 
-    // Une seule app : chaque route des sections renvoie la même index.html (base « / »),
-    // le routeur Blazor prend le relais, sans rechargement d'une section à l'autre.
+    // A single app: every section route returns the same index.html (base "/"), the Blazor router
+    // takes over, without reloading from one section to another.
     [Theory]
     [InlineData("/builder/")]
     [InlineData("/builder/play")]
@@ -35,7 +35,7 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
     [InlineData("/pairings/t/ABCDEF/admin")]
     [InlineData("/online/")]
     [InlineData("/online/g/ABCDEF")]
-    public async Task Sections_de_l_app(string path)
+    public async Task App_sections(string path)
     {
         var response = await Client().GetAsync(path);
         response.EnsureSuccessStatusCode();
@@ -46,9 +46,9 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
         Assert.Equal("no-cache", response.Headers.CacheControl?.ToString());
     }
 
-    // Application installable : manifeste du site, au type attendu par les navigateurs.
+    // Installable app: the site's manifest, with the type browsers expect.
     [Fact]
-    public async Task Manifeste()
+    public async Task Manifest()
     {
         var response = await Client().GetAsync(Assets.Base + "manifest.webmanifest");
         response.EnsureSuccessStatusCode();
@@ -59,9 +59,9 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
             (await Client().GetAsync(Assets.Base + icon.GetProperty("src").GetString())).EnsureSuccessStatusCode();
     }
 
-    // Service worker à la racine du site : sa portée par défaut (« / ») couvre l'app et /_content/.
+    // Service worker at the site root: its default scope ("/") covers the app and /_content/.
     [Fact]
-    public async Task Service_worker_a_la_racine()
+    public async Task Service_worker_at_the_root()
     {
         var response = await Client().GetAsync("/service-worker.js");
         response.EnsureSuccessStatusCode();
@@ -82,20 +82,20 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
     [InlineData(Assets.Base + "img/app/favicon-32.png")]
     [InlineData(Assets.Base + "img/app/apple-touch-icon.png")]
     [InlineData("/builder/cards")]
-    public async Task Fichiers_servis(string path) =>
+    public async Task Served_files(string path) =>
         (await Client().GetAsync(path)).EnsureSuccessStatusCode();
 
     [Theory]
-    [InlineData("/builder/absent.json")]  // fichier absent : pas de repli sur index.html
+    [InlineData("/builder/absent.json")]  // missing file: no fallback to index.html
     [InlineData("/autre")]
-    public async Task Introuvable(string path) =>
+    public async Task Not_found(string path) =>
         Assert.Equal(HttpStatusCode.NotFound, (await Client().GetAsync(path)).StatusCode);
 
     [Theory]
     [InlineData("/builder/")]
     [InlineData("/pairings/t/ABCDEF/admin")]
     [InlineData("/api/stats")]
-    public async Task En_tetes_de_securite(string path)
+    public async Task Security_headers(string path)
     {
         var response = await Client().GetAsync(path);
         response.EnsureSuccessStatusCode();
@@ -105,19 +105,19 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
         Assert.Equal("DENY", Header("X-Frame-Options"));
         Assert.Equal("nosniff", Header("X-Content-Type-Options"));
         Assert.Equal("no-referrer", Header("Referrer-Policy"));
-        Assert.Equal("", Header("Strict-Transport-Security"));        // HTTP : pas de HSTS
+        Assert.Equal("", Header("Strict-Transport-Security"));        // HTTP: no HSTS
     }
 
     [Fact]
-    public async Task HSTS_en_HTTPS()
+    public async Task HSTS_over_HTTPS()
     {
         var http = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
         var response = await http.GetAsync("/healthz");
         Assert.Equal(SecurityHeaders.StrictTransportSecurity, string.Join(",", response.Headers.GetValues("Strict-Transport-Security")));
     }
 
-    // Conteneur derrière Caddy (docker-compose.yml) : noms acceptés (AllowedHosts) et en-têtes
-    // X-Forwarded-* lus (ASPNETCORE_FORWARDEDHEADERS_ENABLED).
+    // Container behind a reverse proxy (docker-compose.yml): accepted names (AllowedHosts) and X-Forwarded-*
+    // headers read (ASPNETCORE_FORWARDEDHEADERS_ENABLED).
     private WebApplicationFactory<Program> BehindProxy() => factory.WithWebHostBuilder(b => b
         .UseSetting("AllowedHosts", "olomoc.test;localhost;127.0.0.1")
         .UseSetting("FORWARDEDHEADERS_ENABLED", "true"));
@@ -125,9 +125,9 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
     [Theory]
     [InlineData("olomoc.test", HttpStatusCode.OK)]
     [InlineData("localhost", HttpStatusCode.OK)]
-    [InlineData("127.0.0.1", HttpStatusCode.OK)]                 // healthcheck du conteneur
+    [InlineData("127.0.0.1", HttpStatusCode.OK)]                 // container healthcheck
     [InlineData("autre.example", HttpStatusCode.BadRequest)]
-    public async Task Hotes_acceptes_derriere_le_proxy(string host, HttpStatusCode status)
+    public async Task Hosts_accepted_behind_the_proxy(string host, HttpStatusCode status)
     {
         using var server = BehindProxy();
         var request = new HttpRequestMessage(HttpMethod.Get, "/healthz");
@@ -136,7 +136,7 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
     }
 
     [Fact]
-    public async Task HTTPS_du_proxy_reconnu()
+    public async Task Proxy_HTTPS_recognized()
     {
         using var server = BehindProxy();
         var request = new HttpRequestMessage(HttpMethod.Get, "/healthz");
@@ -148,7 +148,7 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
     }
 
     [Fact]
-    public async Task En_tetes_du_proxy_ignores_par_defaut()
+    public async Task Proxy_headers_ignored_by_default()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "/healthz");
         request.Headers.Add("X-Forwarded-Proto", "https");
@@ -161,7 +161,7 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
         Assert.Equal("ok\n", await Client().GetStringAsync("/healthz"));
 }
 
-/// <summary>Site démarré en mémoire sur un dossier de données temporaire (pas celui du développement).</summary>
+/// <summary>Site started in memory on a temporary data folder (not the development one).</summary>
 public sealed class TempDataServer : WebApplicationFactory<Program>
 {
     private readonly string _data = Path.Combine(Path.GetTempPath(), "olomoc-server-" + Guid.NewGuid().ToString("N"));

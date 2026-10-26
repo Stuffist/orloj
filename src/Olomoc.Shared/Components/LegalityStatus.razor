@@ -1,5 +1,5 @@
-@* Légalité d'une cabale avant inscription : faction attendue, cartes introuvables, règles du
-   constructeur (le serveur revérifie à l'inscription). *@
+@* Legality of a cabal before registration: expected faction, cards not found, the builder's rules
+   (the server checks again at registration). *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 
@@ -23,10 +23,10 @@ else
 
 @code {
     [Parameter, EditorRequired] public CabalExport Cabal { get; set; } = default!;
-    /// <summary>Faction du joueur, si elle est déjà choisie.</summary>
+    /// <summary>The player's faction, if already chosen.</summary>
     [Parameter] public string? Faction { get; set; }
 
-    // Cartes introuvables, puis problèmes de légalité dans la faction de la cabale.
+    // Cards not found, then legality problems in the cabal's faction.
     private List<string> Issues()
     {
         var resolved = Catalog.Resolve(Cabal);

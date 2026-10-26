@@ -12,19 +12,19 @@ using Olomoc.Tournaments;
 namespace Olomoc.Server.Accounts;
 
 /// <summary>
-/// API des comptes (/api/account). Session par cookie (HttpOnly, SameSite=Strict) ; mots de
-/// passe, verrouillage, jetons des liens et tampon de sécurité gérés par ASP.NET Core Identity.
-/// L'e-mail ne sert qu'à récupérer le compte : confirmation, puis mot de passe oublié.
+/// Accounts API (/api/account). Cookie session (HttpOnly, SameSite=Strict); passwords, lockout,
+/// link tokens and security stamp handled by ASP.NET Core Identity. The email is only used to
+/// recover the account: confirmation, then forgotten password.
 /// </summary>
 public static class AccountEndpoints
 {
     public const string CreatePolicy = "account-create", MailPolicy = "account-mail";
     public const string ConfirmTokenProvider = "EmailConfirmation";
 
-    /// <summary>E-mails envoyés au plus par heure et par compte (confirmation, mot de passe oublié).</summary>
+    /// <summary>Maximum emails sent per hour and per account (confirmation, forgotten password).</summary>
     public const int MailsPerHour = 3;
 
-    /// <summary>Comptes listés au plus par recherche (rôles).</summary>
+    /// <summary>Maximum accounts listed per search (admin panel).</summary>
     public const int MaxListed = 50;
 
     public static void MapAccounts(this WebApplication app)
@@ -38,7 +38,7 @@ public static class AccountEndpoints
         api.MapPost("reset", Reset).RequireRateLimiting(TournamentEndpoints.LoginPolicy);
         api.MapPost("confirm", Confirm).RequireRateLimiting(TournamentEndpoints.LoginPolicy);
 
-        // Compte connecté.
+        // Signed-in account.
         var mine = api.MapGroup("").RequireAuthorization();
         mine.MapPost("logout-others", LogoutOthers).RequireRateLimiting(TournamentEndpoints.WritePolicy);
         mine.MapPost("password", ChangePassword).RequireRateLimiting(TournamentEndpoints.LoginPolicy);
@@ -47,8 +47,8 @@ public static class AccountEndpoints
         mine.MapPost("delete", Delete).RequireRateLimiting(TournamentEndpoints.LoginPolicy);
         mine.MapPost("cabals/sync", CabalSyncEndpoint.Sync).RequireRateLimiting(TournamentEndpoints.WritePolicy);
 
-        // Admin (panneau d'administration) : rôles des comptes ; mot de passe temporaire pour un compte
-        // dont l'e-mail ne permet pas la récupération ; déverrouillage, déconnexion, suppression. Journalisés.
+        // Admin (admin panel): account roles; temporary password for an account whose email cannot be
+        // used for recovery; unlock, sign out, deletion. All logged.
         var admin = app.MapGroup("/api/admin/accounts").RequireAuthorization().AddEndpointFilter(Roles.Require(AccountRole.Admin));
         admin.MapGet("", ListAccounts).RequireRateLimiting(TournamentEndpoints.ReadPolicy);
         admin.MapPut("{userName}/role", SetRole).RequireRateLimiting(TournamentEndpoints.WritePolicy);
@@ -58,9 +58,9 @@ public static class AccountEndpoints
         admin.MapDelete("{userName}", AdminDelete).RequireRateLimiting(TournamentEndpoints.WritePolicy);
     }
 
-    // ---- Sans compte ----
+    // ---- Without an account ----
 
-    /// <summary>Compte de la session ; 204 sans session.</summary>
+    /// <summary>Session account; 204 without a session.</summary>
     private static async Task<IResult> Me(HttpContext ctx, UserManager<OlomocUser> users) =>
         await users.GetUserAsync(ctx.User) is { } user ? Results.Json(await View(user, users), TournamentJson.Options) : Results.NoContent();
 
@@ -106,7 +106,7 @@ public static class AccountEndpoints
         return Results.NoContent();
     }
 
-    // Même réponse que le compte existe ou non, que l'e-mail parte ou non (pas de divulgation).
+    // Same answer whether the account exists or not, whether the email is sent or not (no disclosure).
     private static async Task<IResult> Forgot(ForgotPasswordRequest body, HttpContext ctx, UserManager<OlomocUser> users, MailQueue mail)
     {
         if (await FindAsync(users, body.Login) is { EmailConfirmed: true, Email: { } email } user && await CountMailAsync(user, users))
@@ -117,7 +117,7 @@ public static class AccountEndpoints
         return Results.NoContent();
     }
 
-    /// <summary>Nouveau mot de passe (lien reçu) : les autres sessions sont fermées, celle-ci ouverte.</summary>
+    /// <summary>New password (link received): other sessions are closed, this one is opened.</summary>
     private static async Task<IResult> Reset(ResetPasswordRequest body, UserManager<OlomocUser> users, SignInManager<OlomocUser> signIn)
     {
         if (!AccountRules.IsValidPassword(body.Password)) return Fail("password", 400, AccountRules.MinPassword.ToString());
@@ -141,9 +141,9 @@ public static class AccountEndpoints
         return confirmed.Succeeded ? Results.NoContent() : Problems(Describe(confirmed), 400);
     }
 
-    // ---- Compte connecté ----
+    // ---- Signed-in account ----
 
-    /// <summary>Ferme les sessions des autres appareils (celle-ci reste ouverte).</summary>
+    /// <summary>Closes the sessions of the other devices (this one stays open).</summary>
     private static Task<IResult> LogoutOthers(HttpContext ctx, UserManager<OlomocUser> users, SignInManager<OlomocUser> signIn) =>
         WithUser(ctx, users, async user =>
         {
@@ -159,7 +159,7 @@ public static class AccountEndpoints
             if (!AccountRules.IsValidPassword(body.NewPassword)) return Fail("password", 400, AccountRules.MinPassword.ToString());
             var changed = await users.ChangePasswordAsync(user, body.CurrentPassword ?? "", body.NewPassword);
             if (!changed.Succeeded) return Problems(Describe(changed), 400);
-            await signIn.RefreshSignInAsync(user);       // nouveau tampon : les autres appareils sont déconnectés
+            await signIn.RefreshSignInAsync(user);       // new stamp: the other devices are signed out
             return Results.NoContent();
         });
 
@@ -172,7 +172,7 @@ public static class AccountEndpoints
             if (!await users.CheckPasswordAsync(user, body.Password ?? "")) return Fail("wrongPassword", 400);
             if (!string.Equals(users.NormalizeEmail(email), user.NormalizedEmail, StringComparison.Ordinal))
             {
-                var set = await users.SetEmailAsync(user, email);      // à confirmer de nouveau
+                var set = await users.SetEmailAsync(user, email);      // to be confirmed again
                 if (!set.Succeeded) return Problems(Describe(set), 409);
                 await signIn.RefreshSignInAsync(user);
                 await QueueConfirmationAsync(ctx, user, users, mail, body.Language);
@@ -202,9 +202,9 @@ public static class AccountEndpoints
     // ---- Admin ----
 
     /// <summary>
-    /// Comptes dont le pseudo contient <paramref name="search"/> ; sans recherche, les éditeurs et
-    /// les admins, ou les derniers créés (<paramref name="recent"/>). Admins d'abord, puis par
-    /// pseudo (derniers créés : du plus récent au plus ancien) ; jamais l'e-mail.
+    /// Accounts whose username contains <paramref name="search"/>; without a search, the editors and
+    /// admins, or the newest accounts (<paramref name="recent"/>). Admins first, then by username
+    /// (newest: most recent first); never the email.
     /// </summary>
     private static async Task<IResult> ListAccounts(string? search, bool? recent, OlomocDb db, UserManager<OlomocUser> users)
     {
@@ -238,7 +238,7 @@ public static class AccountEndpoints
 
     private static DateTimeOffset Utc(DateTime date) => new(DateTime.SpecifyKind(date, DateTimeKind.Utc));
 
-    /// <summary>Rôle d'un autre compte (jamais le sien : un admin reste toujours admin, il y en a donc toujours un).</summary>
+    /// <summary>Role of another account (never one's own: an admin always stays admin, so there is always one).</summary>
     private static Task<IResult> SetRole(string userName, RoleRequest body, HttpContext ctx, UserManager<OlomocUser> users, AdminAudit audit) =>
         WithUser(ctx, users, async admin =>
         {
@@ -262,7 +262,7 @@ public static class AccountEndpoints
         return Results.Json(new TemporaryPassword(password), TournamentJson.Options);
     }
 
-    /// <summary>Fin du verrouillage (trop d'essais de mot de passe).</summary>
+    /// <summary>Ends the lockout (too many password attempts).</summary>
     private static async Task<IResult> Unlock(string userName, HttpContext ctx, UserManager<OlomocUser> users, AdminAudit audit)
     {
         if (await users.FindByNameAsync(userName) is not { } user) return Fail("unknownUser", 404);
@@ -272,7 +272,7 @@ public static class AccountEndpoints
         return Results.NoContent();
     }
 
-    /// <summary>Ferme toutes les sessions d'un autre compte (nouveau tampon de sécurité).</summary>
+    /// <summary>Closes all sessions of another account (new security stamp).</summary>
     private static Task<IResult> LogoutEverywhere(string userName, HttpContext ctx, UserManager<OlomocUser> users, AdminAudit audit) =>
         WithUser(ctx, users, async admin =>
         {
@@ -284,8 +284,7 @@ public static class AccountEndpoints
         });
 
     /// <summary>
-    /// Suppression d'un compte et de ses cabales ; jamais le sien, ni celui d'un admin (lui retirer
-    /// son rôle d'abord).
+    /// Deletes an account and its cabals; never one's own, nor an admin's (remove their role first).
     /// </summary>
     private static Task<IResult> AdminDelete(string userName, HttpContext ctx, UserManager<OlomocUser> users, AdminAudit audit) =>
         WithUser(ctx, users, async admin =>
@@ -299,16 +298,16 @@ public static class AccountEndpoints
             return Results.NoContent();
         });
 
-    // ---- Outils ----
+    // ---- Helpers ----
 
     public static async Task<AccountView> View(OlomocUser user, UserManager<OlomocUser> users) =>
         new(user.UserName ?? "", user.Email ?? "", user.EmailConfirmed, await Roles.OfAsync(users, user));
 
-    // Compte de la session ; supprimé entre-temps : session fermée (401).
+    // Session account; deleted in the meantime: session closed (401).
     private static async Task<IResult> WithUser(HttpContext ctx, UserManager<OlomocUser> users, Func<OlomocUser, Task<IResult>> action) =>
         await users.GetUserAsync(ctx.User) is { } user ? await action(user) : Results.Unauthorized();
 
-    /// <summary>Par pseudo, ou par e-mail s'il contient « @ ».</summary>
+    /// <summary>By username, or by email if it contains "@".</summary>
     private static async Task<OlomocUser?> FindAsync(UserManager<OlomocUser> users, string? login)
     {
         login = login?.Trim();
@@ -316,7 +315,7 @@ public static class AccountEndpoints
         return await users.FindByNameAsync(login) ?? (login.Contains('@') ? await users.FindByEmailAsync(login) : null);
     }
 
-    /// <summary>E-mail de confirmation, dans la limite de <see cref="MailsPerHour"/> ; false si la limite est atteinte.</summary>
+    /// <summary>Confirmation email, within the <see cref="MailsPerHour"/> limit; false if the limit is reached.</summary>
     private static async Task<bool> QueueConfirmationAsync(HttpContext ctx, OlomocUser user, UserManager<OlomocUser> users, MailQueue mail, string? language)
     {
         if (user.Email is not { } email || !await CountMailAsync(user, users)) return false;
@@ -339,11 +338,19 @@ public static class AccountEndpoints
         return true;
     }
 
-    // Lien vers une page du constructeur ; compte et jeton dans l'ancre (jamais envoyée au serveur, ni dans les journaux).
-    private static string Link(HttpContext ctx, string page, OlomocUser user, string token) =>
-        $"{ctx.Request.Scheme}://{ctx.Request.Host}/builder/account/{page}#user={Uri.EscapeDataString(user.Id)}&token={Uri.EscapeDataString(token)}";
+    /// <summary>
+    /// Link to a builder page; account and token in the fragment (never sent to the server, never logged).
+    /// Base address: PUBLIC_URL when set (recommended: a forged Host header can then never end up in an
+    /// email), otherwise the request's scheme and host (only safe with AllowedHosts restricted).
+    /// </summary>
+    private static string Link(HttpContext ctx, string page, OlomocUser user, string token)
+    {
+        var configured = ctx.RequestServices.GetRequiredService<IConfiguration>()["PUBLIC_URL"]?.Trim().TrimEnd('/');
+        var origin = string.IsNullOrEmpty(configured) ? $"{ctx.Request.Scheme}://{ctx.Request.Host}" : configured;
+        return $"{origin}/builder/account/{page}#user={Uri.EscapeDataString(user.Id)}&token={Uri.EscapeDataString(token)}";
+    }
 
-    // Lisible et facile à recopier : ni 0/O, ni 1/l/I.
+    // Readable and easy to copy: no 0/O, no 1/l/I.
     private static string TemporaryPasswordText()
     {
         const string alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -369,7 +376,7 @@ public static class AccountEndpoints
         Results.Json(new ProblemList(problems), TournamentJson.Options, statusCode: status);
 }
 
-/// <summary>Jetons de confirmation d'e-mail : durée de vie propre (2 jours), distincte de celle des réinitialisations (1 heure).</summary>
+/// <summary>Email confirmation tokens: their own lifetime (2 days), distinct from password resets (1 hour).</summary>
 public sealed class EmailConfirmationTokenProviderOptions : DataProtectionTokenProviderOptions
 {
     public EmailConfirmationTokenProviderOptions()

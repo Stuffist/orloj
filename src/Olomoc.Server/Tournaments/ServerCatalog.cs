@@ -6,10 +6,10 @@ using Olomoc.Services;
 namespace Olomoc.Server.Tournaments;
 
 /// <summary>
-/// Référentiel côté serveur, pour valider les listes déposées avec les règles du constructeur :
-/// les mêmes services (CatalogService, LocalizationService), alimentés par ce que le site sert
-/// aux visiteurs (référentiel publié : <see cref="CatalogStore"/> ; autres fichiers communs)
-/// au lieu d'un appel HTTP. Rechargé après chaque modification du référentiel.
+/// Server-side card catalog, to validate the submitted lists with the builder's rules: the same
+/// services (CatalogService, LocalizationService), fed with what the site serves to visitors
+/// (published catalog: <see cref="CatalogStore"/>; other shared files) instead of an HTTP call.
+/// Reloaded after each change of the catalog.
 /// </summary>
 public sealed class ServerCatalog
 {

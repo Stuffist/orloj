@@ -4,16 +4,16 @@ using Olomoc.Tournaments;
 
 namespace Olomoc.Pairings.Services;
 
-/// <summary>Réponse de l'API : la valeur, ou les problèmes qui l'ont empêchée.</summary>
+/// <summary>API response: the value, or the problems that prevented it.</summary>
 public sealed record ApiResult<T>(T? Value, IReadOnlyList<Problem> Problems)
 {
     public bool Ok => Problems.Count == 0;
 }
 
 /// <summary>
-/// Appels à l'API des tournois (/api/tournaments, même origine). Les jetons (organisateur,
-/// joueur) passent dans les en-têtes. Serveur injoignable ou trop sollicité : problème
-/// « network » ou « tooManyRequests », affiché comme les autres.
+/// Calls to the tournaments API (/api/tournaments, same origin). Tokens (organizer, player) go in
+/// the headers. Server unreachable or overloaded: "network" or "tooManyRequests" problem, shown
+/// like the others.
 /// </summary>
 public sealed class TournamentApi(HttpClient http)
 {
@@ -25,7 +25,7 @@ public sealed class TournamentApi(HttpClient http)
     public Task<ApiResult<TournamentView>> GetAsync(string code, string? organizer, string? player) =>
         SendAsync<TournamentView>(HttpMethod.Get, $"{Root}/{Uri.EscapeDataString(code)}", null, organizer, player);
 
-    /// <summary>Partie en ligne de la table (ouverte au premier appel), pour l'un de ses deux joueurs.</summary>
+    /// <summary>Online game of the table (opened on the first call), for one of its two players.</summary>
     public Task<ApiResult<Olomoc.Online.OnlineOpened>> OpenOnlineAsync(string code, int round, int table, string player) =>
         SendAsync<Olomoc.Online.OnlineOpened>(HttpMethod.Post, $"{Root}/{code}/rounds/{round}/tables/{table}/online", null, player: player);
 
@@ -50,33 +50,33 @@ public sealed class TournamentApi(HttpClient http)
     public Task<ApiResult<bool>> UndoRoundAsync(string code, string organizer) =>
         SendAsync<bool>(HttpMethod.Delete, $"{Root}/{code}/rounds/last", null, organizer);
 
-    /// <summary>Scénarios prévus des rondes.</summary>
+    /// <summary>Planned scenarios of the rounds.</summary>
     public Task<ApiResult<bool>> SetScenariosAsync(string code, IReadOnlyList<Scenario?> scenarios, string organizer) =>
         SendAsync<bool>(HttpMethod.Put, $"{Root}/{code}/scenarios", new ScenariosRequest(scenarios.ToList()), organizer);
 
-    /// <summary>Échange deux joueurs de la ronde en cours (tables sans résultat).</summary>
+    /// <summary>Swaps two players of the current round (tables without a result).</summary>
     public Task<ApiResult<bool>> SwapPlayersAsync(string code, int round, string first, string second, string organizer) =>
         SendAsync<bool>(HttpMethod.Post, $"{Root}/{code}/rounds/{round}/swap", new SwapRequest(first, second), organizer);
 
     public Task<ApiResult<bool>> SetResultAsync(string code, int round, int table, ResultRequest result, string organizer) =>
         SendAsync<bool>(HttpMethod.Put, $"{Root}/{code}/rounds/{round}/tables/{table}", result, organizer);
 
-    /// <summary>Compter (ou non) le tournoi dans les statistiques.</summary>
+    /// <summary>Counts the tournament in the statistics (or not).</summary>
     public Task<ApiResult<bool>> SetExcludeFromStatsAsync(string code, bool exclude, string organizer) =>
         SendAsync<bool>(HttpMethod.Put, $"{Root}/{code}/stats", new StatsRequest(exclude), organizer);
 
-    /// <summary>Statistiques des tournois terminés et comptés.</summary>
+    /// <summary>Statistics of the finished and counted tournaments.</summary>
     public Task<ApiResult<Olomoc.Tournaments.Stats.StatsView>> GetStatsAsync() =>
         SendAsync<Olomoc.Tournaments.Stats.StatsView>(HttpMethod.Get, "/api/stats", null);
 
     public Task<ApiResult<bool>> FinishAsync(string code, string organizer) =>
         SendAsync<bool>(HttpMethod.Post, $"{Root}/{code}/finish", null, organizer);
 
-    /// <summary>Mot de passe organisateur : renvoie un jeton organisateur pour cet appareil.</summary>
+    /// <summary>Organizer password: returns an organizer token for this device.</summary>
     public Task<ApiResult<OrganizerLogin>> LoginAsync(string code, string password) =>
         SendAsync<OrganizerLogin>(HttpMethod.Post, $"{Root}/{Uri.EscapeDataString(code)}/organizer/login", new PasswordRequest(password));
 
-    /// <summary>Définit, change ou retire (null) le mot de passe organisateur.</summary>
+    /// <summary>Sets, changes or removes (null) the organizer password.</summary>
     public Task<ApiResult<bool>> SetPasswordAsync(string code, string? password, string organizer) =>
         SendAsync<bool>(HttpMethod.Put, $"{Root}/{code}/organizer/password", new PasswordRequest(password), organizer);
 

@@ -4,15 +4,15 @@ using Olomoc.Server.Data;
 namespace Olomoc.Server.Accounts;
 
 /// <summary>
-/// E-mail de contrôle (MAIL_CHECK_TO) : un court message tous les <see cref="Interval"/>
-/// jours. Il garde la clé SMTP active (Brevo la désactive après 90 jours sans envoi) et montre
-/// que l'envoi marche encore. Date du dernier envoi réussi dans la base : un redémarrage n'en
-/// renvoie pas ; un échec est réessayé à la vérification suivante (toutes les 6 heures).
+/// Check email (MAIL_CHECK_TO): a short message every <see cref="Interval"/> days. It keeps the SMTP
+/// key active (Brevo disables it after 90 days without sending) and shows that sending still works.
+/// Date of the last successful send in the database: a restart does not send another one; a failure
+/// is retried at the next check (every 6 hours).
 /// </summary>
 public sealed class MailCheck(string? to, IMailSender sender, IDbContextFactory<OlomocDb> factory, ILogger<MailCheck> log)
     : BackgroundService
 {
-    public static readonly TimeSpan Interval = TimeSpan.FromDays(60);   // bien avant les 90 jours de Brevo
+    public static readonly TimeSpan Interval = TimeSpan.FromDays(60);   // well before Brevo's 90 days
     private const string Kind = "settings", Code = "mail-check";
 
     protected override async Task ExecuteAsync(CancellationToken stop)
@@ -22,11 +22,11 @@ public sealed class MailCheck(string? to, IMailSender sender, IDbContextFactory<
         do
         {
             try { await CheckAsync(DateTime.UtcNow, stop); }
-            catch (Exception e) when (e is not OperationCanceledException) { log.LogWarning(e, "E-mail de contrôle non envoyé : vérifier SMTP_* dans le .env."); }
+            catch (Exception e) when (e is not OperationCanceledException) { log.LogWarning(e, "Check email not sent: verify SMTP_* in the .env file."); }
         } while (await timer.WaitForNextTickAsync(stop));
     }
 
-    /// <summary>Envoie le message s'il est dû ; renvoie true s'il est parti.</summary>
+    /// <summary>Sends the message if it is due; returns true if it was sent.</summary>
     public async Task<bool> CheckAsync(DateTime now, CancellationToken stop = default)
     {
         await using var db = await factory.CreateDbContextAsync(stop);
@@ -37,7 +37,7 @@ public sealed class MailCheck(string? to, IMailSender sender, IDbContextFactory<
         if (last is null) db.Documents.Add(last = new StoredDocumentRow { Kind = Kind, Code = Code, CreatedAt = now, Json = "{}" });
         last.UpdatedAt = now;
         await db.SaveChangesAsync(stop);
-        log.LogInformation("E-mail de contrôle envoyé à {To}.", to);
+        log.LogInformation("Check email sent to {To}.", to);
         return true;
     }
 }

@@ -2,15 +2,14 @@ using Olomoc.Models;
 
 namespace Olomoc.Tournaments;
 
-// Tournoi tel qu'il est enregistré par le serveur (un document JSON par tournoi, dans la base).
-// Les joueurs sont désignés par leur Id ; les secrets (jetons) ne sont conservés que sous forme
-// de hash.
-// Feuille de ronde officielle : une faction et deux cabales par joueur, points de tournoi
-// 0/1/3, différence de PV cumulée.
+// Tournament as stored by the server (one JSON document per tournament, in the database).
+// Players are referred to by their Id; secrets (tokens) are only kept as hashes.
+// Official round sheet: one faction and two cabals per player, tournament points 0/1/3,
+// cumulative VP difference.
 
 public enum PairingMode { Swiss, Alignment }
 
-/// <summary>Inscriptions ouvertes → tournoi lancé (inscriptions closes, listes révélées) → terminé.</summary>
+/// <summary>Registrations open → tournament started (registrations closed, lists revealed) → finished.</summary>
 public enum TournamentPhase { Registration, Started, Finished }
 
 public sealed class Tournament : IStoredDocument
@@ -21,20 +20,20 @@ public sealed class Tournament : IStoredDocument
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";
     public DateOnly? Date { get; set; }
-    public int RoundCount { get; set; } = 3;            // rondes prévues
+    public int RoundCount { get; set; } = 3;            // planned rounds
     public int CabalsPerPlayer { get; set; } = 2;
     public PairingMode Pairing { get; set; } = PairingMode.Swiss;
-    public bool AvoidSameAlignment { get; set; }        // ronde suisse : préférer les alignements opposés
-    public bool ExcludeFromStats { get; set; }          // tournoi d'essai : hors statistiques
+    public bool AvoidSameAlignment { get; set; }        // Swiss round: prefer opposite alignments
+    public bool ExcludeFromStats { get; set; }          // test tournament: outside the statistics
     public TournamentPhase Phase { get; set; } = TournamentPhase.Registration;
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
-    public string OrganizerTokenHash { get; set; } = "";             // jeton du lien d'administration
-    public string OrganizerPasswordHash { get; set; } = "";          // mot de passe facultatif (PBKDF2)
-    public List<string> OrganizerSessionHashes { get; set; } = new(); // jetons ouverts par mot de passe
+    public string OrganizerTokenHash { get; set; } = "";             // token of the admin link
+    public string OrganizerPasswordHash { get; set; } = "";          // optional password (PBKDF2)
+    public List<string> OrganizerSessionHashes { get; set; } = new(); // tokens opened with the password
     public List<Player> Players { get; set; } = new();
     public List<Round> Rounds { get; set; } = new();
-    /// <summary>Scénario prévu pour chaque ronde (index = n° de ronde − 1) ; null : pas encore choisi.</summary>
+    /// <summary>Scenario planned for each round (index = round number − 1); null: not chosen yet.</summary>
     public List<Scenario?> Scenarios { get; set; } = new();
 
     public Player? PlayerById(string id) => Players.FirstOrDefault(p => p.Id == id);
@@ -49,7 +48,7 @@ public sealed class Player
     public string Name { get; set; } = "";
     public string Faction { get; set; } = "";
     public List<CabalExport> Cabals { get; set; } = new();
-    public bool Dropped { get; set; }                   // abandon : n'est plus apparié, reste au classement
+    public bool Dropped { get; set; }                   // dropped: no longer paired, stays in the standings
     public DateTimeOffset RegisteredAt { get; set; }
     public string TokenHash { get; set; } = "";
 }
@@ -64,9 +63,9 @@ public sealed class Round
 }
 
 /// <summary>
-/// Une table : PlayerA contre PlayerB (null : exempt, « bye »), PV de chacun une fois saisis, et
-/// la cabale que chacun a jouée (index dans ses cabales inscrites) ; pour les statistiques, si
-/// l'organisateur les a notés : qui était J1, et ce qui a mis fin à la partie.
+/// A table: PlayerA against PlayerB (null: bye), VP of each once entered, and the cabal each one
+/// played (index among their registered cabals); for the statistics, if the organizer recorded
+/// them: who was P1, and what ended the game.
 /// </summary>
 public sealed class Table
 {
@@ -75,11 +74,11 @@ public sealed class Table
     public string? PlayerB { get; set; }
     public int? VpA { get; set; }
     public int? VpB { get; set; }
-    public int? CabalA { get; set; }                    // cabale jouée (index), pour les statistiques
+    public int? CabalA { get; set; }                    // cabal played (index), for the statistics
     public int? CabalB { get; set; }
-    public TableSide? First { get; set; }               // J1
+    public TableSide? First { get; set; }               // P1
     public GameEnd? End { get; set; }
-    /// <summary>Partie en ligne ouverte pour cette table (code), s'il y en a une.</summary>
+    /// <summary>Online game opened for this table (code), if there is one.</summary>
     public string? OnlineCode { get; set; }
 
     public bool IsBye => PlayerB is null;

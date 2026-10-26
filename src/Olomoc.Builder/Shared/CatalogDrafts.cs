@@ -2,8 +2,8 @@ using Olomoc.Models;
 
 namespace Olomoc.Builder.Shared;
 
-// Éditeur du référentiel : copies modifiables d'une entrée et de ses textes dans chaque langue,
-// converties en CogEdit / EquipmentEdit à l'enregistrement (chaînes vides : absentes).
+// Card catalog editor: editable copies of an entry and of its texts in each language, converted
+// to CogEdit / EquipmentEdit when saving (empty strings: missing).
 
 public sealed class FrequencyDraft
 {
@@ -41,7 +41,7 @@ public sealed class AbilityDraft
         Frequencies = Frequencies.Select(f => new Frequency { Count = f.Count, Per = f.Per }).ToList(),
     };
 
-    /// <summary>Textes des capacités dans une langue ; aucun : liste vide (repli sur la langue de référence).</summary>
+    /// <summary>Ability texts in a language; none: empty list (fallback to the reference language).</summary>
     public static List<AbilityText> TextsIn(List<AbilityDraft> abilities, string language)
     {
         var texts = abilities.Select(a => a.Texts.GetValueOrDefault(language) ?? new()).ToList();
@@ -53,7 +53,7 @@ public sealed class AbilityDraft
     internal static string? NullIfEmpty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 }
 
-/// <summary>Ligne de vie écrite en lettres : S (standard), R (protection), T (corrompu).</summary>
+    /// <summary>Life line written as letters: S (standard), R (protection), T (tainted).</summary>
 public static class LifeLineText
 {
     public static string Format(IEnumerable<HealthPointType> points) => string.Concat(points.Select(p => p.ToString()));
@@ -99,7 +99,7 @@ public sealed class CogDraft
     public Dictionary<string, CogTextDraft> Texts { get; set; } = new();
     public List<AbilityDraft> Abilities { get; set; } = new();
 
-    /// <summary>Nouveau rouage : brouillon (non publié), une capacité.</summary>
+    /// <summary>New cog: draft (unpublished), one ability.</summary>
     public static CogDraft New(IReadOnlyList<string> languages) => new()
     {
         IsNew = true,
@@ -150,7 +150,7 @@ public sealed class BuildRuleDraft
     public string Ministry { get; set; } = "";
 }
 
-/// <summary>Affiliation exclusive d'une carte : aucune, Ministère, faction ou rouage.</summary>
+/// <summary>Exclusive affiliation of a card: none, Ministry, faction or cog.</summary>
 public enum AffiliationKind { None, Ministry, Faction, Cog }
 
 public sealed class EquipmentDraft

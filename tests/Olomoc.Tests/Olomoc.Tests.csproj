@@ -15,8 +15,8 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.13" />
   </ItemGroup>
 
-  <!-- Modèles et services de l'app (données lues dans src/Olomoc.Shared/wwwroot) ; serveur
-       démarré en mémoire pour les tests d'intégration. -->
+  <!-- The app's models and services (data read from src/Olomoc.Shared/wwwroot); server started
+       in memory for the integration tests. -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\Olomoc.Shared\Olomoc.Shared.csproj" />
     <ProjectReference Include="..\..\src\Olomoc.Server\Olomoc.Server.csproj" />

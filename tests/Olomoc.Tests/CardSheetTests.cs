@@ -5,33 +5,33 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Planche des cartes : mise en page A4 paysage, adresse de la planche, images des cartes.</summary>
+/// <summary>Card sheet: landscape A4 layout, address of the sheet, card images.</summary>
 public class CardSheetTests
 {
     [Fact]
-    public void Planche_centree_dans_la_page_avec_les_ecarts_voulus()
+    public void Sheet_centered_in_the_page_with_the_intended_gaps()
     {
         var all = Enumerable.Range(0, 3).SelectMany(c => new[] { CardSheet.Slot(c, 0, "x"), CardSheet.Slot(c, 1, "x") }).ToList();
         var right = all.Max(c => c.XMm) + CardSheet.CardWidthMm;
         var bottom = all.Max(c => c.YMm) + CardSheet.CardHeightMm;
 
-        Assert.Equal(CardSheet.LeftMm, CardSheet.PageWidthMm - right, 6);       // centrée horizontalement
-        Assert.Equal(CardSheet.TopMm, CardSheet.PageHeightMm - bottom, 6);      // et verticalement
+        Assert.Equal(CardSheet.LeftMm, CardSheet.PageWidthMm - right, 6);       // centered horizontally
+        Assert.Equal(CardSheet.TopMm, CardSheet.PageHeightMm - bottom, 6);      // and vertically
         Assert.True(CardSheet.LeftMm > 5 && CardSheet.TopMm > 5, "marges imprimables");
         Assert.Equal(CardSheet.ColumnGapMm, CardSheet.Slot(1, 0).XMm - CardSheet.Slot(0, 0).XMm - CardSheet.CardWidthMm, 6);
         Assert.Equal(CardSheet.RowGapMm, CardSheet.Slot(0, 1).YMm - CardSheet.Slot(0, 0).YMm - CardSheet.CardHeightMm, 6);
-        Assert.True(CardSheet.RowGapMm < CardSheet.ColumnGapMm, "rouage et équipement plus rapprochés qu'entre rouages");
+        Assert.True(CardSheet.RowGapMm < CardSheet.ColumnGapMm, "cog and equipment closer together than cogs");
     }
 
     [Fact]
-    public void Style_en_pourcentages_de_la_page()
+    public void Style_in_percentages_of_the_page()
     {
         var style = CardSheet.Style(CardSheet.Slot(0, 0));
         Assert.Equal("left:3.704%;top:19.643%;width:29.966%;height:30%", style);
     }
 
     [Fact]
-    public async Task Adresse_de_la_planche_aller_retour()
+    public async Task Sheet_address_round_trip()
     {
         var d = await AppData.GetAsync();
         Cog?[] cogs = { d.Cog("3R05"), d.Cog("2R04"), d.Cog("1R01") };
@@ -45,8 +45,8 @@ public class CardSheetTests
         Assert.Equal(equipment.Select(e => e?.Id), readEquipment.Select(e => e?.Id));
 
         var cells = CardSheet.Cells(readCogs, readEquipment);
-        Assert.Equal(5, cells.Count);                                               // un équipement absent
-        // Comme le constructeur : rang 3 à gauche, rang 1 à droite ; rouage en haut, équipement dessous.
+        Assert.Equal(5, cells.Count);                                               // one missing equipment
+        // Like the builder: rank 3 on the left, rank 1 on the right; cog on top, equipment below.
         Assert.Equal(("1R01", 0, 0), (cells[0].Id, cells[0].Column, cells[0].Row));
         Assert.Equal((equipment[2]!.Id, 0, 1), (cells[1].Id, cells[1].Column, cells[1].Row));
         Assert.Equal(("2R04", 1, 0), (cells[2].Id, cells[2].Column, cells[2].Row));
@@ -59,7 +59,7 @@ public class CardSheetTests
     [InlineData("")]
     [InlineData(",,")]
     [InlineData("XXXX.E11,2R04.YYY")]
-    public async Task Adresse_incomplete_ou_inconnue_toleree(string? value)
+    public async Task Incomplete_or_unknown_address_tolerated(string? value)
     {
         var d = await AppData.GetAsync();
         var (cogs, equipment) = CardSheet.Decode(value, d.Catalog);
@@ -69,20 +69,20 @@ public class CardSheetTests
     }
 
     [Fact]
-    public async Task Chaque_carte_du_referentiel_a_son_image()
+    public async Task Every_catalog_card_has_its_image()
     {
         var d = await AppData.GetAsync();
         var ids = d.Catalog.Catalog.Cogs.Select(c => c.Id).Concat(d.Catalog.Catalog.Equipment.Select(e => e.Id));
         var missing = ids.Where(id => !File.Exists(Path.Combine(AppData.WwwRoot, "img", "cards", id + ".jpg"))).ToList();
         Assert.Empty(missing);
 
-        // Format paysage 89 × 63 mm : 1051 × 744 px (en-tête JPEG, segment SOF).
+        // Landscape format 89 × 63 mm: 1051 × 744 px (JPEG header, SOF segment).
         var (width, height) = JpegSize(Path.Combine(AppData.WwwRoot, "img", "cards", "E11.jpg"));
         Assert.Equal((1051, 744), (width, height));
     }
 
     [Fact]
-    public async Task Chaque_faction_et_chaque_Ministere_a_son_embleme()
+    public async Task Every_faction_and_every_Ministry_has_its_emblem()
     {
         var d = await AppData.GetAsync();
         var paths = d.Catalog.AllFactions.Select(f => Emblem.FactionPath(f.Code))

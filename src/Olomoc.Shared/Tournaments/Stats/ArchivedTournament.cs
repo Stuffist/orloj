@@ -1,18 +1,18 @@
 namespace Olomoc.Tournaments.Stats;
 
-// Archive anonyme d'un tournoi terminé, pour les statistiques : ni noms, ni jetons ; les joueurs
-// sont numérotés. Conservée sans limite de durée (les tournois, eux, sont purgés).
+// Anonymous archive of a finished tournament, for the statistics: no names, no tokens; players
+// are numbered. Kept with no time limit (tournaments themselves are purged).
 
-/// <summary>Une carte d'une cabale archivée : rang, rouage, équipement/don (ids du référentiel).</summary>
+/// <summary>A card of an archived cabal: rank, cog, equipment/boon (card catalog ids).</summary>
 public sealed record ArchivedSlot(int Rank, string Cog, string? Equipment);
 
-/// <summary>Un joueur : numéro (ordre d'inscription), faction, cabales inscrites.</summary>
+/// <summary>A player: number (registration order), faction, registered cabals.</summary>
 public sealed record ArchivedPlayer(int Number, string Faction, IReadOnlyList<IReadOnlyList<ArchivedSlot>> Cabals);
 
 /// <summary>
-/// Une partie jouée (exempts exclus) : joueurs A et B, cabale jouée par chacun (si connue), PV ;
-/// si notés (archives version 2) : J1, cause de la fin, agenda de la ronde (<see cref="Agendas.Other"/>
-/// pour un scénario maison, sans son nom) ; si précisés (archives version 3) : decks Artefact et Ministère.
+/// A game played (byes excluded): players A and B, cabal played by each one (if known), VP; if
+/// recorded (archive version 2): P1, cause of the end, agenda of the round (<see cref="Agendas.Other"/>
+/// for a custom scenario, without its name); if specified (archive version 3): Artifact and Ministry decks.
 /// </summary>
 public sealed record ArchivedGame(int A, int B, int? CabalA, int? CabalB, int VpA, int VpB,
     TableSide? First = null, GameEnd? End = null, string? Scenario = null,

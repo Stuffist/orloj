@@ -6,7 +6,7 @@ using Olomoc.Tournaments;
 
 namespace Olomoc.Server.Online;
 
-/// <summary>Parties en ligne enregistrées dans la base, un document JSON par partie (voir <see cref="DocumentStore{T}"/>).</summary>
+/// <summary>Online games stored in the database, one JSON document per game (see <see cref="DocumentStore{T}"/>).</summary>
 public sealed class OnlineStore(IDbContextFactory<OlomocDb> db, int maxGames = 2000)
     : DocumentStore<OnlineGame>(db, Kind, maxGames, TournamentJson.Options)
 {
@@ -14,8 +14,8 @@ public sealed class OnlineStore(IDbContextFactory<OlomocDb> db, int maxGames = 2
 }
 
 /// <summary>
-/// Toutes les 6 heures : suppression des parties sans modification depuis 7 jours (une partie
-/// se joue en une soirée ; le lien d'une partie interrompue reste valable une semaine).
+/// Every 6 hours: deletion of the games unchanged for 7 days (a game is played in an evening;
+/// the link of an interrupted game stays valid for a week).
 /// </summary>
 public sealed class OnlinePurge(OnlineStore store, ILogger<OnlinePurge> log) : BackgroundService
 {
@@ -29,9 +29,9 @@ public sealed class OnlinePurge(OnlineStore store, ILogger<OnlinePurge> log) : B
             try
             {
                 var removed = await store.PurgeAsync(MaxAge, _ => true);
-                if (removed > 0) log.LogInformation("{Count} partie(s) en ligne inactive(s) depuis {Days} jours supprimée(s).", removed, MaxAge.Days);
+                if (removed > 0) log.LogInformation("{Count} online game(s) inactive for {Days} days deleted.", removed, MaxAge.Days);
             }
-            catch (IOException e) { log.LogWarning(e, "Purge des parties en ligne interrompue."); }
+            catch (IOException e) { log.LogWarning(e, "Purge of online games interrupted."); }
         } while (await timer.WaitForNextTickAsync(stop));
     }
 }

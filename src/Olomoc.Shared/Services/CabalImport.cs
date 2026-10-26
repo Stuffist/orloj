@@ -4,12 +4,12 @@ using Olomoc.Models;
 
 namespace Olomoc.Services;
 
-/// <summary>Problème de lecture d'une cabale collée : clé (ui.json, préfixe « import. ») et arguments.</summary>
+/// <summary>Problem reading a pasted cabal: key (ui.json, "import." prefix) and arguments.</summary>
 public sealed record ImportIssue(string Key, params string[] Args);
 
 /// <summary>
-/// Cabale lue (ou null), ce qui n'a pas pu l'être, et les factions possibles pour un texte sans
-/// faction (celles où la cabale est la plus proche d'être légale) : à faire choisir s'il y en a plusieurs.
+/// Cabal read (or null), what could not be read, and the possible factions for a text without a
+/// faction (those where the cabal is closest to legal): to be chosen if there are several.
 /// </summary>
 public sealed record ImportResult(CabalExport? Cabal, IReadOnlyList<ImportIssue> Issues, IReadOnlyList<string> Factions)
 {
@@ -17,12 +17,11 @@ public sealed record ImportResult(CabalExport? Cabal, IReadOnlyList<ImportIssue>
 }
 
 /// <summary>
-/// Cabale collée ou tapée à la main : export JSON (<see cref="CabalExporter.FromJson"/>), ou texte au
-/// format de l'export (builder bwaaaanegamesdb.fr) : nom de la cabale facultatif en première ligne,
-/// puis une ligne par rouage, « ROUAGE - ÉQUIPEMENT/DON » ou « ROUAGE » seul. Les noms sont
-/// reconnus dans la langue courante ou de référence, sans tenir compte de la casse, des accents,
-/// des espaces ni du type de tiret. Faction : celle donnée, sinon celle où la cabale est la plus
-/// proche d'être légale.
+/// Cabal pasted or typed by hand: JSON export (<see cref="CabalExporter.FromJson"/>), or text in
+/// the export format (builder bwaaaanegamesdb.fr): optional cabal name on the first line, then one
+/// line per cog, "COG - EQUIPMENT/BOON" or "COG" alone. Names are recognized in the current or the
+/// reference language, ignoring case, accents, spaces and the kind of dash. Faction: the given
+/// one, otherwise the one where the cabal is closest to legal.
 /// </summary>
 public sealed class CabalImport(CatalogService catalog, LocalizationService l, CabalExporter exporter)
 {
@@ -43,13 +42,13 @@ public sealed class CabalImport(CatalogService catalog, LocalizationService l, C
         string? name = null;
         var issues = new List<ImportIssue>();
         var cogs = new Cog?[3];
-        var wanted = new Equipment?[3];             // équipement/don demandé pour chaque emplacement
+        var wanted = new Equipment?[3];             // equipment/boon asked for each slot
         var lines = trimmed.Split('\n').Select(x => x.Trim()).Where(x => x.Length > 0).ToList();
         for (var i = 0; i < lines.Count; i++)
         {
             if (!TryLine(lines[i], cogsByName, equipmentByName, out var cog, out var equipment))
             {
-                if (i == 0) name = lines[i];       // première ligne non reconnue : nom de la cabale
+                if (i == 0) name = lines[i];       // first line not recognized: name of the cabal
                 else issues.Add(new ImportIssue("unknownLine", (i + 1).ToString(CultureInfo.InvariantCulture), lines[i]));
                 continue;
             }
@@ -63,7 +62,7 @@ public sealed class CabalImport(CatalogService catalog, LocalizationService l, C
         }
         if (cogs.All(c => c is null)) return new(null, issues.Prepend(new ImportIssue("noCog")).ToList());
 
-        // Faction donnée, sinon les plus proches de la légalité (la première par défaut).
+        // Given faction, otherwise those closest to legal (the first one by default).
         string[] factions;
         if (faction is { Length: > 0 } && catalog.AllFactions.Any(f => f.Code == faction)) factions = new[] { faction };
         else
@@ -75,8 +74,8 @@ public sealed class CabalImport(CatalogService catalog, LocalizationService l, C
         return new(exporter.ToModel(name, factions[0], cogs, wanted), issues, factions);
     }
 
-    // Ligne « ROUAGE - ÉQUIPEMENT » (le tiret, espacé ou non, qui sépare deux noms connus : les
-    // traits d'union des noms, « Passe-droit », ne gênent pas) ou « ROUAGE » seul.
+    // Line "COG - EQUIPMENT" (the dash, spaced or not, that separates two known names: the hyphens
+    // inside names, "Passe-droit", do not get in the way) or "COG" alone.
     private static bool TryLine(string line, Dictionary<string, Cog> cogs, Dictionary<string, Equipment> equipment,
         out Cog? cog, out Equipment? item)
     {
@@ -98,7 +97,7 @@ public sealed class CabalImport(CatalogService catalog, LocalizationService l, C
         return index;
     }
 
-    /// <summary>Clé de comparaison : majuscules sans accents, tirets et apostrophes unifiés, espaces réduits.</summary>
+    /// <summary>Comparison key: uppercase without accents, dashes and apostrophes unified, spaces reduced.</summary>
     public static string Key(string s)
     {
         var sb = new StringBuilder(s.Length);

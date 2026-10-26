@@ -7,9 +7,9 @@ using Olomoc.Models;
 namespace Olomoc.Services;
 
 /// <summary>
-/// Langue courante et textes : libellés d'interface (i18n/&lt;langue&gt;/ui.json) et textes des
-/// cartes (i18n/&lt;langue&gt;/cards.json). Tout texte manquant se replie sur la langue de
-/// référence (<see cref="ReferenceLanguage"/>), complète par construction.
+/// Current language and texts: interface labels (i18n/&lt;language&gt;/ui.json) and card texts
+/// (i18n/&lt;language&gt;/cards.json). Any missing text falls back to the reference language
+/// (<see cref="ReferenceLanguage"/>), complete by design.
 /// </summary>
 public sealed class LocalizationService
 {
@@ -34,7 +34,7 @@ public sealed class LocalizationService
     public string Current { get; private set; } = ReferenceLanguage;
     public bool Loaded { get; private set; }
 
-    /// <summary>Levé après un changement de langue, pour le re-rendu des composants.</summary>
+    /// <summary>Raised after a language change, so that components render again.</summary>
     public event Action? Changed;
 
     public Task EnsureLoadedAsync() => _loading ??= LoadAsync();
@@ -68,7 +68,7 @@ public sealed class LocalizationService
             await _js.InvokeVoidAsync("document.documentElement.setAttribute", "lang", code);
             if (persist) await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, code);
         }
-        catch (JSException) { /* stockage indisponible (navigation privée…) : sans conséquence */ }
+        catch (JSException) { /* storage unavailable (private browsing…): no consequence */ }
     }
 
     private bool IsKnown(string code) => Languages.Any(l => l.Code == code);
@@ -83,7 +83,7 @@ public sealed class LocalizationService
     private static string? BrowserLanguage()
     {
         var code = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-        return string.IsNullOrEmpty(code) || code == "iv" ? null : code;   // « iv » : culture invariante
+        return string.IsNullOrEmpty(code) || code == "iv" ? null : code;   // "iv": invariant culture
     }
 
     private async Task<Dictionary<string, string>> LoadUiAsync(string lang)
@@ -101,7 +101,7 @@ public sealed class LocalizationService
 
     // ---- Interface ----
 
-    /// <summary>Libellé d'interface, avec paramètres {0}, {1}… ; repli : courante → référence → [clé].</summary>
+    /// <summary>Interface label, with parameters {0}, {1}…; fallback: current → reference → [key].</summary>
     public string Ui(string key, params object[] args)
     {
         var text = UiOrNull(Current, key) ?? UiOrNull(ReferenceLanguage, key) ?? $"[{key}]";
@@ -116,8 +116,8 @@ public sealed class LocalizationService
     public static string StatKey(StatKind stat) => stat.ToString().ToLowerInvariant();
 
     /// <summary>
-    /// Mots-clés de stats acceptés par la recherche, dans toutes les langues : trigrammes et noms
-    /// complets (ex. « tir », « rng », « ranged »). La syntaxe ne dépend pas de la langue affichée.
+    /// Stat keywords accepted by the search, in every language: three-letter codes and full names
+    /// (e.g. "tir", "rng", "ranged"). The syntax does not depend on the displayed language.
     /// </summary>
     public IReadOnlyDictionary<string, StatKind> StatKeywords()
     {
@@ -130,7 +130,7 @@ public sealed class LocalizationService
         return keywords;
     }
 
-    // ---- Textes des cartes ----
+    // ---- Card texts ----
 
     private Localized Resolve(Func<CardTexts, string?> pick, string fallback)
     {
@@ -153,11 +153,11 @@ public sealed class LocalizationService
 
     private static AbilityText? At(List<AbilityText>? list, int i) => list is not null && i < list.Count ? list[i] : null;
 
-    /// <summary>Nom dans la langue de référence : base des règles indépendantes de la langue (doublons).</summary>
+    /// <summary>Name in the reference language: the basis of language-independent rules (duplicates).</summary>
     public string ReferenceName(Cog cog) => _cards.GetValueOrDefault(ReferenceLanguage)?.Cogs.GetValueOrDefault(cog.Id)?.Name ?? cog.Id;
     public string ReferenceName(Equipment e) => _cards.GetValueOrDefault(ReferenceLanguage)?.Equipment.GetValueOrDefault(e.Id)?.Name ?? e.Id;
 
-    /// <summary>Texte cherchable d'un rouage : nom et titre dans la langue courante et de référence.</summary>
+    /// <summary>Searchable text of a cog: name and title in the current and reference languages.</summary>
     public string SearchText(Cog cog)
     {
         var parts = new List<string?>();
@@ -167,7 +167,7 @@ public sealed class LocalizationService
         return string.Join(' ', parts.Where(p => p is not null));
     }
 
-    /// <summary>Texte cherchable d'un équipement/don : nom, noms et effets des capacités, dans la langue courante et de référence.</summary>
+    /// <summary>Searchable text of an equipment/boon: name, ability names and effects, in the current and reference languages.</summary>
     public string SearchText(Equipment e)
     {
         var parts = new List<string?>();
@@ -180,17 +180,17 @@ public sealed class LocalizationService
         return string.Join(' ', parts.Where(p => p is not null));
     }
 
-    /// <summary>Affiliation d'un équipement/don : « Don · L'Axe », « Équipement · Ligue de Maisel », « Équipement · affilié au rouage ».</summary>
+    /// <summary>Affiliation of an equipment/boon: "Boon · The Axis", "Equipment · Maisel League", "Equipment · affiliated with the cog".</summary>
     public string EquipmentAffiliation(Equipment e) =>
         Ui($"equipment.kind.{e.Kind}") + " · " +
         (e.IsFactionAffiliated ? FactionName(e.Faction!).Text :
          e.IsCogAffiliated ? Ui("equipment.cogAffiliated") :
          MinistryName(e.Ministry!).Text);
 
-    /// <summary>Nom d'un scénario : agenda officiel dans la langue courante, ou nom du scénario maison.</summary>
+    /// <summary>Name of a scenario: official agenda in the current language, or name of the custom scenario.</summary>
     public string ScenarioName(Olomoc.Tournaments.Scenario s) => s.IsOther ? s.Name ?? Ui("agenda.OTHER") : Ui($"agenda.{s.Id}");
 
-    /// <summary>Decks d'un scénario : « Rogue · Désinformation » ; null si aucun n'est précisé.</summary>
+    /// <summary>Decks of a scenario: "Rogue · Disinformation"; null if none is specified.</summary>
     public string? DecksLabel(Olomoc.Tournaments.Scenario s)
     {
         var parts = new[]
@@ -201,7 +201,7 @@ public sealed class LocalizationService
         return parts.Count == 0 ? null : string.Join(" · ", parts);
     }
 
-    /// <summary>Message de légalité dans la langue courante.</summary>
+    /// <summary>Legality message in the current language.</summary>
     public string Describe(LegalityIssue issue) =>
         Ui($"legality.{issue.Key}", issue.Args.Select(a => (object)string.Join(", ", a.Values.Select(v => a.Kind switch
         {

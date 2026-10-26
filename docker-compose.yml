@@ -1,49 +1,55 @@
-# Orloj sur le VPS : https://orloj.top/ (→ /builder/ ; tournois sous /pairings/), derrière le
-# reverse proxy Caddy (deploy/proxy), qui tient les ports 80/443 et les certificats. Le conteneur
-# n'ouvre aucun port public : Caddy le joint par le réseau Docker « web ».
+# Orloj container. GENERIC: valid for any instance, except the values marked "orloj.top" below,
+# which are the public instance's (https://orloj.top/) and must be overridden in .env elsewhere.
 #
-#   docker network create web                        (une fois par machine)
-#   docker compose up -d --build                     (depuis les sources)
-#   docker compose pull && docker compose up -d      (image publiée sur Docker Hub)
+# The container opens no public port: a reverse proxy (Caddy, nginx…) reaches it through the
+# "web" Docker network and handles HTTPS. For orloj.top, that proxy is deploy/proxy (specific).
+#
+#   docker network create web                        (once per machine)
+#   docker compose up -d --build                     (from the sources)
+#   docker compose pull && docker compose up -d      (orloj.top: image published on Docker Hub)
 
 services:
   olomoc:
-    image: stuffist/olomoc
+    image: stuffist/olomoc          # orloj.top: Docker Hub image; built locally under this name with --build
     build: .
     container_name: olomoc
     restart: always
-    # Durcissement : utilisateur sans privilèges (Dockerfile), aucune capacité, pas d'élévation
-    # possible, système de fichiers en lecture seule hormis /data et /tmp.
+    # Hardening: unprivileged user (Dockerfile), no capabilities, no privilege escalation,
+    # read-only file system except /data and /tmp.
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     read_only: true
     tmpfs: [/tmp]
     environment:
-      # Noms acceptés (les autres : erreur 400) ; localhost / 127.0.0.1 : healthcheck, diagnostic.
+      # Accepted host names (others: error 400); localhost / 127.0.0.1: healthcheck, diagnostics.
+      # orloj.top default: set OLOMOC_HOSTS to your own domain.
       AllowedHosts: ${OLOMOC_HOSTS:-orloj.top;localhost;127.0.0.1}
-      # Adresse IP et schéma (https) du visiteur, transmis par Caddy (X-Forwarded-For / -Proto) :
-      # limites de requêtes par visiteur, HSTS. Le port 8080 n'est joignable que par le proxy.
+      # The visitor's IP address and scheme (https), passed on by the reverse proxy (X-Forwarded-For / -Proto):
+      # per-visitor request limits, HSTS. Port 8080 is only reachable by the proxy.
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
-      # Comptes : admins (pseudos de comptes existants, séparés par « ; », relus au démarrage).
+      # Accounts: admins (usernames of existing accounts, separated by ";", read at startup).
       OLOMOC_ADMINS: ${OLOMOC_ADMINS:-}
-      # E-mails (confirmation, mot de passe oublié) par un relais SMTP (Brevo…) ; sans SMTP_HOST,
-      # écrits dans ./data/mail. Identifiants dans .env, à côté de ce fichier, jamais ici.
+      # Emails (confirmation, forgotten password) through an SMTP relay (Brevo…); without SMTP_HOST,
+      # written to ./data/mail. Credentials in .env, next to this file, never here.
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      MAIL_FROM: ${MAIL_FROM:-Orloj <noreply@orloj.top>}
-      # E-mail de contrôle tous les 60 jours (garde la clé SMTP active) ; vide : aucun.
+      MAIL_FROM: ${MAIL_FROM:-Orloj <noreply@orloj.top>}     # orloj.top default: set your own sender
+      # Public address of the site, used in the emails' links (never the request's Host header).
+      # orloj.top default: set PUBLIC_URL to your own address.
+      PUBLIC_URL: ${PUBLIC_URL:-https://orloj.top}
+      # Check email every 60 days (keeps the SMTP key active); empty: none.
       MAIL_CHECK_TO: ${MAIL_CHECK_TO:-}
     ports:
-      # HTTP local au VPS uniquement (diagnostic) : curl http://127.0.0.1:8090/healthz
+      # HTTP local to the server only (diagnostics): curl http://127.0.0.1:8090/healthz
       - "127.0.0.1:${OLOMOC_HTTP_PORT:-8090}:8080"
     volumes:
-      # Données : base SQLite ./data/olomoc.db, à côté de ce fichier (créée au premier démarrage),
-      # sa copie quotidienne cohérente dans ./data/backups (7 gardées), et les modifications du
-      # référentiel faites par les admins (./data/catalog, à exporter vers le dépôt). Conservé par
-      # down/up/--force-recreate/--build ; à sauvegarder comme un dossier.
-      # Doit appartenir à l'utilisateur du conteneur : sudo chown -R 1654:1654 data
+      # Data: SQLite database ./data/olomoc.db, next to this file (created at the first start), its
+      # consistent daily copy in ./data/backups (7 kept), and the card catalog changes made by the
+      # admins (./data/catalog, to export to the repository). Kept across
+      # down/up/--force-recreate/--build; to back up as a folder.
+      # Must belong to the container's user: sudo chown -R 1654:1654 data
       - ./data:/data
     networks: [web]
 

@@ -5,13 +5,13 @@ using Olomoc.Server.Tournaments;
 namespace Olomoc.Server.Data;
 
 /// <summary>
-/// Reprise des données d'avant la base (un fichier JSON par document) : au démarrage, chaque
-/// dossier présent est importé dans la base, puis renommé « .imported » (gardé comme sauvegarde,
-/// jamais réimporté). Les fichiers illisibles sont signalés et restent dans ce dossier.
+/// Import of the data from before the database (one JSON file per document): at startup, each
+/// existing folder is imported into the database, then renamed ".imported" (kept as a backup,
+/// never imported again). Unreadable files are reported and stay in that folder.
 /// </summary>
 public static class JsonImport
 {
-    /// <summary>Dossiers de DATA_DIR et sorte de document correspondante.</summary>
+    /// <summary>DATA_DIR folders and the matching document kind.</summary>
     public static readonly IReadOnlyList<(string Folder, string Kind)> Folders =
     [
         ("tournaments", TournamentStore.Kind),
@@ -20,7 +20,7 @@ public static class JsonImport
 
     public const string ImportedSuffix = ".imported";
 
-    /// <summary>Importe les dossiers présents ; renvoie le nombre de documents ajoutés.</summary>
+    /// <summary>Imports the existing folders; returns the number of documents added.</summary>
     public static async Task<int> RunAsync(IDbContextFactory<OlomocDb> factory, string dataDirectory, ILogger log)
     {
         var added = 0;
@@ -38,7 +38,7 @@ public static class JsonImport
                 if (TournamentStore.Normalize(code) is null || existing.Contains(code)) continue;
                 if (Read(file) is not { } row)
                 {
-                    log.LogWarning("Import : {File} illisible, laissé dans {Folder}{Suffix}.", Path.GetFileName(file), folder, ImportedSuffix);
+                    log.LogWarning("Import: {File} unreadable, left in {Folder}{Suffix}.", Path.GetFileName(file), folder, ImportedSuffix);
                     continue;
                 }
                 row.Kind = kind;
@@ -46,16 +46,16 @@ public static class JsonImport
                 db.Documents.Add(row);
                 count++;
             }
-            await db.SaveChangesAsync();          // une transaction par dossier
+            await db.SaveChangesAsync();          // one transaction per folder
 
             Directory.Move(directory, FreeName(directory + ImportedSuffix));
-            log.LogInformation("Import : {Count} document(s) de {Folder} ajouté(s) à la base.", count, folder);
+            log.LogInformation("Import: {Count} document(s) from {Folder} added to the database.", count, folder);
             added += count;
         }
         return added;
     }
 
-    // Contenu JSON valide ; dates du document (createdAt, updatedAt), à défaut celle du fichier.
+    // Valid JSON content; dates of the document (createdAt, updatedAt), otherwise the file's date.
     private static StoredDocumentRow? Read(string file)
     {
         try
@@ -78,7 +78,7 @@ public static class JsonImport
         root.TryGetProperty(name, out var value) && value.TryGetDateTimeOffset(out var date) && date != default
             ? date.UtcDateTime : null;
 
-    // Dossier déjà importé une fois (restauré puis réimporté) : suffixe horodaté.
+    // Folder already imported once (restored then imported again): timestamped suffix.
     private static string FreeName(string path) =>
         Directory.Exists(path) ? $"{path}-{DateTime.UtcNow:yyyyMMddHHmmss}" : path;
 }

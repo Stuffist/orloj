@@ -8,8 +8,8 @@ using Xunit;
 namespace Olomoc.Tests;
 
 /// <summary>
-/// Cabales de l'appareil synchronisées avec le compte (CabalLibrary) : compte en mémoire, qui
-/// applique les mêmes règles que le serveur ; un FakeStorage = le localStorage d'un appareil.
+/// Device cabals synchronized with the account (CabalLibrary): in-memory account, which applies the
+/// same rules as the server; one FakeStorage = the localStorage of one device.
 /// </summary>
 public class CabalSyncTests
 {
@@ -29,7 +29,7 @@ public class CabalSyncTests
     private static string[] Names(CabalLibrary l) => l.Cabals.Select(c => c.Cabal.Name!).ToArray();
 
     [Fact]
-    public async Task Sans_compte_tout_reste_sur_l_appareil()
+    public async Task Without_an_account_everything_stays_on_the_device()
     {
         var cloud = new FakeCloud();
         var library = await Open(new FakeStorage(), cloud);
@@ -41,7 +41,7 @@ public class CabalSyncTests
     }
 
     [Fact]
-    public async Task Premiere_connexion_les_cabales_de_l_appareil_partent_dans_le_compte()
+    public async Task First_sign_in_the_device_cabals_go_to_the_account()
     {
         var cloud = new FakeCloud();
         var phone = new FakeStorage();
@@ -51,7 +51,7 @@ public class CabalSyncTests
         var changed = 0;
         library.Changed += () => changed++;
 
-        await cloud.SignInAsync("Bohdan");                   // connexion : synchronisation aussitôt
+        await cloud.SignInAsync("Bohdan");                   // sign-in: synchronization right away
         var report = library.LastSync!;
         Assert.Equal(("Bohdan", true, 2), (report.User, report.FirstSync, report.Uploaded));
         Assert.Empty(report.Problems);
@@ -59,14 +59,14 @@ public class CabalSyncTests
         Assert.Equal(0, library.PendingCount);
         Assert.Equal(1, changed);
 
-        // Second appareil, vide : il reçoit les cabales du compte.
+        // Second device, empty: it receives the account's cabals.
         var computer = await Open(new FakeStorage(), cloud);
         Assert.Equal(["Deux", "Une"], Names(computer));
         Assert.False(computer.LastSync!.FirstSync && computer.LastSync.Uploaded > 0);
     }
 
     [Fact]
-    public async Task Sauvegarde_et_suppression_suivent_sur_l_autre_appareil()
+    public async Task Save_and_deletion_follow_on_the_other_device()
     {
         var cloud = new FakeCloud { User = "Bohdan" };
         var phone = await Open(new FakeStorage(), cloud);
@@ -82,12 +82,12 @@ public class CabalSyncTests
         await phone.ReloadAsync();
         Assert.Empty(phone.Cabals);
 
-        // Copie rouverte sur l'ordinateur (autre onglet, plus tard) : rien ne réapparaît.
+        // Copy reopened on the computer (another tab, later): nothing reappears.
         Assert.Empty((await Open(computerStorage, cloud)).Cabals);
     }
 
     [Fact]
-    public async Task Hors_connexion_les_changements_attendent_le_reseau()
+    public async Task Offline_the_changes_wait_for_the_network()
     {
         var cloud = new FakeCloud { User = "Bohdan" };
         var storage = new FakeStorage();
@@ -102,7 +102,7 @@ public class CabalSyncTests
         Assert.Equal("network", library.LastSync!.Problems.Single().Key);
         Assert.Equal(["Gardée", "Supprimée"], cloud.Names("Bohdan"));
 
-        // Rechargement plus tard, réseau revenu : les deux changements partent.
+        // Reload later, network back: both changes are sent.
         cloud.Online = true;
         var later = await Open(storage, cloud);
         Assert.Equal(0, later.PendingCount);
@@ -111,14 +111,14 @@ public class CabalSyncTests
     }
 
     [Fact]
-    public async Task Version_plus_recente_ailleurs_l_emporte_sur_le_changement_en_attente()
+    public async Task Newer_version_elsewhere_wins_over_the_pending_change()
     {
         var cloud = new FakeCloud { User = "Bohdan" };
         var storage = new FakeStorage();
         var phone = await Open(storage, cloud);
         await phone.SaveAsync(Cabal("Ma cabale", "3R06"), T0);
         cloud.Online = false;
-        await phone.SaveAsync(Cabal("Ma cabale", "3R05"), T0.AddHours(1));    // en attente
+        await phone.SaveAsync(Cabal("Ma cabale", "3R05"), T0.AddHours(1));    // pending
 
         cloud.Online = true;
         var computer = await Open(new FakeStorage(), cloud);
@@ -130,19 +130,19 @@ public class CabalSyncTests
     }
 
     [Fact]
-    public async Task Autre_compte_sur_le_meme_appareil()
+    public async Task Another_account_on_the_same_device()
     {
         var cloud = new FakeCloud { User = "Bohdan" };
         var storage = new FakeStorage();
         var library = await Open(storage, cloud);
         await library.SaveAsync(Cabal("De Bohdan"), T0);
 
-        // Déconnecté : une cabale faite sur l'appareil, sans compte.
+        // Signed out: a cabal made on the device, without an account.
         await cloud.SignInAsync(null);
         await library.SaveAsync(Cabal("Sans compte"), T0.AddHours(1));
-        Assert.Equal(["Sans compte", "De Bohdan"], Names(library));          // la copie reste visible
+        Assert.Equal(["Sans compte", "De Bohdan"], Names(library));          // the copy stays visible
 
-        // Un autre compte : seule la cabale faite hors compte le suit.
+        // Another account: only the cabal made without an account follows it.
         await cloud.SignInAsync("Vera");
         Assert.Equal(["Sans compte"], cloud.Names("Vera"));
         Assert.Equal(["Sans compte"], Names(library));
@@ -151,7 +151,7 @@ public class CabalSyncTests
     }
 
     [Fact]
-    public async Task Cabale_refusee_par_le_compte_reste_sur_l_appareil()
+    public async Task Cabal_refused_by_the_account_stays_on_the_device()
     {
         var cloud = new FakeCloud { User = "Bohdan", Limit = 1 };
         var library = await Open(new FakeStorage(), cloud);
@@ -164,7 +164,7 @@ public class CabalSyncTests
     }
 
     [Fact]
-    public async Task Envoi_par_paquets()
+    public async Task Upload_in_batches()
     {
         var cloud = new FakeCloud();
         var library = await Open(new FakeStorage(), cloud);
@@ -176,7 +176,7 @@ public class CabalSyncTests
         Assert.Equal(25, library.LastSync!.Uploaded);
     }
 
-    /// <summary>Compte en mémoire : mêmes règles que le serveur (plus récent l'emporte, limite).</summary>
+    /// <summary>In-memory account: same rules as the server (most recent wins, limit).</summary>
     private sealed class FakeCloud : ICabalCloud
     {
         private readonly Dictionary<string, Dictionary<string, (DateTimeOffset At, CabalExport? Cabal)>> _accounts = new();
@@ -193,7 +193,7 @@ public class CabalSyncTests
         {
             User = user;
             Changed?.Invoke();
-            await Task.Delay(50);                    // synchronisation lancée par l'événement
+            await Task.Delay(50);                    // synchronization started by the event
         }
 
         public Task<string?> CurrentUserAsync() => Task.FromResult(User);
@@ -227,7 +227,7 @@ public class CabalSyncTests
         }
     }
 
-    /// <summary>localStorage en mémoire.</summary>
+    /// <summary>In-memory localStorage.</summary>
     private sealed class FakeStorage : IJSRuntime
     {
         private readonly Dictionary<string, string> _items = new();

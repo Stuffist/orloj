@@ -7,44 +7,44 @@ using Microsoft.EntityFrameworkCore.Design;
 namespace Olomoc.Server.Data;
 
 /// <summary>
-/// Base du site : un seul fichier SQLite (DATA_DIR/olomoc.db). Schéma par migrations EF Core
-/// (dossier Migrations), appliquées au démarrage. Comptes (tables AspNet* d'ASP.NET Core
-/// Identity), leurs cabales (SavedCabals) et clés de chiffrement des cookies de session
-/// (DataProtectionKeys : une session survit à un redémarrage ou à un redéploiement).
+/// The site's database: a single SQLite file (DATA_DIR/olomoc.db). Schema through EF Core
+/// migrations (Migrations folder), applied at startup. Accounts (ASP.NET Core Identity AspNet*
+/// tables), their cabals (SavedCabals) and the encryption keys of the session cookies
+/// (DataProtectionKeys: a session survives a restart or a redeployment).
 /// </summary>
 public sealed class OlomocDb(DbContextOptions<OlomocDb> options) : IdentityDbContext<OlomocUser>(options), IDataProtectionKeyContext
 {
     public const string FileName = "olomoc.db";
 
-    /// <summary>Documents JSON rangés par sorte et par code (tournois, archives de statistiques).</summary>
+    /// <summary>JSON documents stored by kind and by code (tournaments, statistics archives).</summary>
     public DbSet<StoredDocumentRow> Documents => Set<StoredDocumentRow>();
 
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
-    /// <summary>Cabales des comptes (et suppressions, pour les autres appareils).</summary>
+    /// <summary>Account cabals (and deletions, for the other devices).</summary>
     public DbSet<SavedCabalRow> SavedCabals => Set<SavedCabalRow>();
 
-    /// <summary>Journal des actions des admins (panneau d'administration), gardé un an.</summary>
+    /// <summary>Log of the admins' actions (admin panel), kept for a year.</summary>
     public DbSet<AdminActionRow> AdminActions => Set<AdminActionRow>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
-        base.OnModelCreating(model);        // tables d'Identity
+        base.OnModelCreating(model);        // Identity tables
         var doc = model.Entity<StoredDocumentRow>();
         doc.ToTable("Documents");
         doc.HasKey(d => new { d.Kind, d.Code });
         doc.Property(d => d.Kind).HasMaxLength(16);
         doc.Property(d => d.Code).HasMaxLength(16);
-        doc.HasIndex(d => new { d.Kind, d.UpdatedAt });     // purge des inactifs
+        doc.HasIndex(d => new { d.Kind, d.UpdatedAt });     // purge of inactive documents
 
         var cabal = model.Entity<SavedCabalRow>();
         cabal.ToTable("SavedCabals");
         cabal.Property(c => c.Name).HasMaxLength(Olomoc.Accounts.CabalSyncRules.MaxNameLength);
         cabal.Property(c => c.NormalizedName).HasMaxLength(Olomoc.Accounts.CabalSyncRules.MaxNameLength);
         cabal.HasIndex(c => new { c.UserId, c.NormalizedName }).IsUnique();
-        cabal.HasOne<OlomocUser>().WithMany().HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Cascade);   // compte supprimé : ses cabales aussi
+        cabal.HasOne<OlomocUser>().WithMany().HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Cascade);   // account deleted: its cabals too
 
-        // Pseudos en clair (pas de clé étrangère) : l'entrée survit à la suppression du compte.
+        // Plain usernames (no foreign key): the entry survives the deletion of the account.
         var action = model.Entity<AdminActionRow>();
         action.ToTable("AdminActions");
         action.Property(a => a.Admin).HasMaxLength(Olomoc.Accounts.AccountRules.MaxUserName);
@@ -61,8 +61,8 @@ public sealed class OlomocDb(DbContextOptions<OlomocDb> options) : IdentityDbCon
         options.UseSqlite(ConnectionString(dataDirectory));
 
     /// <summary>
-    /// Au démarrage : crée ou met à jour le schéma, passe en journal WAL (lectures pendant les
-    /// écritures, écritures plus sûres en cas d'arrêt brutal).
+    /// At startup: creates or updates the schema, switches to WAL journaling (reads during
+    /// writes, safer writes in case of a crash).
     /// </summary>
     public static async Task MigrateAsync(IDbContextFactory<OlomocDb> factory)
     {
@@ -73,8 +73,8 @@ public sealed class OlomocDb(DbContextOptions<OlomocDb> options) : IdentityDbCon
 }
 
 /// <summary>
-/// Document enregistré : sorte (tournament, stats…), code, dates (UTC) et contenu JSON. Les dates
-/// sont en colonnes pour la purge ; tout le reste vit dans le document.
+/// Stored document: kind (tournament, stats…), code, dates (UTC) and JSON content. The dates are
+/// columns for the purge; everything else lives in the document.
 /// </summary>
 public sealed class StoredDocumentRow
 {
@@ -86,9 +86,9 @@ public sealed class StoredDocumentRow
 }
 
 /// <summary>
-/// Cabale d'un compte, sous son nom (unique par compte, sans tenir compte de la casse) : JSON de
-/// l'export, date de sauvegarde (UTC). Supprimée : <see cref="Deleted"/>, sans contenu, gardée
-/// pour que les autres appareils l'apprennent.
+/// An account's cabal, under its name (unique per account, case-insensitive): JSON of the export,
+/// save date (UTC). Deleted: <see cref="Deleted"/>, without content, kept so that the other
+/// devices learn about it.
 /// </summary>
 public sealed class SavedCabalRow
 {
@@ -101,7 +101,7 @@ public sealed class SavedCabalRow
     public string? Json { get; set; }
 }
 
-/// <summary>Action d'un admin (UTC) : clé de l'action, cible (pseudo ou code), détail facultatif.</summary>
+/// <summary>An admin's action (UTC): action key, target (username or code), optional detail.</summary>
 public sealed class AdminActionRow
 {
     public int Id { get; set; }
@@ -112,7 +112,7 @@ public sealed class AdminActionRow
     public string? Detail { get; set; }
 }
 
-/// <summary>Pour « dotnet ef migrations add » : la base est créée à part, sans démarrer le site.</summary>
+/// <summary>For "dotnet ef migrations add": the database is created separately, without starting the site.</summary>
 public sealed class OlomocDbDesignFactory : IDesignTimeDbContextFactory<OlomocDb>
 {
     public OlomocDb CreateDbContext(string[] args)

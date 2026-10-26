@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <!-- Hôte du site : sert l'app Blazor WebAssembly (Olomoc.Web : constructeur sous
-       /builder/, tournois sous /pairings/, parties en ligne sous /online/), l'API et la
-       synchronisation des parties en ligne (/hubs/online). Seul processus du conteneur,
-       HTTPS compris. -->
+  <!-- The site's host: serves the Blazor WebAssembly app (Olomoc.Web: builder under /builder/,
+       tournaments under /pairings/, online games under /online/), the API and the online games
+       synchronization (/hubs/online). The container's only process, HTTPS excluded (reverse proxy). -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -21,7 +20,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
-    <!-- Dépendance de MailKit (MimeKit), en version corrigée (failles connues de la 10.0.0). -->
+    <!-- MailKit dependency (MimeKit), in a patched version (known vulnerabilities in 10.0.0). -->
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
   </ItemGroup>
 

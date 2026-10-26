@@ -167,7 +167,7 @@ else
                 return;
             }
             await Mine.RememberAsync(created.Code, _name.Trim(), organizerToken: created.OrganizerToken);
-            Nav.NavigateTo($"pairings/t/{created.Code}/admin?created=true");    // encadré « Gardez ce lien »
+            Nav.NavigateTo($"pairings/t/{created.Code}/admin?created=true");    // "Keep this link" box
         }
         finally { _busy = false; }
     }

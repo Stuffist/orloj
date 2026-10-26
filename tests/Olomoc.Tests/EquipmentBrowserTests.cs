@@ -3,22 +3,22 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Catalogue des équipements et dons : groupes, filtre, recherche, tri.</summary>
+/// <summary>Equipment and boon catalog: groups, filter, search, sort.</summary>
 public class EquipmentBrowserTests
 {
     [Fact]
-    public async Task Equipables_par_la_cabale()
+    public async Task Equippable_by_the_cabal()
     {
         var d = await AppData.GetAsync();
         var none = new Olomoc.Models.Equipment?[3];
-        Assert.Null(d.Catalog.EquipableByCabal(new Olomoc.Models.Cog?[3], none, null));       // rien à comparer
+        Assert.Null(d.Catalog.EquipableByCabal(new Olomoc.Models.Cog?[3], none, null));       // nothing to compare
 
-        // Faction seule : ses cartes.
+        // Faction alone: its cards.
         var faction = d.Catalog.EquipableByCabal(new Olomoc.Models.Cog?[3], none, "MAISEL")!;
         Assert.Contains("E11" /* Harmonium */, faction);
         Assert.DoesNotContain("E03" /* Phéromones */, faction);
 
-        // Harmonie et Effort : leurs Ministères, la faction ; pas la Sécurité, l'Axe ni une autre faction.
+        // Harmony and Effort: their Ministries, the faction; not Security, the Axis or another faction.
         var cogs = new Olomoc.Models.Cog?[] { d.Cog("3R06"), d.Cog("2R11"), null };
         var equipable = d.Catalog.EquipableByCabal(cogs, none, "MAISEL")!;
         foreach (var id in new[] { "E03" /* Phéromones */, "E07" /* Ration */, "E11" /* Harmonium */ }) Assert.Contains(id, equipable);
@@ -30,7 +30,7 @@ public class EquipmentBrowserTests
     }
 
     [Fact]
-    public async Task Cabale_partagee_avec_la_fenetre_du_catalogue()
+    public async Task Cabal_shared_with_the_catalog_window()
     {
         var d = await AppData.GetAsync();
         var cogs = new Olomoc.Models.Cog?[] { d.Cog("3R06"), null, d.Cog("1R01") };
@@ -40,12 +40,12 @@ public class EquipmentBrowserTests
         Assert.Equal(cogs.Select(c => c?.Id), readCogs.Select(c => c?.Id));
         Assert.Equal(equipment.Select(e => e?.Id), readEquipment.Select(e => e?.Id));
 
-        Assert.Null(CabalDraft.Read(null, d.Catalog).Faction);                                // rien de publié
-        Assert.Null(CabalDraft.Read("|,,", d.Catalog).Faction);                               // cabale vide
+        Assert.Null(CabalDraft.Read(null, d.Catalog).Faction);                                // nothing published
+        Assert.Null(CabalDraft.Read("|,,", d.Catalog).Faction);                               // empty cabal
     }
 
     [Fact]
-    public async Task Par_ministere_ordre_du_referentiel_puis_factions()
+    public async Task By_Ministry_in_catalog_order_then_factions()
     {
         var d = await AppData.GetAsync();
         var groups = EquipmentBrowser.Browse(d.Catalog, d.L, null, "", EquipmentSort.Ministry);
@@ -55,7 +55,7 @@ public class EquipmentBrowserTests
         Assert.Equal(ministries, groups.Take(ministries.Length).Select(g => g.Key));
         Assert.All(groups.Single(g => g.Key == "AXIS").Items, e => Assert.Equal(Olomoc.Models.EquipmentKind.BOON, e.Kind));
 
-        // Puis un groupe par faction, dans l'ordre du référentiel des factions.
+        // Then one group per faction, in the order of the faction reference.
         var factionGroups = groups.Skip(ministries.Length).ToList();
         var order = d.Catalog.AllFactions.Select(f => EquipmentBrowser.FactionPrefix + f.Code).ToList();
         Assert.All(factionGroups, g => Assert.Contains(g.Key, order));
@@ -63,7 +63,7 @@ public class EquipmentBrowserTests
         Assert.All(factionGroups, g => Assert.All(g.Items, e => Assert.Equal(g.Key, EquipmentBrowser.FactionPrefix + e.Faction)));
         Assert.Equal(13, factionGroups.Sum(g => g.Items.Count));
 
-        // Dans chaque groupe : de A à Z.
+        // Within each group: A to Z.
         Assert.All(groups, g =>
         {
             var names = g.Items.Select(e => CogQuery.Fold(d.L.EquipmentName(e).Text)).ToList();
@@ -77,7 +77,7 @@ public class EquipmentBrowserTests
     [Theory]
     [InlineData("HARMONY", 5)]
     [InlineData("AXIS", 8)]
-    public async Task Filtre_par_ministere(string group, int count)
+    public async Task Filter_by_Ministry(string group, int count)
     {
         var d = await AppData.GetAsync();
         var groups = EquipmentBrowser.Browse(d.Catalog, d.L, group, null, EquipmentSort.Ministry);
@@ -86,12 +86,12 @@ public class EquipmentBrowserTests
     }
 
     [Fact]
-    public async Task Filtre_par_faction()
+    public async Task Filter_by_faction()
     {
         var d = await AppData.GetAsync();
         var all = EquipmentBrowser.Browse(d.Catalog, d.L, EquipmentBrowser.Factions, null, EquipmentSort.Ministry);
         Assert.Equal(13, all.Sum(g => g.Items.Count));
-        Assert.True(all.Count > 1);                     // un groupe par faction
+        Assert.True(all.Count > 1);                     // one group per faction
 
         var first = all[0];
         var one = EquipmentBrowser.Browse(d.Catalog, d.L, first.Key, null, EquipmentSort.Ministry);
@@ -99,7 +99,7 @@ public class EquipmentBrowserTests
     }
 
     [Fact]
-    public async Task Choix_d_un_equipement_range_par_groupe_puis_par_nom()
+    public async Task Equipment_choice_sorted_by_group_then_by_name()
     {
         var d = await AppData.GetAsync();
         var shuffled = d.Catalog.Catalog.Equipment.OrderByDescending(e => e.Id).ToList();
@@ -109,10 +109,10 @@ public class EquipmentBrowserTests
     }
 
     [Theory]
-    [InlineData("phero", "E03")]                // nom, sans accent
-    [InlineData("rouages HOSTILES", "E03")]     // effet, casse indifférente, mots cumulés
-    [InlineData("esquive", "E38")]              // effet seulement
-    public async Task Recherche_dans_les_noms_et_les_effets(string search, string id)
+    [InlineData("phero", "E03")]                // name, without accent
+    [InlineData("rouages HOSTILES", "E03")]     // effect, case-insensitive, words combined
+    [InlineData("esquive", "E38")]              // effect only
+    public async Task Search_in_names_and_effects(string search, string id)
     {
         var d = await AppData.GetAsync();
         var found = EquipmentBrowser.Browse(d.Catalog, d.L, null, search, EquipmentSort.Ministry).SelectMany(g => g.Items);
@@ -121,7 +121,7 @@ public class EquipmentBrowserTests
     }
 
     [Fact]
-    public async Task Par_nom_un_seul_groupe_alphabetique()
+    public async Task By_name_a_single_alphabetical_group()
     {
         var d = await AppData.GetAsync();
         var group = Assert.Single(EquipmentBrowser.Browse(d.Catalog, d.L, null, "", EquipmentSort.Name));

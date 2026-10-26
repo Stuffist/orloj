@@ -13,9 +13,9 @@ using Olomoc.Tournaments;
 namespace Olomoc.Server.CardCatalog;
 
 /// <summary>
-/// Référentiel servi aux apps (mêmes adresses que les fichiers statiques : brouillons pour les
-/// seuls éditeurs et admins) et éditeur du référentiel (/api/admin/catalog, éditeurs et admins) : rouages, équipements et dons,
-/// factions, publication, export des fichiers à recommiter.
+/// Card catalog served to the apps (same addresses as the static files: drafts for editors and
+/// admins only) and card catalog editor (/api/admin/catalog, editors and admins): cogs, equipment
+/// and boons, factions, publication, export of the files to commit back.
 /// </summary>
 public static class CatalogEndpoints
 {
@@ -41,21 +41,21 @@ public static class CatalogEndpoints
         admin.MapPut("{collection:regex(^(cogs|equipment)$)}/{id}/published", SetPublished);
         admin.MapDelete("{collection:regex(^(cogs|equipment)$)}/{id}", Revert);
         admin.MapGet("export", (CatalogStore store) =>
-            Results.File(store.ExportZip(), "application/zip", $"orloj-referentiel-{DateTime.UtcNow:yyyyMMdd-HHmm}.zip"));
+            Results.File(store.ExportZip(), "application/zip", $"orloj-catalog-{DateTime.UtcNow:yyyyMMdd-HHmm}.zip"));
     }
 
-    // ---- Fichiers servis ----
+    // ---- Served files ----
 
     private static IResult Serve(HttpContext ctx, CatalogStore store, string path)
     {
         if (store.Serve(path, Roles.CanEdit(ctx.User)) is not { } served) return Results.NotFound();
         ctx.Response.Headers.ETag = served.ETag;
-        ctx.Response.Headers.Vary = "Cookie";          // contenu différent pour un éditeur ou un admin
+        ctx.Response.Headers.Vary = "Cookie";          // different content for an editor or an admin
         if (ctx.Request.Headers.IfNoneMatch == served.ETag) return Results.StatusCode(StatusCodes.Status304NotModified);
         return Results.Bytes(served.Body, "application/json; charset=utf-8");
     }
 
-    // ---- Éditeur ----
+    // ---- Editor ----
 
     private static async Task<IResult> SaveCog(string id, CogEdit body, CatalogStore store)
     {
@@ -122,8 +122,8 @@ public static class CatalogEndpoints
     }
 
     /// <summary>
-    /// Annule les modifications d'une entrée (textes et factions compris) : celle du dépôt revient ;
-    /// une entrée nouvelle disparaît.
+    /// Cancels the changes of an entry (texts and factions included): the repository's version
+    /// comes back; a new entry disappears.
     /// </summary>
     private static async Task<IResult> Revert(string collection, string id, CatalogStore store)
     {
@@ -144,13 +144,13 @@ public static class CatalogEndpoints
         return Results.NoContent();
     }
 
-    // ---- Outils ----
+    // ---- Helpers ----
 
     private static (Catalog Catalog, FactionReference Factions) Read(CatalogStore store) =>
         (store.Merged(CatalogStore.CatalogPath).Deserialize<Catalog>(ReadOptions) ?? new(),
          store.Merged(CatalogStore.FactionsPath).Deserialize<FactionReference>(ReadOptions) ?? new());
 
-    // Entrée telle qu'écrite dans le fichier : « published » seulement pour une entrée publiée (absent : brouillon).
+    // Entry as written in the file: "published" only for a published entry (absent: draft).
     private static JsonNode Entry(object entry)
     {
         var node = JsonSerializer.SerializeToNode(entry, CatalogStore.WriteOptions)!.AsObject();
@@ -158,7 +158,7 @@ public static class CatalogEndpoints
         return node;
     }
 
-    // Textes de chaque langue donnée : écrits ; vides sans texte au dépôt : retirés (repli sur la langue de référence).
+    // Texts of each given language: written; empty without a text in the repository: removed (fallback to the reference language).
     private static void SetTexts(CatalogStore.Editor e, string collection, string key, Dictionary<string, (object? Text, string?[]? Strings)> texts)
     {
         foreach (var (language, (text, strings)) in texts)
@@ -170,7 +170,7 @@ public static class CatalogEndpoints
         }
     }
 
-    // Rouage membre (ou non) d'une faction ; liste gardée triée, comme dans le dépôt.
+    // Cog member (or not) of a faction; list kept sorted, as in the repository.
     private static void SetMember(CatalogStore.Editor e, JsonObject faction, string id, bool member)
     {
         var members = (faction["cogIds"] as JsonArray ?? []).Select(m => m!.GetValue<string>()).ToList();

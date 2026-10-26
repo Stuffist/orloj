@@ -1,6 +1,6 @@
 namespace Olomoc;
 
-/// <summary>Document enregistré par le serveur sous un code public (tournoi, partie en ligne).</summary>
+/// <summary>Document stored by the server under a public code (tournament, online game).</summary>
 public interface IStoredDocument
 {
     string Code { get; set; }

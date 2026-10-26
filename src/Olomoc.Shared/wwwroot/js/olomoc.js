@@ -1,6 +1,6 @@
-// Petits services du navigateur pour les apps Blazor (appelés par JS interop).
+// Small browser services for the Blazor apps (called through JS interop).
 window.olomoc = {
-    // Enregistre un texte sous forme de fichier (téléchargement).
+    // Saves a text as a file (download).
     download(fileName, text, type) {
         const url = URL.createObjectURL(new Blob([text], { type: type || "application/octet-stream" }));
         const link = Object.assign(document.createElement("a"), { href: url, download: fileName });
@@ -10,9 +10,9 @@ window.olomoc = {
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
 
-    // Planche de cartes en image PNG : page blanche de widthMm × heightMm à dpi points par
-    // pouce, chaque carte dessinée à sa position (mm). Images du même site (sans quoi le
-    // navigateur interdit l'export du canevas).
+    // Card sheet as a PNG image: white page of widthMm × heightMm at dpi dots per inch, each card
+    // drawn at its position (mm). Images from the same site (otherwise the browser forbids
+    // exporting the canvas).
     async renderCards(fileName, widthMm, heightMm, dpi, cards) {
         const px = mm => Math.round(mm / 25.4 * dpi);
         const canvas = Object.assign(document.createElement("canvas"), { width: px(widthMm), height: px(heightMm) });
@@ -36,8 +36,8 @@ window.olomoc = {
         setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
 
-    // Petite fenêtre à part (réutilisée si elle est déjà ouverte sous ce nom), à poser à côté
-    // de la page (largeur et hauteur facultatives). Renvoie false si le navigateur l'a bloquée.
+    // Small separate window (reused if it is already open under this name), to place next to the
+    // page (optional width and height). Returns false if the browser blocked it.
     openWindow(url, name, width = 480, height = 900) {
         const w = window.open(url, name, `popup,width=${width},height=${height}`);
         if (!w) return false;
@@ -45,11 +45,11 @@ window.olomoc = {
         return true;
     },
 
-    // Fenêtre d'impression du navigateur (impression ou « Enregistrer au format PDF »).
+    // Browser print window (print or "Save as PDF").
     print() { window.print(); },
 
-    // Retour sur l'onglet (page de nouveau visible) : appelle la méthode .NET indiquée.
-    // Renvoie un identifiant pour offVisible.
+    // Back on the tab (page visible again): calls the given .NET method.
+    // Returns an identifier for offVisible.
     onVisible(dotnetRef, method) {
         const handler = () => { if (document.visibilityState === "visible") dotnetRef.invokeMethodAsync(method); };
         document.addEventListener("visibilitychange", handler);
@@ -62,9 +62,8 @@ window.olomoc = {
         window.olomoc._handlers[id] = null;
     },
 
-    // Clé du localStorage modifiée par une autre fenêtre du site (cabale publiée par le
-    // constructeur) : appelle la méthode .NET indiquée avec la nouvelle valeur. Renvoie un
-    // identifiant pour offStorage.
+    // localStorage key changed by another window of the site (cabal published by the builder):
+    // calls the given .NET method with the new value. Returns an identifier for offStorage.
     onStorage(dotnetRef, key, method) {
         const handler = e => { if (e.key === key) dotnetRef.invokeMethodAsync(method, e.newValue); };
         window.addEventListener("storage", handler);
@@ -79,13 +78,13 @@ window.olomoc = {
     _handlers: [],
 };
 
-// Application utilisable hors connexion : service worker du site (/service-worker.js, portée « / »).
+// App usable offline: the site's service worker (/service-worker.js, scope "/").
 if ("serviceWorker" in navigator) {
-    performance.setResourceTimingBufferSize(1000);      // tous les fichiers de Blazor (des centaines en Debug)
+    performance.setResourceTimingBufferSize(1000);      // all the Blazor files (hundreds in Debug)
     navigator.serviceWorker.register("/service-worker.js", { scope: "/" }).catch(() => { });
 
-    // Page et fichiers chargés jusqu'ici, à garder en cache s'ils n'y sont pas déjà : ceux de la
-    // première visite, chargés avant que le service worker ne prenne la main.
+    // Page and files loaded so far, to keep in the cache if they are not there yet: those of the
+    // first visit, loaded before the service worker takes over.
     const sendLoaded = () => navigator.serviceWorker.controller?.postMessage({
         type: "loaded",
         page: location.href,

@@ -1,4 +1,4 @@
-@* Fin de l'en-tête : choix de la langue, valable pour tout le site. Le menu est dans AppNav. *@
+@* End of the header: language choice, valid for the whole site. The menu is in AppNav. *@
 @inject LocalizationService L
 @implements IDisposable
 
@@ -19,7 +19,7 @@
     protected override async Task OnInitializedAsync()
     {
         L.Changed += OnChanged;
-        await L.EnsureLoadedAsync();          // affiché dès que les langues sont chargées
+        await L.EnsureLoadedAsync();          // shown as soon as the languages are loaded
     }
 
     private Task OnLanguageChanged(ChangeEventArgs e) => L.SetLanguageAsync(e.Value?.ToString() ?? "");

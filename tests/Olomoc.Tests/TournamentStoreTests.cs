@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Stockage des tournois : purge des tournois inactifs, jamais des tournois à venir.</summary>
+/// <summary>Tournament storage: purge of inactive tournaments, never of upcoming ones.</summary>
 public sealed class TournamentStoreTests : IDisposable
 {
     private static readonly DateOnly Today = new(2026, 10, 13);
@@ -20,7 +20,7 @@ public sealed class TournamentStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task Purge_des_inactifs_passes_ou_sans_date_jamais_des_tournois_a_venir()
+    public async Task Purge_of_inactive_past_or_undated_never_upcoming_tournaments()
     {
         var db = await TestDb.OpenAsync(_dir);
         var store = new TournamentStore(db);
@@ -39,11 +39,11 @@ public sealed class TournamentStoreTests : IDisposable
         Assert.NotNull(await store.LoadAsync(oldToday));
         Assert.NotNull(await store.LoadAsync(oldFuture));
         Assert.NotNull(await store.LoadAsync(recentPast));
-        Assert.NotNull(db.Find(TournamentStore.Kind, unreadable));        // illisible : laissé à examiner
+        Assert.NotNull(db.Find(TournamentStore.Kind, unreadable));        // unreadable: left to be examined
     }
 
     [Fact]
-    public async Task Suppression_seulement_si_acceptee()
+    public async Task Deletion_only_if_accepted()
     {
         var db = await TestDb.OpenAsync(_dir);
         var store = new TournamentStore(db);
@@ -52,11 +52,11 @@ public sealed class TournamentStoreTests : IDisposable
         Assert.NotNull(await store.LoadAsync(code));
         Assert.Equal("ok", await store.DeleteAsync(code, _ => (true, "ok")));
         Assert.Null(await store.LoadAsync(code));
-        Assert.Null(await store.DeleteAsync(code, _ => (true, "ok")));       // n'existe plus
+        Assert.Null(await store.DeleteAsync(code, _ => (true, "ok")));       // no longer exists
     }
 
     [Fact]
-    public async Task Modification_enregistree_seulement_si_demandee()
+    public async Task Change_saved_only_if_requested()
     {
         var db = await TestDb.OpenAsync(_dir);
         var store = new TournamentStore(db);
@@ -74,7 +74,7 @@ public sealed class TournamentStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task Nombre_maximal_de_tournois()
+    public async Task Maximum_number_of_tournaments()
     {
         var db = await TestDb.OpenAsync(_dir);
         var store = new TournamentStore(db, maxTournaments: 2);
@@ -85,7 +85,7 @@ public sealed class TournamentStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task Sauvegarde_quotidienne_les_sept_plus_recentes_gardees()
+    public async Task Daily_backup_the_seven_most_recent_kept()
     {
         var db = await TestDb.OpenAsync(_dir);
         var code = (await new TournamentStore(db).CreateAsync(t => t.Name = "Sauvé"))!.Code;
@@ -94,14 +94,14 @@ public sealed class TournamentStoreTests : IDisposable
         var day = new DateTime(2026, 10, 1);
         var first = await backup.BackupAsync(day);
         Assert.NotNull(first);
-        Assert.Null(await backup.BackupAsync(day.AddHours(5)));            // déjà faite ce jour-là
+        Assert.Null(await backup.BackupAsync(day.AddHours(5)));            // already made that day
         for (var i = 1; i <= 8; i++) await backup.BackupAsync(day.AddDays(i));
 
         var files = Directory.GetFiles(Path.Combine(_dir, "backups")).Select(Path.GetFileName).Order().ToList();
         Assert.Equal(DbBackup.Keep, files.Count);
         Assert.Equal("olomoc-20261003.db", files[0]);
 
-        // Une sauvegarde est une base complète, lisible telle quelle.
+        // A backup is a complete database, readable as is.
         var copy = Path.Combine(_dir, "copie");
         Directory.CreateDirectory(copy);
         File.Copy(Path.Combine(_dir, "backups", "olomoc-20261009.db"), Path.Combine(copy, OlomocDb.FileName));

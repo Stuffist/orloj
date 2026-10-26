@@ -1,9 +1,8 @@
-@* Mode partie : un rouage de la cabale. Caractéristiques, ligne de vie (blessures, soins, correction au toucher),
-   Noirceur, pions d'action, état sonné, capacités à coût ou limitées par partie. Toute
-   modification passe par la GameSession (règles + annulation), puis OnChanged (sauvegarde,
-   compte rendu en notification). Les fenêtres et notifications se superposent à la page :
-   les boutons de la carte ne bougent pas. ReadOnly (camp adverse d'une partie en ligne) :
-   mêmes informations, commandes désactivées. *@
+@* Play mode: one cog of the cabal. Stats, life line (wounds, healing, correction by tapping),
+   Darkness, action tokens, stunned state, abilities with a cost or limited per game. Every change
+   goes through the GameSession (rules + undo), then OnChanged (save, report in a notification).
+   Windows and notifications are layered over the page: the card's buttons do not move. ReadOnly
+   (opponent's side in an online game): same information, controls disabled. *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 
@@ -71,7 +70,7 @@
             <label for="extra-@Slot">@L.Ui("play.extra", L.AbilityName(Cog, 0))</label>
             <select id="extra-@Slot" value="@(S.ExtraEquipmentId ?? "")" @onchange="OnExtraChanged">
                 <option value="">@L.Ui("play.extra.none")</option>
-                @* @key : la sélection suit sa carte quand la liste change (cartes portées ailleurs). *@
+                @* @key: the selection follows its card when the list changes (cards carried elsewhere). *@
                 @foreach (var e in ExtraOptions)
                 {
                     <option @key="e.Id" value="@e.Id">@L.EquipmentName(e)</option>
@@ -154,7 +153,7 @@
     [Parameter, EditorRequired] public Cog Cog { get; set; } = default!;
     [Parameter] public bool ReadOnly { get; set; }
 
-    /// <summary>Après chaque modification, avec son compte rendu éventuel (nom du rouage compris).</summary>
+    /// <summary>After each change, with its optional report (cog name included).</summary>
     [Parameter] public EventCallback<string?> OnChanged { get; set; }
 
     private enum Panel { None, Wound, Heal }
@@ -169,10 +168,10 @@
     private Equipment? Main => S.EquipmentId is { } id ? Catalog.EquipmentById(id) : null;
     private Equipment? Extra => S.ExtraEquipmentId is { } id ? Catalog.EquipmentById(id) : null;
 
-    // Cartes portées : équipement/don, puis carte supplémentaire éventuelle.
+    // Carried cards: equipment/boon, then optional extra card.
     private List<Equipment> Carried => new[] { Main, Extra }.OfType<Equipment>().ToList();
 
-    // Pas de doublon avec les cartes de la cabale (la carte supplémentaire actuelle reste proposée).
+    // No duplicate with the cabal's cards (the current extra card stays offered).
     private List<Equipment> ExtraOptions => Catalog.ExtraEquipmentOptions(Cog,
         Session.State.Cogs.SelectMany(c => new[] { c.EquipmentId, c == S ? null : c.ExtraEquipmentId }).OfType<string>());
 
@@ -185,7 +184,7 @@
 
     private sealed record TrackedAbility(string Key, Ability Ability, Localized Name);
 
-    // Capacités du rouage puis de ses cartes qui ont un coût ou une limite par partie.
+    // Abilities of the cog then of its cards that have a cost or a limit per game.
     private List<TrackedAbility> Tracked =>
         Cog.Abilities.Select((a, i) => new TrackedAbility(GameSession.AbilityKey(Cog.Id, i), a, L.AbilityName(Cog, i)))
            .Concat(Carried.SelectMany(e => e.Abilities.Select((a, i) => new TrackedAbility(GameSession.AbilityKey(e.Id, i), a, L.AbilityName(e, i)))))
@@ -220,7 +219,7 @@
         return Report(L.Ui("play.result.healed", Session.Heal(Slot, _amount)));
     }
 
-    // PV touché : compte rendu seulement s'il a un effet (Noirceur, hors de combat…).
+    // HP tapped: report only if it has an effect (Darkness, out of action…).
     private Task TogglePoint(int index)
     {
         var o = Session.TogglePoint(Slot, index);

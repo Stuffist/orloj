@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
-  <!-- Le site dans le navigateur : une seule app Blazor WebAssembly, servie à la racine par
-       Olomoc.Server. Elle réunit le constructeur (/builder/…), les tournois (/pairings/…) et les
-       parties en ligne (/online/…), bibliothèques de pages : on passe de l'un à l'autre sans
-       rechargement. -->
+  <!-- The site in the browser: a single Blazor WebAssembly app, served at the root by
+       Olomoc.Server. It brings together the builder (/builder/…), the tournaments (/pairings/…)
+       and the online games (/online/…), page libraries: moving from one to another needs no reload. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>

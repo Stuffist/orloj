@@ -4,26 +4,26 @@ namespace Olomoc.Services;
 
 public enum EquipmentSort { Ministry, Name }
 
-/// <summary>Groupe de la liste : code de Ministère, <see cref="EquipmentBrowser.FactionPrefix"/> + code de faction, ou <see cref="EquipmentBrowser.CogAffiliated"/>.</summary>
+/// <summary>Group of the list: Ministry code, <see cref="EquipmentBrowser.FactionPrefix"/> + faction code, or <see cref="EquipmentBrowser.CogAffiliated"/>.</summary>
 public sealed record EquipmentGroup(string Key, IReadOnlyList<Equipment> Items);
 
 /// <summary>
-/// Équipements et dons rangés par affiliation : chaque Ministère dans l'ordre du référentiel
-/// (l'Axe, les dons, en dernier), puis les cartes de chaque faction (ordre des factions), puis
-/// celles affiliées à un rouage ; dans un groupe, de A à Z dans la langue courante. Sert au
-/// choix de l'équipement d'un rouage et au catalogue (filtre par groupe, recherche dans les
-/// noms et les effets sans accents ni casse, tri par Ministère ou par nom).
+/// Equipment and boons sorted by affiliation: each Ministry in the catalog's order (the Axis, the
+/// boons, last), then the cards of each faction (factions' order), then those affiliated with a
+/// cog; within a group, A to Z in the current language. Used for choosing a cog's equipment and
+/// for the catalog (filter by group, search in names and effects ignoring accents and case, sort
+/// by Ministry or by name).
 /// </summary>
 public static class EquipmentBrowser
 {
-    /// <summary>Filtre : toutes les cartes de faction.</summary>
+    /// <summary>Filter: all faction cards.</summary>
     public const string Factions = "FACTIONS";
     public const string FactionPrefix = "FACTION:", CogAffiliated = "COG";
 
     public static string GroupOf(Equipment e) =>
         e.Ministry ?? (e.Faction is { } f ? FactionPrefix + f : CogAffiliated);
 
-    /// <summary>Rangées par groupe d'affiliation, puis par nom.</summary>
+    /// <summary>Sorted by affiliation group, then by name.</summary>
     public static List<Equipment> Ordered(IEnumerable<Equipment> equipment, CatalogService catalog, LocalizationService l)
     {
         var order = catalog.Catalog.Ministries.Select(m => m.Code)
@@ -36,13 +36,13 @@ public static class EquipmentBrowser
             .ToList();
     }
 
-    /// <summary>Groupes successifs d'une liste déjà rangée par <see cref="Ordered"/>.</summary>
+    /// <summary>Successive groups of a list already sorted by <see cref="Ordered"/>.</summary>
     public static IReadOnlyList<EquipmentGroup> Grouped(IReadOnlyList<Equipment> ordered) =>
         ordered.GroupBy(GroupOf).Select(g => new EquipmentGroup(g.Key, g.ToList())).ToList();
 
-    /// <param name="group">Groupe à afficher seul (code de Ministère, <see cref="Factions"/>,
-    /// <see cref="FactionPrefix"/> + code…), ou null pour tous.</param>
-    /// <param name="only">Ids à garder seuls (ce que la cabale peut équiper), ou null pour tous.</param>
+    /// <param name="group">Group to show alone (Ministry code, <see cref="Factions"/>,
+    /// <see cref="FactionPrefix"/> + code…), or null for all.</param>
+    /// <param name="only">Ids to keep alone (what the cabal can equip), or null for all.</param>
     public static IReadOnlyList<EquipmentGroup> Browse(CatalogService catalog, LocalizationService l, string? group, string? search, EquipmentSort sort,
                                                        IReadOnlySet<string>? only = null)
     {
@@ -58,17 +58,17 @@ public static class EquipmentBrowser
         return Grouped(Ordered(items, catalog, l));
     }
 
-    /// <summary>Titre d'un groupe : nom du Ministère ou de la faction.</summary>
+    /// <summary>Title of a group: name of the Ministry or of the faction.</summary>
     public static string GroupTitle(string key, LocalizationService l) =>
         key == CogAffiliated ? l.Ui("equipment.group.cog")
         : key.StartsWith(FactionPrefix, StringComparison.Ordinal) ? l.FactionName(key[FactionPrefix.Length..]).Text
         : l.MinistryName(key).Text;
 
-    /// <summary>Ministère d'un groupe (son emblème), sinon null.</summary>
+    /// <summary>Ministry of a group (its emblem), otherwise null.</summary>
     public static string? GroupMinistry(string key) =>
         key == CogAffiliated || key.StartsWith(FactionPrefix, StringComparison.Ordinal) ? null : key;
 
-    /// <summary>Faction d'un groupe (son logo), sinon null.</summary>
+    /// <summary>Faction of a group (its logo), otherwise null.</summary>
     public static string? GroupFaction(string key) =>
         key.StartsWith(FactionPrefix, StringComparison.Ordinal) ? key[FactionPrefix.Length..] : null;
 

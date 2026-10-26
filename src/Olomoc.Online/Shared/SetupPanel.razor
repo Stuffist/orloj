@@ -1,12 +1,12 @@
-@* Mise en place guidée (LDR p.31). Initiative : chaque joueur lance 5 D6 (tirés par le serveur),
-   réussite à 5+, le plus de réussites devient J1, égalité : on relance. Agenda : J1 le choisit
-   ou le tire au sort parmi le recueil officiel (tirage à confirmer, ou à relancer). *@
+@* Guided setup (rulebook p.31). Initiative: each player rolls 5 D6 (rolled by the server), success
+   on 5+, the most successes becomes P1, tie: roll again. Agenda: P1 chooses it or draws it at
+   random from the official collection (draw to confirm, or to redraw). *@
 @inject LocalizationService L
 
 <section class="panel">
     @if (_held is { } held)
     {
-        @* Jet complet, gardé 2 s à l'écran : le serveur a déjà désigné J1 (ou demandé de relancer). *@
+        @* Complete roll, kept on screen for 2 s: the server has already designated P1 (or asked to roll again). *@
         <h2>@L.Ui("online.initiative.title")</h2>
         <ul class="online-dice-rows">
             @for (var i = 0; i < View.Seats.Count; i++)
@@ -73,8 +73,8 @@
         @if (View.Me == View.First)
         {
             <div class="online-inline">
-                @* Tirage au sort : propose un agenda dans la liste, à confirmer ou relancer (rien n'est
-                   envoyé avant « Confirmer »). *@
+                @* Random draw: suggests an agenda in the list, to confirm or redraw (nothing is sent
+                   before "Confirm"). *@
                 <select aria-label="@L.Ui("online.agenda.title")" value="@_agenda" @onchange="e => (_agenda, _drawn) = (e.Value?.ToString() ?? Agendas.All[0], false)">
                     @foreach (var id in Agendas.All)
                     {
@@ -103,23 +103,23 @@
     private string _agenda = Agendas.All[0];
     private bool _drawn;
 
-    // Agenda au hasard dans le recueil officiel, autre que celui proposé : à confirmer ou relancer.
+    // Random agenda from the official collection, other than the one suggested: to confirm or redraw.
     private void Draw()
     {
         var others = Agendas.All.Where(id => id != _agenda).ToList();
         (_agenda, _drawn) = (others[Random.Shared.Next(others.Count)], true);
     }
 
-    // ---- Résultat du jet, gardé 2 s ----
-    // Au second jet, le serveur désigne J1 (étape suivante) ou efface les dés (égalité) : sans pause,
-    // le résultat disparaît aussitôt. Le jet complet est relu dans le journal (« initiative » de
-    // chaque siège, puis « first » ou « initiativeTie ») et affiché 2 s, seulement quand on le voit
-    // arriver (pas au chargement de la page).
+    // ---- Roll result, kept for 2 s ----
+    // On the second roll, the server designates P1 (next step) or clears the dice (tie): without a
+    // pause, the result would disappear at once. The complete roll is read back from the log
+    // (each seat's "initiative", then "first" or "initiativeTie") and shown for 2 s, only when it
+    // is seen arriving (not when the page loads).
     private const int HoldMilliseconds = 2000;
 
     private sealed record InitiativeRound(IReadOnlyList<int>?[] Dice, int? First);
 
-    private DateTimeOffset? _lastRound;     // fin du dernier jet complet déjà vu
+    private DateTimeOffset? _lastRound;     // end of the last complete roll already seen
     private bool _started;
     private InitiativeRound? _held;
     private int _holdId;
@@ -139,7 +139,7 @@
         if (at is null || at == _lastRound) return;
         _lastRound = at;
 
-        // Les jets de ce tour : entrées « initiative » juste avant la fin, une par siège.
+        // The rolls of this round: "initiative" entries right before the end, one per seat.
         var dice = new IReadOnlyList<int>?[View.Seats.Count];
         for (var i = end - 1; i >= 0 && log[i].Key == "initiative"; i--)
             if (log[i].Seat is { } seat && seat < dice.Length && dice[seat] is null && log[i].Args is { Count: > 0 } args)

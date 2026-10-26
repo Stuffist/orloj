@@ -1,138 +1,137 @@
-# Installer Orloj comme une application (PWA)
+# Installing Orloj as an app (PWA)
 
-Une **PWA** (Progressive Web App) est un site qu'on peut installer sur l'écran d'accueil d'un
-téléphone ou sur un ordinateur. Il s'ouvre alors en plein écran, sans barre d'adresse, comme une
-vraie application. Ça reste le même site, servi par le même serveur, donc ça marche sur Android
-comme sur iOS (et sur ordinateur), sans passer par un store.
+A **PWA** (Progressive Web App) is a site that can be installed on a phone's home screen or on a
+computer. It then opens full screen, without an address bar, like a real app. It is still the
+same site, served by the same server, so it works on Android as on iOS (and on desktop), without
+going through a store.
 
-Deux niveaux, tous deux faits sur la branche `pwa` (un commit chacun) :
+Two levels, both done on the `pwa` branch (one commit each):
 
-1. **Installable** : manifeste, icônes, balises.
-2. **Hors connexion** : un service worker qui garde une copie du site en cache.
+1. **Installable**: manifest, icons, tags.
+2. **Offline**: a service worker that keeps a copy of the site in its cache.
 
-## Ce qui était déjà en place
+## What was already in place
 
-- **HTTPS**, obligatoire pour une PWA : assuré par Caddy et Let's Encrypt sur orloj.top
-  (`deploy/proxy/Caddyfile`). En local, `http://localhost` compte comme sûr.
-- **CSP** (`src/Olomoc.Server/Hosting/SecurityHeaders.cs`) : `default-src 'self'` couvre le
-  manifeste et `script-src 'self'` le service worker. Rien à changer.
-- **Sauvegardes sur l'appareil** (cabales, partie en cours, langue) : dans le `localStorage`,
-  elles marchent aussi dans l'app installée (voir la réserve iOS plus bas).
+- **HTTPS**, required for a PWA: handled by the reverse proxy in front of the server (on
+  orloj.top: Caddy and Let's Encrypt, `deploy/proxy/Caddyfile`, specific to that server).
+  Locally, `http://localhost` counts as secure.
+- **CSP** (`src/Olomoc.Server/Hosting/SecurityHeaders.cs`): `default-src 'self'` covers the
+  manifest and `script-src 'self'` the service worker. Nothing to change.
+- **Saves on the device** (cabals, game in progress, language): in `localStorage`, they also
+  work in the installed app (see the iOS caveat below).
 
-## Niveau 1 : installable
+## Level 1: installable
 
-- `src/Olomoc.Shared/wwwroot/manifest.webmanifest` : **une seule app** pour tout le site
-  (`scope: "/"`), qui s'ouvre sur le constructeur (`start_url: "/builder/"`), en plein écran
-  (`display: "standalone"`), aux couleurs du fond du site (`#14181c`). Le constructeur et les
-  tournois sont d'ailleurs une seule app Blazor (`Olomoc.Web`) : on passe de l'un à l'autre par
-  le menu (`AppNav.razor`), sans rechargement.
-- `src/Olomoc.Shared/wwwroot/img/app/` : icônes **provisoires**, dessinées d'après la marque de
-  l'en-tête (`.mark` de `app.css` : anneaux rouille sur fond sombre). 192 et 512 px, une version
-  « maskable » (dessin réduit pour qu'Android puisse la découper en rond), `apple-touch-icon`
-  180 px pour iOS, favicon 32 px. À remplacer par une vraie icône le jour venu, aux mêmes noms et
-  tailles. Si elle reprend un visuel du jeu, vérifier que la permission d'Occicat Games couvre
-  cet usage.
-- Les deux `index.html` : lien vers le manifeste, `theme-color`, favicon, `apple-touch-icon`.
+- `src/Olomoc.Shared/wwwroot/manifest.webmanifest`: **a single app** for the whole site
+  (`scope: "/"`), which opens on the builder (`start_url: "/builder/"`), full screen
+  (`display: "standalone"`), in the site's background color (`#14181c`). The builder and the
+  tournaments are a single Blazor app anyway (`Olomoc.Web`): you move from one to the other
+  through the menu (`AppNav.razor`), without reloading.
+- `src/Olomoc.Shared/wwwroot/img/app/`: **temporary** icons, drawn after the header's mark
+  (`.mark` in `app.css`: rust rings on a dark background). 192 and 512 px, a "maskable" version
+  (smaller drawing so that Android can crop it into a circle), a 180 px `apple-touch-icon` for
+  iOS, a 32 px favicon. To be replaced by a real icon when the time comes, with the same names
+  and sizes. If it uses artwork from the game, check that Occicat Games' permission covers this
+  use.
+- Both `index.html` files: link to the manifest, `theme-color`, favicon, `apple-touch-icon`.
 
-Résultat :
+Result:
 
-- **Android (Chrome, Edge, Samsung Internet)** : le menu propose « Installer l'application » (ou
-  « Ajouter à l'écran d'accueil »).
-- **iOS** : pas de proposition automatique. Dans Safari : **Partager → Sur l'écran d'accueil**.
-  L'app s'ouvre ensuite en plein écran.
-- **Ordinateur (Chrome, Edge)** : une icône d'installation apparaît dans la barre d'adresse.
+- **Android (Chrome, Edge, Samsung Internet)**: the menu offers "Install app" (or "Add to home
+  screen").
+- **iOS**: no automatic offer. In Safari: **Share → Add to Home Screen**. The app then opens full
+  screen.
+- **Desktop (Chrome, Edge)**: an install icon appears in the address bar.
 
-## Niveau 2 : hors connexion
+## Level 2: offline
 
-`src/Olomoc.Server/wwwroot/service-worker.js`, servi à `/service-worker.js` et enregistré par
+`src/Olomoc.Server/wwwroot/service-worker.js`, served at `/service-worker.js` and registered by
 `src/Olomoc.Shared/wwwroot/js/olomoc.js`.
 
-### Pourquoi à la racine
+### Why at the root
 
-Un service worker ne contrôle que les adresses situées sous son propre dossier. Les données, les
-traductions et les images sont servies sous `/_content/Olomoc.Shared/`, en dehors de `/builder/`.
-Placé à la racine, il couvre l'app (`/_framework/`, `/builder/…`, `/pairings/…`) et ces fichiers, sans en-tête particulier.
+A service worker only controls the addresses under its own folder. Data, translations and images
+are served under `/_content/Olomoc.Shared/`, outside `/builder/`. Placed at the root, it covers
+the app (`/_framework/`, `/builder/…`, `/pairings/…`) and these files, without any special header.
 
-### Réseau d'abord
+### Network first
 
-- **En ligne**, chaque fichier est demandé au serveur, comme sans service worker. Un
-  redéploiement est donc vu aussitôt, comme aujourd'hui (`Cache-Control: no-cache`), sans
-  bandeau « nouvelle version ». Chaque réponse est copiée en cache au passage.
-- **Hors ligne**, ou si le serveur ne répond pas en 4 secondes (réseau faible dans une salle),
-  c'est la copie en cache qui sert.
-- Toutes les routes des sections (`/builder/play`, `/pairings/stats`…) sont servies par la même
-  copie de `index.html`. Une route jamais visitée marche donc aussi hors ligne.
-- **L'API (`/api/…`) n'est jamais mise en cache** : données de tournoi vivantes, jetons
-  d'organisateur. Hors ligne, la partie Tournois affiche son interface mais pas ses données.
+- **Online**, each file is requested from the server, as without a service worker. A
+  redeployment is therefore seen at once, as before (`Cache-Control: no-cache`), without a "new
+  version" banner. Each response is copied into the cache on the way.
+- **Offline**, or if the server does not answer within 4 seconds (weak network in a venue), the
+  cached copy is used.
+- All the section routes (`/builder/play`, `/pairings/stats`…) are served by the same copy of
+  `index.html`. A route never visited therefore also works offline.
+- **The API (`/api/…`) is never cached**: live tournament data, organizer tokens. Offline, the
+  Tournaments part shows its interface but not its data.
 
-### Première visite
+### First visit
 
-La page et les fichiers chargés avant que le service worker ne prenne la main ne passent pas par
-lui. `olomoc.js` lui envoie donc la liste des fichiers déjà chargés (Resource Timing), quand il
-prend la main et chaque fois que la page passe en arrière-plan. Il copie ceux qui manquent.
+The page and the files loaded before the service worker takes over do not go through it.
+`olomoc.js` therefore sends it the list of files already loaded (Resource Timing), when it takes
+over and every time the page goes to the background. It copies the missing ones.
 
-Seules les images de cartes **déjà affichées** sont disponibles hors ligne. Tout précharger
-coûterait environ 11 Mo dès la première visite.
+Only the card images **already displayed** are available offline. Preloading everything would
+cost about 11 MB from the first visit.
 
-### Vérifié en local (Edge sans interface, profil vierge)
+### Checked locally (headless Edge, blank profile)
 
-Fait deux fois : avec `dotnet run` (Debug) et avec la version publiée (`dotnet publish -c
-Release`, celle de l'image Docker, fichiers compressés compris).
+Done twice: with `dotnet run` (Debug) and with the published version (`dotnet publish -c
+Release`, the one in the Docker image, compressed files included).
 
-1. Site lancé sur `http://localhost:5199`. Ouverture de `/builder/` : le service worker prend la
-   main, Edge juge le site **installable** et lit le manifeste sans erreur. Fichiers en cache :
-   249 en Debug, 82 en Release (assemblies élaguées). Aucune réponse de `/api/`.
-2. **Serveur arrêté**, puis `/builder/`, `/builder/play` (jamais visitée) et
-   `/builder/equipment` : toutes s'affichent complètes depuis le cache (emblèmes, pictogrammes),
-   sans aucune erreur dans la console.
+1. Site started on `http://localhost:5199`. Opening `/builder/`: the service worker takes over,
+   Edge considers the site **installable** and reads the manifest without errors. Cached files:
+   249 in Debug, 82 in Release (trimmed assemblies). No response from `/api/`.
+2. **Server stopped**, then `/builder/`, `/builder/play` (never visited) and
+   `/builder/equipment`: all of them display completely from the cache (emblems, pictograms),
+   without any error in the console.
 
-Reste à tester sur de vrais téléphones, une fois déployé.
+Still to be tested on real phones, once deployed.
 
-## Tester
+## Testing
 
-- **Sur ordinateur** : `dotnet run --project src/Olomoc.Server` (profil de lancement, en
-  Development), ouvrir le site dans Chrome ou Edge. Outils de développement → **Application** :
-  manifeste, service worker, contenu du cache. Onglet **Réseau** → « Hors connexion » pour
-  simuler la perte de réseau. L'icône d'installation apparaît dans la barre d'adresse.
-- **Sur téléphone** : il faut du HTTPS, donc déployer sur orloj.top (un téléphone qui ouvre
-  `http://<IP du PC>:…` n'aura ni installation ni service worker). Pour Android sans déployer :
-  débogage USB et `chrome://inspect` → redirection de port, le téléphone voit alors
-  `localhost`.
+- **On desktop**: `dotnet run --project src/Olomoc.Server` (launch profile, in Development),
+  open the site in Chrome or Edge. Developer tools → **Application**: manifest, service worker,
+  cache content. **Network** tab → "Offline" to simulate losing the network. The install icon
+  appears in the address bar.
+- **On a phone**: HTTPS is needed, so the site must be deployed behind HTTPS (for the public
+  instance: orloj.top). A phone opening `http://<PC IP>:…` gets neither installation nor service
+  worker. For Android without deploying: USB debugging and `chrome://inspect` → port
+  forwarding, the phone then sees `localhost`.
 
-## À tester sur iPhone
+## To test on iPhone
 
-- **Stockage séparé** : sur iOS, l'app installée a son propre `localStorage`, distinct de celui
-  de Safari. Les cabales déjà sauvegardées dans Safari n'apparaîtront pas dans l'app. Il faut les
-  transférer par l'export/import JSON, et le signaler aux joueurs. En contrepartie, l'app
-  installée n'est pas soumise à l'effacement automatique que Safari applique aux sites peu visités.
-- **Pas de bouton retour** en plein écran sur iOS (Android garde le retour du système). Chaque
-  page doit avoir un moyen de revenir en arrière dans l'interface.
-- **Fichiers et fenêtres** (`olomoc.js`) : téléchargements (export JSON, planche PNG), fenêtre à
-  part (`openWindow`) et impression se comportent différemment en mode app. Sur iOS, un
-  téléchargement ouvre une feuille d'aperçu et `window.open` une vue Safari par-dessus l'app. À
-  vérifier un par un.
+- **Separate storage**: on iOS, the installed app has its own `localStorage`, distinct from
+  Safari's. Cabals already saved in Safari will not appear in the app. They have to be moved
+  with the JSON export/import, and players should be told. On the other hand, the installed app
+  is not subject to the automatic erasing Safari applies to rarely visited sites.
+- **No back button** full screen on iOS (Android keeps the system back). Each page must have a
+  way to go back in the interface.
+- **Files and windows** (`olomoc.js`): downloads (JSON export, PNG sheet), separate window
+  (`openWindow`) and printing behave differently in app mode. On iOS, a download opens a preview
+  sheet and `window.open` a Safari view over the app. To check one by one.
 
-## Limites et suites possibles
+## Limits and possible next steps
 
-- **Le cache ne se vide pas** : chaque redéploiement y ajoute les fichiers de `_framework` qui ont
-  changé (quelques centaines de Ko). On pourra supprimer plus tard les copies que la version en
-  cours n'utilise plus.
-- **Bouton « Installer l'application »** dans l'en-tête : sur Android et ordinateur via
-  l'événement `beforeinstallprompt`, et sur iOS une aide « Partager → Sur l'écran d'accueil ».
-  Textes à ajouter dans `i18n/`.
-- **Raccourcis** du manifeste (appui long sur l'icône, par exemple « Tournois ») : le manifeste
-  n'existe qu'en une langue.
-- **Play Store** : une PWA peut y être publiée sans réécriture, sous forme de TWA (Trusted Web
-  Activity, avec Bubblewrap). Il faut un compte développeur Google et
-  `/.well-known/assetlinks.json` sur le site. **App Store** : Apple refuse souvent une app qui
-  n'est qu'un site enveloppé, ça ne vaut pas le coup.
+- **The cache is never emptied**: each redeployment adds the `_framework` files that changed (a
+  few hundred KB). The copies the current version no longer uses could be deleted later.
+- **"Install app" button** in the header: on Android and desktop through the
+  `beforeinstallprompt` event, and on iOS a "Share → Add to Home Screen" hint. Texts to add in
+  `i18n/`.
+- Manifest **shortcuts** (long press on the icon, e.g. "Tournaments"): the manifest only exists
+  in one language.
+- **Play Store**: a PWA can be published there without rewriting, as a TWA (Trusted Web
+  Activity, with Bubblewrap). It needs a Google developer account and
+  `/.well-known/assetlinks.json` on the site. **App Store**: Apple often refuses an app that is
+  only a wrapped site, not worth it.
 
-## Revenir en arrière
+## Rolling back
 
-Retirer le manifeste suffit à défaire le niveau 1 (les icônes déjà posées sur les écrans
-d'accueil restent, et ouvrent le site). Mais **un service worker reste installé dans
-les navigateurs qui l'ont reçu**, même si le fichier disparaît du serveur. Si le niveau 2 a été
-déployé puis abandonné, il faut publier à la place un `service-worker.js` qui se désinstalle :
+Removing the manifest is enough to undo level 1 (icons already placed on home screens stay, and
+open the site). But **a service worker stays installed in the browsers that received it**, even
+if the file disappears from the server. If level 2 was deployed then abandoned, a
+`service-worker.js` that uninstalls itself must be published instead:
 
 ```js
 self.addEventListener("install", () => self.skipWaiting());
@@ -142,5 +141,5 @@ self.addEventListener("activate", event => event.waitUntil((async () => {
 })()));
 ```
 
-Retirer aussi l'enregistrement dans `olomoc.js`. Comme le service worker passe d'abord par le
-réseau, il ne fige pas un vieux site en attendant : le risque se limite à une copie inutile.
+Also remove the registration in `olomoc.js`. Since the service worker goes to the network first,
+it does not freeze an old site in the meantime: the risk is limited to a useless copy.

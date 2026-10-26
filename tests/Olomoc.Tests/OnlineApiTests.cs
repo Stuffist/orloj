@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Parties en ligne : création, hub SignalR (sièges, spectateurs, synchronisation), tables de tournoi.</summary>
+/// <summary>Online games: creation, SignalR hub (seats, spectators, synchronization), tournament tables.</summary>
 public sealed class OnlineApiTests : IAsyncDisposable
 {
     private readonly string _data = Path.Combine(Path.GetTempPath(), "olomoc-tests-" + Guid.NewGuid().ToString("N"));
@@ -36,7 +36,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
         return server;
     }
 
-    // Client SignalR branché sur le serveur en mémoire (long polling : pas de WebSocket en test).
+    // SignalR client plugged into the in-memory server (long polling: no WebSocket in tests).
     private async Task<HubConnection> Connect(WebApplicationFactory<Program> server)
     {
         var hub = new HubConnectionBuilder()
@@ -84,7 +84,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
         return await Read<OnlineCreated>(response);
     }
 
-    // Lancer les dés de part et d'autre jusqu'à départager (égalité : on relance).
+    // Roll the dice on both sides until there is a winner (tie: roll again).
     private static async Task RollUntilFirst(HubConnection a, HubConnection b)
     {
         for (var i = 0; i < 50 && (await View(a))!.Step == OnlineStep.Initiative; i++)
@@ -96,7 +96,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Partie_locale_ouverte_en_ligne_cabale_prete()
+    public async Task Local_game_opened_online_with_a_ready_cabal()
     {
         var server = Server();
         var http = server.CreateClient();
@@ -112,18 +112,18 @@ public sealed class OnlineApiTests : IAsyncDisposable
         Assert.Equal("A", mine.Cabal!.Name);
         var guest = (await Join(b, created.Code, created.InviteToken)).View!;
         Assert.True(guest.Seats[0].Ready);
-        Assert.Null(guest.Seats[0].Cabal);                    // secrète jusqu'à ce que l'invité soit prêt
+        Assert.Null(guest.Seats[0].Cabal);                    // secret until the guest is ready
 
         await Ok(b, new(OnlineCommandType.SetName, "Bo"));
         await Ok(b, new(OnlineCommandType.SetCabal, Cabal: cabalB));
         await Ok(b, new(OnlineCommandType.SetReady, Flag: true));
         var started = (await View(a))!;
-        Assert.Equal(OnlineStep.Initiative, started.Step);    // la partie commence au début
+        Assert.Equal(OnlineStep.Initiative, started.Step);    // the game starts from the beginning
         Assert.Equal("A", started.Seats[0].Cabal!.Name);
     }
 
     [Fact]
-    public async Task Salon_avec_une_cabale_illegale_refuse()
+    public async Task Lobby_with_an_illegal_cabal_refused()
     {
         var http = Server().CreateClient();
         var (cabalA, _) = await MaiselCabals();
@@ -134,7 +134,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Partie_libre_de_bout_en_bout()
+    public async Task Free_game_end_to_end()
     {
         var server = Server();
         var http = server.CreateClient();
@@ -157,13 +157,13 @@ public sealed class OnlineApiTests : IAsyncDisposable
         Assert.Equal("notFound", (await Join(await Connect(server), "ZZZZZZ", null)).Error);
         Assert.Equal("forbidden", (await watcher.InvokeAsync<OnlineResult>("Send", new OnlineCommand(OnlineCommandType.SetReady, Flag: true))).Problems[0].Key);
 
-        // Les autres connexions sont prévenues de chaque changement.
+        // The other connections are told about each change.
         var changed = new TaskCompletionSource();
         watcher.On<int>("Changed", _ => changed.TrySetResult());
         await Ok(b, new(OnlineCommandType.SetName, "Bo"));
         await changed.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
-        // Salon : cabales secrètes jusqu'à ce que les deux soient prêts.
+        // Lobby: cabals secret until both are ready.
         await Ok(a, new(OnlineCommandType.SetCabal, Cabal: cabalA));
         await Ok(a, new(OnlineCommandType.SetReady, Flag: true));
         Assert.Null((await View(b))!.Seats[0].Cabal);
@@ -176,7 +176,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
         await Ok(first == 0 ? a : b, new(OnlineCommandType.DrawAgenda));
         Assert.Equal(OnlineStep.Cycle, (await View(a))!.Step);
 
-        // A blesse un de ses rouages : B et le spectateur le voient.
+        // A wounds one of their cogs: B and the spectator see it.
         var mine = (await View(a))!.Mine!;
         var session = new GameSession(mine.State!);
         session.Wound(0, 1, attack: false, ignoreProtection: false);
@@ -185,7 +185,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
         Assert.Equal(1, (await View(watcher))!.Seats[0].State!.Cogs[0].Marked);
         Assert.Contains((await View(b))!.Log, e => e.Key == "note" && e.Args![0] == "1 blessure");
 
-        // La partie survit à un redémarrage du serveur (fichier JSON).
+        // The game survives a server restart (JSON document).
         var again = Server();
         var reconnected = await Connect(again);
         var view = (await Join(reconnected, created.Code, created.InviteToken)).View!;
@@ -194,7 +194,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Partie_d_une_table_de_tournoi()
+    public async Task Game_of_a_tournament_table()
     {
         var server = Server();
         var http = server.CreateClient();
@@ -214,7 +214,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
         }
         var open = $"/api/tournaments/{t.Code}/rounds/1/tables/1/online";
 
-        // Avant le lancement : pas de partie en ligne.
+        // Before the start: no online game.
         Assert.Equal(HttpStatusCode.Conflict, (await http.SendAsync(Post(open, ana.PlayerToken))).StatusCode);
         await http.SendAsync(Post($"/api/tournaments/{t.Code}/start", organizer: t.OrganizerToken));
         await http.SendAsync(Post($"/api/tournaments/{t.Code}/rounds", organizer: t.OrganizerToken));
@@ -229,7 +229,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
         var tournament = await Read<TournamentView>(await http.GetAsync($"/api/tournaments/{t.Code}"));
         Assert.Equal(code, tournament.Rounds[0].Tables[0].OnlineCode);
 
-        // Chacun s'identifie avec son jeton de joueur ; ses cabales inscrites sont proposées.
+        // Each one identifies with their player token; their registered cabals are offered.
         var a = await Connect(server);
         var b = await Connect(server);
         var viewA = (await Join(a, code, ana.PlayerToken)).View!;
@@ -240,7 +240,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
         Assert.Equal(new OnlineTournamentRef(t.Code, 1, 1), viewA.Tournament);
         Assert.Equal("forbidden", (await Join(await Connect(server), code, t.OrganizerToken)).Error);
 
-        // Cabales lancées : notées à la table du tournoi (Ana : sa 2ᵉ cabale inscrite, Bo : sa 1ʳᵉ).
+        // Cabals started: recorded on the tournament table (Ana: her 2nd registered cabal, Bo: his 1st).
         await Ok(a, new(OnlineCommandType.SetCabal, Cabal: cabalB));
         await Ok(b, new(OnlineCommandType.SetCabal, Cabal: cabalA));
         await Ok(a, new(OnlineCommandType.SetReady, Flag: true));
@@ -251,7 +251,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Creation_limitee_par_adresse()
+    public async Task Creation_limited_per_address()
     {
         var http = Server(createPerHour: 1).CreateClient();
         await Create(http);
@@ -260,7 +260,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Nom_trop_long_refuse()
+    public async Task Name_too_long_refused()
     {
         var http = Server().CreateClient();
         var refused = await http.PostAsJsonAsync("/api/online", new CreateOnlineRequest(new string('x', 41)), TournamentJson.Options);

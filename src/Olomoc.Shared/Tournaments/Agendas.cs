@@ -1,9 +1,9 @@
 namespace Olomoc.Tournaments;
 
 /// <summary>
-/// Scénario d'une ronde : un agenda du recueil officiel (<see cref="Agendas.All"/>), ou
-/// <see cref="Agendas.Other"/> pour un scénario maison, nommé par l'organisateur ; et, si
-/// précisés, les decks Artefact et Ministère joués (<see cref="Decks"/>).
+/// Scenario of a round: an agenda from the official collection (<see cref="Agendas.All"/>), or
+/// <see cref="Agendas.Other"/> for a custom scenario, named by the organizer; and, if specified,
+/// the Artifact and Ministry decks played (<see cref="Decks"/>).
 /// </summary>
 public sealed record Scenario(string Id, string? Name = null, string? Artifact = null, string? Ministry = null)
 {
@@ -11,8 +11,8 @@ public sealed record Scenario(string Id, string? Name = null, string? Artifact =
 }
 
 /// <summary>
-/// Decks Artefact et Ministère, dans l'ordre de leur numéro (Artefact 1, 2…). Noms affichés :
-/// clés « deck.artifact.&lt;id&gt; » et « deck.ministry.&lt;id&gt; » des textes.
+/// Artifact and Ministry decks, in the order of their number (Artifact 1, 2…). Displayed names:
+/// keys "deck.artifact.&lt;id&gt;" and "deck.ministry.&lt;id&gt;" of the texts.
 /// </summary>
 public static class Decks
 {
@@ -24,8 +24,8 @@ public static class Decks
 }
 
 /// <summary>
-/// Agendas du recueil officiel (« Agendas », Occicat, janvier 2026 ; version anglaise de
-/// septembre 2026), dans l'ordre du sommaire. Noms affichés : clés « agenda.&lt;id&gt; » des textes.
+/// Agendas of the official collection ("Agendas", Occicat, January 2026; English version of
+/// September 2026), in the order of the table of contents. Displayed names: keys "agenda.&lt;id&gt;" of the texts.
 /// </summary>
 public static class Agendas
 {
@@ -41,11 +41,11 @@ public static class Agendas
     public static bool IsKnown(string? id) => id is not null && (id == Other || All.Contains(id));
 
     /// <summary>
-    /// Tirage au sort des scénarios des rondes pas encore appariées (au-delà de
-    /// <paramref name="pairedRounds"/>) : agendas officiels seulement, sans répétition, ni avec
-    /// ceux des rondes gardées telles quelles (déjà appariées, ou scénario maison choisi par
-    /// l'organisateur). Recueil épuisé : on recommence. Chacune de ces rondes (scénarios maison
-    /// compris) reçoit aussi un deck Artefact et un deck Ministère au hasard.
+/// Random draw of the scenarios of the rounds not paired yet (beyond
+/// <paramref name="pairedRounds"/>): official agendas only, without repeats, nor repeating those
+/// of the rounds kept as they are (already paired, or custom scenario chosen by the organizer).
+/// Collection exhausted: start again. Each of these rounds (custom scenarios included) also gets
+/// a random Artifact deck and Ministry deck.
     /// </summary>
     public static List<Scenario?> Draw(IReadOnlyList<Scenario?> current, int roundCount, int pairedRounds, Random random)
     {
@@ -74,8 +74,8 @@ public static class Agendas
     }
 }
 
-/// <summary>Joueur de la table qui a joué en premier (J1).</summary>
+/// <summary>Player of the table who played first (P1).</summary>
 public enum TableSide { A, B }
 
-/// <summary>Cause de la fin de partie : Fiel à 3, fin du 4ᵉ cycle, niveau de traque de la PoliSec à 3.</summary>
+/// <summary>Cause of the end of the game: Bile at 3, end of the 4th cycle, PoliSec hunt level at 3.</summary>
 public enum GameEnd { Bile, FourthCycle, PoliSec }

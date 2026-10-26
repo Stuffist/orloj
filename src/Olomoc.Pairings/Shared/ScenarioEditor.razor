@@ -1,5 +1,5 @@
-@* Scénarios des rondes (organisateur), prévus à l'avance : agenda du recueil officiel, ou scénario
-   maison à nommer (« Autre ») ; tirage au sort des agendas pour les rondes pas encore appariées. *@
+@* Scenarios of the rounds (organizer), planned in advance: agenda of the official collection, or
+   custom scenario to name ("Other"); random draw of the agendas for the rounds not paired yet. *@
 @inject LocalizationService L
 
 <ol class="tn-scenarios">
@@ -59,11 +59,11 @@
 
 @code {
     [Parameter, EditorRequired] public TournamentView View { get; set; } = default!;
-    /// <summary>Enregistrement : renvoie les problèmes (aucun si accepté).</summary>
+    /// <summary>Save: returns the problems (none if accepted).</summary>
     [Parameter, EditorRequired] public Func<IReadOnlyList<Scenario?>, Task<IReadOnlyList<Problem>>> Save { get; set; } = default!;
     [Parameter] public bool ReadOnly { get; set; }
 
-    // Chaînes vides : rien de choisi.
+    // Empty strings: nothing chosen.
     private sealed record Row(string Id, string Name, string Artifact = "", string Ministry = "");
 
     private static Row RowOf(Scenario? s) => s is null ? new Row("", "") : new Row(s.Id, s.Name ?? "", s.Artifact ?? "", s.Ministry ?? "");
@@ -72,7 +72,7 @@
     private bool _dirty, _busy;
     private IReadOnlyList<Problem>? _problems;
 
-    // Valeurs du serveur reprises tant que rien n'est en cours de modification (actualisation périodique).
+    // Server values taken back as long as nothing is being changed (periodic refresh).
     protected override void OnParametersSet()
     {
         if (_dirty && _rows.Count == View.RoundCount) return;
@@ -81,10 +81,10 @@
             .ToList();
     }
 
-    // Scénario maison sans nom : pas encore enregistrable.
+    // Custom scenario without a name: cannot be saved yet.
     private bool Complete => _rows.All(r => r.Id != Agendas.Other || r.Name.Trim().Length > 0);
 
-    // Plus d'agenda : plus de decks non plus (ils ne seraient pas enregistrés).
+    // No more agenda: no more decks either (they would not be saved).
     private void Choose(int index, string? id) => Edit(index, string.IsNullOrEmpty(id) ? new Row("", "") : _rows[index] with { Id = id });
     private void Rename(int index, string? name) => Edit(index, _rows[index] with { Name = name ?? "" });
     private void SetArtifact(int index, string? id) => Edit(index, _rows[index] with { Artifact = id ?? "" });
@@ -100,7 +100,7 @@
     private void Draw()
     {
         var drawn = Agendas.Draw(Current(), View.RoundCount, View.Rounds.Count, new Random());
-        // Scénario maison : nom gardé (en cours de saisie), decks tirés.
+        // Custom scenario: name kept (being typed), decks drawn.
         for (var i = View.Rounds.Count; i < View.RoundCount; i++)
             _rows[i] = _rows[i].Id == Agendas.Other ? RowOf(drawn[i]) with { Name = _rows[i].Name } : RowOf(drawn[i]);
         _dirty = true;

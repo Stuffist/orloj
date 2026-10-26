@@ -1,27 +1,27 @@
 namespace Olomoc.Tournaments.Stats;
 
-/// <summary>Part d'un élément (faction, rouage) : Count sur Total.</summary>
+/// <summary>Share of an item (faction, cog): Count out of Total.</summary>
 public sealed record Share(string Key, int Count, int Total)
 {
     public double Percent => Total == 0 ? 0 : 100.0 * Count / Total;
 }
 
-/// <summary>Bilan des parties d'un élément (faction, rouage de rang 3) : victoires sur parties.</summary>
+/// <summary>Game results of an item (faction, rank 3 cog): wins out of games.</summary>
 public sealed record WinRate(string Key, int Games, int Wins, int Draws, int Losses)
 {
     public double Percent => Games == 0 ? 0 : 100.0 * Wins / Games;
 }
 
 /// <summary>
-/// Parties jouées sur un scénario (agenda, ou <see cref="Agendas.Other"/>) ou avec un deck
-/// (Artefact, Ministère), et bilan de J1 quand il est noté.
+/// Games played on a scenario (agenda, or <see cref="Agendas.Other"/>) or with a deck (Artifact,
+/// Ministry), and P1's results when recorded.
 /// </summary>
 public sealed record ScenarioStat(string Key, int Games, int Total, WinRate First)
 {
     public double Percent => Total == 0 ? 0 : 100.0 * Games / Total;
 }
 
-/// <summary>Rouages choisis dans les cabales inscrites d'une faction.</summary>
+/// <summary>Cogs chosen in a faction's registered cabals.</summary>
 public sealed record FactionPicks(string Faction, int Cabals, IReadOnlyList<Share> Cogs);
 
 public sealed record StatsView(
@@ -31,22 +31,22 @@ public sealed record StatsView(
     WinRate FirstPlayer, IReadOnlyList<Share> Ends, IReadOnlyList<ScenarioStat> Scenarios,
     IReadOnlyList<ScenarioStat> Artifacts, IReadOnlyList<ScenarioStat> Ministries)
 {
-    /// <summary>En dessous, un taux de victoire est peu significatif (affiché, mais signalé).</summary>
+    /// <summary>Below this, a win rate is not very meaningful (shown, but flagged).</summary>
     public const int MinGames = 10;
 
     public static readonly StatsView Empty = TournamentStats.Compute(Array.Empty<ArchivedTournament>());
 }
 
 /// <summary>
-/// Statistiques des tournois archivés :
+/// Statistics of the archived tournaments:
 /// <list type="bullet">
-/// <item>factions jouées : part des joueurs ;</item>
-/// <item>choix des rouages : pour chaque faction, part des cabales inscrites qui contiennent le rouage
-/// (les deux cabales d'un joueur comptent) ;</item>
-/// <item>victoires : chaque camp d'une partie compte (un affrontement de même faction, des deux côtés) ;
-/// par faction, et par rouage de rang 3 de la cabale jouée, quand elle est connue ;</item>
-/// <item>parties où c'est noté : victoires de J1, causes de fin de partie, scénarios joués (et
-/// victoires de J1 par scénario), decks Artefact et Ministère joués (de même).</item>
+/// <item>factions played: share of the players;</item>
+/// <item>cog choices: for each faction, share of the registered cabals that contain the cog (both
+/// of a player's cabals count);</item>
+/// <item>wins: each side of a game counts (a mirror match, on both sides); per faction, and per
+/// rank 3 cog of the cabal played, when it is known;</item>
+/// <item>games where it is recorded: P1 wins, causes of the end of the game, scenarios played (and
+/// P1 wins per scenario), Artifact and Ministry decks played (likewise).</item>
 /// </list>
 /// </summary>
 public static class TournamentStats
@@ -70,7 +70,7 @@ public static class TournamentStats
             return new FactionPicks(g.Key, cabals.Count, cogs);
         }).OrderByDescending(p => p.Cabals).ThenBy(p => p.Faction).ToList();
 
-        // Chaque camp d'une partie : faction, rouage de rang 3 de la cabale jouée (si connue), PV pour / contre.
+        // Each side of a game: faction, rank 3 cog of the cabal played (if known), VP for / against.
         var sides = list.SelectMany(t => t.Games.SelectMany(g => new[]
         {
             Side(t, g.A, g.CabalA, g.VpA, g.VpB),
@@ -94,7 +94,7 @@ public static class TournamentStats
             ByKey(games, g => g.Ministry, Decks.Ministries));
     }
 
-    // Parties où la clé est notée, groupées par clé : les plus jouées d'abord, puis dans l'ordre de référence.
+    // Games where the key is recorded, grouped by key: most played first, then in the reference order.
     private static IReadOnlyList<ScenarioStat> ByKey(IEnumerable<ArchivedGame> games, Func<ArchivedGame, string?> key, IReadOnlyList<string> order)
     {
         var noted = games.Where(g => key(g) is not null).ToList();
@@ -103,7 +103,7 @@ public static class TournamentStats
             .OrderByDescending(s => s.Games).ThenBy(s => order.ToList().IndexOf(s.Key) is var i && i < 0 ? int.MaxValue : i).ToList();
     }
 
-    // Bilan de J1 sur les parties où il est noté : victoire, nul ou défaite du joueur qui a commencé.
+    // P1's results on the games where it is recorded: win, draw or loss of the player who started.
     private static WinRate FirstRate(string key, IEnumerable<ArchivedGame> games)
     {
         var known = games.Where(g => g.First is not null)

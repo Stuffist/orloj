@@ -6,8 +6,8 @@ using Xunit;
 namespace Olomoc.Tests;
 
 /// <summary>
-/// Cohérence des paquets de langue avec le référentiel neutre : la langue de référence est
-/// complète, les autres ne contiennent rien d'inconnu, les pictogrammes sont identiques.
+/// Consistency of the language packs with the neutral card catalog: the reference language is
+/// complete, the others contain nothing unknown, the pictograms are identical.
 /// </summary>
 public class I18nConsistencyTests
 {
@@ -41,7 +41,7 @@ public class I18nConsistencyTests
     }
 
     [Fact]
-    public void La_reference_est_complete()
+    public void The_reference_is_complete()
     {
         var fr = Cards(Ref);
         var missing = new List<string>();
@@ -66,7 +66,7 @@ public class I18nConsistencyTests
     }
 
     [Fact]
-    public void Les_autres_langues_ne_contiennent_rien_d_inconnu()
+    public void Other_languages_contain_nothing_unknown()
     {
         var ids = Entries().ToDictionary(e => (e.Section, e.Id), e => e.Abilities);
         var problems = new List<string>();
@@ -79,16 +79,16 @@ public class I18nConsistencyTests
                     foreach (var p in entries.EnumerateObject())
                     {
                         if (!ids.TryGetValue((section, p.Name), out var count)) { problems.Add($"{lang}: {section}/{p.Name} inconnu"); continue; }
-                        if (Get(p.Value, "abilities") is { } a && a.GetArrayLength() > count) problems.Add($"{lang}: {section}/{p.Name} a trop de capacités");
+                        if (Get(p.Value, "abilities") is { } a && a.GetArrayLength() > count) problems.Add($"{lang}: {section}/{p.Name} has too many abilities");
                     }
             var uiRef = Ui(Ref).EnumerateObject().Select(p => p.Name).ToHashSet();
-            problems.AddRange(Ui(lang).EnumerateObject().Select(p => p.Name).Where(k => !uiRef.Contains(k)).Select(k => $"{lang}: clé ui inconnue {k}"));
+            problems.AddRange(Ui(lang).EnumerateObject().Select(p => p.Name).Where(k => !uiRef.Contains(k)).Select(k => $"{lang}: unknown ui key {k}"));
         }
         Assert.Empty(problems);
     }
 
     [Fact]
-    public void Les_pictogrammes_sont_connus_et_identiques_dans_toutes_les_langues()
+    public void Pictograms_are_known_and_identical_in_every_language()
     {
         var problems = new List<string>();
         var reference = Cards(Ref);
@@ -109,7 +109,7 @@ public class I18nConsistencyTests
                             var refTokens = refEffect is { } r && Get(r, "gameEffect")?.GetString() is { } re
                                 ? Token.Matches(re).Select(m => m.Value).OrderBy(t => t).ToList() : new List<string>();
                             if (!tokens.OrderBy(t => t).SequenceEqual(refTokens))
-                                problems.Add($"{lang}: {section}/{id}[{i}] pictogrammes différents de {Ref}");
+                                problems.Add($"{lang}: {section}/{id}[{i}] pictograms different from {Ref}");
                         }
                         i++;
                     }
@@ -118,7 +118,7 @@ public class I18nConsistencyTests
     }
 
     [Fact]
-    public void Le_lexique_des_mots_cles_est_complet()
+    public void The_keyword_glossary_is_complete()
     {
         Assert.True(Olomoc.Models.GameTokens.IsKnown("{permanent}"));
         Assert.True(Olomoc.Models.GameTokens.IsKnown("{freq:game:2}"));
@@ -129,7 +129,7 @@ public class I18nConsistencyTests
     }
 
     [Fact]
-    public async Task Une_langue_partielle_se_replie_sur_la_reference()
+    public async Task A_partial_language_falls_back_to_the_reference()
     {
         var d = await AppData.CreateAsync();
         await d.L.SetLanguageAsync("en");

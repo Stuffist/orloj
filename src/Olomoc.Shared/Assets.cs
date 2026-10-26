@@ -1,9 +1,9 @@
 namespace Olomoc;
 
 /// <summary>
-/// Fichiers statiques communs (référentiel, langues, pictogrammes, styles) : publiés par la
-/// bibliothèque Olomoc.Shared à la racine du site, partagés par toutes les apps (/builder/…).
-/// Dans un composant Razor : Olomoc.Assets (ComponentBase.Assets, depuis .NET 9, masque ce nom).
+/// Shared static files (card catalog, languages, pictograms, styles): published by the
+/// Olomoc.Shared library at the site root, shared by all apps (/builder/…). In a Razor
+/// component: Olomoc.Assets (ComponentBase.Assets, since .NET 9, hides this name).
 /// </summary>
 public static class Assets
 {

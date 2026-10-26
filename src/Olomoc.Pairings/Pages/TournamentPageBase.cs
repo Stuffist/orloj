@@ -7,8 +7,8 @@ using Olomoc.Tournaments;
 namespace Olomoc.Pairings.Pages;
 
 /// <summary>
-/// Page d'un tournoi (publique ou administration) : chargement avec les jetons gardés sur cet
-/// appareil, puis actualisation toutes les 30 secondes (appariements et résultats en direct).
+/// Page of a tournament (public or admin): loaded with the tokens kept on this device, then
+/// refreshed every 30 seconds (live pairings and results).
 /// </summary>
 public abstract class TournamentPageBase : ComponentBase, IDisposable
 {
@@ -43,7 +43,7 @@ public abstract class TournamentPageBase : ComponentBase, IDisposable
         _ = PollAsync(_stop.Token);
     }
 
-    /// <summary>Avant le premier chargement (ex. : jeton reçu dans l'adresse).</summary>
+    /// <summary>Before the first load (e.g. token received in the address).</summary>
     protected virtual Task BeforeLoadAsync() => Task.CompletedTask;
 
     protected async Task RefreshAsync()
@@ -53,7 +53,7 @@ public abstract class TournamentPageBase : ComponentBase, IDisposable
         {
             View = view;
             LoadProblems = null;
-            // Mémorisé pour « Mes tournois » (nom à jour) ; écrit seulement s'il change.
+            // Remembered for "My tournaments" (up-to-date name); written only if it changes.
             if (Entry?.Name != view.Name) await Mine.RememberAsync(view.Code, view.Name);
         }
         else LoadProblems = result.Problems;
@@ -70,7 +70,7 @@ public abstract class TournamentPageBase : ComponentBase, IDisposable
                 await InvokeAsync(StateHasChanged);
             }
         }
-        catch (OperationCanceledException) { /* page quittée */ }
+        catch (OperationCanceledException) { /* page left */ }
     }
 
     protected string PublicLink => $"{Nav.BaseUri}pairings/t/{View?.Code ?? Code}";
@@ -82,7 +82,7 @@ public abstract class TournamentPageBase : ComponentBase, IDisposable
             await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
             _copied = text;
         }
-        catch (JSException) { _copied = null; }   // presse-papiers indisponible : le lien reste sélectionnable
+        catch (JSException) { _copied = null; }   // clipboard unavailable: the link stays selectable
     }
 
     protected string CopyLabel(string text) => L.Ui(_copied == text ? "export.copied" : "export.copy");
@@ -92,7 +92,7 @@ public abstract class TournamentPageBase : ComponentBase, IDisposable
     protected static string DateLabel(DateOnly? date) =>
         date?.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture) ?? "";
 
-    /// <summary>« Ronde suisse · 3 rondes · 2 cabales par joueur ».</summary>
+    /// <summary>"Swiss rounds · 3 rounds · 2 cabals per player".</summary>
     protected string Settings(TournamentView v) => string.Join(" · ", new[]
     {
         L.Ui(v.Pairing == PairingMode.Swiss ? (v.AvoidSameAlignment ? "pairings.mode.swissAligned" : "pairings.mode.swiss") : "pairings.mode.alignment"),

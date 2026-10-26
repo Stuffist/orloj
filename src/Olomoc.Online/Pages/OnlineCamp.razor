@@ -4,9 +4,9 @@
 @inject CatalogService Catalog
 @inject OnlineConnection Hub
 
-@* Camp d'un joueur seul, en lecture : fenêtre détachée depuis la partie (?window=true, en-tête
-   compact), à poser sur un autre écran. Suivi en spectateur, sans jeton : la présence du joueur
-   n'est pas touchée, et rien ne s'y modifie. *@
+@* A single player's side, read-only: window detached from the game (?window=true, compact
+   header), to place on another screen. Followed as a spectator, without a token: the player's
+   presence is not affected, and nothing can be changed there. *@
 
 @if (!_ready)
 {

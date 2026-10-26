@@ -6,10 +6,9 @@
 @inject CabalLibrary Library
 @inject LocalizationService L
 
-@* Compte : connexion, création, mot de passe oublié ; une fois connecté, cabales du compte,
-   e-mail (confirmation), mot de passe, autres appareils, suppression ; l'éditeur du référentiel
-   (éditeurs et admins), le panneau d'administration (admins).
-   Compte facultatif. *@
+@* Account: sign-in, creation, forgotten password; once signed in, the account's cabals, email
+   (confirmation), password, other devices, deletion; the card catalog editor (editors and
+   admins), the admin panel (admins). Optional account. *@
 
 @if (!L.Loaded || !Accounts.Loaded)
 {
@@ -129,7 +128,7 @@ else
         <section class="panel account-panel">
             <h3>@L.Ui("account.password.title")</h3>
             <form class="account-form" @onsubmit="ChangePasswordAsync" @onsubmit:preventDefault="true">
-                @* Pseudo caché : les gestionnaires de mots de passe savent quel compte mettre à jour. *@
+                @* Hidden username: password managers know which account to update. *@
                 <input class="sr-only" type="text" autocomplete="username" value="@me.UserName" readonly tabindex="-1" aria-hidden="true" />
                 <div class="field">
                     <label for="password-current">@L.Ui("account.password.current")</label>
@@ -221,8 +220,8 @@ else
 
 @code {
     private bool _busy, _forgotOpen;
-    private string? _done;          // message en tête de page (compte créé, supprimé…)
-    private string? _cabalsMessage; // cabales de cet appareil envoyées au compte
+    private string? _done;          // message at the top of the page (account created, deleted…)
+    private string? _cabalsMessage; // cabals of this device sent to the account
     private readonly DateTimeOffset _openedAt = DateTimeOffset.Now;
     private readonly Dictionary<string, AccountStatus> _status = new();
     private string _loginName = "", _loginPassword = "", _forgotName = "";
@@ -245,7 +244,7 @@ else
         ? @<p class="account-msg @(s.Ok ? "ok" : "error")" role="@(s.Ok ? "status" : "alert")">@s.Text</p>
         : null;
 
-    // Appel à l'API : formulaires désactivés pendant l'appel, compte rendu sous le formulaire.
+    // API call: forms disabled during the call, report under the form.
     private async Task Run<T>(string form, Func<Task<AccountResult<T>>> call, Func<T?, string?> success)
     {
         _busy = true;
@@ -326,7 +325,7 @@ else
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
-    // Première connexion de cet appareil : ses cabales viennent de partir dans le compte.
+    // First sign-in of this device: its cabals were just sent to the account.
     private void OnLibraryChanged()
     {
         if (Library.LastSync is { FirstSync: true, Uploaded: > 0 } sync && sync.At >= _openedAt && sync.User == Accounts.Current?.UserName)

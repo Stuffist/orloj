@@ -6,25 +6,25 @@ using Olomoc.Tournaments;
 
 namespace Olomoc.Services;
 
-/// <summary>Bilan d'une synchronisation avec le compte.</summary>
-/// <param name="FirstSync">Première synchronisation de cet appareil avec ce compte (ses cabales y ont été envoyées).</param>
-/// <param name="Uploaded">Changements de cet appareil appliqués au compte.</param>
+/// <summary>Summary of a synchronization with the account.</summary>
+/// <param name="FirstSync">First synchronization of this device with this account (its cabals were sent to it).</param>
+/// <param name="Uploaded">Changes of this device applied to the account.</param>
 public sealed record CabalSyncReport(DateTimeOffset At, string User, bool FirstSync, int Uploaded, IReadOnlyList<Problem> Problems);
 
 /// <summary>
-/// Cabales sauvegardées, au format de l'export JSON (<see cref="CabalExport"/>). Le nom identifie
-/// une cabale : sauvegarder sous un nom déjà pris remplace la cabale existante.
+/// Saved cabals, in the JSON export format (<see cref="CabalExport"/>). The name identifies a
+/// cabal: saving under a name already taken replaces the existing cabal.
 /// <para>
-/// Toujours une copie sur l'appareil (localStorage) : tout marche sans compte et hors connexion.
-/// Connecté, cette copie est synchronisée avec le compte : chaque changement part aussitôt (ou
-/// au prochain chargement, sans réseau), et le compte renvoie ses cabales, celles des autres
-/// appareils comprises. À nom égal, le plus récent l'emporte, suppression comprise.
+/// Always a copy on the device (localStorage): everything works without an account and offline.
+/// When signed in, this copy is synchronized with the account: each change is sent at once (or at
+/// the next load, without network), and the account returns its cabals, including those of the
+/// other devices. For the same name, the most recent one wins, deletion included.
 /// </para>
 /// <para>
-/// La copie appartient au dernier compte synchronisé ici (<c>olomoc.cabals.account</c>). Première
-/// connexion de l'appareil : toutes ses cabales partent dans le compte. Un autre compte ensuite :
-/// seules celles faites ici hors compte (pas encore envoyées) le suivent ; les autres, déjà dans
-/// le compte précédent, laissent la place aux siennes.
+/// The copy belongs to the last account synchronized here (<c>olomoc.cabals.account</c>). First
+/// sign-in on the device: all its cabals go to the account. Another account afterwards: only those
+/// made here without an account (not sent yet) follow it; the others, already in the previous
+/// account, make way for its own.
 /// </para>
 /// </summary>
 public sealed class CabalLibrary
@@ -35,14 +35,14 @@ public sealed class CabalLibrary
 
     private readonly IJSRuntime _js;
     private readonly ICabalCloud? _cloud;
-    private readonly SemaphoreSlim _sync = new(1, 1);     // une synchronisation à la fois
+    private readonly SemaphoreSlim _sync = new(1, 1);     // one synchronization at a time
     private Task? _loading;
     private List<SavedCabal> _cabals = new();
-    private List<DeletedCabal> _deleted = new();          // suppressions pas encore envoyées
-    private string? _owner;                               // compte de cette copie
-    private string? _lastUser;                            // compte vu à la dernière synchronisation
+    private List<DeletedCabal> _deleted = new();          // deletions not sent yet
+    private string? _owner;                               // account of this copy
+    private string? _lastUser;                            // account seen at the last synchronization
 
-    /// <summary>Sans compte (tests, app sans session) : copie de l'appareil seulement.</summary>
+    /// <summary>Without an account (tests, app without a session): device copy only.</summary>
     public CabalLibrary(IJSRuntime js) : this(js, null) { }
 
     public CabalLibrary(IJSRuntime js, ICabalCloud? cloud)
@@ -52,21 +52,21 @@ public sealed class CabalLibrary
         if (cloud is not null) cloud.Changed += () => _ = OnAccountChangedAsync();
     }
 
-    /// <summary>Cabales sauvegardées, la plus récente d'abord.</summary>
+    /// <summary>Saved cabals, most recent first.</summary>
     public IReadOnlyList<SavedCabal> Cabals => _cabals;
 
-    /// <summary>Changements pas encore envoyés au compte (sauvegardes, suppressions).</summary>
+    /// <summary>Changes not sent to the account yet (saves, deletions).</summary>
     public int PendingCount => _cabals.Count(c => c.Pending) + _deleted.Count;
 
-    /// <summary>Dernière synchronisation (null : aucune encore, ou pas de compte).</summary>
+    /// <summary>Last synchronization (null: none yet, or no account).</summary>
     public CabalSyncReport? LastSync { get; private set; }
 
-    /// <summary>Liste changée (synchronisation, changement de compte).</summary>
+    /// <summary>List changed (synchronization, account change).</summary>
     public event Action? Changed;
 
     public Task EnsureLoadedAsync() => _loading ??= LoadAsync();
 
-    /// <summary>Relit les sauvegardes : une autre page du site (le constructeur, dans un autre onglet) a pu en ajouter.</summary>
+    /// <summary>Reads the saves again: another page of the site (the builder, in another tab) may have added some.</summary>
     public Task ReloadAsync() => _loading = LoadAsync();
 
     private async Task LoadAsync()
@@ -80,14 +80,14 @@ public sealed class CabalLibrary
         await SyncAsync();
     }
 
-    /// <summary>Cabale sauvegardée sous ce nom (sans tenir compte de la casse ni des espaces autour).</summary>
+    /// <summary>Cabal saved under this name (case-insensitive, surrounding spaces ignored).</summary>
     public SavedCabal? Find(string? name) =>
         string.IsNullOrWhiteSpace(name) ? null : _cabals.FirstOrDefault(c => SameName(c.Cabal.Name, name));
 
-    /// <summary>Sauvegarde la cabale, qui doit être nommée ; remplace celle du même nom.</summary>
+    /// <summary>Saves the cabal, which must be named; replaces the one with the same name.</summary>
     public async Task SaveAsync(CabalExport cabal, DateTimeOffset now)
     {
-        if (string.IsNullOrWhiteSpace(cabal.Name)) throw new ArgumentException("Cabale sans nom.", nameof(cabal));
+        if (string.IsNullOrWhiteSpace(cabal.Name)) throw new ArgumentException("Cabal without a name.", nameof(cabal));
         _cabals.RemoveAll(c => SameName(c.Cabal.Name, cabal.Name));
         _cabals.Insert(0, new SavedCabal(now, cabal, Pending: true));
         _deleted.RemoveAll(d => SameName(d.Name, cabal.Name));
@@ -105,8 +105,8 @@ public sealed class CabalLibrary
     }
 
     /// <summary>
-    /// Envoie les changements de cet appareil au compte connecté et reprend ses cabales. Sans
-    /// compte ou sans réseau : rien ne change (les changements attendent) ; renvoie null.
+    /// Sends this device's changes to the signed-in account and takes back its cabals. Without an
+    /// account or without network: nothing changes (the changes wait); returns null.
     /// </summary>
     public async Task<CabalSyncReport?> SyncAsync()
     {
@@ -116,14 +116,14 @@ public sealed class CabalLibrary
         {
             if (await _cloud.CurrentUserAsync() is not { } user) return null;
             var firstSync = _owner is null;
-            if (_owner is not null && _owner != user) _deleted.Clear();     // suppressions de l'autre compte
+            if (_owner is not null && _owner != user) _deleted.Clear();     // deletions of the other account
             var sent = _cabals.Where(c => firstSync || c.Pending).ToList();
             var tombstones = _owner == user ? _deleted.ToList() : new List<DeletedCabal>();
             var changes = sent.Select(c => new CabalChange(c.Cabal.Name!, c.SavedAt, c.Cabal))
                 .Concat(tombstones.Select(d => new CabalChange(d.Name, d.At, null)))
                 .ToList();
 
-            // Par paquets ; le dernier appel renvoie les cabales du compte.
+            // In batches; the last call returns the account's cabals.
             CabalSyncResult? result = null;
             var applied = 0;
             var problems = new List<Problem>();
@@ -135,7 +135,7 @@ public sealed class CabalLibrary
                 if (!response.Ok || response.Value is null)
                 {
                     LastSync = new(DateTimeOffset.Now, user, firstSync, applied, response.Problems);
-                    return LastSync;                                         // réessayé plus tard
+                    return LastSync;                                         // retried later
                 }
                 result = response.Value;
                 applied += result.Applied;
@@ -154,8 +154,8 @@ public sealed class CabalLibrary
     }
 
     /// <summary>
-    /// Copie de l'appareil = cabales du compte, plus celles d'ici que le compte n'a pas (ou en plus
-    /// ancien) : changements faits pendant l'envoi, ou refusés (limite) ; elles restent à envoyer.
+    /// Device copy = the account's cabals, plus those from here that the account does not have (or
+    /// has an older version of): changes made during the upload, or refused (limit); they stay to be sent.
     /// </summary>
     private void Merge(IReadOnlyList<SavedCabal> account, List<SavedCabal> sent, List<DeletedCabal> tombstones)
     {
@@ -171,17 +171,17 @@ public sealed class CabalLibrary
         _deleted.RemoveAll(tombstones.Contains);
     }
 
-    // Connexion (ou changement de compte) : synchronisation, puis liste mise à jour à l'écran.
+    // Sign-in (or account change): synchronization, then list updated on screen.
     private async Task OnAccountChangedAsync()
     {
-        if (_cloud is null || _loading is null) return;          // pas encore chargée : le chargement synchronisera
+        if (_cloud is null || _loading is null) return;          // not loaded yet: loading will synchronize
         await _loading;
         var user = await _cloud.CurrentUserAsync();
         if (user is null || user == _lastUser) return;
         await SyncAsync();
     }
 
-    /// <summary>Même composition (faction, rouages et équipements/dons par rang), noms mis à part.</summary>
+    /// <summary>Same composition (faction, cogs and equipment/boons per rank), names aside.</summary>
     public static bool SameCards(CabalExport a, CabalExport b) => Cards(a) == Cards(b);
 
     private static string Cards(CabalExport c) =>
@@ -197,8 +197,8 @@ public sealed class CabalLibrary
             var json = await _js.InvokeAsync<string?>("localStorage.getItem", key);
             return string.IsNullOrEmpty(json) ? null : JsonSerializer.Deserialize<T>(json, JsonOpts);
         }
-        catch (JSException) { return null; }      // stockage indisponible : aucune sauvegarde
-        catch (JsonException) { return null; }    // contenu illisible : ignoré, écrasé à la prochaine sauvegarde
+        catch (JSException) { return null; }      // storage unavailable: no save
+        catch (JsonException) { return null; }    // unreadable content: ignored, overwritten at the next save
     }
 
     private async Task StoreAsync()
@@ -209,9 +209,9 @@ public sealed class CabalLibrary
             await _js.InvokeVoidAsync("localStorage.setItem", DeletedKey, JsonSerializer.Serialize(_deleted, JsonOpts));
             if (_owner is not null) await _js.InvokeVoidAsync("localStorage.setItem", OwnerKey, JsonSerializer.Serialize(_owner, JsonOpts));
         }
-        catch (JSException) { /* navigation privée… : la sauvegarde vit le temps de l'onglet */ }
+        catch (JSException) { /* private browsing…: the save lives as long as the tab */ }
     }
 
-    /// <summary>Cabale supprimée sur cet appareil, suppression pas encore envoyée au compte.</summary>
+    /// <summary>Cabal deleted on this device, deletion not sent to the account yet.</summary>
     private sealed record DeletedCabal(string Name, DateTimeOffset At);
 }

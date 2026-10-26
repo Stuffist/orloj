@@ -1,6 +1,6 @@
 namespace Olomoc.Server.Accounts;
 
-/// <summary>Textes des e-mails, en français ou en anglais (langue du site lors de la demande).</summary>
+/// <summary>Email texts, in French or in English (site language at the time of the request).</summary>
 public static class AccountMails
 {
     public static string Language(string? language) => language == "en" ? "en" : "fr";
@@ -27,7 +27,7 @@ public static class AccountMails
             Si vous n'avez pas créé de compte Orloj, ignorez ce message.
             """);
 
-    /// <summary>Contrôle mensuel, pour l'admin du site (en français).</summary>
+    /// <summary>Periodic check, for the site admin (in French).</summary>
     public static OutgoingMail Check(string to, DateTime now) =>
         new(to, "Orloj — l'envoi des e-mails fonctionne",
             $"""
@@ -37,7 +37,7 @@ public static class AccountMails
             e-mails du site (confirmation d'adresse, mot de passe oublié) partent bien.
 
             S'il ne vous parvient plus : vérifier SMTP_HOST, SMTP_USER et SMTP_PASSWORD dans le
-            .env du VPS, et le journal du conteneur (docker logs olomoc).
+            .env du serveur, et le journal du conteneur (docker logs olomoc).
             """);
 
     public static OutgoingMail Reset(string to, string userName, string link, string? language) => Language(language) == "en"

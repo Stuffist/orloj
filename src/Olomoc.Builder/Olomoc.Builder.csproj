@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
-  <!-- Constructeur de cabales, mode partie, compte et éditeur du référentiel : pages sous
-       /builder/…, réunies avec les tournois dans l'app Olomoc.Web. -->
+  <!-- Cabal builder, play mode, account, card catalog editor and admin panel: pages under
+       /builder/…, brought together with the tournaments in the Olomoc.Web app. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Olomoc.Shared\Olomoc.Shared.csproj" />
-    <!-- Page Partie : cadre « Jouer en ligne » (créer un salon, parties suivies). -->
+    <!-- Play page: "Play online" box (create a lobby, followed games). -->
     <ProjectReference Include="..\Olomoc.Online\Olomoc.Online.csproj" />
   </ItemGroup>
 

@@ -4,9 +4,8 @@
 @inject LocalizationService L
 @inject NavigationManager Nav
 
-@* En-tête de tout le site : titre et sous-titre de la section (constructeur, tournois, en ligne), langue,
-   puis le menu (AppNav). Fenêtre à part ouverte par le constructeur (?window=true) : en-tête
-   compact, sans menu. *@
+@* Header of the whole site: title and subtitle of the section (builder, tournaments, online), language,
+   then the menu (AppNav). Separate window opened by the builder (?window=true): compact header, no menu. *@
 
 <PageTitle>@(L.Loaded ? L.Ui(Title) : "Orloj")</PageTitle>
 
@@ -45,13 +44,13 @@
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) => OnChanged();
 
-    // Adresse sans la base : « builder/play », « pairings/t/ABCDEF »…
+    // Address without the base: "builder/play", "pairings/t/ABCDEF"…
     private string[] Segments => Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-    // Section : « builder », « pairings » ou « online » (constructeur par défaut).
+    // Section: "builder", "pairings" or "online" (builder by default).
     private string Section => Segments.FirstOrDefault() is "pairings" or "online" ? Segments[0] : "builder";
 
-    // Page du constructeur : « play », « equipment »… ; vide pour l'accueil.
+    // Builder page: "play", "equipment"…; empty for the home page.
     private string Page => Segments.ElementAtOrDefault(1) ?? "";
 
     private string Home => Section switch
@@ -61,7 +60,7 @@
         _ => "nav.builder",
     };
 
-    // Parties en ligne : sous l'onglet Partie, avec le titre du site (sous-titre propre).
+    // Online games: under the Play tab, with the site's title (own subtitle).
     private string Title => Section == "pairings" ? "pairings.title" : "app.title";
 
     private string Subtitle => Section switch
