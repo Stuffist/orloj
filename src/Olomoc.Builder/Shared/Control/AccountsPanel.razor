@@ -1,0 +1,178 @@
+@* Panneau d'administration : comptes. Sans recherche, les éditeurs et les admins (ou les derniers
+   créés) ; avec, les comptes dont le pseudo la contient. Par compte : rôle, dates, état, et les
+   actions (mot de passe temporaire, déverrouiller, déconnecter, supprimer). Jamais l'e-mail ;
+   son propre compte ne se modifie pas ici. *@
+@using Olomoc.Accounts
+@inject AdminApi Api
+@inject AccountService Accounts
+@inject LocalizationService L
+@inject IJSRuntime JS
+
+<section class="panel account-panel">
+    <h3>@L.Ui("control.accounts.title")</h3>
+    <p class="hint">@L.Ui("account.roles.help")</p>
+    <form class="account-form" @onsubmit="SearchAsync" @onsubmit:preventDefault="true">
+        <div class="field">
+            <label for="roles-search">@L.Ui("account.roles.search")</label>
+            <input id="roles-search" type="search" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="@AccountRules.MaxUserName"
+                   @bind="_search" @bind:event="oninput" />
+        </div>
+        <div class="account-actions">
+            <button class="btn" type="submit" disabled="@_busy">@L.Ui("account.roles.searchSubmit")</button>
+            <button class="btn" type="button" disabled="@_busy" @onclick="RecentAsync">@L.Ui("control.accounts.recent")</button>
+        </div>
+    </form>
+    @if (_status is { } status)
+    {
+        <p class="account-msg @(status.Ok ? "ok" : "error")" role="@(status.Ok ? "status" : "alert")">@status.Text</p>
+    }
+    @if (_accounts is { } accounts)
+    {
+        <p class="account-roles-heading">@Heading</p>
+        @if (accounts.Count == 0)
+        {
+            <p class="hint">@L.Ui("account.roles.none")</p>
+        }
+        else
+        {
+            <ul class="account-roles control-accounts">
+                @foreach (var account in accounts)
+                {
+                    var self = string.Equals(account.UserName, Accounts.Current?.UserName, StringComparison.OrdinalIgnoreCase);
+                    <li @key="(account.UserName, _version)">
+                        <div class="control-account-head">
+                            <span class="account-role-name">
+                                <strong>@account.UserName</strong>@if (self) { <span class="hint"> (@L.Ui("account.roles.you"))</span> }
+                                @if (account.LockedOut) { <span class="account-badge todo">@L.Ui("control.accounts.locked")</span> }
+                                @if (!account.EmailConfirmed) { <span class="account-badge todo">@L.Ui("account.emailUnconfirmed")</span> }
+                            </span>
+                            <select aria-label="@L.Ui("account.roles.of", account.UserName)" disabled="@(self || _busy)"
+                                    value="@account.Role" @onchange="e => SetRoleAsync(account, e)">
+                                @foreach (var role in Enum.GetValues<AccountRole>())
+                                {
+                                    <option value="@role">@L.Ui($"account.role.{role}")</option>
+                                }
+                            </select>
+                        </div>
+                        <span class="hint control-meta">
+                            @L.Ui("control.accounts.meta", AdminUi.Date(account.CreatedAt), AdminUi.Date(account.LastLoginAt), account.Cabals)
+                        </span>
+                        @if (!self)
+                        {
+                            <div class="control-row-actions">
+                                <button class="btn small" disabled="@_busy" @onclick="() => ResetAsync(account)">@L.Ui("account.admin.submit")</button>
+                                @if (account.LockedOut)
+                                {
+                                    <button class="btn small" disabled="@_busy" @onclick="() => UnlockAsync(account)">@L.Ui("control.accounts.unlock")</button>
+                                }
+                                <button class="btn small" disabled="@_busy" @onclick="() => LogoutAsync(account)">@L.Ui("control.accounts.logout")</button>
+                                @if (account.Role != AccountRole.Admin)
+                                {
+                                    <button class="btn small danger" disabled="@_busy" @onclick="() => DeleteAsync(account)">@L.Ui("control.accounts.delete")</button>
+                                }
+                            </div>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    }
+</section>
+
+@code {
+    /// <summary>Après une action qui change les chiffres (rôle, suppression…).</summary>
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private bool _busy, _recent;
+    private string _search = "", _shown = "";
+    private int _version;       // lignes recréées à chaque lecture : rôle refusé, liste rétablie
+    private List<AdminAccount>? _accounts;
+    private (string Text, bool Ok)? _status;
+
+    private string Heading => _shown.Length > 0 ? L.Ui("account.roles.found", _shown)
+        : L.Ui(_recent ? "control.accounts.recentHeading" : "account.roles.staff");
+
+    protected override Task OnInitializedAsync() => LoadAsync("", false);
+
+    private Task SearchAsync()
+    {
+        _status = null;
+        return LoadAsync(_search.Trim(), false);
+    }
+
+    private Task RecentAsync()
+    {
+        _status = null;
+        _search = "";
+        return LoadAsync("", true);
+    }
+
+    private async Task LoadAsync(string search, bool recent)
+    {
+        _busy = true;
+        try
+        {
+            var result = await Api.AccountsAsync(search, recent);
+            if (result.Ok)
+            {
+                _accounts = result.Value ?? [];
+                _shown = search;
+                _recent = recent;
+                _version++;
+            }
+            else _status = (L.Describe(result.Problems), false);
+        }
+        finally { _busy = false; }
+    }
+
+    private Task ReloadAsync() => LoadAsync(_shown, _recent);
+
+    // Action sur un compte : compte rendu, liste relue, chiffres de la page relus.
+    private async Task RunAsync<T>(Func<Task<AccountResult<T>>> call, Func<T?, string> success)
+    {
+        _busy = true;
+        try
+        {
+            var result = await call();
+            _status = result.Ok ? (success(result.Value), true) : (L.Describe(result.Problems), false);
+        }
+        finally { _busy = false; }
+        await ReloadAsync();
+        await Changed.InvokeAsync();
+    }
+
+    private Task SetRoleAsync(AdminAccount account, ChangeEventArgs e)
+    {
+        if (!Enum.TryParse<AccountRole>(e.Value?.ToString(), out var role) || role == account.Role) return Task.CompletedTask;
+        return RunAsync(() => Api.SetRoleAsync(account.UserName, role),
+            _ => L.Ui("account.roles.done", account.UserName, L.Ui($"account.role.{role}")));
+    }
+
+    private async Task ResetAsync(AdminAccount account)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", L.Ui("control.accounts.reset.confirm", account.UserName))) return;
+        await RunAsync(() => Api.ResetPasswordAsync(account.UserName), t => L.Ui("account.admin.done", account.UserName, t?.Password ?? ""));
+    }
+
+    private Task UnlockAsync(AdminAccount account) =>
+        RunAsync(() => Api.UnlockAsync(account.UserName), _ => L.Ui("control.accounts.unlocked", account.UserName));
+
+    private async Task LogoutAsync(AdminAccount account)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", L.Ui("control.accounts.logout.confirm", account.UserName))) return;
+        await RunAsync(() => Api.LogoutAsync(account.UserName), _ => L.Ui("control.accounts.loggedOut", account.UserName));
+    }
+
+    // Suppression confirmée en retapant le pseudo.
+    private async Task DeleteAsync(AdminAccount account)
+    {
+        var typed = await JS.InvokeAsync<string?>("prompt", L.Ui("control.accounts.delete.confirm", account.UserName, account.Cabals));
+        if (typed is null) return;
+        if (!string.Equals(typed.Trim(), account.UserName, StringComparison.OrdinalIgnoreCase))
+        {
+            _status = (L.Ui("control.mismatch"), false);
+            return;
+        }
+        await RunAsync(() => Api.DeleteAccountAsync(account.UserName), _ => L.Ui("control.accounts.deleted", account.UserName));
+    }
+}

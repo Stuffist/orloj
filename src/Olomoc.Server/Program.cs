@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Olomoc.Accounts;
 using Olomoc.Server.Accounts;
+using Olomoc.Server.Admin;
 using Olomoc.Server.CardCatalog;
 using Olomoc.Server.Data;
 using Olomoc.Server.Hosting;
@@ -26,11 +27,13 @@ Directory.CreateDirectory(dataDirectory);
 builder.Services.AddDbContextFactory<OlomocDb>(o => OlomocDb.Configure(o, dataDirectory));
 builder.Services.AddSingleton(sp => new TournamentStore(sp.GetRequiredService<IDbContextFactory<OlomocDb>>()));
 builder.Services.AddSingleton<StatsArchive>();    // jamais purgées
-builder.Services.AddHostedService(sp => new DbBackup(dataDirectory, sp.GetRequiredService<ILogger<DbBackup>>()));
+builder.Services.AddSingleton(sp => new DbBackup(dataDirectory, sp.GetRequiredService<ILogger<DbBackup>>()));
+builder.Services.AddHostedService(sp => sp.GetRequiredService<DbBackup>());   // aussi à la main (panneau d'administration)
 // Référentiel : fichiers du dépôt, plus les modifications des admins (DATA_DIR/catalog).
 builder.Services.AddSingleton(sp => new CatalogStore(sp.GetRequiredService<IWebHostEnvironment>().WebRootFileProvider,
     Path.Combine(dataDirectory, "catalog"), sp.GetRequiredService<ILogger<CatalogStore>>()));
 builder.Services.AddSingleton<ServerCatalog>();
+builder.Services.AddSingleton<AdminAudit>();      // journal des actions des admins
 builder.Services.AddHostedService<TournamentPurge>();
 builder.Services.ConfigureHttpJsonOptions(o => TournamentJson.Configure(o.SerializerOptions));
 
@@ -159,6 +162,7 @@ app.MapTournaments();
 app.MapAccounts();
 app.MapCatalog();                           // avant les fichiers statiques : référentiel fusionné
 app.MapOnline();
+app.MapAdmin(dataDirectory);                // panneau d'administration (admins)
 app.MapGet("/", () => Results.Redirect("/builder/"));
 app.MapGet("/healthz", () => "ok\n");
 ClientApps.MapFallbacks(app);               // routes de l'app : index.html

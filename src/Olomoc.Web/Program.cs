@@ -21,6 +21,7 @@ builder.Services.AddScoped<GameStore>();                // partie en cours (menu
 // Constructeur.
 builder.Services.AddScoped<CabalDraft>();
 builder.Services.AddScoped<Olomoc.Builder.Shared.AdminCatalogApi>();   // éditeur du référentiel (éditeurs et admins)
+builder.Services.AddScoped<Olomoc.Builder.Shared.AdminApi>();          // panneau d'administration (admins)
 
 // Tournois.
 builder.Services.AddScoped<CabalImport>();              // cabale collée (texte ou JSON)

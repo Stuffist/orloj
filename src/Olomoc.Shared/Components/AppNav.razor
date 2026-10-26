@@ -1,6 +1,6 @@
 @* Menu du site : constructeur, partie (point si une partie est en cours ; parties en ligne comprises), tournois, statistiques,
-   éditeur (éditeurs et admins), compte. Ordinateur : onglets sous l'en-tête ; téléphone : barre
-   fixée en bas de l'écran, sans l'éditeur (dans « Mon compte »). Liens internes à l'app : pas de
+   éditeur (éditeurs et admins), panneau d'administration (admins), compte. Ordinateur : onglets sous l'en-tête ; téléphone : barre
+   fixée en bas de l'écran, sans l'éditeur ni le panneau (dans « Mon compte »). Liens internes à l'app : pas de
    rechargement. Icônes d'interface (pas les pictogrammes du livre de règles). *@
 @inject LocalizationService L
 @inject AccountService Accounts
@@ -28,9 +28,13 @@
         {
             @Tab("editor", "builder/admin", L.Ui("nav.editor"), L.Ui("nav.editor"), EditorIcon, active, "editor push")
         }
-        @* Sur téléphone, l'éditeur passe par « Mon compte » : l'onglet du compte s'y allume. *@
+        @if (account is { IsAdmin: true })
+        {
+            @Tab("control", "builder/control", L.Ui("nav.control"), L.Ui("nav.control"), ControlIcon, active, "editor")
+        }
+        @* Sur téléphone, l'éditeur et le panneau d'administration passent par « Mon compte » : l'onglet du compte s'y allume. *@
         @Tab("account", "builder/account", account?.UserName ?? L.Ui("account.signIn"), L.Ui("nav.account.short"), AccountIcon, active,
-            (account is { CanEdit: true } ? "" : "push") + (active == "editor" ? " also-current" : ""))
+            (account is { CanEdit: true } ? "" : "push") + (active is "editor" or "control" ? " also-current" : ""))
     </nav>
 }
 
@@ -62,6 +66,7 @@
                     "play" => "play",
                     "account" or "privacy" => "account",
                     "admin" => "editor",
+                    "control" => "control",
                     _ => "builder",
                 },
                 _ => "",
@@ -80,12 +85,13 @@
 
     private const string Svg = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\">";
 
-    // Cartes empilées (cabale), dé (partie), coupe (tournois), barres (statistiques), crayon (éditeur), silhouette (compte).
+    // Cartes empilées (cabale), dé (partie), coupe (tournois), barres (statistiques), crayon (éditeur), bouclier (admin), silhouette (compte).
     private static readonly MarkupString BuilderIcon = new(Svg + "<rect x=\"3.5\" y=\"6.5\" width=\"11\" height=\"14\" rx=\"2\"/><path d=\"M8 3.5h10a2 2 0 0 1 2 2V17\"/></svg>");
     private static readonly MarkupString PlayIcon = new(Svg + "<rect x=\"3.5\" y=\"3.5\" width=\"17\" height=\"17\" rx=\"3.5\"/><circle class=\"pip\" cx=\"8.5\" cy=\"8.5\" r=\"1.4\"/><circle class=\"pip\" cx=\"12\" cy=\"12\" r=\"1.4\"/><circle class=\"pip\" cx=\"15.5\" cy=\"15.5\" r=\"1.4\"/></svg>");
     private static readonly MarkupString TournamentIcon = new(Svg + "<path d=\"M7 4h10v5a5 5 0 0 1-10 0z\"/><path d=\"M17 5.5h3V7a3 3 0 0 1-3 3M7 5.5H4V7a3 3 0 0 0 3 3M12 14v4M8 20.5h8\"/></svg>");
     private static readonly MarkupString StatsIcon = new(Svg + "<path d=\"M3.5 20.5h17M6.5 20.5v-7M12 20.5v-13M17.5 20.5v-9\"/></svg>");
     private static readonly MarkupString EditorIcon = new(Svg + "<path d=\"M4 20h4L19 9l-4-4L4 16z\"/><path d=\"M13 7l4 4\"/></svg>");
+    private static readonly MarkupString ControlIcon = new(Svg + "<path d=\"M12 3.5l7 2.8v5.2c0 4.3-3 7.6-7 9-4-1.4-7-4.7-7-9V6.3z\"/><path d=\"M9 12l2 2 4-4\"/></svg>");
     private static readonly MarkupString AccountIcon = new(Svg + "<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4.5 20.5a7.5 7.5 0 0 1 15 0\"/></svg>");
 
     private void OnChanged() => InvokeAsync(StateHasChanged);

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Olomoc.Accounts;
+using Olomoc.Server.Admin;
 using Olomoc.Server.Data;
 using Olomoc.Server.Tournaments;
 using Olomoc.Tournaments;
@@ -46,11 +47,15 @@ public static class AccountEndpoints
         mine.MapPost("delete", Delete).RequireRateLimiting(TournamentEndpoints.LoginPolicy);
         mine.MapPost("cabals/sync", CabalSyncEndpoint.Sync).RequireRateLimiting(TournamentEndpoints.WritePolicy);
 
-        // Admin : rôles des comptes ; mot de passe temporaire pour un compte dont l'e-mail ne permet pas la récupération.
+        // Admin (panneau d'administration) : rôles des comptes ; mot de passe temporaire pour un compte
+        // dont l'e-mail ne permet pas la récupération ; déverrouillage, déconnexion, suppression. Journalisés.
         var admin = app.MapGroup("/api/admin/accounts").RequireAuthorization().AddEndpointFilter(Roles.Require(AccountRole.Admin));
         admin.MapGet("", ListAccounts).RequireRateLimiting(TournamentEndpoints.ReadPolicy);
         admin.MapPut("{userName}/role", SetRole).RequireRateLimiting(TournamentEndpoints.WritePolicy);
         admin.MapPost("{userName}/reset-password", AdminReset).RequireRateLimiting(TournamentEndpoints.WritePolicy);
+        admin.MapPost("{userName}/unlock", Unlock).RequireRateLimiting(TournamentEndpoints.WritePolicy);
+        admin.MapPost("{userName}/logout", LogoutEverywhere).RequireRateLimiting(TournamentEndpoints.WritePolicy);
+        admin.MapDelete("{userName}", AdminDelete).RequireRateLimiting(TournamentEndpoints.WritePolicy);
     }
 
     // ---- Sans compte ----
@@ -198,42 +203,54 @@ public static class AccountEndpoints
 
     /// <summary>
     /// Comptes dont le pseudo contient <paramref name="search"/> ; sans recherche, les éditeurs et
-    /// les admins. Admins d'abord, puis par pseudo ; jamais l'e-mail.
+    /// les admins, ou les derniers créés (<paramref name="recent"/>). Admins d'abord, puis par
+    /// pseudo (derniers créés : du plus récent au plus ancien) ; jamais l'e-mail.
     /// </summary>
-    private static async Task<IResult> ListAccounts(string? search, OlomocDb db, UserManager<OlomocUser> users)
+    private static async Task<IResult> ListAccounts(string? search, bool? recent, OlomocDb db, UserManager<OlomocUser> users)
     {
         var roles = await db.UserRoles.Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name }).ToListAsync();
         var roleOf = roles.GroupBy(r => r.UserId).ToDictionary(g => g.Key,
             g => g.Any(r => r.Name == Roles.Admin) ? AccountRole.Admin : AccountRole.Editor);
         var query = db.Users.AsNoTracking();
-        if (string.IsNullOrWhiteSpace(search))
-        {
-            var staff = roleOf.Keys.ToList();
-            query = query.Where(u => staff.Contains(u.Id));
-        }
-        else
+        var newest = string.IsNullOrWhiteSpace(search) && recent == true;
+        if (!string.IsNullOrWhiteSpace(search))
         {
             var normalized = users.NormalizeName(search.Trim());
             query = query.Where(u => u.NormalizedUserName!.Contains(normalized));
         }
-        var found = await query.OrderBy(u => u.NormalizedUserName).Take(MaxListed).Select(u => new { u.Id, u.UserName }).ToListAsync();
-        var list = found.Select(u => new AccountSummary(u.UserName ?? "", roleOf.GetValueOrDefault(u.Id, AccountRole.User)))
-            .OrderByDescending(a => a.Role).ThenBy(a => a.UserName, StringComparer.OrdinalIgnoreCase).ToList();
-        return Results.Json(list, TournamentJson.Options);
+        else if (!newest)
+        {
+            var staff = roleOf.Keys.ToList();
+            query = query.Where(u => staff.Contains(u.Id));
+        }
+        query = newest ? query.OrderByDescending(u => u.CreatedAt) : query.OrderBy(u => u.NormalizedUserName);
+        var found = await query.Take(MaxListed)
+            .Select(u => new { u.Id, u.UserName, u.CreatedAt, u.LastLoginAt, u.EmailConfirmed, u.LockoutEnd }).ToListAsync();
+        var ids = found.Select(u => u.Id).ToList();
+        var cabals = await db.SavedCabals.Where(c => ids.Contains(c.UserId) && !c.Deleted).GroupBy(c => c.UserId)
+            .Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count);
+        var now = DateTimeOffset.UtcNow;
+        var list = found.Select(u => new AdminAccount(u.UserName ?? "", roleOf.GetValueOrDefault(u.Id, AccountRole.User),
+            Utc(u.CreatedAt), u.LastLoginAt is { } last ? Utc(last) : null, u.EmailConfirmed, u.LockoutEnd > now, cabals.GetValueOrDefault(u.Id)));
+        if (!newest) list = list.OrderByDescending(a => a.Role).ThenBy(a => a.UserName, StringComparer.OrdinalIgnoreCase);
+        return Results.Json(list.ToList(), TournamentJson.Options);
     }
 
+    private static DateTimeOffset Utc(DateTime date) => new(DateTime.SpecifyKind(date, DateTimeKind.Utc));
+
     /// <summary>Rôle d'un autre compte (jamais le sien : un admin reste toujours admin, il y en a donc toujours un).</summary>
-    private static Task<IResult> SetRole(string userName, RoleRequest body, HttpContext ctx, UserManager<OlomocUser> users) =>
+    private static Task<IResult> SetRole(string userName, RoleRequest body, HttpContext ctx, UserManager<OlomocUser> users, AdminAudit audit) =>
         WithUser(ctx, users, async admin =>
         {
             if (!Enum.IsDefined(body.Role)) return Fail("role", 400);
             if (await users.FindByNameAsync(userName) is not { } user) return Fail("unknownUser", 404);
             if (user.Id == admin.Id) return Fail("ownRole", 400);
             await Roles.SetAsync(users, user, body.Role);
+            await audit.LogAsync(admin.UserName!, "role", user.UserName!, body.Role.ToString());
             return Results.Json(new AccountSummary(user.UserName ?? "", body.Role), TournamentJson.Options);
         });
 
-    private static async Task<IResult> AdminReset(string userName, UserManager<OlomocUser> users)
+    private static async Task<IResult> AdminReset(string userName, HttpContext ctx, UserManager<OlomocUser> users, AdminAudit audit)
     {
         if (await users.FindByNameAsync(userName) is not { } user) return Fail("unknownUser", 404);
         var password = TemporaryPasswordText();
@@ -241,8 +258,46 @@ public static class AccountEndpoints
         if (!reset.Succeeded) return Problems(Describe(reset), 500);
         await users.SetLockoutEndDateAsync(user, null);
         await users.ResetAccessFailedCountAsync(user);
+        await audit.LogAsync(AdminEndpoints.AdminName(ctx), "resetPassword", user.UserName!);
         return Results.Json(new TemporaryPassword(password), TournamentJson.Options);
     }
+
+    /// <summary>Fin du verrouillage (trop d'essais de mot de passe).</summary>
+    private static async Task<IResult> Unlock(string userName, HttpContext ctx, UserManager<OlomocUser> users, AdminAudit audit)
+    {
+        if (await users.FindByNameAsync(userName) is not { } user) return Fail("unknownUser", 404);
+        await users.SetLockoutEndDateAsync(user, null);
+        await users.ResetAccessFailedCountAsync(user);
+        await audit.LogAsync(AdminEndpoints.AdminName(ctx), "unlock", user.UserName!);
+        return Results.NoContent();
+    }
+
+    /// <summary>Ferme toutes les sessions d'un autre compte (nouveau tampon de sécurité).</summary>
+    private static Task<IResult> LogoutEverywhere(string userName, HttpContext ctx, UserManager<OlomocUser> users, AdminAudit audit) =>
+        WithUser(ctx, users, async admin =>
+        {
+            if (await users.FindByNameAsync(userName) is not { } user) return Fail("unknownUser", 404);
+            if (user.Id == admin.Id) return Fail("ownAccount", 400);
+            await users.UpdateSecurityStampAsync(user);
+            await audit.LogAsync(admin.UserName!, "logout", user.UserName!);
+            return Results.NoContent();
+        });
+
+    /// <summary>
+    /// Suppression d'un compte et de ses cabales ; jamais le sien, ni celui d'un admin (lui retirer
+    /// son rôle d'abord).
+    /// </summary>
+    private static Task<IResult> AdminDelete(string userName, HttpContext ctx, UserManager<OlomocUser> users, AdminAudit audit) =>
+        WithUser(ctx, users, async admin =>
+        {
+            if (await users.FindByNameAsync(userName) is not { } user) return Fail("unknownUser", 404);
+            if (user.Id == admin.Id) return Fail("ownAccount", 400);
+            if (await Roles.OfAsync(users, user) == AccountRole.Admin) return Fail("deleteAdmin", 400);
+            var deleted = await users.DeleteAsync(user);
+            if (!deleted.Succeeded) return Problems(Describe(deleted), 500);
+            await audit.LogAsync(admin.UserName!, "deleteAccount", user.UserName!);
+            return Results.NoContent();
+        });
 
     // ---- Outils ----
 

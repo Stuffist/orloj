@@ -1,0 +1,194 @@
+@page "/builder/control"
+@namespace Olomoc.Builder.Pages
+@using Olomoc.Accounts
+@using Olomoc.Builder.Shared.Control
+@implements IDisposable
+@inject AccountService Accounts
+@inject AdminApi Api
+@inject LocalizationService L
+
+@* Panneau d'administration (admins) : chiffres de la base, comptes, tournois et parties en ligne de
+   tout le monde, maintenance (sauvegarde, purges), journal des actions des admins. *@
+
+@if (!L.Loaded || !Accounts.Loaded)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("account.loading") : "…")</p>
+}
+else if (Accounts.Current is not { IsAdmin: true })
+{
+    <section class="panel account-panel">
+        <h2>@L.Ui("control.title")</h2>
+        <p>@L.Ui("control.restricted")</p>
+        <p><a class="btn" href="builder/account">@L.Ui("account.title")</a></p>
+    </section>
+}
+else
+{
+    <h2 class="control-title">@L.Ui("control.title")</h2>
+
+    <section class="panel">
+        <h3>@L.Ui("control.overview.title")</h3>
+        @if (_overviewError is { } error)
+        {
+            <p class="account-msg error" role="alert">@error</p>
+        }
+        @if (_overview is { } o)
+        {
+            <div class="control-tiles">
+                @Tile(L.Ui("control.overview.accounts"), $"{o.Accounts.Total} / {o.Accounts.Max}",
+                    L.Ui("control.overview.accounts.detail", o.Accounts.Confirmed, o.Accounts.Editors, o.Accounts.Admins))
+                @Tile(L.Ui("control.overview.month"), $"+{o.Accounts.CreatedLast30Days}",
+                    L.Ui("control.overview.month.detail", o.Accounts.ActiveLast30Days, o.Accounts.LockedOut))
+                @Tile(L.Ui("control.overview.cabals"), o.Accounts.SavedCabals.ToString(), null)
+                @Tile(L.Ui("control.overview.tournaments"), $"{o.Tournaments.Total} / {o.Tournaments.Max}",
+                    L.Ui("control.overview.tournaments.detail", o.Tournaments.Registration, o.Tournaments.Started, o.Tournaments.Finished))
+                @Tile(L.Ui("control.overview.online"), $"{o.Online.Total} / {o.Online.Max}",
+                    L.Ui("control.overview.online.detail", o.Online.ActiveLastDay))
+                @Tile(L.Ui("control.overview.stats"), o.StatsArchives.ToString(), null)
+                @Tile(L.Ui("control.overview.catalog"), o.CatalogChanges.ToString(), L.Ui("control.overview.catalog.detail"))
+                @Tile(L.Ui("control.overview.database"), L.Bytes(o.DatabaseBytes),
+                    L.Ui("control.overview.backup", AdminUi.Date(o.LastBackup), o.Backups))
+                @Tile(L.Ui("control.overview.mail"), L.Ui(o.MailBySmtp ? "control.overview.mail.smtp" : "control.overview.mail.files"), null)
+                @Tile(L.Ui("control.overview.started"), AdminUi.Date(o.StartedAt), null)
+            </div>
+        }
+    </section>
+
+    <AccountsPanel Changed="RefreshAsync" />
+    <TournamentsPanel Changed="RefreshAsync" />
+    <OnlineGamesPanel Changed="RefreshAsync" />
+
+    <section class="panel">
+        <h3>@L.Ui("control.maintenance.title")</h3>
+        <p class="hint">@L.Ui("control.maintenance.help")</p>
+        <div class="control-row-actions">
+            <button class="btn" disabled="@_busy" @onclick="BackupAsync">@L.Ui("control.maintenance.backup")</button>
+            <button class="btn" disabled="@_busy" @onclick="() => PurgeAsync(PurgeKind.Tournaments)">@L.Ui("control.maintenance.purgeTournaments")</button>
+            <button class="btn" disabled="@_busy" @onclick="() => PurgeAsync(PurgeKind.Online)">@L.Ui("control.maintenance.purgeOnline")</button>
+        </div>
+        @if (_maintenance is { } m)
+        {
+            <p class="account-msg @(m.Ok ? "ok" : "error")" role="@(m.Ok ? "status" : "alert")">@m.Text</p>
+        }
+    </section>
+
+    <section class="panel">
+        <h3>@L.Ui("control.audit.title")</h3>
+        @if (_audit is not { Count: > 0 } audit)
+        {
+            <p class="hint">@L.Ui("control.audit.none")</p>
+        }
+        else
+        {
+            <div class="control-scroll">
+                <table class="tn-standings control-table">
+                    <thead>
+                        <tr>
+                            <th class="tn-left">@L.Ui("control.audit.at")</th>
+                            <th class="tn-left">@L.Ui("control.audit.admin")</th>
+                            <th class="tn-left">@L.Ui("control.audit.action")</th>
+                            <th class="tn-left">@L.Ui("control.audit.target")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var a in audit)
+                        {
+                            <tr>
+                                <td class="tn-left">@AdminUi.Date(a.At)</td>
+                                <td class="tn-left">@a.Admin</td>
+                                <td class="tn-left">@L.Ui($"control.audit.action.{a.Action}")</td>
+                                <td class="tn-left">@a.Target@if (a.Detail is { Length: > 0 } detail) { <span class="hint"> · @AuditDetail(a)</span> }</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private bool _busy;
+    private AdminOverview? _overview;
+    private string? _overviewError;
+    private List<AdminAction>? _audit;
+    private (string Text, bool Ok)? _maintenance;
+    private bool _loaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        Accounts.Changed += OnAccountChanged;
+        await Task.WhenAll(L.EnsureLoadedAsync(), Accounts.EnsureLoadedAsync());
+        if (Accounts.Current is { IsAdmin: true }) await RefreshAsync();
+    }
+
+    private static RenderFragment Tile(string label, string value, string? detail) =>
+        @<div class="control-tile">
+            <span class="control-tile-label">@label</span>
+            <strong class="control-tile-value">@value</strong>
+            @if (detail is not null) { <span class="control-tile-detail">@detail</span> }
+        </div>;
+
+    // Chiffres et journal relus (au chargement, puis après chaque action).
+    private async Task RefreshAsync()
+    {
+        _loaded = true;
+        var overview = Api.OverviewAsync();
+        var audit = Api.AuditAsync();
+        var o = await overview;
+        if (o.Ok)
+        {
+            _overview = o.Value;
+            _overviewError = null;
+        }
+        else _overviewError = L.Describe(o.Problems);
+        if ((await audit).Value is { } actions) _audit = actions;
+    }
+
+    private string AuditDetail(AdminAction a) => a.Action == "role" && Enum.TryParse<AccountRole>(a.Detail, out var role)
+        ? L.Ui($"account.role.{role}") : a.Detail ?? "";
+
+    private async Task BackupAsync()
+    {
+        _busy = true;
+        try
+        {
+            var result = await Api.BackupAsync();
+            _maintenance = result.Value is { } b
+                ? (L.Ui("control.maintenance.backupDone", b.File, L.Bytes(b.Bytes)), true)
+                : (L.Describe(result.Problems), false);
+        }
+        finally { _busy = false; }
+        await RefreshAsync();
+    }
+
+    private async Task PurgeAsync(PurgeKind kind)
+    {
+        _busy = true;
+        try
+        {
+            var result = await Api.PurgeAsync(kind);
+            _maintenance = result.Value is { } p
+                ? (L.Ui(kind == PurgeKind.Tournaments ? "control.maintenance.purgedTournaments" : "control.maintenance.purgedOnline", p.Removed), true)
+                : (L.Describe(result.Problems), false);
+        }
+        finally { _busy = false; }
+        await RefreshAsync();
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    // Connexion depuis cette page (ou session fermée) : chiffres chargés ou masqués.
+    private void OnAccountChanged() => InvokeAsync(async () =>
+    {
+        if (Accounts.Current is { IsAdmin: true } && !_loaded) await RefreshAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        L.Changed -= OnChanged;
+        Accounts.Changed -= OnAccountChanged;
+    }
+}

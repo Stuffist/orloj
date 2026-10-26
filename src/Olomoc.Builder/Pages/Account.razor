@@ -8,7 +8,7 @@
 
 @* Compte : connexion, création, mot de passe oublié ; une fois connecté, cabales du compte,
    e-mail (confirmation), mot de passe, autres appareils, suppression ; l'éditeur du référentiel
-   (éditeurs et admins), les rôles des comptes et le mot de passe temporaire (admins).
+   (éditeurs et admins), le panneau d'administration (admins).
    Compte facultatif. *@
 
 @if (!L.Loaded || !Accounts.Loaded)
@@ -192,21 +192,10 @@ else
 
     @if (me.IsAdmin)
     {
-        <RolesPanel />
         <section class="panel account-panel">
-            <h3>@L.Ui("account.admin.title")</h3>
-            <form class="account-form" @onsubmit="AdminResetAsync" @onsubmit:preventDefault="true">
-                <p class="hint">@L.Ui("account.admin.help")</p>
-                <div class="field">
-                    <label for="admin-name">@L.Ui("account.userName")</label>
-                    <input id="admin-name" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="@AccountRules.MaxUserName"
-                           @bind="_adminName" @bind:event="oninput" />
-                </div>
-                @Status("admin")
-                <div class="account-actions">
-                    <button class="btn" type="submit" disabled="@(_busy || !AccountRules.IsValidUserName(_adminName.Trim()))">@L.Ui("account.admin.submit")</button>
-                </div>
-            </form>
+            <h3>@L.Ui("control.title")</h3>
+            <p class="hint">@L.Ui("account.control.help")</p>
+            <p><a class="btn" href="builder/control">@L.Ui("account.control.open")</a></p>
         </section>
     }
 
@@ -239,7 +228,7 @@ else
     private string _loginName = "", _loginPassword = "", _forgotName = "";
     private string _registerName = "", _registerEmail = "", _registerPassword = "";
     private string _currentPassword = "", _newPassword = "", _newEmail = "", _emailPassword = "";
-    private string _adminName = "", _deletePassword = "";
+    private string _deletePassword = "";
 
     private bool CanRegister => AccountRules.IsValidUserName(_registerName.Trim()) && AccountRules.IsValidEmail(_registerEmail.Trim())
                                 && AccountRules.IsValidPassword(_registerPassword);
@@ -326,9 +315,6 @@ else
         });
 
     private Task LogoutOthersAsync() => Run("sessions", Accounts.LogoutOthersAsync, _ => L.Ui("account.sessions.done"));
-
-    private Task AdminResetAsync() => Run("admin", () => Accounts.AdminResetPasswordAsync(_adminName), temporary =>
-        L.Ui("account.admin.done", _adminName.Trim(), temporary?.Password ?? ""));
 
     private Task DeleteAsync() => Run("delete", () => Accounts.DeleteAsync(new DeleteAccountRequest(_deletePassword)), _ =>
     {

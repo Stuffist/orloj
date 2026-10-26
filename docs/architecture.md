@@ -7,7 +7,7 @@ Vue d'ensemble technique d'Orloj. Le détail des règles et des fonctions est da
 
 ```
 Navigateur ── une app Blazor WebAssembly (Olomoc.Web), téléchargée une fois
-   │            /builder/…  pages de Olomoc.Builder   (constructeur, partie, compte, éditeur)
+   │            /builder/…  pages de Olomoc.Builder   (constructeur, partie, compte, éditeur, admin)
    │            /pairings/… pages de Olomoc.Pairings  (tournois, statistiques)
    │            /online/…   pages de Olomoc.Online    (parties en ligne à deux)
    │            localStorage : cabales, partie, langue, tournois et parties en ligne suivis
@@ -17,7 +17,7 @@ Navigateur ── une app Blazor WebAssembly (Olomoc.Web), téléchargée une fo
 Olomoc.Server (ASP.NET Core, un conteneur)
    ├── fichiers : l'app (/_framework/, index.html), /_content/Olomoc.Shared/ (CSS, images, langues)
    ├── référentiel : fichiers du dépôt + modifications de l'éditeur (DATA_DIR/catalog)
-   ├── API : /api/tournaments, /api/stats, /api/account, /api/online, /api/admin/…
+   ├── API : /api/tournaments, /api/stats, /api/account, /api/online, /api/admin/… (éditeur, panneau d'administration)
    ├── hub SignalR : /hubs/online (parties en ligne)
    └── SQLite : DATA_DIR/olomoc.db (+ backups/, mail/ sans SMTP)
 ```
@@ -61,7 +61,8 @@ résultats, référentiel, commandes des parties en ligne).
 | **Tournois** `/pairings/` | Crée ou rejoint un tournoi ; page publique (inscription, rondes, classement) ; administration (rondes, résultats, abandons, export). Rafraîchie toutes les 30 s. | `/api/tournaments/{code}` | Tournoi : table `Documents` (sorte `tournament`). Jetons organisateur et joueur : `olomoc.tournaments` (localStorage) et lien d'administration (jeton dans l'ancre). |
 | **Stats** `/pairings/stats` | Statistiques publiques des tournois terminés : factions, rouages, victoires, scénarios, decks. | `/api/stats`, calculées en mémoire | — (l'archive anonyme est écrite à la fin d'un tournoi : `Documents`, sorte `stats`) |
 | **Éditeur** `/builder/admin` (éditeurs, admins) | Crée et modifie rouages, équipements, dons, factions, en français et en anglais ; publication ; export zip. | Référentiel fusionné, brouillons compris | `DATA_DIR/catalog/` (JSON au format du dépôt, entrées modifiées seulement). Le dépôt n'est jamais modifié : export puis commit. |
-| **Compte** `/builder/account` | Connexion, création, e-mail (confirmation, mot de passe oublié), mot de passe, autres appareils, suppression ; rôles des comptes et mot de passe temporaire (admins). | `/api/account/me` | Tables d'Identity (comptes, rôles), `SavedCabals`. Session : cookie `olomoc_session`. |
+| **Compte** `/builder/account` | Connexion, création, e-mail (confirmation, mot de passe oublié), mot de passe, autres appareils, suppression ; liens vers l'éditeur et le panneau d'administration. | `/api/account/me` | Tables d'Identity (comptes, rôles), `SavedCabals`. Session : cookie `olomoc_session`. |
+| **Admin** `/builder/control` (admins) | Chiffres de la base ; comptes (rôle, mot de passe temporaire, déverrouillage, déconnexion, suppression) ; tournois de tout le monde (nouveau lien d'administration, stats, suppression) ; parties en ligne (suppression) ; sauvegarde et purges à la main ; journal. | `/api/admin/…` (overview, accounts, tournaments, online, audit) | Tables d'Identity, `Documents`, `DATA_DIR/backups/` ; chaque action dans la table `AdminActions` (gardée un an). |
 
 Langue : `olomoc.lang` (localStorage) ; textes de l'interface `i18n/*/ui.json`, des cartes
 `i18n/*/cards.json` (repli sur le français).
@@ -70,11 +71,14 @@ Langue : `olomoc.lang` (localStorage) ; textes de l'interface `i18n/*/ui.json`, 
 
 - **Visiteur** : tout sauf l'éditeur ; cabales et partie sur l'appareil seulement.
 - **Compte** : en plus, ses cabales sur tous ses appareils.
-- **Éditeur** : en plus, l'éditeur et les brouillons. **Admin** : en plus, les rôles des autres
-  comptes (jamais le sien) et le mot de passe temporaire. Premier admin : `OLOMOC_ADMINS`.
+- **Éditeur** : en plus, l'éditeur et les brouillons. **Admin** : en plus, le panneau
+  d'administration : les autres comptes (rôle, jamais le sien ; suppression, jamais d'un admin),
+  les tournois et parties en ligne de tout le monde (actions limitées, journalisées).
+  Premier admin : `OLOMOC_ADMINS`.
 - **Tournois** : pas de compte. Administration par le jeton organisateur (dans le lien
   d'administration) ou un mot de passe facultatif ; modification d'une inscription par le
-  jeton joueur.
+  jeton joueur. Un admin ne pilote pas un tournoi : il peut en générer un nouveau lien
+  d'administration (l'ancien cesse de marcher), l'exclure des stats ou le supprimer.
 
 ## Limites connues
 
@@ -108,4 +112,3 @@ Langue : `olomoc.lang` (localStorage) ; textes de l'interface `i18n/*/ui.json`, 
   - sans compte : perdre le lien (jeton du siège) sur un autre appareil, c'est jouer en spectateur ;
   - 2 000 parties en base, purgées après 7 jours sans activité ;
   - le Bloc (plateau, figurines) n'est pas encore géré : seuls les camps sont suivis.
-- **Branche `online-salon`** (mode en ligne) : à part, pas sur `main`.

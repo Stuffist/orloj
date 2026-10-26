@@ -1,0 +1,176 @@
+@* Panneau d'administration : tous les tournois, le plus récemment modifié d'abord. Actions limitées :
+   nouveau lien d'administration (organisateur qui a perdu le sien), statistiques, suppression.
+   La page d'administration du tournoi reste à son organisateur. *@
+@using Olomoc.Accounts
+@using Olomoc.Tournaments
+@inject AdminApi Api
+@inject LocalizationService L
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<section class="panel">
+    <h3>@L.Ui("control.tournaments.title", _items?.Count ?? 0)</h3>
+    <p class="hint">@L.Ui("control.tournaments.help")</p>
+    <div class="control-filter">
+        <input type="search" autocomplete="off" spellcheck="false" placeholder="@L.Ui("control.filter")" aria-label="@L.Ui("control.filter")"
+               @bind="_filter" @bind:event="oninput" />
+        <button class="btn small" disabled="@_busy" @onclick="LoadAsync">@L.Ui("control.reload")</button>
+    </div>
+    @if (_status is { } status)
+    {
+        <p class="account-msg @(status.Ok ? "ok" : "error")" role="@(status.Ok ? "status" : "alert")">@status.Text</p>
+    }
+    @if (_link is { } link)
+    {
+        <div class="control-link">
+            <span>@L.Ui("control.tournaments.link", link.Code)</span>
+            <span class="tn-share">
+                <code>@link.Url</code>
+                <button class="btn small" @onclick="() => CopyAsync(link.Url)">@L.Ui(_copied ? "export.copied" : "export.copy")</button>
+            </span>
+            <span class="hint">@L.Ui("control.tournaments.link.help")</span>
+        </div>
+    }
+    @if (_items is { } items)
+    {
+        var shown = Shown(items).ToList();
+        @if (shown.Count == 0)
+        {
+            <p class="hint">@L.Ui("control.none")</p>
+        }
+        else
+        {
+            <div class="control-scroll">
+                <table class="tn-standings control-table">
+                    <thead>
+                        <tr>
+                            <th class="tn-left">@L.Ui("control.tournaments.name")</th>
+                            <th>@L.Ui("control.tournaments.date")</th>
+                            <th>@L.Ui("control.tournaments.phase")</th>
+                            <th>@L.Ui("control.tournaments.players")</th>
+                            <th>@L.Ui("control.updated")</th>
+                            <th class="tn-left">@L.Ui("control.actions")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var t in shown)
+                        {
+                            <tr @key="t.Code">
+                                <td class="tn-left">
+                                    <a href="pairings/t/@t.Code">@t.Name</a>
+                                    <span class="hint control-code">@t.Code</span>
+                                    @if (t.HasPassword) { <span class="account-badge">@L.Ui("control.tournaments.password")</span> }
+                                    @if (t.ExcludeFromStats) { <span class="account-badge todo">@L.Ui("control.tournaments.excluded")</span> }
+                                </td>
+                                <td>@AdminUi.Day(t.Date)</td>
+                                <td>@Phase(t)</td>
+                                <td>@t.Players</td>
+                                <td>@AdminUi.Date(t.UpdatedAt)</td>
+                                <td class="tn-left">
+                                    <div class="control-row-actions">
+                                        <button class="btn small" disabled="@_busy" @onclick="() => NewLinkAsync(t)">@L.Ui("control.tournaments.newLink")</button>
+                                        <button class="btn small" disabled="@_busy" @onclick="() => ToggleStatsAsync(t)">
+                                            @L.Ui(t.ExcludeFromStats ? "control.tournaments.include" : "control.tournaments.exclude")
+                                        </button>
+                                        <button class="btn small danger" disabled="@_busy" @onclick="() => DeleteAsync(t)">@L.Ui("control.delete")</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+</section>
+
+@code {
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private bool _busy, _copied;
+    private string _filter = "";
+    private List<AdminTournament>? _items;
+    private (string Text, bool Ok)? _status;
+    private (string Code, string Url)? _link;      // nouveau lien d'administration, à transmettre
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private IEnumerable<AdminTournament> Shown(List<AdminTournament> items)
+    {
+        var filter = _filter.Trim();
+        return filter.Length == 0 ? items : items.Where(t =>
+            t.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) || t.Code.Contains(filter, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string Phase(AdminTournament t) => t.Phase switch
+    {
+        TournamentPhase.Registration => L.Ui("control.tournaments.registration"),
+        TournamentPhase.Started => L.Ui("control.tournaments.started", t.Rounds, t.RoundCount),
+        _ => L.Ui("control.tournaments.finished"),
+    };
+
+    private async Task LoadAsync()
+    {
+        _busy = true;
+        try
+        {
+            var result = await Api.TournamentsAsync();
+            if (result.Ok) _items = result.Value ?? [];
+            else _status = (L.Describe(result.Problems), false);
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task RunAsync<T>(Func<Task<AccountResult<T>>> call, Func<T?, string> success)
+    {
+        _busy = true;
+        try
+        {
+            var result = await call();
+            _status = result.Ok ? (success(result.Value), true) : (L.Describe(result.Problems), false);
+        }
+        finally { _busy = false; }
+        await LoadAsync();
+        await Changed.InvokeAsync();
+    }
+
+    private async Task NewLinkAsync(AdminTournament t)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", L.Ui("control.tournaments.newLink.confirm", t.Name, t.Code))) return;
+        _link = null;
+        _copied = false;
+        await RunAsync(() => Api.NewOrganizerLinkAsync(t.Code), created =>
+        {
+            if (created is not null) _link = (created.Code, $"{Nav.BaseUri}pairings/t/{created.Code}/admin#{created.OrganizerToken}");
+            return L.Ui("control.tournaments.newLink.done", t.Name);
+        });
+    }
+
+    private Task ToggleStatsAsync(AdminTournament t) =>
+        RunAsync(() => Api.SetExcludeFromStatsAsync(t.Code, !t.ExcludeFromStats),
+            _ => L.Ui(t.ExcludeFromStats ? "control.tournaments.included" : "control.tournaments.excludedDone", t.Name));
+
+    // Suppression confirmée en retapant le code, comme pour l'organisateur.
+    private async Task DeleteAsync(AdminTournament t)
+    {
+        var typed = await JS.InvokeAsync<string?>("prompt", L.Ui("pairings.admin.delete.confirm", t.Name, t.Code));
+        if (typed is null) return;
+        if (!string.Equals(typed.Trim(), t.Code, StringComparison.OrdinalIgnoreCase))
+        {
+            _status = (L.Ui("control.mismatch"), false);
+            return;
+        }
+        if (_link?.Code == t.Code) _link = null;
+        await RunAsync(() => Api.DeleteTournamentAsync(t.Code), _ => L.Ui("control.tournaments.deleted", t.Name));
+    }
+
+    private async Task CopyAsync(string text)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            _copied = true;
+        }
+        catch (JSException) { _copied = false; }   // presse-papiers indisponible : le lien reste sélectionnable
+    }
+}

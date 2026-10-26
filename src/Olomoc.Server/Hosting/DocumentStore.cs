@@ -37,11 +37,31 @@ public class DocumentStore<T> where T : class, IStoredDocument, new()
         return upper is { Length: CodeLength } && upper.All(Alphabet.Contains) ? upper : null;
     }
 
+    /// <summary>Nombre maximal de documents de cette sorte.</summary>
+    public int MaxDocuments => _maxDocuments;
+
     /// <summary>Codes des documents enregistrés.</summary>
     public IEnumerable<string> Codes()
     {
         using var db = _db.CreateDbContext();
         return db.Documents.Where(d => d.Kind == _kind).Select(d => d.Code).ToList();
+    }
+
+    /// <summary>Tous les documents de cette sorte (panneau d'administration) ; les illisibles sont ignorés.</summary>
+    public async Task<List<T>> ListAsync()
+    {
+        await using var db = await _db.CreateDbContextAsync();
+        var rows = await db.Documents.AsNoTracking().Where(d => d.Kind == _kind).Select(d => d.Json).ToListAsync();
+        var docs = new List<T>(rows.Count);
+        foreach (var json in rows)
+        {
+            try
+            {
+                if (JsonSerializer.Deserialize<T>(json, _json) is { } doc) docs.Add(doc);
+            }
+            catch (JsonException) { /* document illisible : laissé tel quel, à examiner */ }
+        }
+        return docs;
     }
 
     public async Task<T?> LoadAsync(string code)

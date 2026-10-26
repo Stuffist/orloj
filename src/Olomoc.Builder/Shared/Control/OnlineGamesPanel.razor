@@ -1,0 +1,124 @@
+@* Panneau d'administration : parties en ligne, la plus récemment active d'abord ; suppression. *@
+@using Olomoc.Accounts
+@using Olomoc.Online
+@inject AdminApi Api
+@inject LocalizationService L
+@inject IJSRuntime JS
+
+<section class="panel">
+    <h3>@L.Ui("control.online.title", _items?.Count ?? 0)</h3>
+    <div class="control-filter">
+        <input type="search" autocomplete="off" spellcheck="false" placeholder="@L.Ui("control.filter")" aria-label="@L.Ui("control.filter")"
+               @bind="_filter" @bind:event="oninput" />
+        <button class="btn small" disabled="@_busy" @onclick="LoadAsync">@L.Ui("control.reload")</button>
+    </div>
+    @if (_status is { } status)
+    {
+        <p class="account-msg @(status.Ok ? "ok" : "error")" role="@(status.Ok ? "status" : "alert")">@status.Text</p>
+    }
+    @if (_items is { } items)
+    {
+        var shown = Shown(items).ToList();
+        @if (shown.Count == 0)
+        {
+            <p class="hint">@L.Ui("control.none")</p>
+        }
+        else
+        {
+            <div class="control-scroll">
+                <table class="tn-standings control-table">
+                    <thead>
+                        <tr>
+                            <th class="tn-left">@L.Ui("control.online.game")</th>
+                            <th>@L.Ui("control.online.step")</th>
+                            <th>@L.Ui("control.online.tournament")</th>
+                            <th>@L.Ui("control.updated")</th>
+                            <th class="tn-left">@L.Ui("control.actions")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var g in shown)
+                        {
+                            <tr @key="g.Code">
+                                <td class="tn-left">
+                                    <a href="online/g/@g.Code">@Seats(g)</a>
+                                    <span class="hint control-code">@g.Code</span>
+                                </td>
+                                <td>@Step(g)</td>
+                                <td>
+                                    @if (g.Tournament is { } t)
+                                    {
+                                        <a href="pairings/t/@t.Code">@L.Ui("control.online.table", t.Code, t.Round, t.Table)</a>
+                                    }
+                                    else
+                                    {
+                                        <span>—</span>
+                                    }
+                                </td>
+                                <td>@AdminUi.Date(g.UpdatedAt)</td>
+                                <td class="tn-left">
+                                    <button class="btn small danger" disabled="@_busy" @onclick="() => DeleteAsync(g)">@L.Ui("control.delete")</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+</section>
+
+@code {
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private bool _busy;
+    private string _filter = "";
+    private List<AdminOnlineGame>? _items;
+    private (string Text, bool Ok)? _status;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private IEnumerable<AdminOnlineGame> Shown(List<AdminOnlineGame> items)
+    {
+        var filter = _filter.Trim();
+        return filter.Length == 0 ? items : items.Where(g =>
+            g.Code.Contains(filter, StringComparison.OrdinalIgnoreCase) || g.Seats.Any(s => s.Contains(filter, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private string Seats(AdminOnlineGame g) =>
+        string.Join(" / ", g.Seats.Select(s => s.Length > 0 ? s : L.Ui("control.online.emptySeat")));
+
+    private string Step(AdminOnlineGame g) => g.Step switch
+    {
+        OnlineStep.Lobby => L.Ui("control.online.lobby"),
+        OnlineStep.Finished => L.Ui("control.online.finished"),
+        OnlineStep.Cycle => L.Ui("control.online.cycle", g.Cycle),
+        _ => L.Ui("control.online.setup"),
+    };
+
+    private async Task LoadAsync()
+    {
+        _busy = true;
+        try
+        {
+            var result = await Api.OnlineGamesAsync();
+            if (result.Ok) _items = result.Value ?? [];
+            else _status = (L.Describe(result.Problems), false);
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task DeleteAsync(AdminOnlineGame g)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", L.Ui("control.online.delete.confirm", Seats(g), g.Code))) return;
+        _busy = true;
+        try
+        {
+            var result = await Api.DeleteOnlineGameAsync(g.Code);
+            _status = result.Ok ? (L.Ui("control.online.deleted", g.Code), true) : (L.Describe(result.Problems), false);
+        }
+        finally { _busy = false; }
+        await LoadAsync();
+        await Changed.InvokeAsync();
+    }
+}

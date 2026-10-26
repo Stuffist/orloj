@@ -441,17 +441,32 @@ Facultatifs : sans compte, tout marche comme avant, sur l'appareil. `/builder/ac
 - **Rôles**, enregistrés dans la base (rôles d'Identity) :
   - **joueur** (par défaut) : tout le site, sauf l'éditeur ;
   - **éditeur** : en plus, l'éditeur du référentiel (et ses brouillons) ;
-  - **admin** : tout, dont les rôles des autres comptes (« Mon compte », « Admin : rôles des
-    comptes » : recherche par pseudo, jamais l'e-mail) et un mot de passe temporaire pour un
-    joueur sans e-mail confirmé. Un admin ne change jamais son propre rôle : il en reste toujours
-    un. Un changement de rôle vaut tout de suite pour l'API, dans la minute pour les brouillons
-    servis.
+  - **admin** : tout, dont le **panneau d'administration** (voir plus bas). Un admin ne change
+    jamais son propre rôle : il en reste toujours un. Un changement de rôle vaut tout de suite
+    pour l'API, dans la minute pour les brouillons servis.
   - **Premier admin** : créer son compte, puis redémarrer avec son pseudo dans `OLOMOC_ADMINS`
     (seuls des comptes existants le reçoivent). La variable donne le rôle à chaque démarrage
     sans jamais le retirer : à vider ensuite, ou à garder comme secours.
 - **Cabales** : les mêmes sur tous les appareils (voir « Cabales sauvegardées »).
 - **Suppression** du compte (mot de passe redemandé) et page **Données personnelles**
   (`/builder/privacy`).
+
+### Panneau d'administration (admins)
+
+`/builder/control` (onglet « Admin » sur ordinateur, lien dans « Mon compte ») :
+- **vue d'ensemble** : comptes (confirmés, éditeurs, admins, nouveaux et connectés sur 30 jours,
+  verrouillés), cabales sauvegardées, tournois par phase, parties en ligne, archives de stats,
+  entrées modifiées du référentiel, taille de la base, dernière sauvegarde, envoi des e-mails ;
+- **comptes** (recherche par pseudo, éditeurs et admins, ou derniers créés ; jamais l'e-mail) :
+  rôle, mot de passe temporaire (joueur sans e-mail confirmé), déverrouillage, déconnexion
+  partout, suppression avec ses cabales (pas son propre compte, ni un admin) ;
+- **tournois** de tout le monde : nouveau lien d'administration (l'ancien cesse de marcher ;
+  pour l'organisateur qui l'a perdu), inclure ou exclure des stats, suppression. La page
+  d'administration d'un tournoi reste à son organisateur ;
+- **parties en ligne** : liste et suppression ;
+- **maintenance** : sauvegarde maintenant (remplace celle du jour), purges des tournois et des
+  parties avec les règles des tâches de fond ;
+- **journal** des actions des admins (table `AdminActions`, gardé un an), 100 dernières affichées.
 
 Mise en service des e-mails, une fois : compte chez un relais SMTP (Brevo : gratuit jusqu'à 300
 e-mails par jour), enregistrements DNS SPF, DKIM et DMARC de `orloj.top` (donnés par le relais),
@@ -673,7 +688,7 @@ tests/Olomoc.Tests/   xUnit
   cabale, problèmes renvoyés par le serveur (tournois, parties en ligne).
 - `Components/AppNav.razor` — menu du site : onglets sous l'en-tête (ordinateur), barre fixée en bas
   (téléphone) ; constructeur, partie (point si une partie est en cours ; parties en ligne comprises), tournois,
-  statistiques, éditeur (éditeurs et admins), compte. `Components/HeaderTools.razor` — choix de la langue.
+  statistiques, éditeur (éditeurs et admins), panneau d'administration (admins), compte. `Components/HeaderTools.razor` — choix de la langue.
 - `Accounts/AccountApiModels.cs` (règles et échanges de l'API des comptes), `Services/AccountService.cs`
   (session du site).
 - `Tournaments/` — tournoi (`TournamentModels.cs`), classement (`Standings.cs`),
@@ -691,8 +706,9 @@ tests/Olomoc.Tests/   xUnit
 - `Pages/Home.razor` — constructeur : composition, légalité, sauvegarde et export, lancement d'une partie.
 - `Pages/Play.razor` — mode partie.
 - `Pages/AdminCatalog.razor`, `Shared/CogEditor.razor`, `EquipmentEditor.razor`, `AbilitiesEditor.razor`,
-  `CatalogDrafts.cs`, `AdminCatalogApi.cs` — éditeur du référentiel (éditeurs et admins) ;
-  `Shared/RolesPanel.razor` — rôles des comptes (admins).
+  `CatalogDrafts.cs`, `AdminCatalogApi.cs` — éditeur du référentiel (éditeurs et admins).
+- `Pages/Control.razor`, `Shared/Control/` (`AccountsPanel`, `TournamentsPanel`, `OnlineGamesPanel`),
+  `Shared/AdminApi.cs` — panneau d'administration (admins).
 - `Pages/Account.razor`, `AccountConfirm.razor`, `AccountReset.razor`, `Privacy.razor` — compte,
   liens reçus par e-mail, données personnelles.
 
@@ -719,14 +735,16 @@ tests/Olomoc.Tests/   xUnit
   `TournamentStore.cs` (un document par tournoi, verrou par tournoi), `StatsArchive.cs`,
   `ServerCatalog.cs` (référentiel côté serveur), `TournamentPurge.cs` (90 jours sans modification, date passée ou absente).
 - `Accounts/AccountEndpoints.cs` — API `/api/account` (Identity, cookie de session) et
-  `/api/admin/accounts` (rôles, mot de passe temporaire) ; `Roles.cs` (joueur, éditeur, admin ;
+  `/api/admin/accounts` (rôles, mot de passe temporaire, déverrouillage, déconnexion, suppression) ; `Roles.cs` (joueur, éditeur, admin ;
   filtre des API, `OLOMOC_ADMINS`) ; `CabalSyncEndpoint.cs` (cabales du compte) ; `Mail.cs` (relais SMTP par MailKit, ou fichiers ; file d'envoi),
   `AccountMails.cs` (textes des e-mails).
+- `Admin/AdminEndpoints.cs` — API `/api/admin` du panneau d'administration (vue d'ensemble,
+  tournois, parties en ligne, sauvegarde, purges, journal) ; `AdminAudit.cs` (journal des actions).
 - `CardCatalog/CatalogStore.cs` — référentiel servi : fichiers du dépôt + modifications de l'éditeur
   (`DATA_DIR/catalog`), brouillons cachés aux visiteurs, export ; `CatalogEndpoints.cs` (fichiers
   servis, API `/api/admin/catalog`).
 - `Data/OlomocDb.cs` — base SQLite (EF Core) : table `Documents` (sorte, code, dates,
-  JSON), comptes (tables d'Identity), cabales des comptes (`SavedCabals`), clés des cookies ; schéma par migrations (`Data/Migrations`, appliquées au démarrage ; nouvelle
+  JSON), comptes (tables d'Identity), cabales des comptes (`SavedCabals`), journal des admins (`AdminActions`), clés des cookies ; schéma par migrations (`Data/Migrations`, appliquées au démarrage ; nouvelle
   migration : `dotnet dotnet-ef migrations add <Nom> --project src/Olomoc.Server
   --output-dir Data/Migrations`). `JsonImport.cs` (reprise des anciens fichiers),
   `DbBackup.cs` (copie quotidienne, `VACUUM INTO`).
