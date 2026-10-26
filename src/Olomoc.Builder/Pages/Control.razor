@@ -45,6 +45,8 @@ else
                 @Tile(L.Ui("control.overview.online"), $"{o.Online.Total} / {o.Online.Max}",
                     L.Ui("control.overview.online.detail", o.Online.ActiveLastDay))
                 @Tile(L.Ui("control.overview.stats"), o.StatsArchives.ToString(), null)
+                @Tile(L.Ui("control.overview.zones"), $"{o.Zones.Total} / {o.Zones.Max}",
+                    L.Ui("control.overview.zones.detail", o.Zones.Open, o.Zones.Games))
                 @Tile(L.Ui("control.overview.catalog"), o.CatalogChanges.ToString(), L.Ui("control.overview.catalog.detail"))
                 @Tile(L.Ui("control.overview.database"), L.Bytes(o.DatabaseBytes),
                     L.Ui("control.overview.backup", AdminUi.Date(o.LastBackup), o.Backups))

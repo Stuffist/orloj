@@ -1,0 +1,29 @@
+@* Dominance of a zone: "Dominated by the Light — leading: Rubin Network", "Closed under Darkness,
+   dominated by The Others", a tie, or nothing yet. *@
+@inject LocalizationService L
+
+<p class="zn-dominance @(Dominance.Alignment?.ToString().ToLowerInvariant())">
+    @if (Dominance.Alignment is { } alignment)
+    {
+        <span class="tn-alignment @alignment.ToString().ToLowerInvariant()">@L.Ui($"pairings.alignment.{alignment}")</span>
+        <span>@L.Ui(Closed ? "zones.dominance.closedUnder" : "zones.dominance.dominatedBy", L.Ui($"zones.alignment.{alignment}"))</span>
+        @if (Dominance.Faction is { } faction)
+        {
+            <span class="zn-dominance-faction">@L.Ui(Closed ? "zones.dominance.faction.closed" : "zones.dominance.faction")</span>
+            <FactionBadge Code="@faction" />
+        }
+    }
+    else if (Dominance.Tie)
+    {
+        <span>@L.Ui(Closed ? "zones.dominance.tie.closed" : "zones.dominance.tie")</span>
+    }
+    else
+    {
+        <span class="empty">@L.Ui(Closed ? "zones.dominance.none.closed" : "zones.dominance.none")</span>
+    }
+</p>
+
+@code {
+    [Parameter, EditorRequired] public Dominance Dominance { get; set; } = default!;
+    [Parameter] public bool Closed { get; set; }
+}

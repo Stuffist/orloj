@@ -4,7 +4,7 @@
 @inject LocalizationService L
 @inject NavigationManager Nav
 
-@* Header of the whole site: title and subtitle of the section (builder, tournaments, online), language,
+@* Header of the whole site: title and subtitle of the section (builder, tournaments, online, zones), language,
    then the menu (AppNav). Separate window opened by the builder (?window=true): compact header, no menu. *@
 
 <PageTitle>@(L.Loaded ? L.Ui(Title) : "Orloj")</PageTitle>
@@ -47,8 +47,8 @@
     // Address without the base: "builder/play", "pairings/t/ABCDEF"…
     private string[] Segments => Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-    // Section: "builder", "pairings" or "online" (builder by default).
-    private string Section => Segments.FirstOrDefault() is "pairings" or "online" ? Segments[0] : "builder";
+    // Section: "builder", "pairings", "online" or "zones" (builder by default).
+    private string Section => Segments.FirstOrDefault() is "pairings" or "online" or "zones" ? Segments[0] : "builder";
 
     // Builder page: "play", "equipment"…; empty for the home page.
     private string Page => Segments.ElementAtOrDefault(1) ?? "";
@@ -57,16 +57,18 @@
     {
         "pairings" => "pairings.home",
         "online" => "online.home",
+        "zones" => "zones.home",
         _ => "nav.builder",
     };
 
     // Online games: under the Play tab, with the site's title (own subtitle).
-    private string Title => Section == "pairings" ? "pairings.title" : "app.title";
+    private string Title => Section switch { "pairings" => "pairings.title", "zones" => "zones.title", _ => "app.title" };
 
     private string Subtitle => Section switch
     {
         "pairings" => "pairings.subtitle",
         "online" => "online.subtitle",
+        "zones" => "zones.subtitle",
         _ => Page switch
         {
             "play" => "play.subtitle",

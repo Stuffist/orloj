@@ -11,6 +11,7 @@ using Olomoc.Server.Data;
 using Olomoc.Server.Hosting;
 using Olomoc.Server.Online;
 using Olomoc.Server.Tournaments;
+using Olomoc.Server.Zones;
 using Olomoc.Tournaments;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,6 +35,10 @@ builder.Services.AddSingleton(sp => new CatalogStore(sp.GetRequiredService<IWebH
     Path.Combine(dataDirectory, "catalog"), sp.GetRequiredService<ILogger<CatalogStore>>()));
 builder.Services.AddSingleton<ServerCatalog>();
 builder.Services.AddSingleton<AdminAudit>();      // log of the admins' actions
+// Dystopian Encounters: zones (documents, kind "zone") and their games (ZoneGames table).
+builder.Services.AddSingleton(sp => new ZoneStore(sp.GetRequiredService<IDbContextFactory<OlomocDb>>()));
+builder.Services.AddSingleton<ZoneGameStore>();
+builder.Services.AddSingleton<ZoneStats>();
 builder.Services.AddHostedService<TournamentPurge>();
 builder.Services.ConfigureHttpJsonOptions(o => TournamentJson.Configure(o.SerializerOptions));
 
@@ -106,6 +111,7 @@ var loginsPer15Minutes = builder.Configuration.GetValue("RATE_LOGINS_PER_15_MINU
 var readsPerMinute = builder.Configuration.GetValue("RATE_READS_PER_MINUTE", 300);
 var accountsPerHour = builder.Configuration.GetValue("RATE_ACCOUNTS_PER_HOUR", 5);
 var mailsPerHour = builder.Configuration.GetValue("RATE_MAILS_PER_HOUR", 10);
+var zoneEntriesPerHour = builder.Configuration.GetValue("RATE_ZONE_ENTRIES_PER_HOUR", 60);
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -125,6 +131,9 @@ builder.Services.AddRateLimiter(o =>
         ctx.Connection.RemoteIpAddress?.ToString() ?? "", _ => new() { PermitLimit = accountsPerHour, Window = TimeSpan.FromHours(1) }));
     o.AddPolicy(AccountEndpoints.MailPolicy, ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "", _ => new() { PermitLimit = mailsPerHour, Window = TimeSpan.FromHours(1) }));
+    // Games entered in the zones without an account: a club evening shares one IP address.
+    o.AddPolicy(ZoneEndpoints.EntryPolicy, ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "", _ => new() { PermitLimit = zoneEntriesPerHour, Window = TimeSpan.FromHours(1) }));
 });
 
 var app = builder.Build();
@@ -162,6 +171,7 @@ app.MapTournaments();
 app.MapAccounts();
 app.MapCatalog();                           // before the static files: merged card catalog
 app.MapOnline();
+app.MapZones();                             // Dystopian Encounters
 app.MapAdmin(dataDirectory);                // admin panel (admins)
 app.MapGet("/", () => Results.Redirect("/builder/"));
 app.MapGet("/healthz", () => "ok\n");

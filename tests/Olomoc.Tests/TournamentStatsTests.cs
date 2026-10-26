@@ -50,6 +50,17 @@ public class TournamentStatsTests
     }
 
     [Fact]
+    public void Wins_per_alignment_Light_against_Darkness_games_only()
+    {
+        Assert.Empty(TournamentStats.Compute(new[] { Sample }).AlignmentWins);          // without the alignments
+        Alignment? alignmentOf(string f) => f == "MAISEL" ? Alignment.DARK : Alignment.LIGHT;
+        var wins = TournamentStats.Compute(new[] { Sample }, alignmentOf).AlignmentWins.ToDictionary(w => w.Key);
+        // The Maisel mirror match is left out.
+        Assert.Equal((2, 2, 18), (wins["DARK"].Games, wins["DARK"].Wins, wins["DARK"].Vp));
+        Assert.Equal((2, 0, 7), (wins["LIGHT"].Games, wins["LIGHT"].Wins, wins["LIGHT"].Vp));
+    }
+
+    [Fact]
     public void Wins_per_faction_each_side_counts()
     {
         var wins = TournamentStats.Compute(new[] { Sample }).FactionWins.ToDictionary(w => w.Key);

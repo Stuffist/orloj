@@ -9,15 +9,16 @@ Technical overview of Orloj. The details of the rules and features are in the
 Browser ── one Blazor WebAssembly app (Olomoc.Web), downloaded once
    │         /builder/…  Olomoc.Builder pages   (builder, play, account, editor, admin)
    │         /pairings/… Olomoc.Pairings pages  (tournaments, statistics)
+   │         /zones/…    Olomoc.Pairings pages  (Dystopian Encounters)
    │         /online/…   Olomoc.Online pages    (two-player online games)
-   │         localStorage: cabals, game, language, followed tournaments and online games
+   │         localStorage: cabals, game, language, followed tournaments and online games, zone entries
    │
    │  HTTPS (reverse proxy; orloj.top: Caddy, deploy/proxy); WebSocket for online games
    ▼
 Olomoc.Server (ASP.NET Core, one container)
    ├── files: the app (/_framework/, index.html), /_content/Olomoc.Shared/ (CSS, images, languages)
    ├── card catalog: repository files + editor changes (DATA_DIR/catalog)
-   ├── API: /api/tournaments, /api/stats, /api/account, /api/online, /api/admin/… (editor, admin panel)
+   ├── API: /api/tournaments, /api/stats, /api/zones, /api/account, /api/online, /api/admin/… (editor, admin panel)
    ├── SignalR hub: /hubs/online (online games)
    └── SQLite: DATA_DIR/olomoc.db (+ backups/, mail/ without SMTP)
 ```
@@ -27,7 +28,7 @@ Olomoc.Server (ASP.NET Core, one container)
 | `Olomoc.Shared` | Library shared by the browser and the server: models, rules (legality, play, pairings, standings, statistics), browser services, display components, static files. |
 | `Olomoc.Web` | The browser app: startup, router, layout, menu. Brings the three page libraries together; moving from one to another needs no reload. |
 | `Olomoc.Builder` | `/builder/…` pages. |
-| `Olomoc.Pairings` | `/pairings/…` pages. |
+| `Olomoc.Pairings` | `/pairings/…` and `/zones/…` pages. |
 | `Olomoc.Online` | `/online/…` pages; SignalR client. |
 | `Olomoc.Server` | Host: serves the app and the files, API, online games hub, database, emails, background tasks (purges, backup, check email). |
 | `tests/Olomoc.Tests` | xUnit: rules (Shared) and API (in-memory server, temporary database). |
@@ -40,7 +41,8 @@ online game commands).
 
 - **.NET 10**: Blazor WebAssembly (browser), ASP.NET Core (server), xUnit.
 - **SQLite + EF Core**: a database in one file, schema through migrations applied at startup.
-  Tournaments, statistics archives and online games: JSON documents (`Documents` table).
+  Tournaments, statistics archives, online games and zones: JSON documents (`Documents` table);
+  games of the zones: `ZoneGames` table.
 - **SignalR** (WebSocket): synchronization of online games.
 - **ASP.NET Core Identity**: accounts, passwords, roles, session cookie (90 days, extended on
   use), encryption keys in the database.
@@ -59,7 +61,8 @@ online game commands).
 | **Play** `/builder/play` | The device's current game, local or online. Local: HP, Darkness, Bile, tokens, limited abilities, 4 cycles; undo; "Open online" takes it online with its cabal. | The cabal started from the builder | `olomoc.game` (localStorage) or `olomoc.game.online` (code of the current online game): one current game per device. Undo history: memory. |
 | ↳ **Online** (games `/online/g/…`; without a game in progress, "Play online" box) | Synchronized two-player game: lobby (cabals secret until "Ready"), player numbers, agenda, cycles; each player tracks their side, the other read-only; shared hunt. Free game (invitation link) or tournament table. Name: account, otherwise device, otherwise random. | `/hubs/online` hub (view specific to each seat) | Game: `Documents` table (kind `online`). Seat tokens: `olomoc.online`, name: `olomoc.online.name` (localStorage); presence: server memory. |
 | **Tournaments** `/pairings/` | Creates or joins a tournament; public page (registration, rounds, standings); administration (rounds, results, drops, export). Refreshed every 30 s. | `/api/tournaments/{code}` | Tournament: `Documents` table (kind `tournament`). Organizer and player tokens: `olomoc.tournaments` (localStorage) and admin link (token in the fragment). |
-| **Stats** `/pairings/stats` | Public statistics of finished tournaments: factions, cogs, wins, scenarios, decks. | `/api/stats`, computed in memory | — (the anonymous archive is written at the end of a tournament: `Documents`, kind `stats`) |
+| **Stats** `/pairings/stats` | Public statistics of finished tournaments: factions, cogs, wins (alignment, faction, rank 3), scenarios, decks. | `/api/stats`, computed in memory | — (the anonymous archive is written at the end of a tournament: `Documents`, kind `stats`) |
+| **Encounters** `/zones/` | Dystopian Encounters: zones (club, event, period, online), entry of games without an account (duel or 2 v 2, optional names and cabals), each zone's games, statistics and dominance (Light or Darkness, leading faction); statistics of all zones. | `/api/zones`, statistics computed in memory | Zone: `Documents` (kind `zone`); games: `ZoneGames` table. Entry tokens and zones seen: `olomoc.zones` (localStorage). |
 | **Editor** `/builder/admin` (editors, admins) | Creates and edits cogs, equipment, boons, factions, in French and English; publication; zip export. | Merged card catalog, drafts included | `DATA_DIR/catalog/` (JSON in the repository format, changed entries only). The repository is never changed: export, then commit. |
 | **Account** `/builder/account` | Sign-in, creation, email (confirmation, forgotten password), password, other devices, deletion; links to the editor and the admin panel. | `/api/account/me` | Identity tables (accounts, roles), `SavedCabals`. Session: `olomoc_session` cookie. |
 | **Admin** `/builder/control` (admins) | Database figures; accounts (role, temporary password, unlock, sign out, deletion); everyone's tournaments (new admin link, stats, deletion); online games (deletion); backup and purges by hand; log. | `/api/admin/…` (overview, accounts, tournaments, online, audit) | Identity tables, `Documents`, `DATA_DIR/backups/`; each action in the `AdminActions` table (kept for a year). |
@@ -78,6 +81,10 @@ Language: `olomoc.lang` (localStorage); interface texts `i18n/*/ui.json`, card t
   an optional password; a registration is changed with the player token. An admin does not run a
   tournament: they can generate a new admin link for it (the old one stops working), exclude it
   from the stats or delete it.
+- **Zones** (Dystopian Encounters): created, deleted, hidden by the admins, who also choose the
+  dominance mode and the managers (optional accounts). Managers: settings, closing, moderation of
+  their zone's games. Entering a game: anyone, no account, in an open zone; changing it: the
+  entry token of the device, or the author's account, while the zone is open.
 
 ## Known limits
 
@@ -111,3 +118,10 @@ Language: `olomoc.lang` (localStorage); interface texts `i18n/*/ui.json`, card t
     spectator;
   - 2,000 games in the database, purged after 7 days without activity;
   - the Block (board, miniatures) is not handled yet: only the sides are tracked.
+- **Zones**:
+  - all zones are public (a hidden zone is only left out of the list): no private zone yet;
+  - a game entered without an account can only be changed from the same browser (entry token),
+    or by a manager or an admin;
+  - 500 zones and 10,000 games per zone; zones are never purged;
+  - entries without an account are only limited per IP address (`RATE_ZONE_ENTRIES_PER_HOUR`):
+    managers delete the unwanted ones.

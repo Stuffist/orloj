@@ -12,7 +12,7 @@ namespace Olomoc.Server.Tournaments;
 /// statistics cover the whole history. The figures are computed once, kept in memory, and
 /// computed again after each archive added or removed.
 /// </summary>
-public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory)
+public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory, ServerCatalog catalog)
 {
     public const string Kind = "stats";
 
@@ -55,14 +55,16 @@ public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory)
         return db.Documents.Any(d => d.Kind == Kind && d.Code == code);
     }
 
-    public StatsView Stats()
+    /// <summary>Statistics (wins per alignment: alignments of the current card catalog).</summary>
+    public async Task<StatsView> StatsAsync()
     {
+        var cat = await catalog.GetAsync();
         lock (_lock)
         {
             if (_stats is not null) return _stats;
             using var db = factory.CreateDbContext();
             var archives = db.Documents.Where(d => d.Kind == Kind).Select(d => d.Json).AsEnumerable().Select(Read).OfType<ArchivedTournament>();
-            return _stats = TournamentStats.Compute(archives.ToList());
+            return _stats = TournamentStats.Compute(archives.ToList(), cat.AlignmentOf);
         }
     }
 

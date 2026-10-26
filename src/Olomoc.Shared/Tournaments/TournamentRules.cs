@@ -61,24 +61,29 @@ public static class TournamentRules
         cabals ??= Array.Empty<CabalExport>();
         if (cabals.Count != t.CabalsPerPlayer) problems.Add(Problem.Of("cabalCount", t.CabalsPerPlayer.ToString()));
 
-        for (var i = 0; i < cabals.Count; i++)
-        {
-            var cabal = cabals[i];
-            if (cabal.Faction?.Code != faction)
-            {
-                problems.Add(new Problem("cabalFaction", new[] { faction }, i));
-                continue;
-            }
-            var resolved = catalog.Resolve(cabal);
-            if (resolved.Missing.Count > 0)
-            {
-                problems.Add(new Problem("cabalMissing", new[] { string.Join(", ", resolved.Missing) }, i));
-                continue;
-            }
-            foreach (var issue in catalog.CheckLegality(faction, resolved.Cogs, resolved.Equipment).Issues)
-                problems.Add(new Problem("cabalIllegal", null, i, issue));
-        }
+        for (var i = 0; i < cabals.Count; i++) problems.AddRange(CheckCabal(catalog, faction, cabals[i], i));
         return problems;
+    }
+
+    /// <summary>
+    /// A cabal of the faction, legal with the builder's rules; <paramref name="index"/> numbers the
+    /// problems ("Cabal n").
+    /// </summary>
+    public static IEnumerable<Problem> CheckCabal(CatalogService catalog, string faction, CabalExport cabal, int index)
+    {
+        if (cabal.Faction?.Code != faction)
+        {
+            yield return new Problem("cabalFaction", new[] { faction }, index);
+            yield break;
+        }
+        var resolved = catalog.Resolve(cabal);
+        if (resolved.Missing.Count > 0)
+        {
+            yield return new Problem("cabalMissing", new[] { string.Join(", ", resolved.Missing) }, index);
+            yield break;
+        }
+        foreach (var issue in catalog.CheckLegality(faction, resolved.Cogs, resolved.Equipment).Issues)
+            yield return new Problem("cabalIllegal", null, index, issue);
     }
 
     public static Problem? CanEditRegistrations(Tournament t) =>
@@ -167,17 +172,28 @@ public static class TournamentRules
         foreach (var s in scenarios)
         {
             if (s is null) { cleaned.Add(null); continue; }
-            if (!Agendas.IsKnown(s.Id)) return Problem.Of("scenario");
-            if (s.Artifact is not null && !Decks.IsArtifact(s.Artifact)) return Problem.Of("deck");
-            if (s.Ministry is not null && !Decks.IsMinistry(s.Ministry)) return Problem.Of("deck");
-            if (s.Id != Agendas.Other) { cleaned.Add(new Scenario(s.Id, null, s.Artifact, s.Ministry)); continue; }
-            var name = s.Name?.Trim() ?? "";
-            if (name.Length is 0 || name.Length > MaxNameLength) return Problem.Of("scenarioName", MaxNameLength.ToString());
-            cleaned.Add(new Scenario(Agendas.Other, name, s.Artifact, s.Ministry));
+            var (clean, problem) = CheckScenario(s);
+            if (problem is not null) return problem;
+            cleaned.Add(clean);
         }
         while (cleaned.Count > 0 && cleaned[^1] is null) cleaned.RemoveAt(cleaned.Count - 1);
         t.Scenarios = cleaned;
         return null;
+    }
+
+    /// <summary>
+    /// A scenario: official agenda or named custom scenario, known decks. Returns it cleaned (name
+    /// trimmed, only kept for a custom scenario), or the problem.
+    /// </summary>
+    public static (Scenario? Clean, Problem? Problem) CheckScenario(Scenario s)
+    {
+        if (!Agendas.IsKnown(s.Id)) return (null, Problem.Of("scenario"));
+        if (s.Artifact is not null && !Decks.IsArtifact(s.Artifact)) return (null, Problem.Of("deck"));
+        if (s.Ministry is not null && !Decks.IsMinistry(s.Ministry)) return (null, Problem.Of("deck"));
+        if (s.Id != Agendas.Other) return (new Scenario(s.Id, null, s.Artifact, s.Ministry), null);
+        var name = s.Name?.Trim() ?? "";
+        if (name.Length is 0 || name.Length > MaxNameLength) return (null, Problem.Of("scenarioName", MaxNameLength.ToString()));
+        return (new Scenario(Agendas.Other, name, s.Artifact, s.Ministry), null);
     }
 
     /// <summary>

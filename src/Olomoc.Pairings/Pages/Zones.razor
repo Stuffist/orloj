@@ -1,0 +1,156 @@
+@page "/zones"
+@implements IDisposable
+@inject LocalizationService L
+@inject CatalogService Catalog
+@inject AccountService Accounts
+@inject ZoneApi Api
+@inject MyZoneEntries Mine
+
+@* Dystopian Encounters: the zones (open first, then upcoming, then closed, by year), with their
+   dominance; "My zones" (managed, or where this device entered games) at the top. *@
+
+@if (!_ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else
+{
+    <section class="panel">
+        <h2>@L.Ui("zones.title")</h2>
+        <p class="tn-intro">@L.Ui("zones.intro")</p>
+        <div class="tn-actions">
+            <a class="btn" href="zones/stats">@L.Ui("zones.stats.all")</a>
+            @if (Accounts.Current is { IsAdmin: true })
+            {
+                <a class="btn primary" href="zones/new">@L.Ui("zones.create")</a>
+            }
+        </div>
+        <Problems Items="_problems" />
+    </section>
+
+    @if (Accounts.Current is not { IsAdmin: true } && _zones.Any(z => z.CanManage) || Mine.Zones.Count > 0)
+    {
+        <section class="panel">
+            <h2>@L.Ui("zones.mine")</h2>
+            <ul class="zn-list">
+                @* Managed (for an admin: all of them, below), then seen on this device, most recent first. *@
+                @if (Accounts.Current is not { IsAdmin: true })
+                {
+                    @foreach (var z in _zones.Where(z => z.CanManage && !Mine.Knows(z.Code)))
+                    {
+                        @Card(z)
+                    }
+                }
+                @foreach (var m in Mine.Zones)
+                {
+                    var mine = m;
+                    @if (_zones.FirstOrDefault(z => string.Equals(z.Code, mine.Code, StringComparison.OrdinalIgnoreCase)) is { } z)
+                    {
+                        @Card(z, mine.Code)
+                    }
+                    else
+                    {
+                        @* Hidden zone reached by its link (or deleted): only its name. *@
+                        <li class="zn-card">
+                            <div class="zn-card-head">
+                                <a class="tn-mine-name" href="zones/@mine.Code">@mine.Name</a>
+                                <button class="btn small danger tn-mine-actions" @onclick="() => Mine.ForgetZoneAsync(mine.Code)">@L.Ui("pairings.mine.forget")</button>
+                            </div>
+                        </li>
+                    }
+                }
+            </ul>
+        </section>
+    }
+
+    @foreach (var (key, zones) in Groups)
+    {
+        <section class="panel">
+            <h2>@key</h2>
+            <ul class="zn-list">
+                @foreach (var z in zones)
+                {
+                    @Card(z)
+                }
+            </ul>
+        </section>
+    }
+
+    @if (_zones.Count == 0 && _problems is not { Count: > 0 })
+    {
+        <section class="panel"><p class="empty">@L.Ui("zones.empty")</p></section>
+    }
+}
+
+@code {
+    private bool _ready;
+    private List<ZoneSummary> _zones = new();
+    private IReadOnlyList<Problem>? _problems;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        Accounts.Changed += OnChanged;
+        await Task.WhenAll(L.EnsureLoadedAsync(), Catalog.EnsureLoadedAsync(), Mine.EnsureLoadedAsync(), Accounts.EnsureLoadedAsync());
+        var result = await Api.ListAsync();
+        _zones = result.Value ?? new();
+        _problems = result.Problems;
+        _ready = true;
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        L.Changed -= OnChanged;
+        Accounts.Changed -= OnChanged;
+    }
+
+    // Open, upcoming, then closed by year (of the end, or of the start), most recent first.
+    private IEnumerable<(string Title, List<ZoneSummary> Zones)> Groups
+    {
+        get
+        {
+            var open = _zones.Where(z => z.Status == ZoneStatus.Open).OrderBy(z => z.EndDate ?? DateOnly.MaxValue).ThenBy(z => z.Name).ToList();
+            if (open.Count > 0) yield return (L.Ui("zones.group.open"), open);
+            var upcoming = _zones.Where(z => z.Status == ZoneStatus.Upcoming).OrderBy(z => z.StartDate).ThenBy(z => z.Name).ToList();
+            if (upcoming.Count > 0) yield return (L.Ui("zones.group.upcoming"), upcoming);
+            foreach (var year in _zones.Where(z => z.Status == ZoneStatus.Closed).GroupBy(z => (z.EndDate ?? z.StartDate)?.Year)
+                         .OrderByDescending(g => g.Key ?? 0))
+                yield return (year.Key is { } y ? L.Ui("zones.group.closedIn", y) : L.Ui("zones.group.closed"),
+                    year.OrderByDescending(z => z.EndDate).ThenBy(z => z.Name).ToList());
+        }
+    }
+
+    // A zone; "Forget" in "My zones" (<paramref name="forget"/>: its code).
+    private RenderFragment Card(ZoneSummary z, string? forget = null) =>
+        @<li class="zn-card">
+            <div class="zn-card-head">
+                <a class="tn-mine-name" href="zones/@z.Code">@z.Name</a>
+                <span class="tn-phase @ZoneText.StatusClass(z.Status)">@L.Ui($"zones.status.{z.Status}")</span>
+                <span class="tn-role">@L.Ui($"zones.kind.{z.Kind}")</span>
+                @if (z.Hidden)
+                {
+                    <span class="tn-role">@L.Ui("zones.hidden")</span>
+                }
+                <span class="tn-mine-actions">
+                    @if (z.CanManage)
+                    {
+                        <a class="btn small" href="zones/@z.Code/manage">@L.Ui("zones.manage")</a>
+                    }
+                    @if (forget is not null)
+                    {
+                        <button class="btn small danger" @onclick="() => Mine.ForgetZoneAsync(forget)">@L.Ui("pairings.mine.forget")</button>
+                    }
+                </span>
+            </div>
+            <p class="tn-meta">
+                @if (L.Period(z.StartDate, z.EndDate) is { Length: > 0 } period)
+                {
+                    <span>@period · </span>
+                }
+                <span>@L.Ui("zones.games", z.Games)</span>
+            </p>
+            <DominanceLine Dominance="z.Dominance" Closed="@(z.Status == ZoneStatus.Closed)" />
+        </li>;
+}

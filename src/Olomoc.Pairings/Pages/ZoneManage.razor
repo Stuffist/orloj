@@ -1,0 +1,217 @@
+@page "/zones/new"
+@page "/zones/{Code}/manage"
+@implements IDisposable
+@inject LocalizationService L
+@inject AccountService Accounts
+@inject ZoneApi Api
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+@* Settings of a zone. Its managers: name, description, kind, dates, closing by hand. The admins, in
+   addition: creation, dominance mode, visibility, managers, deletion. *@
+
+@if (!_ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else if (!Allowed)
+{
+    <section class="panel">
+        <p class="empty">@L.Ui(Accounts.Current is null ? "zones.manage.signIn" : "zones.manage.forbidden")</p>
+        <Problems Items="_problems" />
+        <div class="tn-actions">
+            @if (Accounts.Current is null)
+            {
+                <a class="btn primary" href="builder/account">@L.Ui("account.signIn")</a>
+            }
+            <a class="btn" href="zones/">@L.Ui("zones.home")</a>
+        </div>
+    </section>
+}
+else
+{
+    <section class="panel">
+        <h2>@(IsNew ? L.Ui("zones.create") : L.Ui("zones.manage.title", _zone!.Name))</h2>
+        <form class="tn-form" @onsubmit="SaveAsync" @onsubmit:preventDefault="true">
+            <div class="tn-fields">
+                <div class="field grow">
+                    <label for="zn-name">@L.Ui("zones.field.name")</label>
+                    <input id="zn-name" type="text" maxlength="@ZoneRules.MaxNameLength" value="@_name" @oninput="e => _name = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="field">
+                    <label for="zn-kind">@L.Ui("zones.field.kind")</label>
+                    <select id="zn-kind" value="@_kind" @onchange="e => _kind = Enum.Parse<ZoneKind>(e.Value!.ToString()!)">
+                        @foreach (var k in Enum.GetValues<ZoneKind>())
+                        {
+                            <option value="@k">@L.Ui($"zones.kind.{k}")</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="field">
+                <label for="zn-description">@L.Ui("zones.field.description")</label>
+                <textarea id="zn-description" class="zn-textarea" rows="4" maxlength="@ZoneRules.MaxDescriptionLength"
+                          placeholder="@L.Ui("zones.field.description.placeholder")"
+                          @oninput="e => _description = e.Value?.ToString() ?? string.Empty">@_description</textarea>
+            </div>
+            <div class="tn-fields">
+                <div class="field">
+                    <label for="zn-start">@L.Ui("zones.field.start")</label>
+                    <input id="zn-start" type="date" value="@_start?.ToString("yyyy-MM-dd")" @onchange="e => _start = ParseDate(e)" />
+                </div>
+                <div class="field">
+                    <label for="zn-end">@L.Ui("zones.field.end")</label>
+                    <input id="zn-end" type="date" value="@_end?.ToString("yyyy-MM-dd")" @onchange="e => _end = ParseDate(e)" />
+                </div>
+                <div class="field">
+                    <label class="check">
+                        <input type="checkbox" checked="@_closed" @onchange="e => _closed = e.Value is true" />
+                        @L.Ui("zones.field.closed")
+                    </label>
+                </div>
+            </div>
+            <p class="hint">@L.Ui("zones.field.dates.help")</p>
+
+            @if (IsAdmin)
+            {
+                <fieldset class="tn-modes">
+                    <legend>@L.Ui("zones.field.mode")</legend>
+                    @foreach (var m in Enum.GetValues<DominanceMode>())
+                    {
+                        var mode = m;
+                        <label>
+                            <input type="radio" name="zn-mode" checked="@(_mode == mode)" @onchange="() => _mode = mode" />
+                            <span><strong>@L.Ui($"zones.mode.{mode}")</strong> — @L.Ui($"zones.mode.{mode}.help", StatsView.MinGames)</span>
+                        </label>
+                    }
+                </fieldset>
+                <div class="field">
+                    <label for="zn-managers">@L.Ui("zones.field.managers")</label>
+                    <input id="zn-managers" type="text" value="@_managers" autocomplete="off" spellcheck="false"
+                           placeholder="@L.Ui("zones.field.managers.placeholder")" @oninput="e => _managers = e.Value?.ToString() ?? string.Empty" />
+                    <span class="hint">@L.Ui("zones.field.managers.help", ZoneRules.MaxManagers)</span>
+                </div>
+                <div class="field">
+                    <label class="check">
+                        <input type="checkbox" checked="@_hidden" @onchange="e => _hidden = e.Value is true" />
+                        @L.Ui("zones.field.hidden")
+                    </label>
+                </div>
+            }
+            else if (_zone is { } z)
+            {
+                <p class="hint">@L.Ui($"zones.mode.{z.Mode}") · @L.Ui("zones.field.managers"): @string.Join(", ", z.Managers ?? [])</p>
+            }
+
+            <Problems Items="_problems" />
+            <div class="tn-actions">
+                <button class="btn primary" type="submit" disabled="@(_busy || _name.Trim().Length == 0)">@L.Ui(IsNew ? "zones.create.submit" : "zones.manage.save")</button>
+                <a class="btn" href="@(IsNew ? "zones/" : $"zones/{Code}")">@L.Ui("pairings.cancel")</a>
+                @if (_saved)
+                {
+                    <span class="tn-legal" role="status">@L.Ui("zones.manage.saved")</span>
+                }
+            </div>
+        </form>
+    </section>
+
+    @if (IsAdmin && !IsNew)
+    {
+        <section class="panel tn-danger">
+            <h3>@L.Ui("zones.delete.zone")</h3>
+            <p class="tn-intro">@L.Ui("zones.delete.zone.help")</p>
+            <button class="btn danger" disabled="@_busy" @onclick="DeleteAsync">@L.Ui("zones.delete.zone")</button>
+        </section>
+    }
+}
+
+@code {
+    [Parameter] public string? Code { get; set; }
+
+    private bool _ready, _busy, _saved;
+    private ZoneView? _zone;
+    private IReadOnlyList<Problem>? _problems;
+
+    private string _name = "", _description = "", _managers = "";
+    private ZoneKind _kind = ZoneKind.Club;
+    private DateOnly? _start, _end;
+    private bool _closed, _hidden;
+    private DominanceMode _mode = DominanceMode.Wins;
+
+    private bool IsNew => Code is null;
+    private bool IsAdmin => Accounts.Current is { IsAdmin: true };
+    private bool Allowed => IsNew ? IsAdmin : _zone is { CanManage: true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        await Task.WhenAll(L.EnsureLoadedAsync(), Accounts.EnsureLoadedAsync());
+        if (!IsNew)
+        {
+            var result = await Api.GetAsync(Code!);
+            _zone = result.Value;
+            _problems = result.Problems;
+            if (_zone is { } z)
+            {
+                _name = z.Name;
+                _description = z.Description;
+                _kind = z.Kind;
+                _start = z.StartDate;
+                _end = z.EndDate;
+                _closed = z.Closed;
+                _hidden = z.Hidden;
+                _mode = z.Mode;
+                _managers = string.Join(", ", z.Managers ?? []);
+            }
+        }
+        _ready = true;
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnChanged;
+
+    private static DateOnly? ParseDate(ChangeEventArgs e) => DateOnly.TryParse(e.Value?.ToString(), out var d) ? d : null;
+
+    private async Task SaveAsync()
+    {
+        if (_busy) return;
+        _busy = true;
+        _saved = false;
+        try
+        {
+            if (IsAdmin)
+            {
+                var request = new ZoneAdminRequest(_name.Trim(), _description, _kind, _start, _end, _closed, _mode, _hidden,
+                    _managers.Split(',', ';', ' ').Select(n => n.Trim()).Where(n => n.Length > 0).ToList());
+                if (IsNew)
+                {
+                    var created = await Api.CreateAsync(request);
+                    _problems = created.Problems;
+                    if (created.Value is { } c) Nav.NavigateTo($"zones/{c.Code}");
+                    return;
+                }
+                var updated = await Api.AdminUpdateAsync(Code!, request);
+                _problems = updated.Problems;
+                _saved = updated.Ok;
+            }
+            else
+            {
+                var updated = await Api.UpdateSettingsAsync(Code!, new ZoneSettingsRequest(_name.Trim(), _description, _kind, _start, _end, _closed));
+                _problems = updated.Problems;
+                _saved = updated.Ok;
+            }
+        }
+        finally { _busy = false; }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_zone is not { } z || !await JS.InvokeAsync<bool>("confirm", L.Ui("zones.delete.zone.confirm", z.Name, z.Stats.Games))) return;
+        _busy = true;
+        var result = await Api.DeleteAsync(z.Code);
+        _busy = false;
+        _problems = result.Problems;
+        if (result.Ok) Nav.NavigateTo("zones/");
+    }
+}

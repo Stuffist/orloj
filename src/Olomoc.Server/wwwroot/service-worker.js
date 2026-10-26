@@ -1,11 +1,11 @@
-// The site's service worker (scope "/": the app, its /builder/, /pairings/ and /online/ sections, and /_content/):
+// The site's service worker (scope "/": the app, its /builder/, /pairings/, /online/ and /zones/ sections, and /_content/):
 // the app stays usable offline. Network first: online, everything comes from the server as without a
 // service worker (a redeployment is seen at once); the cached copy is only used when the network is
 // missing, or slow to answer. Registered by olomoc.js.
 
 const CACHE = "olomoc";
 const NETWORK_TIMEOUT_MS = 4000;            // network too slow (game venue with poor coverage): cached copy
-const SECTIONS = ["builder", "pairings", "online"];
+const SECTIONS = ["builder", "pairings", "online", "zones"];
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", event => event.waitUntil(self.clients.claim()));

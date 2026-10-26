@@ -27,6 +27,9 @@ public sealed class OlomocDb(DbContextOptions<OlomocDb> options) : IdentityDbCon
     /// <summary>Log of the admins' actions (admin panel), kept for a year.</summary>
     public DbSet<AdminActionRow> AdminActions => Set<AdminActionRow>();
 
+    /// <summary>Games recorded in the zones (Dystopian Encounters); the zones are documents.</summary>
+    public DbSet<ZoneGameRow> ZoneGames => Set<ZoneGameRow>();
+
     protected override void OnModelCreating(ModelBuilder model)
     {
         base.OnModelCreating(model);        // Identity tables
@@ -52,6 +55,14 @@ public sealed class OlomocDb(DbContextOptions<OlomocDb> options) : IdentityDbCon
         action.Property(a => a.Target).HasMaxLength(64);
         action.Property(a => a.Detail).HasMaxLength(200);
         action.HasIndex(a => a.At);
+
+        // Author's account: forgotten when the account is deleted (the game stays).
+        var game = model.Entity<ZoneGameRow>();
+        game.ToTable("ZoneGames");
+        game.Property(g => g.ZoneCode).HasMaxLength(16);
+        game.Property(g => g.EditTokenHash).HasMaxLength(64);
+        game.HasIndex(g => new { g.ZoneCode, g.Id });
+        game.HasOne<OlomocUser>().WithMany().HasForeignKey(g => g.SubmitterId).OnDelete(DeleteBehavior.SetNull);
     }
 
     public static string ConnectionString(string dataDirectory) =>
@@ -110,6 +121,22 @@ public sealed class AdminActionRow
     public string Action { get; set; } = "";
     public string Target { get; set; } = "";
     public string? Detail { get; set; }
+}
+
+/// <summary>
+/// A game of a zone: JSON of the game (Olomoc.Zones.ZoneGame), date played, dates of entry (UTC),
+/// author's account if signed in, hash of the entry token (the device that entered it).
+/// </summary>
+public sealed class ZoneGameRow
+{
+    public long Id { get; set; }
+    public string ZoneCode { get; set; } = "";
+    public DateOnly PlayedOn { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public string? SubmitterId { get; set; }
+    public string EditTokenHash { get; set; } = "";
+    public string Json { get; set; } = "";
 }
 
 /// <summary>For "dotnet ef migrations add": the database is created separately, without starting the site.</summary>

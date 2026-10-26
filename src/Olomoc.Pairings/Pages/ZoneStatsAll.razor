@@ -1,0 +1,60 @@
+@page "/zones/stats"
+@implements IDisposable
+@inject LocalizationService L
+@inject CatalogService Catalog
+@inject ZoneApi Api
+
+@* Statistics of all the zones together (hidden zones excluded). *@
+
+@if (!_ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else if (_stats is not { } s)
+{
+    <section class="panel">
+        <Problems Items="_problems" />
+        <a class="btn" href="zones/">@L.Ui("zones.home")</a>
+    </section>
+}
+else
+{
+    <section class="panel">
+        <h2>@L.Ui("zones.stats.all")</h2>
+        <p class="tn-meta">@L.Ui("zones.stats.totals", s.Tournaments, s.Games)</p>
+        <p class="hint">@L.Ui("zones.stats.method", StatsView.MinGames)</p>
+        <div class="tn-actions">
+            <a class="btn small" href="zones/">@L.Ui("zones.home")</a>
+            <a class="btn small" href="pairings/stats">@L.Ui("zones.stats.tournaments")</a>
+        </div>
+    </section>
+
+    @if (s.Games == 0)
+    {
+        <section class="panel"><p class="empty">@L.Ui("zones.noGames")</p></section>
+    }
+    else
+    {
+        <StatsSections Stats="s" Zones="true" />
+    }
+}
+
+@code {
+    private bool _ready;
+    private StatsView? _stats;
+    private IReadOnlyList<Problem>? _problems;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        await Task.WhenAll(L.EnsureLoadedAsync(), Catalog.EnsureLoadedAsync());
+        var result = await Api.AllStatsAsync();
+        _stats = result.Value;
+        _problems = result.Problems;
+        _ready = true;
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnChanged;
+}

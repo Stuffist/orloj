@@ -1,0 +1,105 @@
+using Olomoc.Models;
+using Olomoc.Services;
+using Olomoc.Tournaments;
+
+namespace Olomoc.Zones;
+
+/// <summary>
+/// Rules of the zones: settings, and games entered (checked in the browser for the display, then
+/// again by the server before saving). Problems: keys "pairings.problem.*" of the texts.
+/// </summary>
+public static class ZoneRules
+{
+    public const int MaxNameLength = TournamentRules.MaxNameLength, MaxDescriptionLength = 1000;
+    public const int MaxZones = 500, MaxGamesPerZone = 10_000, MaxManagers = 10;
+
+    public static int PlayersPerSide(GameFormat format) => format == GameFormat.Teams ? 2 : 1;
+
+    public static IReadOnlyList<Problem> CheckSettings(string? name, string? description, DateOnly? start, DateOnly? end)
+    {
+        var problems = new List<Problem>();
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > MaxNameLength) problems.Add(Problem.Of("zoneName", MaxNameLength.ToString()));
+        if ((description?.Length ?? 0) > MaxDescriptionLength) problems.Add(Problem.Of("zoneDescription", MaxDescriptionLength.ToString()));
+        if (start is { } s && end is { } e && e < s) problems.Add(Problem.Of("zoneDates"));
+        return problems;
+    }
+
+    /// <summary>
+    /// A game entered in the zone: the zone open (except for its managers, <paramref name="manager"/>),
+    /// a date in its period and not in the future, the format's number of players, known factions
+    /// (in teams: same alignment in a team, opposed teams), VP, optional names, cabals and scenario.
+    /// Returns the cleaned game (names trimmed, empty ones removed), or the problems.
+    /// </summary>
+    public static (ZoneGame? Clean, IReadOnlyList<Problem> Problems) CheckGame(ZoneGame? game, Zone zone, CatalogService catalog,
+        DateOnly today, bool manager)
+    {
+        var problems = new List<Problem>();
+        if (game is null) return (null, [Problem.Of("zoneGame")]);
+        if (!manager)
+        {
+            var status = zone.StatusOn(today);
+            if (status == ZoneStatus.Closed) return (null, [Problem.Of("zoneClosed")]);
+            if (status == ZoneStatus.Upcoming) return (null, [Problem.Of("zoneUpcoming", Date(zone.StartDate))]);
+        }
+
+        // One day of margin: a game entered just after midnight, in a time zone ahead of the server.
+        if (game.PlayedOn > today.AddDays(1)) problems.Add(Problem.Of("playedOnFuture"));
+        else if (zone.StartDate is { } start && game.PlayedOn < start || zone.EndDate is { } end && game.PlayedOn > end)
+            problems.Add(Problem.Of("playedOnOutside", Date(zone.StartDate), Date(zone.EndDate)));
+
+        var perSide = PlayersPerSide(game.Format);
+        if (game.A?.Players is not { } a || game.B?.Players is not { } b || a.Count != perSide || b.Count != perSide)
+        {
+            problems.Add(Problem.Of("zonePlayers"));
+            return (null, problems);
+        }
+        if (game.A.Vp is < 0 or > TournamentRules.MaxVictoryPoints || game.B.Vp is < 0 or > TournamentRules.MaxVictoryPoints)
+            problems.Add(Problem.Of("zoneVictoryPoints", TournamentRules.MaxVictoryPoints.ToString()));
+
+        var players = a.Concat(b).ToList();
+        var known = true;
+        for (var i = 0; i < players.Count; i++)
+        {
+            var p = players[i];
+            if (p?.Faction is null || catalog.AllFactions.All(f => f.Code != p.Faction))
+            {
+                problems.Add(Problem.Of("zoneFaction", (i + 1).ToString()));
+                known = false;
+                continue;
+            }
+            if ((p.Name?.Trim().Length ?? 0) > MaxNameLength) problems.Add(Problem.Of("zonePlayerName", MaxNameLength.ToString()));
+            if (p.Cabal is { } cabal) problems.AddRange(TournamentRules.CheckCabal(catalog, p.Faction, cabal, i));
+        }
+        if (known && game.Format == GameFormat.Teams)
+        {
+            Alignment? Of(IReadOnlyList<ZonePlayer> side) =>
+                side.Select(p => catalog.AlignmentOf(p.Faction)).Distinct().ToList() is [{ } single] ? single : null;
+            var (alignmentA, alignmentB) = (Of(a), Of(b));
+            if (alignmentA is null || alignmentB is null) problems.Add(Problem.Of("teamAlignment"));
+            else if (alignmentA == alignmentB) problems.Add(Problem.Of("teamsOpposed"));
+        }
+
+        Scenario? scenario = null;
+        if (game.Scenario is { } s)
+        {
+            var (clean, problem) = TournamentRules.CheckScenario(s);
+            if (problem is not null) problems.Add(problem);
+            scenario = clean;
+        }
+        if (game.First is { } first && !Enum.IsDefined(first) || game.End is { } gameEnd && !Enum.IsDefined(gameEnd))
+            problems.Add(Problem.Of("zoneGame"));
+
+        if (problems.Count > 0) return (null, problems);
+        return (game with
+        {
+            A = Clean(game.A),
+            B = Clean(game.B),
+            Scenario = scenario,
+        }, problems);
+    }
+
+    private static ZoneSide Clean(ZoneSide side) =>
+        side with { Players = side.Players.Select(p => p with { Name = p.Name?.Trim() is { Length: > 0 } n ? n : null }).ToList() };
+
+    private static string Date(DateOnly? d) => d?.ToString("yyyy-MM-dd") ?? "";
+}

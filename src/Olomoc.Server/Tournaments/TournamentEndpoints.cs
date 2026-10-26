@@ -61,7 +61,7 @@ public static class TournamentEndpoints
                 return (true, Results.NoContent());
             }));
 
-        app.MapGet("/api/stats", (StatsArchive stats) => Results.Json(stats.Stats(), TournamentJson.Options))
+        app.MapGet("/api/stats", async (StatsArchive stats) => Results.Json(await stats.StatsAsync(), TournamentJson.Options))
             .RequireRateLimiting(ReadPolicy);
     }
 

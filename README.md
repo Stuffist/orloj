@@ -651,6 +651,8 @@ administration):
 - **factions played**: share of the players;
 - **cog choices**, per faction (selector) and per rank: share of the faction's registered
   cabals that contain the cog (both of a player's cabals count);
+- **wins per alignment**: Light against Darkness games only (a game between two factions of the
+  same alignment says nothing about it), once per game;
 - **wins per faction** and **per rank 3 cog** of the cabal played: wins / games, each side of a
   game counting (mirror match: on both sides; byes excluded), with W/D/L and the number of
   games; faded below 10 games;
@@ -665,6 +667,47 @@ computed in memory (`Tournaments/Stats/TournamentStats.cs`) and computed again f
 added or removed (`GET /api/stats`). Deleting a tournament, or excluding it, removes its
 archive; at startup, a finished tournament without an archive gets one.
 
+The computation shared with the zones is in `Tournaments/Stats/GameStats.cs` (games in a neutral
+form: a side is one player or a team of two).
+
+## Dystopian Encounters (zones)
+
+`/zones/` ("Encounters" tab) replaces Occicat's "Rencontres dystopiques" form: games played
+outside tournaments, recorded in **zones** (a club, a convention, a period of the year, online),
+with their statistics and their **dominance**. **Never a ranking of people**: player names are
+optional, shown in the list of games, never counted.
+
+- **Zones**: created by the **admins** (`/zones/new`): name, description (place, schedule…),
+  kind, optional opening and closing dates, dominance mode, optional **managers** (accounts, by
+  username), hidden (test zone: out of the list and of the all-zones statistics, reachable by its
+  link). A zone is *upcoming* before its opening, *open*, then *closed* after its closing date or
+  when a manager closes it by hand (reversible). Managers change the settings (not the managers,
+  the mode or the visibility) and moderate the games; an admin can do everything.
+- **Entering a game** ("Record an encounter"): **anyone, without an account**, in an open zone.
+  Duel (1 v 1) or **2 v 2** (a Light team against a Darkness team, VP per team). Required: the
+  faction of each player and the VP of each side. Optional: names, the cabal played (from
+  "My cabals", composed or pasted, legality checked), the side that played first, the end of the
+  game, the scenario and its decks. Checked by `Zones/ZoneRules.cs` in the browser, then again on
+  the server: date within the zone's period and not in the future, alignments of the teams.
+- **Changing or deleting a game**: the device that entered it (entry token in the localStorage,
+  `olomoc.zones`), or the author's account on any device, while the zone is open; its managers
+  and the admins, at any time. Entries limited per IP address (`RATE_ZONE_ENTRIES_PER_HOUR`,
+  60 by default).
+- **Statistics** of each zone, and of all the zones together: the same panels as the tournaments
+  (`Shared/StatsSections.razor`), each player counting (in 2 v 2, both players of the winning team
+  win); factions counted on the participations, cog choices on the cabals played.
+- **Dominance** (`Zones/ZoneDominance.cs`), mode chosen per zone: number of **wins**, **win rate**
+  (at least 10 games) or total **VP**. The leading alignment comes from the Light against
+  Darkness games, then the leading faction of that alignment; a tie at the top: no dominance.
+  Computed live: an open zone is "Dominated by the Light — leading: …", a closed one "Closed under
+  the Light, dominated by …".
+- **My zones** (top of the list): zones managed, and zones seen on this device.
+
+Storage: zones are documents (kind `zone`, 500 at most, never purged); games are rows of the
+`ZoneGames` table (JSON of the game, author's account forgotten when the account is deleted,
+hash of the entry token; 10,000 per zone). Statistics computed in memory, again after each
+change (`Zones/ZoneStats.cs`).
+
 ## Files
 
 Overview: [docs/architecture.md](docs/architecture.md). Main files:
@@ -677,7 +720,8 @@ src/Olomoc.Web/       the site's Blazor WebAssembly app (served at the root): ro
                       layout; brings together the three page libraries below, without
                       reloading from one to another
 src/Olomoc.Builder/   pages of the builder, play mode, account, editor and admin panel (/builder/…)
-src/Olomoc.Pairings/  pages of the tournaments and statistics (/pairings/…)
+src/Olomoc.Pairings/  pages of the tournaments and statistics (/pairings/…), and of the
+                      Dystopian Encounters (/zones/…)
 src/Olomoc.Online/    pages of the online games (/online/…)
 src/Olomoc.Server/    ASP.NET Core host: app, shared files, API, online games hub
 tests/Olomoc.Tests/   xUnit
@@ -712,13 +756,15 @@ tests/Olomoc.Tests/   xUnit
   problems returned by the server (tournaments, online games).
 - `Components/AppNav.razor` — site menu: tabs under the header (desktop), bar fixed at the
   bottom (phone); builder, play (dot if a game is in progress; online games included),
-  tournaments, statistics, editor (editors and admins), admin panel (admins), account.
+  tournaments, statistics, zones, editor (editors and admins), admin panel (admins), account.
   `Components/HeaderTools.razor` — language choice.
 - `Accounts/AccountApiModels.cs` (rules and exchanges of the accounts API),
   `Accounts/AdminApiModels.cs` (admin panel), `Services/AccountService.cs` (the site's session).
 - `Tournaments/` — tournament (`TournamentModels.cs`), standings (`Standings.cs`), pairings
   (`Pairer.cs`), rules of the phases and registrations (`TournamentRules.cs`), exchanges with
-  the API (`TournamentApiModels.cs`).
+  the API (`TournamentApiModels.cs`); statistics (`Stats/`: `GameStats.cs`, `TournamentStats.cs`).
+- `Zones/` — Dystopian Encounters: zone and game (`ZoneModels.cs`), rules (`ZoneRules.cs`),
+  dominance (`ZoneDominance.cs`), exchanges with the API (`ZoneApiModels.cs`).
 - `wwwroot/` — card catalog (`data/`), languages (`i18n/`), pictograms (`img/`), styles
   (`css/app.css`), file download and service worker registration (`js/olomoc.js`), installable
   app (`manifest.webmanifest`, icons in `img/app/`).
@@ -746,6 +792,11 @@ tests/Olomoc.Tests/   xUnit
   rounds, VP entry, drops, export, share links.
 - `Services/TournamentApi.cs` (API calls), `Services/MyTournaments.cs` (tokens kept on the
   device).
+- `Pages/Zones.razor` (list, My zones), `ZonePage.razor` (a zone: entry, games, statistics),
+  `ZoneManage.razor` (settings; creation by an admin), `ZoneStatsAll.razor`;
+  `Shared/EncounterForm.razor` (entry of a game), `StatsSections.razor` (statistics panels,
+  shared with `/pairings/stats`), `DominanceLine.razor`; `Services/ZoneApi.cs`,
+  `Services/MyZoneEntries.cs` (entry tokens kept on the device).
 
 **`src/Olomoc.Online`** (Razor library, `/online/…` routes)
 - `Shared/OnlineStart.razor` — "Play online" box of the Play page: create a lobby, games followed
@@ -769,13 +820,17 @@ tests/Olomoc.Tests/   xUnit
   (player, editor, admin; API filter, `OLOMOC_ADMINS`); `CabalSyncEndpoint.cs` (account cabals);
   `Mail.cs` (SMTP relay through MailKit, or files; sending queue), `AccountMails.cs` (email
   texts).
+- `Zones/ZoneEndpoints.cs` — `/api/zones` API (public reading, entries without an account, rights
+  by entry token, account, manager or admin) and `/api/admin/zones`; `ZoneStore.cs` (zones as
+  documents, games in the `ZoneGames` table), `ZoneStats.cs` (statistics kept in memory).
 - `Admin/AdminEndpoints.cs` — `/api/admin` API of the admin panel (overview, tournaments, online
   games, backup, purges, log); `AdminAudit.cs` (action log).
 - `CardCatalog/CatalogStore.cs` — served card catalog: repository files + editor changes
   (`DATA_DIR/catalog`), drafts hidden from visitors, export; `CatalogEndpoints.cs` (served
   files, `/api/admin/catalog` API).
 - `Data/OlomocDb.cs` — SQLite database (EF Core): `Documents` table (kind, code, dates, JSON),
-  accounts (Identity tables), account cabals (`SavedCabals`), admin log (`AdminActions`), cookie
+  accounts (Identity tables), account cabals (`SavedCabals`), admin log (`AdminActions`), games
+  of the zones (`ZoneGames`), cookie
   keys; schema through migrations (`Data/Migrations`, applied at startup; new migration:
   `dotnet dotnet-ef migrations add <Name> --project src/Olomoc.Server
   --output-dir Data/Migrations`). `JsonImport.cs` (import of the old files), `DbBackup.cs`
@@ -787,7 +842,7 @@ tests/Olomoc.Tests/   xUnit
   (`OnlineStore.cs`: one document per game, kind `online`), players' presence
   (`OnlinePresence.cs`).
 - `Hosting/ClientApps.cs` — the WebAssembly app at the root (`_framework/`); routes of the
-  `/builder/…`, `/pairings/…` and `/online/…` sections sent to `index.html`.
+  `/builder/…`, `/pairings/…`, `/online/…` and `/zones/…` sections sent to `index.html`.
 - `Hosting/SecurityHeaders.cs` — CSP, frames forbidden, Referrer-Policy, HSTS over HTTPS.
 - `wwwroot/service-worker.js` — offline: network first, cached copy if the network is missing
   (never the API); at the root to cover the app and `/_content/` (see `docs/pwa.md`).

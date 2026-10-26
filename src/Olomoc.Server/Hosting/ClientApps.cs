@@ -2,14 +2,14 @@ namespace Olomoc.Server.Hosting;
 
 /// <summary>
 /// The site in the browser: a single Blazor WebAssembly app (Olomoc.Web), served at the root
-/// (_framework/…, index.html), whose pages live under three sections: the builder (/builder/…),
-/// the tournaments (/pairings/…) and the online games (/online/…). Any address in a section
-/// without a matching file returns index.html: the Blazor router takes over, without reloading
-/// from one section to another.
+/// (_framework/…, index.html), whose pages live under four sections: the builder (/builder/…),
+/// the tournaments (/pairings/…), the online games (/online/…) and the Dystopian Encounters
+/// (/zones/…). Any address in a section without a matching file returns index.html: the Blazor
+/// router takes over, without reloading from one section to another.
 /// </summary>
 public static class ClientApps
 {
-    public static readonly string[] Sections = ["builder", "pairings", "online"];
+    public static readonly string[] Sections = ["builder", "pairings", "online", "zones"];
 
     public static void Map(WebApplication app)
     {

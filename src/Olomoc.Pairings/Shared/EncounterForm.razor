@@ -1,0 +1,324 @@
+@* Entry (or change) of a game in a zone: duel or 2 v 2 (a Light team against a Darkness team), date,
+   for each player a faction, and optionally a name (never counted) and the cabal played; VP of each
+   side; optionally, for the statistics: the side that played first, the end of the game, the
+   scenario and its decks. *@
+@inject LocalizationService L
+@inject CatalogService Catalog
+@inject CabalLibrary Library
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<form class="tn-form zn-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault="true">
+    <div class="tn-fields">
+        <fieldset class="tn-modes zn-format">
+            <legend>@L.Ui("zones.form.format")</legend>
+            <label>
+                <input type="radio" name="zn-format" checked="@(_format == GameFormat.Duel)" @onchange="() => SetFormat(GameFormat.Duel)" />
+                <span>@L.Ui("zones.format.Duel")</span>
+            </label>
+            <label>
+                <input type="radio" name="zn-format" checked="@(_format == GameFormat.Teams)" @onchange="() => SetFormat(GameFormat.Teams)" />
+                <span>@L.Ui("zones.format.Teams") — <span class="hint">@L.Ui("zones.format.Teams.help")</span></span>
+            </label>
+        </fieldset>
+        <div class="field">
+            <label for="zn-date">@L.Ui("zones.form.date")</label>
+            <input id="zn-date" type="date" value="@_date.ToString("yyyy-MM-dd")" min="@Zone.StartDate?.ToString("yyyy-MM-dd")"
+                   max="@MaxDate.ToString("yyyy-MM-dd")" @onchange="OnDateChanged" />
+        </div>
+    </div>
+
+    <div class="zn-sides">
+        @foreach (var side in new[] { TableSide.A, TableSide.B })
+        {
+            var s = side;
+            <fieldset class="zn-side">
+                <legend>@L.Ui("zones.form.side", s == TableSide.A ? 1 : 2)</legend>
+                @for (var k = 0; k < PerSide; k++)
+                {
+                    var index = Slot(s, k);
+                    var player = _players[index];
+                    <div class="zn-player">
+                        <div class="tn-fields">
+                            <div class="field">
+                                <label for="zn-faction-@index">@L.Ui("filter.faction")</label>
+                                <select id="zn-faction-@index" value="@player.Faction" @onchange="e => SetFaction(index, e.Value?.ToString())">
+                                    <option value="">@L.Ui("common.choose")</option>
+                                    @foreach (var f in FactionsFor(s, index))
+                                    {
+                                        <option value="@f.Code">@L.FactionName(f.Code)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="field grow">
+                                <label for="zn-name-@index">@L.Ui("zones.form.name")</label>
+                                <input id="zn-name-@index" type="text" maxlength="@ZoneRules.MaxNameLength" value="@player.Name"
+                                       placeholder="@L.Ui("zones.form.name.placeholder")" autocomplete="off"
+                                       @oninput="e => player.Name = e.Value?.ToString() ?? string.Empty" />
+                            </div>
+                        </div>
+                        @if (player.ShowCabal || player.Cabal is not null)
+                        {
+                            <CabalPicker Index="index" Faction="@player.Faction" Value="player.Cabal" ValueChanged="c => SetCabal(index, c)"
+                                         LibraryVersion="_libraryVersion" Title="@L.Ui("zones.form.cabal", index + 1)" />
+                            @if (player.Cabal is not null)
+                            {
+                                <button type="button" class="btn small" @onclick="() => SetCabal(index, null)">@L.Ui("zones.form.cabal.remove")</button>
+                            }
+                        }
+                        else
+                        {
+                            <button type="button" class="btn small" @onclick="() => player.ShowCabal = true">@L.Ui("zones.form.cabal.add")</button>
+                        }
+                    </div>
+                }
+                <div class="zn-side-result">
+                    <div class="field">
+                        <label for="zn-vp-@s">@L.Ui("zones.form.vp")</label>
+                        <input id="zn-vp-@s" type="number" min="0" max="@TournamentRules.MaxVictoryPoints" inputmode="numeric"
+                               value="@(s == TableSide.A ? _vpA : _vpB)" @oninput="e => SetVp(s, e.Value?.ToString())" />
+                    </div>
+                    <button type="button" class="tn-first @(_first == s ? "on" : null)" aria-pressed="@(_first == s ? "true" : "false")"
+                            title="@L.Ui("zones.form.first.title")" @onclick="() => _first = _first == s ? null : s">@L.Ui("pairings.result.first")</button>
+                </div>
+            </fieldset>
+        }
+    </div>
+
+    <details class="zn-more" open="@(_moreOpen ? true : null)">
+        <summary>@L.Ui("zones.form.more")</summary>
+        <div class="tn-result-end" role="group" aria-label="@L.Ui("pairings.result.end.title")">
+            <span class="tn-result-end-label">@L.Ui("pairings.result.end")</span>
+            @foreach (var end in Enum.GetValues<GameEnd>())
+            {
+                var e = end;
+                <button type="button" class="@(_end == e ? "on" : null)" aria-pressed="@(_end == e ? "true" : "false")"
+                        @onclick="() => _end = _end == e ? null : e">@L.Ui($"pairings.end.{e}")</button>
+            }
+        </div>
+        <ol class="tn-scenarios">
+            <li>
+                <label for="zn-scenario" class="tn-table-number">@L.Ui("zones.form.scenario")</label>
+                <select id="zn-scenario" value="@_scenario" @onchange="e => _scenario = e.Value?.ToString() ?? string.Empty">
+                    <option value="">@L.Ui("pairings.scenarios.none")</option>
+                    @foreach (var id in Agendas.All)
+                    {
+                        <option value="@id">@L.Ui($"agenda.{id}")</option>
+                    }
+                    <option value="@Agendas.Other">@L.Ui("agenda.OTHER")</option>
+                </select>
+                @if (_scenario == Agendas.Other)
+                {
+                    <input type="text" maxlength="@TournamentRules.MaxNameLength" value="@_scenarioName"
+                           placeholder="@L.Ui("pairings.scenarios.otherName")" aria-label="@L.Ui("pairings.scenarios.otherName")"
+                           @oninput="e => _scenarioName = e.Value?.ToString() ?? string.Empty" />
+                }
+                <select class="tn-deck" value="@_artifact" disabled="@(_scenario.Length == 0)" aria-label="@L.Ui("pairings.scenarios.artifact")"
+                        title="@L.Ui("pairings.scenarios.artifact")" @onchange="e => _artifact = e.Value?.ToString() ?? string.Empty">
+                    <option value="">@L.Ui("pairings.scenarios.none")</option>
+                    @foreach (var id in Decks.Artifacts)
+                    {
+                        <option value="@id">@L.Ui($"deck.artifact.{id}")</option>
+                    }
+                </select>
+                <select class="tn-deck" value="@_ministry" disabled="@(_scenario.Length == 0)" aria-label="@L.Ui("pairings.scenarios.ministry")"
+                        title="@L.Ui("pairings.scenarios.ministry")" @onchange="e => _ministry = e.Value?.ToString() ?? string.Empty">
+                    <option value="">@L.Ui("pairings.scenarios.none")</option>
+                    @foreach (var id in Decks.Ministries)
+                    {
+                        <option value="@id">@L.Ui($"deck.ministry.{id}")</option>
+                    }
+                </select>
+            </li>
+        </ol>
+    </details>
+
+    <Problems Items="_problems" />
+    <div class="tn-actions">
+        <button class="btn primary" type="submit" disabled="@(_busy || !Complete)">@L.Ui(Existing is null ? "zones.form.submit" : "zones.form.save")</button>
+        @if (OnCancel.HasDelegate)
+        {
+            <button class="btn" type="button" @onclick="OnCancel">@L.Ui("pairings.cancel")</button>
+        }
+    </div>
+</form>
+
+@code {
+    [Parameter, EditorRequired] public ZoneView Zone { get; set; } = default!;
+    /// <summary>Game being changed (null: new game).</summary>
+    [Parameter] public ZoneGame? Existing { get; set; }
+    /// <summary>Submit: returns the problems (none if the game is accepted).</summary>
+    [Parameter, EditorRequired] public Func<ZoneGame, Task<IReadOnlyList<Problem>>> Submit { get; set; } = default!;
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private sealed class PlayerRow
+    {
+        public string Faction = "";
+        public string Name = "";
+        public CabalExport? Cabal;
+        public bool ShowCabal;
+    }
+
+    private GameFormat _format = GameFormat.Duel;
+    private DateOnly _date;
+    // Players: A1, A2, B1, B2 (A2 and B2 only in 2 v 2).
+    private readonly PlayerRow[] _players = Enumerable.Range(0, 4).Select(_ => new PlayerRow()).ToArray();
+    private string _vpA = "", _vpB = "";
+    private TableSide? _first;
+    private GameEnd? _end;
+    private string _scenario = "", _scenarioName = "", _artifact = "", _ministry = "";
+    private bool _moreOpen, _busy;
+    private IReadOnlyList<Problem>? _problems;
+
+    private int PerSide => ZoneRules.PlayersPerSide(_format);
+
+    // Number of a player in the problems ("Cabal n") and the fields: A1 = 0, A2 = 1, B1 = 2, B2 = 3 in
+    // 2 v 2; A = 0, B = 1 in a duel (the order of ZoneGame.Players).
+    private int Slot(TableSide side, int k) => side == TableSide.A ? k : PerSide + k;
+
+    private DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
+    private DateOnly MaxDate => Zone.EndDate is { } end && end < Today ? end : Today;
+
+    protected override void OnInitialized()
+    {
+        _date = MaxDate;
+        if (Existing is not { } g) return;
+        _format = g.Format;
+        _date = g.PlayedOn;
+        var players = g.Players.ToList();
+        for (var i = 0; i < players.Count && i < 4; i++)
+        {
+            _players[i].Faction = players[i].Faction;
+            _players[i].Name = players[i].Name ?? "";
+            _players[i].Cabal = players[i].Cabal;
+        }
+        _vpA = g.A.Vp.ToString();
+        _vpB = g.B.Vp.ToString();
+        _first = g.First;
+        _end = g.End;
+        if (g.Scenario is { } s)
+        {
+            _scenario = s.Id;
+            _scenarioName = s.Name ?? "";
+            _artifact = s.Artifact ?? "";
+            _ministry = s.Ministry ?? "";
+        }
+        _moreOpen = g.End is not null || g.Scenario is not null;
+    }
+
+    // Duel ↔ 2 v 2: the first player of each side keeps their place.
+    private void SetFormat(GameFormat format)
+    {
+        if (format == _format) return;
+        var a = _players[0];
+        var b = _players[Slot(TableSide.B, 0)];
+        _format = format;
+        var rows = Enumerable.Range(0, 4).Select(_ => new PlayerRow()).ToArray();
+        rows[0] = a;
+        rows[Slot(TableSide.B, 0)] = b;
+        for (var i = 0; i < 4; i++) _players[i] = rows[i];
+        _problems = null;
+    }
+
+    // In 2 v 2: the factions of the alignment chosen in the team, opposed to the other team's.
+    private IEnumerable<Faction> FactionsFor(TableSide side, int index)
+    {
+        var all = Catalog.AllFactions.OrderBy(f => L.FactionName(f.Code).Text);
+        if (_format != GameFormat.Teams) return all;
+        var mate = Catalog.AlignmentOf(_players[side == TableSide.A ? 1 - index : 5 - index].Faction);
+        var other = TeamAlignment(side == TableSide.A ? TableSide.B : TableSide.A);
+        return all.Where(f => (mate is null || f.Alignment == mate) && (other is null || f.Alignment != other) || f.Code == _players[index].Faction);
+    }
+
+    private Alignment? TeamAlignment(TableSide side) =>
+        Enumerable.Range(0, PerSide).Select(k => Catalog.AlignmentOf(_players[Slot(side, k)].Faction)).FirstOrDefault(a => a is not null);
+
+    private void SetFaction(int index, string? faction)
+    {
+        _players[index].Faction = faction ?? "";
+        _problems = null;
+    }
+
+    private void SetCabal(int index, CabalExport? cabal)
+    {
+        var player = _players[index];
+        player.Cabal = cabal;
+        player.ShowCabal = cabal is not null;
+        // Cabal chosen first: its faction becomes the player's.
+        if (player.Faction.Length == 0 && cabal?.Faction is { } f) player.Faction = f.Code;
+        _problems = null;
+    }
+
+    private void SetVp(TableSide side, string? value)
+    {
+        if (side == TableSide.A) _vpA = value ?? "";
+        else _vpB = value ?? "";
+    }
+
+    private void OnDateChanged(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _date = d;
+    }
+
+    private static int? Parse(string s) => int.TryParse(s, out var n) ? n : null;
+
+    private IEnumerable<PlayerRow> Playing => _players.Take(2 * PerSide);
+
+    private bool Complete => Playing.All(p => p.Faction.Length > 0)
+        && Parse(_vpA) is >= 0 and <= TournamentRules.MaxVictoryPoints && Parse(_vpB) is >= 0 and <= TournamentRules.MaxVictoryPoints
+        && (_scenario != Agendas.Other || _scenarioName.Trim().Length > 0);
+
+    private ZoneGame Build()
+    {
+        ZoneSide Side(TableSide s, string vp) => new(Enumerable.Range(0, PerSide).Select(k => _players[Slot(s, k)])
+            .Select(p => new ZonePlayer(p.Faction, p.Name.Trim() is { Length: > 0 } n ? n : null, p.Cabal)).ToList(), Parse(vp) ?? 0);
+        var scenario = _scenario.Length == 0 ? null : new Scenario(_scenario, _scenario == Agendas.Other ? _scenarioName.Trim() : null,
+            _artifact.Length > 0 ? _artifact : null, _ministry.Length > 0 ? _ministry : null);
+        return new ZoneGame(_format, _date, Side(TableSide.A, _vpA), Side(TableSide.B, _vpB), _first, _end, scenario);
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (!Complete || _busy) return;
+        _busy = true;
+        try
+        {
+            var game = Build();
+            // Same checks as the server, before sending (the zone's state is checked by the server).
+            var (_, problems) = ZoneRules.CheckGame(game, new Zone { StartDate = Zone.StartDate, EndDate = Zone.EndDate }, Catalog, Today, manager: true);
+            _problems = problems.Count > 0 ? problems : await Submit(game);
+        }
+        finally { _busy = false; }
+    }
+
+    // Back on the tab (after "Compose…" in the builder): "My cabals" read again.
+    private int _libraryVersion;
+    private DotNetObjectReference<EncounterForm>? _self;
+    private int? _visibilityHandler;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _self = DotNetObjectReference.Create(this);
+        try { _visibilityHandler = await JS.InvokeAsync<int>("olomoc.onVisible", _self, nameof(OnPageVisibleAsync)); }
+        catch (JSException) { /* without script: the list is read again at the next load */ }
+    }
+
+    [JSInvokable]
+    public async Task OnPageVisibleAsync()
+    {
+        await Library.ReloadAsync();
+        _libraryVersion++;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_visibilityHandler is { } id)
+        {
+            try { await JS.InvokeVoidAsync("olomoc.offVisible", id); }
+            catch (Exception e) when (e is JSException or JSDisconnectedException) { }
+        }
+        _self?.Dispose();
+    }
+}

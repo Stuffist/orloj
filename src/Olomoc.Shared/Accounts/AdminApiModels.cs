@@ -17,8 +17,11 @@ public sealed record TournamentMetrics(int Total, int Max, int Registration, int
 
 public sealed record OnlineMetrics(int Total, int Max, int ActiveLastDay);
 
+/// <summary>Dystopian Encounters: zones (open now) and games recorded.</summary>
+public sealed record ZoneMetrics(int Total, int Max, int Open, int Games);
+
 /// <summary>Database figures and server state.</summary>
-public sealed record AdminOverview(AccountMetrics Accounts, TournamentMetrics Tournaments, OnlineMetrics Online,
+public sealed record AdminOverview(AccountMetrics Accounts, TournamentMetrics Tournaments, OnlineMetrics Online, ZoneMetrics Zones,
     int StatsArchives, int CatalogChanges, long DatabaseBytes, DateTimeOffset? LastBackup, int Backups,
     bool MailBySmtp, DateTimeOffset StartedAt);
 

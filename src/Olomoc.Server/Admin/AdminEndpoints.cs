@@ -7,6 +7,7 @@ using Olomoc.Server.CardCatalog;
 using Olomoc.Server.Data;
 using Olomoc.Server.Online;
 using Olomoc.Server.Tournaments;
+using Olomoc.Server.Zones;
 using Olomoc.Tournaments;
 
 namespace Olomoc.Server.Admin;
@@ -30,9 +31,9 @@ public static class AdminEndpoints
         var read = admin.MapGroup("").RequireRateLimiting(TournamentEndpoints.ReadPolicy);
         var write = admin.MapGroup("").RequireRateLimiting(TournamentEndpoints.WritePolicy);
 
-        read.MapGet("overview", (OlomocDb db, TournamentStore tournaments, OnlineStore online, CatalogStore catalog,
+        read.MapGet("overview", (OlomocDb db, TournamentStore tournaments, OnlineStore online, ZoneStore zones, CatalogStore catalog,
             DbBackup backup, IMailSender mail, IConfiguration config) =>
-            Overview(db, tournaments, online, catalog, backup, mail, config, dataDirectory));
+            Overview(db, tournaments, online, zones, catalog, backup, mail, config, dataDirectory));
         read.MapGet("tournaments", ListTournaments);
         read.MapGet("online", ListOnline);
         read.MapGet("audit", async (AdminAudit audit) => Results.Json(await audit.RecentAsync(), TournamentJson.Options));
@@ -47,7 +48,7 @@ public static class AdminEndpoints
 
     // ---- Overview ----
 
-    private static async Task<IResult> Overview(OlomocDb db, TournamentStore tournaments, OnlineStore online, CatalogStore catalog,
+    private static async Task<IResult> Overview(OlomocDb db, TournamentStore tournaments, OnlineStore online, ZoneStore zones, CatalogStore catalog,
         DbBackup backup, IMailSender mail, IConfiguration config, string dataDirectory)
     {
         var now = DateTimeOffset.UtcNow;
@@ -73,7 +74,12 @@ public static class AdminEndpoints
         var backups = backup.Backups();
         var databaseBytes = new[] { OlomocDb.FileName, OlomocDb.FileName + "-wal" }
             .Select(name => new FileInfo(Path.Combine(dataDirectory, name))).Where(f => f.Exists).Sum(f => f.Length);
-        return Results.Json(new AdminOverview(accounts, tournamentMetrics, onlineMetrics,
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var allZones = await zones.ListAsync();
+        var zoneMetrics = new ZoneMetrics(allZones.Count, zones.MaxDocuments, allZones.Count(z => z.StatusOn(today) == Olomoc.Zones.ZoneStatus.Open),
+            await db.ZoneGames.CountAsync());
+
+        return Results.Json(new AdminOverview(accounts, tournamentMetrics, onlineMetrics, zoneMetrics,
             await db.Documents.CountAsync(d => d.Kind == StatsArchive.Kind),
             catalog.Status().Values.Sum(entries => entries.Count),
             databaseBytes,
