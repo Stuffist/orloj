@@ -5,11 +5,16 @@ namespace Olomoc.Zones;
 
 /// <summary>
 /// Dominance of a zone: the leading alignment (null: none yet, or a tie, <see cref="Tie"/>), and the
-/// leading faction of that alignment (null if tied, or none).
+/// leading faction of that alignment (null if tied, or none). <see cref="Games"/>: Light against
+/// Darkness games counted, and <see cref="Mode"/>, to explain an absence of dominance (win rate:
+/// not enough games yet).
 /// </summary>
-public sealed record Dominance(Alignment? Alignment, string? Faction, bool Tie)
+public sealed record Dominance(Alignment? Alignment, string? Faction, bool Tie, int Games = 0, DominanceMode Mode = DominanceMode.Wins)
 {
     public static readonly Dominance None = new(null, null, false);
+
+    /// <summary>Win rate mode below <see cref="StatsView.MinGames"/> Light against Darkness games.</summary>
+    public bool NeedsMoreGames => Alignment is null && !Tie && Mode == DominanceMode.WinRate && Games is > 0 and < StatsView.MinGames;
 }
 
 /// <summary>
@@ -27,10 +32,11 @@ public static class ZoneDominance
 {
     public static Dominance Compute(StatsView stats, DominanceMode mode, Func<string, Alignment?> alignmentOf)
     {
+        var games = stats.AlignmentWins.FirstOrDefault()?.Games ?? 0;      // each side of these games: the same number
         var (alignmentKey, tie) = Leader(stats.AlignmentWins, mode);
-        if (alignmentKey is null || !Enum.TryParse<Alignment>(alignmentKey, out var alignment)) return new(null, null, tie);
+        if (alignmentKey is null || !Enum.TryParse<Alignment>(alignmentKey, out var alignment)) return new(null, null, tie, games, mode);
         var (faction, _) = Leader(stats.FactionWins.Where(w => alignmentOf(w.Key) == alignment), mode);
-        return new(alignment, faction, false);
+        return new(alignment, faction, false, games, mode);
     }
 
     /// <summary>Value compared for the mode; null: does not take part (too few games).</summary>

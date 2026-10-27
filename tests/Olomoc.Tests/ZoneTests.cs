@@ -188,7 +188,11 @@ public class ZoneTests
         Assert.Equal((Alignment.DARK, "MAISEL"), (vp.Alignment, vp.Faction));        // 30 VP against 12; Maisel 25, The Others 5
 
         // Win rate: fewer than StatsView.MinGames games, nobody takes part yet.
-        Assert.Equal(Dominance.None, ZoneDominance.Compute(s, DominanceMode.WinRate, d.Catalog.AlignmentOf));
+        var rate = ZoneDominance.Compute(s, DominanceMode.WinRate, d.Catalog.AlignmentOf);
+        Assert.Null(rate.Alignment);
+        Assert.Equal(3, rate.Games);
+        Assert.True(rate.NeedsMoreGames);                                           // "3 games out of the 10 needed"
+        Assert.False(wins.NeedsMoreGames);
     }
 
     [Fact]
@@ -205,11 +209,11 @@ public class ZoneTests
     {
         var d = await AppData.GetAsync();
         var s = await Stats(Duel("RUBIN", "MAISEL", 5, 3), Duel("LIBUS", "OTHERS", 1, 3));
-        Assert.Equal(new Dominance(null, null, true), ZoneDominance.Compute(s, DominanceMode.Wins, d.Catalog.AlignmentOf));
+        Assert.Equal(new Dominance(null, null, true, 2), ZoneDominance.Compute(s, DominanceMode.Wins, d.Catalog.AlignmentOf));
 
         // Alignment leading, its factions tied: no leading faction.
         var s2 = await Stats(Duel("RUBIN", "MAISEL", 5, 3), Duel("LIBUS", "OTHERS", 5, 3));
-        Assert.Equal(new Dominance(Alignment.LIGHT, null, false), ZoneDominance.Compute(s2, DominanceMode.Wins, d.Catalog.AlignmentOf));
+        Assert.Equal(new Dominance(Alignment.LIGHT, null, false, 2), ZoneDominance.Compute(s2, DominanceMode.Wins, d.Catalog.AlignmentOf));
     }
 
     [Fact]

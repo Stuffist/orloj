@@ -1,5 +1,5 @@
 @* Dominance of a zone: "Dominated by the Light — leading: Rubin Network", "Closed under Darkness,
-   dominated by The Others", a tie, or nothing yet. *@
+   dominated by The Others", a tie, not enough games yet (win rate), or nothing yet. *@
 @inject LocalizationService L
 
 <p class="zn-dominance @(Dominance.Alignment?.ToString().ToLowerInvariant())">
@@ -16,6 +16,15 @@
     else if (Dominance.Tie)
     {
         <span>@L.Ui(Closed ? "zones.dominance.tie.closed" : "zones.dominance.tie")</span>
+    }
+    else if (Dominance.NeedsMoreGames)
+    {
+        <span class="empty">@L.Ui(Closed ? "zones.dominance.needsGames.closed" : "zones.dominance.needsGames", Dominance.Games, StatsView.MinGames)</span>
+    }
+    else if (Dominance.Games > 0)
+    {
+        @* Light against Darkness games, but nobody ahead (draws, no VP scored). *@
+        <span class="empty">@L.Ui(Closed ? "zones.dominance.none.closed" : "zones.dominance.noWinner")</span>
     }
     else
     {
