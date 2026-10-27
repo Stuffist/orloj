@@ -64,7 +64,7 @@ else
         {
             @if (CanEnter)
             {
-                <button class="btn primary" @onclick="() => { _entering = true; _saved = false; }">@L.Ui("zones.enter")</button>
+                <button class="btn primary" @onclick="StartEntering">@L.Ui("zones.enter")</button>
                 @if (z.Status != ZoneStatus.Open)
                 {
                     <p class="hint">@L.Ui("zones.enter.asManager")</p>
@@ -74,15 +74,16 @@ else
             {
                 <p class="empty">@L.Ui(z.Status == ZoneStatus.Upcoming ? "zones.enter.upcoming" : "zones.enter.closed")</p>
             }
-            @if (_saved)
+            @if (_notice is { } notice)
             {
-                <p class="tn-legal" role="status">@L.Ui("zones.enter.saved")</p>
+                <p class="tn-legal" role="status">@L.Ui(notice)</p>
             }
         }
         else
         {
             <h3>@L.Ui(_editing is null ? "zones.enter" : "zones.edit")</h3>
-            <EncounterForm @key="_formKey" Zone="z" Existing="_editing?.Game" Submit="SaveAsync" OnCancel="CloseForm" />
+            <EncounterForm @key="_formKey" Zone="z" Existing="_editing?.Game" Submit="SaveAsync" OnCancel="CloseForm"
+                           Format="_nextFormat" Date="_nextDate" Notice="@(_editing is null && _notice is { } n ? L.Ui(n) : null)" />
         }
     </section>
 
@@ -119,7 +120,7 @@ else
                 @foreach (var g in _games)
                 {
                     var game = g;
-                    <li class="zn-game">
+                    <li class="zn-game @(game.Id == _highlighted ? "new" : null)">
                         <div class="zn-game-meta">
                             <span>@ZoneText.Date(game.Game.PlayedOn)</span>
                             <span class="tn-role">@L.Ui($"zones.format.{game.Game.Format}")</span>
@@ -160,7 +161,11 @@ else
 
     private enum Tab { Games, Stats }
 
-    private bool _ready, _entering, _saved, _loadingMore;
+    private bool _ready, _entering, _loadingMore;
+    private string? _notice;                 // "saved" message (text key)
+    private long? _highlighted;              // game just saved
+    private GameFormat _nextFormat = GameFormat.Duel;
+    private DateOnly? _nextDate;
     private ZoneView? _zone;
     private IReadOnlyList<Problem>? _problems, _listProblems;
     private List<ZoneGameView> _games = new();
@@ -217,8 +222,14 @@ else
     {
         _editing = g;
         _entering = false;
-        _saved = false;
+        _notice = null;
         _formKey++;
+    }
+
+    private void StartEntering()
+    {
+        _entering = true;
+        _notice = null;
     }
 
     private void CloseForm()
@@ -228,6 +239,10 @@ else
         _formKey++;
     }
 
+    // Called by the form as a plain Func (not an EventCallback): Blazor does not redraw the page
+    // afterwards, hence StateHasChanged. New game: confirmation, and a fresh form (same format and
+    // date) for the next one;
+    // change: form closed. Either way the game is highlighted in the list.
     private async Task<IReadOnlyList<Problem>> SaveAsync(ZoneGame game)
     {
         if (_zone is not { } z) return [];
@@ -235,16 +250,24 @@ else
         {
             var updated = await Api.UpdateGameAsync(z.Code, editing.Id, game, Mine.TokenOf(z.Code, editing.Id));
             if (!updated.Ok) return updated.Problems;
+            _highlighted = editing.Id;
+            _notice = "zones.edit.saved";
+            CloseForm();
         }
         else
         {
             var created = await Api.AddGameAsync(z.Code, game);
             if (created.Value is not { } c) return created.Problems;
             await Mine.RememberAsync(z.Code, z.Name, c.Id, c.EditToken);
+            _highlighted = c.Id;
+            _notice = "zones.enter.saved";
+            _nextFormat = game.Format;
+            _nextDate = game.PlayedOn;
+            _formKey++;
         }
-        CloseForm();
-        _saved = true;
+        _tab = Tab.Games;
         await LoadAsync();
+        StateHasChanged();
         return [];
     }
 

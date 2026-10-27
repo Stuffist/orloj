@@ -140,6 +140,10 @@
         {
             <button class="btn" type="button" @onclick="OnCancel">@L.Ui("pairings.cancel")</button>
         }
+        @if (Notice is not null)
+        {
+            <span class="tn-legal zn-notice" role="status">✓ @Notice</span>
+        }
     </div>
 </form>
 
@@ -150,6 +154,11 @@
     /// <summary>Submit: returns the problems (none if the game is accepted).</summary>
     [Parameter, EditorRequired] public Func<ZoneGame, Task<IReadOnlyList<Problem>>> Submit { get; set; } = default!;
     [Parameter] public EventCallback OnCancel { get; set; }
+    /// <summary>New game: format and date proposed (those of the previous one).</summary>
+    [Parameter] public GameFormat Format { get; set; }
+    [Parameter] public DateOnly? Date { get; set; }
+    /// <summary>Message next to the buttons ("Encounter recorded…").</summary>
+    [Parameter] public string? Notice { get; set; }
 
     private sealed class PlayerRow
     {
@@ -181,7 +190,8 @@
 
     protected override void OnInitialized()
     {
-        _date = MaxDate;
+        _format = Format;
+        _date = Date is { } d && d <= MaxDate ? d : MaxDate;
         if (Existing is not { } g) return;
         _format = g.Format;
         _date = g.PlayedOn;

@@ -1097,3 +1097,7 @@ body {
     .zn-game-side.right { align-items: flex-start; text-align: left; }
     .zn-game-side.right .zn-game-player { justify-content: flex-start; }
 }
+/* Game just saved: highlighted in the list; confirmation next to the form's buttons. */
+.zn-game.new { outline: 2px solid var(--ok); animation: zn-new 2.5s ease-out; }
+@keyframes zn-new { from { background: rgba(63, 166, 106, .25); } }
+.zn-notice { align-self: center; font-weight: 600; }
