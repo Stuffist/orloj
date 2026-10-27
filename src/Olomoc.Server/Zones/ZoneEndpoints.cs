@@ -57,7 +57,7 @@ public static class ZoneEndpoints
         {
             var manages = access.Manages(z);
             if (z.Hidden && !manages) continue;
-            list.Add(new ZoneSummary(z.Code, z.Name, z.Kind, z.StartDate, z.EndDate, z.StatusOn(Today), z.Hidden,
+            list.Add(new ZoneSummary(z.Code, z.Name, z.Description, z.Kind, z.StartDate, z.EndDate, z.StatusOn(Today), z.Hidden,
                 counts.GetValueOrDefault(z.Code), await stats.DominanceAsync(z), manages));
         }
         return Results.Json(list, TournamentJson.Options);

@@ -1101,3 +1101,8 @@ body {
 .zn-game.new { outline: 2px solid var(--ok); animation: zn-new 2.5s ease-out; }
 @keyframes zn-new { from { background: rgba(63, 166, 106, .25); } }
 .zn-notice { align-self: center; font-weight: 600; }
+/* Zone description in the list: two lines at most (full text in the tooltip). */
+.zn-card-description {
+    margin: .3rem 0 0; font-size: .85rem; overflow: hidden;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+}

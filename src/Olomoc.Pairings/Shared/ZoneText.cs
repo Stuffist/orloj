@@ -18,6 +18,10 @@ public static class ZoneText
         _ => "",
     };
 
+    /// <summary>Description on one paragraph: its lines joined by " · " (the list shows two lines at most).</summary>
+    public static string Condensed(string? text) => string.Join(" · ",
+        (text ?? "").Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+
     public static string StatusClass(ZoneStatus status) => status switch
     {
         ZoneStatus.Open => "registration",

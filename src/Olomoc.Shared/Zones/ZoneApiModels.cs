@@ -10,8 +10,11 @@ public static class ZoneHeaders
     public const string Entry = "X-Olomoc-Entry";
 }
 
-/// <summary>Zone in the list: its state, number of games, dominance; <see cref="CanManage"/>: manager or admin.</summary>
-public sealed record ZoneSummary(string Code, string Name, ZoneKind Kind, DateOnly? StartDate, DateOnly? EndDate,
+/// <summary>
+/// Zone in the list: its description, state, number of games, dominance; <see cref="CanManage"/>:
+/// manager or admin.
+/// </summary>
+public sealed record ZoneSummary(string Code, string Name, string Description, ZoneKind Kind, DateOnly? StartDate, DateOnly? EndDate,
     ZoneStatus Status, bool Hidden, int Games, Dominance Dominance, bool CanManage);
 
 /// <summary>

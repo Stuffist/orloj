@@ -144,6 +144,10 @@ else
                     }
                 </span>
             </div>
+            @if (ZoneText.Condensed(z.Description) is { Length: > 0 } description)
+            {
+                <p class="zn-card-description" title="@z.Description">@description</p>
+            }
             <p class="tn-meta">
                 @if (L.Period(z.StartDate, z.EndDate) is { Length: > 0 } period)
                 {
