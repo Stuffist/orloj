@@ -84,7 +84,8 @@ Language: `olomoc.lang` (localStorage); interface texts `i18n/*/ui.json`, card t
 - **Zones** (Dystopian Encounters): created, deleted, hidden by the admins, who also choose the
   dominance mode and the managers (optional accounts). Managers: settings, closing, moderation of
   their zone's games. Entering a game: anyone, no account, in an open zone; changing it: the
-  entry token of the device, or the author's account, while the zone is open.
+  entry token of the device, or the author's account, while the zone is open. A tournament can be
+  bound to an open zone at its creation: its results are copied there, and only change through it.
 
 ## Known limits
 

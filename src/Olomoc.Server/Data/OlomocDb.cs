@@ -62,6 +62,8 @@ public sealed class OlomocDb(DbContextOptions<OlomocDb> options) : IdentityDbCon
         game.Property(g => g.ZoneCode).HasMaxLength(16);
         game.Property(g => g.EditTokenHash).HasMaxLength(64);
         game.HasIndex(g => new { g.ZoneCode, g.Id });
+        game.Property(g => g.TournamentCode).HasMaxLength(16);
+        game.HasIndex(g => new { g.ZoneCode, g.TournamentCode });     // games copied from a tournament
         game.HasOne<OlomocUser>().WithMany().HasForeignKey(g => g.SubmitterId).OnDelete(DeleteBehavior.SetNull);
     }
 
@@ -125,7 +127,8 @@ public sealed class AdminActionRow
 
 /// <summary>
 /// A game of a zone: JSON of the game (Olomoc.Zones.ZoneGame), date played, dates of entry (UTC),
-/// author's account if signed in, hash of the entry token (the device that entered it).
+/// author's account if signed in, hash of the entry token (the device that entered it); or, for a
+/// game copied from a tournament bound to the zone, the tournament's code (no token, no author).
 /// </summary>
 public sealed class ZoneGameRow
 {
@@ -136,6 +139,9 @@ public sealed class ZoneGameRow
     public DateTime UpdatedAt { get; set; }
     public string? SubmitterId { get; set; }
     public string EditTokenHash { get; set; } = "";
+    public string? TournamentCode { get; set; }
+    /// <summary>Round and table of the tournament (round × 1000 + table).</summary>
+    public int? TournamentTable { get; set; }
     public string Json { get; set; } = "";
 }
 

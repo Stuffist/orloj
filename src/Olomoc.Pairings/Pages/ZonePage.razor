@@ -124,6 +124,20 @@ else
                         <div class="zn-game-meta">
                             <span>@ZoneText.Date(game.Game.PlayedOn)</span>
                             <span class="tn-role">@L.Ui($"zones.format.{game.Game.Format}")</span>
+                            @if (game.Tournament is { } tournament)
+                            {
+                                @* Copied from a tournament bound to the zone: changed through the tournament only. *@
+                                <span class="tn-role" title="@L.Ui("zones.fromTournament.title")">
+                                    @if (game.TournamentName is { } name)
+                                    {
+                                        @L.Ui("zones.fromTournament") <a href="pairings/t/@tournament">@name</a>
+                                    }
+                                    else
+                                    {
+                                        @L.Ui("zones.fromTournament")
+                                    }
+                                </span>
+                            }
                             @if (game.Game.Scenario is { } scenario)
                             {
                                 <ScenarioTag Scenario="scenario" />

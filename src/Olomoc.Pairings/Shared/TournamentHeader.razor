@@ -1,4 +1,4 @@
-@* Header of a tournament: name, date and settings, code to share, phase. *@
+@* Header of a tournament: name, date and settings, zone it counts for, code to share, phase. *@
 @inject LocalizationService L
 
 <section class="panel tn-head">
@@ -10,6 +10,10 @@
                 <span>@Date · </span>
             }
             <span>@Settings</span>
+            @if (View.Zone is { } zone)
+            {
+                <span> · @L.Ui("pairings.zone") <a href="zones/@zone">@(View.ZoneName ?? zone)</a></span>
+            }
         </p>
     </div>
     <div class="tn-head-side">

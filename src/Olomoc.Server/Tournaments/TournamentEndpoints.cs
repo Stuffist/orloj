@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
+using Olomoc.Server.Zones;
 using Olomoc.Tournaments;
+using Olomoc.Zones;
 
 namespace Olomoc.Server.Tournaments;
 
@@ -40,8 +42,14 @@ public static class TournamentEndpoints
             Organizer(code, ctx, store, t => Done(TournamentRules.UndoLastRound(t))));
         write.MapPost("rounds/{round:int}/swap", (string code, int round, SwapRequest body, HttpContext ctx, TournamentStore store) =>
             Organizer(code, ctx, store, t => Done(TournamentRules.SwapPlayers(t, round, body.First, body.Second))));
-        write.MapPut("rounds/{round:int}/tables/{table:int}", (string code, int round, int table, ResultRequest body, HttpContext ctx, TournamentStore store) =>
-            Organizer(code, ctx, store, t => Done(TournamentRules.SetResult(t, round, table, body.VpA, body.VpB, body.CabalA, body.CabalB, body.First, body.End), status: 400)));
+        // A result: copied into the tournament's zone, if it has one.
+        write.MapPut("rounds/{round:int}/tables/{table:int}", async (string code, int round, int table, ResultRequest body, HttpContext ctx,
+            TournamentStore store, TournamentZoneSync zone) =>
+        {
+            var result = await Organizer(code, ctx, store, t => Done(TournamentRules.SetResult(t, round, table, body.VpA, body.VpB, body.CabalA, body.CabalB, body.First, body.End), status: 400));
+            await zone.SyncAsync(code);
+            return result;
+        });
         write.MapPut("scenarios", (string code, ScenariosRequest body, HttpContext ctx, TournamentStore store) =>
             Organizer(code, ctx, store, t => Done(TournamentRules.SetScenarios(t, body.Scenarios), status: 400)));
         // End of the tournament: anonymous archive for the statistics (if it is counted).
@@ -52,14 +60,19 @@ public static class TournamentEndpoints
                 if (result.Item1) stats.Update(t, DateTimeOffset.UtcNow);
                 return result;
             }));
-        // Count the tournament in the statistics or not, at any time.
-        write.MapPut("stats", (string code, StatsRequest body, HttpContext ctx, TournamentStore store, StatsArchive stats) =>
-            Organizer(code, ctx, store, t =>
+        // Count the tournament in the statistics or not, at any time (and in its zone).
+        write.MapPut("stats", async (string code, StatsRequest body, HttpContext ctx, TournamentStore store, StatsArchive stats,
+            TournamentZoneSync zone) =>
+        {
+            var result = await Organizer(code, ctx, store, t =>
             {
                 t.ExcludeFromStats = body.Exclude;
                 stats.Update(t, DateTimeOffset.UtcNow);
                 return (true, Results.NoContent());
-            }));
+            });
+            await zone.SyncAsync(code);
+            return result;
+        });
 
         app.MapGet("/api/stats", async (StatsArchive stats) => Results.Json(await stats.StatsAsync(), TournamentJson.Options))
             .RequireRateLimiting(ReadPolicy);
@@ -67,10 +80,18 @@ public static class TournamentEndpoints
 
     // ---- Creation and reading ----
 
-    private static async Task<IResult> Create(CreateTournamentRequest body, TournamentStore store)
+    private static async Task<IResult> Create(CreateTournamentRequest body, TournamentStore store, ZoneStore zones)
     {
         var problems = TournamentRules.CheckSettings(body.Name, body.RoundCount, body.CabalsPerPlayer).ToList();
         if (TournamentRules.CheckPassword(NullIfEmpty(body.Password)) is { } bad) problems.Add(bad);
+        // Zone: an existing zone, not closed (its results will be copied there).
+        Zone? zone = null;
+        if (NullIfEmpty(body.Zone) is { } zoneCode)
+        {
+            zone = await zones.LoadAsync(zoneCode);
+            if (zone is null) problems.Add(Problem.Of("zoneNotFound"));
+            else if (zone.StatusOn(DateOnly.FromDateTime(DateTime.UtcNow)) == ZoneStatus.Closed) problems.Add(Problem.Of("zoneClosed"));
+        }
         if (problems.Count > 0) return Problems(problems, 400);
 
         var token = Tokens.New();
@@ -83,6 +104,8 @@ public static class TournamentEndpoints
             t.Pairing = body.Pairing;
             t.AvoidSameAlignment = body.Pairing == PairingMode.Swiss && body.AvoidSameAlignment;
             t.ExcludeFromStats = body.ExcludeFromStats;
+            t.Zone = zone?.Code;
+            t.ZoneName = zone?.Name;
             t.OrganizerTokenHash = Tokens.Hash(token);
             if (NullIfEmpty(body.Password) is { } password) t.OrganizerPasswordHash = Tokens.HashPassword(password);
         });
@@ -138,14 +161,20 @@ public static class TournamentEndpoints
 
     private static string? NullIfEmpty(string? s) => string.IsNullOrEmpty(s) ? null : s;
 
-    /// <summary>Deletion by the organizer: the tournament and its statistics archive.</summary>
-    private static async Task<IResult> Delete(string code, HttpContext ctx, TournamentStore store, StatsArchive stats) =>
-        await store.DeleteAsync(code, t =>
+    /// <summary>Deletion by the organizer: the tournament, its statistics archive and its games in its zone.</summary>
+    private static async Task<IResult> Delete(string code, HttpContext ctx, TournamentStore store, StatsArchive stats, TournamentZoneSync sync)
+    {
+        string? zone = null;
+        var result = await store.DeleteAsync(code, t =>
         {
             if (!IsOrganizer(ctx, t)) return (false, Forbidden());
             stats.Remove(t.Code);
+            zone = t.Zone;
             return (true, Results.NoContent());
-        }) ?? NotFound();
+        });
+        await sync.RemoveAsync(code, zone);
+        return result ?? NotFound();
+    }
 
     // ---- Registrations ----
 
@@ -220,7 +249,8 @@ public static class TournamentEndpoints
         t.Code, t.Name, t.Date, t.RoundCount, t.CabalsPerPlayer, t.Pairing, t.AvoidSameAlignment, t.Phase,
         t.Players.Select(p => new PlayerView(p.Id, p.Name, p.Faction, p.Dropped,
             t.Phase != TournamentPhase.Registration || organizer || p == me ? p.Cabals : null)).ToList(),
-        t.Rounds, Standings.Compute(t), organizer, me?.Id, t.OrganizerPasswordHash.Length > 0, t.ExcludeFromStats, t.Scenarios);
+        t.Rounds, Standings.Compute(t), organizer, me?.Id, t.OrganizerPasswordHash.Length > 0, t.ExcludeFromStats, t.Scenarios,
+        t.Zone, t.ZoneName);
 
     // Token of the admin link, or of a session opened with the password.
     private static bool IsOrganizer(HttpContext ctx, Tournament t)

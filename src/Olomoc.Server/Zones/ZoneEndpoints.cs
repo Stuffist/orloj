@@ -81,14 +81,19 @@ public static class ZoneEndpoints
     }
 
     private static async Task<IResult> Games(string code, long? before, int? take, HttpContext ctx, UserManager<OlomocUser> users,
-        ZoneStore zones, ZoneGameStore games)
+        ZoneStore zones, ZoneGameStore games, TournamentStore tournaments)
     {
         if (await zones.LoadAsync(code) is not { } z) return NotFound();
         var access = await Access.OfAsync(ctx, users);
         var count = Math.Clamp(take ?? PageSize, 1, PageSize);
         var page = await games.PageAsync(z.Code, before, count + 1);
         var open = z.StatusOn(Today) == ZoneStatus.Open;
-        var views = page.Take(count).Select(g => new ZoneGameView(g.Id, g.Game, g.CreatedAt, access.CanEdit(z, g, open, null))).ToList();
+        // Games copied from tournaments: their name, while the tournament exists (purged after 90 days).
+        var names = new Dictionary<string, string?>();
+        foreach (var t in page.Select(g => g.TournamentCode).OfType<string>().Distinct())
+            names[t] = (await tournaments.LoadAsync(t))?.Name;
+        var views = page.Take(count).Select(g => new ZoneGameView(g.Id, g.Game, g.CreatedAt, access.CanEdit(z, g, open, null),
+            g.TournamentCode, g.TournamentCode is { } t ? names[t] : null)).ToList();
         return Results.Json(new ZoneGamesPage(views, page.Count > count ? views[^1].Id : null, await games.CountAsync(z.Code)),
             TournamentJson.Options);
     }
@@ -116,6 +121,7 @@ public static class ZoneEndpoints
         if (await games.GetAsync(z.Code, id) is not { } stored) return NotFoundGame();
         var access = await Access.OfAsync(ctx, users);
         var open = z.StatusOn(Today) == ZoneStatus.Open;
+        if (stored.TournamentCode is not null) return FromTournament();
         if (!access.CanEdit(z, stored, open, ctx.Request.Headers[ZoneHeaders.Entry])) return Forbidden(open);
         var (clean, problems) = ZoneRules.CheckGame(body, z, await catalog.GetAsync(), Today, access.Manages(z));
         if (clean is null) return Problems(problems, 400);
@@ -131,6 +137,7 @@ public static class ZoneEndpoints
         if (await games.GetAsync(z.Code, id) is not { } stored) return NotFoundGame();
         var access = await Access.OfAsync(ctx, users);
         var open = z.StatusOn(Today) == ZoneStatus.Open;
+        if (stored.TournamentCode is not null) return FromTournament();
         if (!access.CanEdit(z, stored, open, ctx.Request.Headers[ZoneHeaders.Entry])) return Forbidden(open);
         if (!await games.DeleteAsync(z.Code, id)) return NotFoundGame();
         stats.Invalidate(z.Code);
@@ -247,15 +254,19 @@ public static class ZoneEndpoints
 
         public bool Manages(Zone z) => IsAdmin || UserId is not null && z.ManagerIds.Contains(UserId);
 
-        /// <summary>A manager, always; otherwise the author (account or entry token), while the zone is open.</summary>
-        public bool CanEdit(Zone z, StoredZoneGame g, bool open, string? entryToken) =>
-            Manages(z) || open && (UserId is not null && g.SubmitterId == UserId || Tokens.Matches(entryToken, g.EditTokenHash));
+        /// <summary>
+        /// A manager, always; otherwise the author (account or entry token), while the zone is open.
+        /// Never a game copied from a tournament: it follows the tournament.
+        /// </summary>
+        public bool CanEdit(Zone z, StoredZoneGame g, bool open, string? entryToken) => g.TournamentCode is null &&
+            (Manages(z) || open && (UserId is not null && g.SubmitterId == UserId || Tokens.Matches(entryToken, g.EditTokenHash)));
     }
 
     private static IResult Problems(IReadOnlyList<Problem> problems, int status) =>
         Results.Json(new ProblemList(problems), TournamentJson.Options, statusCode: status);
 
     private static IResult NotFound() => Problems([Problem.Of("zoneNotFound")], 404);
+    private static IResult FromTournament() => Problems([Problem.Of("zoneGameFromTournament")], 409);
     private static IResult NotFoundGame() => Problems([Problem.Of("zoneGameNotFound")], 404);
     private static IResult Forbidden(bool open) => Problems([Problem.Of(open ? "zoneForbidden" : "zoneClosed")], 403);
 }

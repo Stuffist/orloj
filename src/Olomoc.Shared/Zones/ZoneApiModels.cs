@@ -28,9 +28,11 @@ public sealed record ZoneView(string Code, string Name, string Description, Zone
 /// <summary>
 /// A recorded game: id, content, date of entry. <see cref="CanEdit"/>: through the account (its
 /// author while the zone is open, a manager, an admin); the device's entry tokens are checked by the
-/// browser itself.
+/// browser itself. <see cref="Tournament"/>: code of the tournament it was copied from (then changed
+/// through the tournament only), and its name.
 /// </summary>
-public sealed record ZoneGameView(long Id, ZoneGame Game, DateTimeOffset CreatedAt, bool CanEdit);
+public sealed record ZoneGameView(long Id, ZoneGame Game, DateTimeOffset CreatedAt, bool CanEdit,
+    string? Tournament = null, string? TournamentName = null);
 
 /// <summary>A page of games, most recent first; <see cref="Next"/>: to ask for the following ones (before=).</summary>
 public sealed record ZoneGamesPage(IReadOnlyList<ZoneGameView> Games, long? Next, int Total);

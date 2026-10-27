@@ -26,10 +26,13 @@ public static class TournamentHeaders
     public const string Player = "X-Olomoc-Player";
 }
 
-/// <summary>Optional password: gives admin access on another device, without the link.</summary>
+/// <summary>
+/// Optional password: gives admin access on another device, without the link. Optional zone (code):
+/// the results count for it.
+/// </summary>
 public sealed record CreateTournamentRequest(
     string Name, DateOnly? Date, int RoundCount, int CabalsPerPlayer, PairingMode Pairing, bool AvoidSameAlignment,
-    string? Password = null, bool ExcludeFromStats = false);
+    string? Password = null, bool ExcludeFromStats = false, string? Zone = null);
 
 /// <summary>Organizer token: returned only once, to be kept by the organizer.</summary>
 public sealed record TournamentCreated(string Code, string OrganizerToken);
@@ -74,7 +77,7 @@ public sealed record TournamentView(
     PairingMode Pairing, bool AvoidSameAlignment, TournamentPhase Phase,
     IReadOnlyList<PlayerView> Players, IReadOnlyList<Round> Rounds, IReadOnlyList<Standing> Standings,
     bool IsOrganizer, string? MyPlayerId, bool HasPassword, bool ExcludeFromStats = false,
-    IReadOnlyList<Scenario?>? Scenarios = null)
+    IReadOnlyList<Scenario?>? Scenarios = null, string? Zone = null, string? ZoneName = null)
 {
     public PlayerView? Player(string? id) => Players.FirstOrDefault(p => p.Id == id);
     public Scenario? ScenarioOf(int roundNumber) => Scenarios?.ElementAtOrDefault(roundNumber - 1);

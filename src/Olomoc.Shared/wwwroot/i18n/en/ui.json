@@ -837,6 +837,10 @@
   "pairings.admin.delete": "Delete permanently…",
   "pairings.admin.delete.confirm": "Permanently delete “{0}”? To confirm, type the tournament code ({1}).",
   "pairings.admin.delete.mismatch": "Wrong code: the tournament was not deleted.",
+  "pairings.create.zone": "Dystopian Encounters zone (optional)",
+  "pairings.create.zone.none": "None",
+  "pairings.create.zone.help": "Each result entered also counts in this zone (without the players' names).",
+  "pairings.zone": "Zone:",
   "pairings.create.password": "Organizer password (optional)",
   "pairings.create.password.help": "To manage from another device by typing it, without the link. At least {0} characters.",
   "pairings.admin.keep.title": "Keep this admin link",
@@ -989,6 +993,8 @@
   "zones.noGames": "No game in this zone yet.",
   "zones.more": "Older games",
   "zones.cabal": "Cabal",
+  "zones.fromTournament": "Tournament",
+  "zones.fromTournament.title": "Game of a tournament bound to the zone: it follows the tournament (changed or removed from its administration).",
   "zones.form.format": "Format",
   "zones.format.Duel": "1 v 1",
   "zones.format.Teams": "2 v 2",
@@ -1057,5 +1063,6 @@
   "pairings.problem.zoneStorageFull": "The server does not accept new zones for now.",
   "pairings.problem.zoneForbidden": "Only the author of the entry (this device or their account), the zone's managers and the admins change it.",
   "pairings.problem.zoneNotFound": "No zone with this code.",
-  "pairings.problem.zoneGameNotFound": "This encounter no longer exists."
+  "pairings.problem.zoneGameNotFound": "This encounter no longer exists.",
+  "pairings.problem.zoneGameFromTournament": "This game comes from a tournament: change it from the tournament's administration."
 }

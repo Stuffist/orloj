@@ -25,6 +25,12 @@ public sealed class Tournament : IStoredDocument
     public PairingMode Pairing { get; set; } = PairingMode.Swiss;
     public bool AvoidSameAlignment { get; set; }        // Swiss round: prefer opposite alignments
     public bool ExcludeFromStats { get; set; }          // test tournament: outside the statistics
+    /// <summary>
+    /// Zone of the Dystopian Encounters the tournament counts for (code, chosen at creation; name kept
+    /// for the display): each result entered is copied there, without the names.
+    /// </summary>
+    public string? Zone { get; set; }
+    public string? ZoneName { get; set; }
     public TournamentPhase Phase { get; set; } = TournamentPhase.Registration;
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }

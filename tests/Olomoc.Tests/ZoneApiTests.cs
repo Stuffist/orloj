@@ -288,4 +288,96 @@ public sealed class ZoneApiTests : IDisposable
         var overview = await Read<AdminOverview>(await root.GetAsync("/api/admin/overview"));
         Assert.Equal((1, 1, 1), (overview.Zones.Total, overview.Zones.Open, overview.Zones.Games));
     }
+
+    // ---- Tournaments bound to a zone ----
+
+    private static Task<HttpResponseMessage> Organizer(HttpClient http, HttpMethod method, string url, string token, object? body = null)
+    {
+        var request = new HttpRequestMessage(method, url);
+        if (body is not null) request.Content = JsonContent.Create(body, body.GetType(), options: TournamentJson.Options);
+        request.Headers.Add(TournamentHeaders.Organizer, token);
+        return http.SendAsync(request);
+    }
+
+    /// <summary>A tournament bound to the zone, two players, started, round 1 paired; its table.</summary>
+    private static async Task<(TournamentCreated T, Olomoc.Tournaments.Table Table)> TournamentInZone(HttpClient http, string zone)
+    {
+        var created = await Send(http, HttpMethod.Post, "/api/tournaments",
+            new CreateTournamentRequest("Open du club", Today, 3, 1, PairingMode.Swiss, false, Zone: zone));
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var t = await Read<TournamentCreated>(created);
+        var d = await AppData.GetAsync();
+        var cabal = new Olomoc.Services.CabalExporter(d.L).ToModel("Assaut", "MAISEL",
+            new Olomoc.Models.Cog?[] { d.Cog("1R01"), d.Cog("2R08"), d.Cog("3R06") },
+            new Olomoc.Models.Equipment?[] { d.Equipment("E11"), d.Equipment("D01"), d.Equipment("E03") });
+        foreach (var name in new[] { "Ana", "Bea" })
+            Assert.Equal(HttpStatusCode.Created, (await Send(http, HttpMethod.Post, $"/api/tournaments/{t.Code}/players",
+                new RegistrationRequest(name, "MAISEL", [cabal]))).StatusCode);
+        await Organizer(http, HttpMethod.Post, $"/api/tournaments/{t.Code}/start", t.OrganizerToken);
+        await Organizer(http, HttpMethod.Post, $"/api/tournaments/{t.Code}/rounds", t.OrganizerToken);
+        var view = await Read<TournamentView>(await http.GetAsync($"/api/tournaments/{t.Code}"));
+        Assert.Equal((zone, "Club du mardi"), (view.Zone, view.ZoneName));
+        return (t, view.Rounds[0].Tables.Single());
+    }
+
+    [Fact]
+    public async Task Results_of_a_bound_tournament_follow_it_into_the_zone()
+    {
+        var (_, root, _, _, anonymous) = await StartAsync();
+        var zone = await CreateZone(root, Settings());
+        var (t, table) = await TournamentInZone(anonymous, zone);
+        var result = $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}";
+        Assert.Empty((await Games(anonymous, zone)).Games);
+
+        // A result: one duel in the zone, without the names, with the cabal played; not editable from the zone.
+        Assert.Equal(HttpStatusCode.NoContent, (await Organizer(anonymous, HttpMethod.Put, result, t.OrganizerToken, new ResultRequest(9, 4))).StatusCode);
+        var game = Assert.Single((await Games(root, zone)).Games);
+        Assert.Equal((t.Code, "Open du club", false), (game.Tournament, game.TournamentName, game.CanEdit));
+        Assert.Equal((9, 4, GameFormat.Duel), (game.Game.A.Vp, game.Game.B.Vp, game.Game.Format));
+        Assert.All(game.Game.Players, p => Assert.Null(p.Name));
+        Assert.NotNull(game.Game.A.Players[0].Cabal);
+        var refused = await Send(root, HttpMethod.Delete, $"/api/zones/{zone}/games/{game.Id}");
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Equal(["zoneGameFromTournament"], await Keys(refused));
+
+        // Corrected: the same game (same place in the list), updated.
+        await Organizer(anonymous, HttpMethod.Put, result, t.OrganizerToken, new ResultRequest(3, 8));
+        var corrected = Assert.Single((await Games(anonymous, zone)).Games);
+        Assert.Equal((game.Id, 3, 8), (corrected.Id, corrected.Game.A.Vp, corrected.Game.B.Vp));
+
+        // Excluded from the statistics: out of the zone; counted again: back.
+        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/stats", t.OrganizerToken, new StatsRequest(true));
+        Assert.Empty((await Games(anonymous, zone)).Games);
+        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/stats", t.OrganizerToken, new StatsRequest(false));
+        Assert.Single((await Games(anonymous, zone)).Games);
+
+        // Result cleared, then the tournament deleted: nothing left in the zone.
+        await Organizer(anonymous, HttpMethod.Put, result, t.OrganizerToken, new ResultRequest(null, null));
+        Assert.Empty((await Games(anonymous, zone)).Games);
+        await Organizer(anonymous, HttpMethod.Put, result, t.OrganizerToken, new ResultRequest(5, 5));
+        Assert.Equal(1, (await Zone(anonymous, zone)).Stats.Games);
+        Assert.Equal(HttpStatusCode.NoContent, (await Organizer(anonymous, HttpMethod.Delete, $"/api/tournaments/{t.Code}", t.OrganizerToken)).StatusCode);
+        Assert.Equal(0, (await Zone(anonymous, zone)).Stats.Games);
+    }
+
+    [Fact]
+    public async Task A_closed_zone_is_neither_offered_nor_changed()
+    {
+        var (_, root, _, _, anonymous) = await StartAsync();
+        var zone = await CreateZone(root, Settings());
+        var (t, table) = await TournamentInZone(anonymous, zone);
+        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}", t.OrganizerToken, new ResultRequest(9, 4));
+        await Send(root, HttpMethod.Put, $"/api/admin/zones/{zone}", Settings(closed: true));
+
+        // Closed: the tournament no longer changes it (its game stays as it was).
+        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}", t.OrganizerToken, new ResultRequest(1, 2));
+        Assert.Equal(9, Assert.Single((await Games(anonymous, zone)).Games).Game.A.Vp);
+
+        // And a new tournament cannot be bound to it.
+        var refused = await Send(anonymous, HttpMethod.Post, "/api/tournaments",
+            new CreateTournamentRequest("Trop tard", Today, 3, 1, PairingMode.Swiss, false, Zone: zone));
+        Assert.Equal(["zoneClosed"], await Keys(refused));
+        Assert.Equal(["zoneNotFound"], await Keys(await Send(anonymous, HttpMethod.Post, "/api/tournaments",
+            new CreateTournamentRequest("Nulle part", Today, 3, 1, PairingMode.Swiss, false, Zone: "ABCDEF"))));
+    }
 }

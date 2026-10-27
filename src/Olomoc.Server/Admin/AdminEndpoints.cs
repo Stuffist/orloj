@@ -114,7 +114,8 @@ public static class AdminEndpoints
         return Results.Json(new TournamentCreated(Code(code), token), TournamentJson.Options);
     }
 
-    private static async Task<IResult> SetStats(string code, StatsRequest body, HttpContext ctx, TournamentStore store, StatsArchive stats, AdminAudit audit)
+    private static async Task<IResult> SetStats(string code, StatsRequest body, HttpContext ctx, TournamentStore store, StatsArchive stats,
+        TournamentZoneSync zone, AdminAudit audit)
     {
         var name = await store.UpdateAsync(code, t =>
         {
@@ -123,19 +124,24 @@ public static class AdminEndpoints
             return (true, t.Name);
         });
         if (name is null) return NotFound();
+        await zone.SyncAsync(code);
         await audit.LogAsync(AdminName(ctx), body.Exclude ? "excludeStats" : "includeStats", Code(code), name);
         return Results.NoContent();
     }
 
-    /// <summary>Like a deletion by the organizer: the tournament and its statistics archive.</summary>
-    private static async Task<IResult> DeleteTournament(string code, HttpContext ctx, TournamentStore store, StatsArchive stats, AdminAudit audit)
+    /// <summary>Like a deletion by the organizer: the tournament, its statistics archive, its games in its zone.</summary>
+    private static async Task<IResult> DeleteTournament(string code, HttpContext ctx, TournamentStore store, StatsArchive stats,
+        TournamentZoneSync sync, AdminAudit audit)
     {
+        string? zone = null;
         var name = await store.DeleteAsync(code, t =>
         {
             stats.Remove(t.Code);
+            zone = t.Zone;
             return (true, t.Name);
         });
         if (name is null) return NotFound();
+        await sync.RemoveAsync(code, zone);
         await audit.LogAsync(AdminName(ctx), "deleteTournament", Code(code), name);
         return Results.NoContent();
     }

@@ -702,6 +702,12 @@ optional, shown in the list of games, never counted.
   Computed live: an open zone is "Dominated by the Light — leading: …", a closed one "Closed under
   the Light, dominated by …".
 - **My zones** (top of the list): zones managed, and zones seen on this device.
+- **Tournaments bound to a zone**: when creating a tournament, an optional zone (not closed). Each
+  result entered is copied into it as a duel (`Zones/TournamentZone.cs`, `TournamentZoneSync.cs`):
+  factions, cabal played, P1, end, scenario, **without the names** (the zone keeps its games after
+  the tournament is purged). A corrected or cleared result, a tournament excluded from the
+  statistics or deleted: the zone follows. These games are changed through the tournament only; a
+  closed zone is no longer changed.
 
 Storage: zones are documents (kind `zone`, 500 at most, never purged); games are rows of the
 `ZoneGames` table (JSON of the game, author's account forgotten when the account is deleted,

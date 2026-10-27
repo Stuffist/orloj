@@ -222,4 +222,49 @@ public class ZoneTests
         var s = StatsView.OfGames(1, [], _ => null);
         Assert.Equal(Dominance.None, ZoneDominance.Compute(s, DominanceMode.Wins, _ => null));
     }
+
+    // ---- Tournament bound to a zone ----
+
+    [Fact]
+    public async Task Tournament_results_as_zone_games()
+    {
+        var cabal = await MaiselCabal();
+        var t = new Tournament
+        {
+            Code = "TTTTTT", Date = new(2026, 11, 7), CabalsPerPlayer = 2,
+            Players =
+            [
+                new() { Id = "a", Name = "Ana", Faction = "MAISEL", Cabals = [cabal, cabal] },
+                new() { Id = "b", Name = "Bea", Faction = "RUBIN", Cabals = [cabal, cabal] },
+                new() { Id = "c", Name = "Cid", Faction = "LIBUS", Cabals = [cabal, cabal] },
+            ],
+            Rounds =
+            [
+                new()
+                {
+                    Number = 2,
+                    Tables =
+                    [
+                        new() { Number = 1, PlayerA = "a", PlayerB = "b", VpA = 7, VpB = 3, CabalA = 1, First = TableSide.B, End = GameEnd.Bile },
+                        new() { Number = 2, PlayerA = "c" },                      // bye
+                        new() { Number = 3, PlayerA = "c", PlayerB = "b" },       // no result yet
+                    ],
+                },
+            ],
+            Scenarios = [null, new Scenario("SABOTAGE")],
+        };
+
+        var game = Assert.Single(TournamentZone.Games(t));
+        Assert.Equal(TournamentZone.Key(2, 1), game.Key);
+        var g = game.Value;
+        Assert.Equal((GameFormat.Duel, new DateOnly(2026, 11, 7), 7, 3), (g.Format, g.PlayedOn, g.A.Vp, g.B.Vp));
+        Assert.Equal(("MAISEL", "RUBIN"), (g.A.Players[0].Faction, g.B.Players[0].Faction));
+        Assert.All(g.Players, p => Assert.Null(p.Name));                      // never the names
+        Assert.NotNull(g.A.Players[0].Cabal);
+        Assert.Null(g.B.Players[0].Cabal);                                     // two cabals, the one played unknown
+        Assert.Equal((TableSide.B, GameEnd.Bile, "SABOTAGE"), (g.First, g.End, g.Scenario!.Id));
+
+        t.ExcludeFromStats = true;
+        Assert.Empty(TournamentZone.Games(t));
+    }
 }

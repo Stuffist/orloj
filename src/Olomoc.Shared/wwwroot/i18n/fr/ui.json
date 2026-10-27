@@ -837,6 +837,10 @@
   "pairings.admin.delete": "Supprimer définitivement…",
   "pairings.admin.delete.confirm": "Supprimer définitivement « {0} » ? Pour confirmer, tapez le code du tournoi ({1}).",
   "pairings.admin.delete.mismatch": "Code incorrect : le tournoi n’a pas été supprimé.",
+  "pairings.create.zone": "Zone des Rencontres dystopiques (facultatif)",
+  "pairings.create.zone.none": "Aucune",
+  "pairings.create.zone.help": "Chaque résultat saisi compte aussi dans cette zone (sans les noms des joueurs).",
+  "pairings.zone": "Zone :",
   "pairings.create.password": "Mot de passe organisateur (facultatif)",
   "pairings.create.password.help": "Pour administrer depuis un autre appareil en le tapant, sans le lien. {0} caractères au moins.",
   "pairings.admin.keep.title": "Gardez ce lien d’administration",
@@ -989,6 +993,8 @@
   "zones.noGames": "Pas encore de partie dans cette zone.",
   "zones.more": "Parties plus anciennes",
   "zones.cabal": "Cabale",
+  "zones.fromTournament": "Tournoi",
+  "zones.fromTournament.title": "Partie d’un tournoi rattaché à la zone : elle suit le tournoi (modifiée ou retirée depuis son administration).",
   "zones.form.format": "Format",
   "zones.format.Duel": "1 contre 1",
   "zones.format.Teams": "2 contre 2",
@@ -1057,5 +1063,6 @@
   "pairings.problem.zoneStorageFull": "Le serveur n’accepte plus de nouvelles zones pour l’instant.",
   "pairings.problem.zoneForbidden": "Seuls l’auteur de la saisie (cet appareil ou son compte), les gérants de la zone et les admins la modifient.",
   "pairings.problem.zoneNotFound": "Aucune zone avec ce code.",
-  "pairings.problem.zoneGameNotFound": "Cet affrontement n’existe plus."
+  "pairings.problem.zoneGameNotFound": "Cet affrontement n’existe plus.",
+  "pairings.problem.zoneGameFromTournament": "Cette partie vient d’un tournoi : modifiez-la depuis l’administration du tournoi."
 }

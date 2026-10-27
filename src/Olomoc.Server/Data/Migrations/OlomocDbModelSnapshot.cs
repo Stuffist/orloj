@@ -361,6 +361,13 @@ namespace Olomoc.Server.Data.Migrations
                     b.Property<string>("SubmitterId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TournamentCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TournamentTable")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -374,6 +381,8 @@ namespace Olomoc.Server.Data.Migrations
                     b.HasIndex("SubmitterId");
 
                     b.HasIndex("ZoneCode", "Id");
+
+                    b.HasIndex("ZoneCode", "TournamentCode");
 
                     b.ToTable("ZoneGames", (string)null);
                 });

@@ -2,6 +2,7 @@
 @inject LocalizationService L
 @inject CatalogService Catalog
 @inject TournamentApi Api
+@inject ZoneApi Zones
 @inject MyTournaments Mine
 @inject NavigationManager Nav
 @inject IJSRuntime JS
@@ -103,6 +104,20 @@ else
                     <span><strong>@L.Ui("pairings.mode.alignment")</strong> — @L.Ui("pairings.mode.alignment.help")</span>
                 </label>
             </fieldset>
+            @if (_zones.Count > 0)
+            {
+                <div class="field">
+                    <label for="t-zone">@L.Ui("pairings.create.zone")</label>
+                    <select id="t-zone" value="@_zone" @onchange="e => _zone = e.Value?.ToString() ?? string.Empty">
+                        <option value="">@L.Ui("pairings.create.zone.none")</option>
+                        @foreach (var z in _zones)
+                        {
+                            <option value="@z.Code">@z.Name</option>
+                        }
+                    </select>
+                    <span class="hint">@L.Ui("pairings.create.zone.help")</span>
+                </div>
+            }
             <div class="field">
                 <label for="t-password">@L.Ui("pairings.create.password")</label>
                 <input id="t-password" type="password" autocomplete="new-password" maxlength="@TournamentRules.MaxPasswordLength"
@@ -132,6 +147,8 @@ else
     private bool _avoidSame;
     private string _password = "";
     private bool _excludeFromStats;
+    private string _zone = "";
+    private List<ZoneSummary> _zones = new();        // zones not closed, for the results to count there
     private IReadOnlyList<Problem>? _problems;
     private bool _busy;
 
@@ -141,6 +158,9 @@ else
         await L.EnsureLoadedAsync();
         await Catalog.EnsureLoadedAsync();
         await Mine.EnsureLoadedAsync();
+        // Zones: optional; without the server, the field is simply left out.
+        _zones = ((await Zones.ListAsync()).Value ?? new()).Where(z => z.Status != ZoneStatus.Closed)
+            .OrderByDescending(z => z.Status == ZoneStatus.Open).ThenBy(z => z.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         _ready = true;
     }
 
@@ -160,7 +180,7 @@ else
         try
         {
             var result = await Api.CreateAsync(new CreateTournamentRequest(_name.Trim(), _date, _rounds, _cabals, _mode, _avoidSame,
-                _password.Length == 0 ? null : _password, _excludeFromStats));
+                _password.Length == 0 ? null : _password, _excludeFromStats, _zone.Length == 0 ? null : _zone));
             if (result.Value is not { } created)
             {
                 _problems = result.Problems;
