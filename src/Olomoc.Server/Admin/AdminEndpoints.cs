@@ -19,8 +19,10 @@ namespace Olomoc.Server.Admin;
 /// </summary>
 public static class AdminEndpoints
 {
-    /// <summary>Server start time (overview).</summary>
-    public static readonly DateTimeOffset StartedAt = DateTimeOffset.UtcNow;
+    /// <summary>Server start time (overview). Taken from the process, not from a static field
+    /// initializer: those run lazily on first access, i.e. on the first overview request.</summary>
+    public static readonly DateTimeOffset StartedAt =
+        new(System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime(), TimeSpan.Zero);
 
     public static void MapAdmin(this WebApplication app, string dataDirectory)
     {
