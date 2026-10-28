@@ -112,7 +112,8 @@ else
                         <option value="">@L.Ui("pairings.create.zone.none")</option>
                         @foreach (var z in _zones)
                         {
-                            <option value="@z.Code">@z.Name</option>
+                            @* Zones the organizer does not manage (account manager or admin): marked. *@
+                            <option value="@z.Code">@(z.CanManage ? z.Name : L.Ui("pairings.create.zone.notMine", z.Name))</option>
                         }
                     </select>
                     <span class="hint">@L.Ui("pairings.create.zone.help")</span>

@@ -839,6 +839,7 @@
   "pairings.admin.delete.mismatch": "Code incorrect : le tournoi n’a pas été supprimé.",
   "pairings.create.zone": "Zone des Rencontres dystopiques (facultatif)",
   "pairings.create.zone.none": "Aucune",
+  "pairings.create.zone.notMine": "{0} — gérée par d’autres",
   "pairings.create.zone.help": "Chaque résultat saisi compte aussi dans cette zone (sans les noms des joueurs).",
   "pairings.zone": "Zone :",
   "pairings.create.password": "Mot de passe organisateur (facultatif)",

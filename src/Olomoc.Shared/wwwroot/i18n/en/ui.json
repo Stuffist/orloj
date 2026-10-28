@@ -839,6 +839,7 @@
   "pairings.admin.delete.mismatch": "Wrong code: the tournament was not deleted.",
   "pairings.create.zone": "Dystopian Encounters zone (optional)",
   "pairings.create.zone.none": "None",
+  "pairings.create.zone.notMine": "{0} — managed by others",
   "pairings.create.zone.help": "Each result entered also counts in this zone (without the players' names).",
   "pairings.zone": "Zone:",
   "pairings.create.password": "Organizer password (optional)",
