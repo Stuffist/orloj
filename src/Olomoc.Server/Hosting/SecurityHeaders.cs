@@ -5,7 +5,8 @@ namespace Olomoc.Server.Hosting;
 /// <list type="bullet">
 /// <item>CSP: the site's scripts, styles and data only (Blazor WebAssembly: 'wasm-unsafe-eval'
 /// to compile the runtime, inline styles for style= attributes); data:/blob: images
-/// (QR codes, PNG card sheet);</item>
+/// (QR codes, PNG card sheet), https: images (zone logos: a link set by the zone's managers,
+/// never stored by the server; no Referer sent);</item>
 /// <item>no display in a frame (frame-ancestors, X-Frame-Options): no clickjacking on the
 /// admin page;</item>
 /// <item>no Referer: outgoing links do not reveal the pages visited;</item>
@@ -19,7 +20,7 @@ public static class SecurityHeaders
         "default-src 'self'; " +
         "script-src 'self' 'wasm-unsafe-eval'; " +
         "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data: blob:; " +
+        "img-src 'self' data: blob: https:; " +
         "connect-src 'self'; " +
         "object-src 'none'; " +
         "base-uri 'self'; " +

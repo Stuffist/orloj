@@ -125,4 +125,6 @@ Language: `olomoc.lang` (localStorage); interface texts `i18n/*/ui.json`, card t
     or by a manager or an admin;
   - 500 zones and 10,000 games per zone; zones are never purged;
   - entries without an account are only limited per IP address (`RATE_ZONE_ENTRIES_PER_HOUR`):
-    managers delete the unwanted ones.
+    managers delete the unwanted ones;
+  - a zone's logo is a link to an image on another site (the CSP accepts `https:` images for it):
+    that site sees the visitors' IP address, and the image disappears if the link breaks.

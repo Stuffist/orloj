@@ -197,11 +197,22 @@ public sealed class ZoneApiTests : IDisposable
         Assert.Equal(HttpStatusCode.NoContent, (await Send(bob, HttpMethod.Delete, $"/api/zones/{mine}/games/{entry.Id}")).StatusCode);
 
         // Settings: the manager, not another account, not anonymous.
-        var settings = new ZoneSettingsRequest("Club de Bob (mardi)", "Nouvelle salle", ZoneKind.Club, Today.AddDays(-30), null, false);
+        var settings = new ZoneSettingsRequest("Club de Bob (mardi)", "Nouvelle salle", ZoneKind.Club, Today.AddDays(-30), null, false,
+            " https://example.org/bob.png ");
         Assert.Equal(HttpStatusCode.Forbidden, (await Send(carl, HttpMethod.Put, $"/api/zones/{mine}", settings)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Send(anonymous, HttpMethod.Put, $"/api/zones/{mine}", settings)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Send(bob, HttpMethod.Put, $"/api/zones/{mine}", settings)).StatusCode);
         Assert.Equal("Club de Bob (mardi)", (await Zone(anonymous, mine)).Name);
+
+        // Logo: a link only (https), kept trimmed, in the zone and the list.
+        Assert.Equal("https://example.org/bob.png", (await Zone(anonymous, mine)).Logo);
+        Assert.Equal("https://example.org/bob.png",
+            (await Read<List<ZoneSummary>>(await anonymous.GetAsync("/api/zones"))).Single(z => z.Code == mine).Logo);
+        var badLogo = await Send(bob, HttpMethod.Put, $"/api/zones/{mine}", settings with { Logo = "javascript:alert(1)" });
+        Assert.Equal(HttpStatusCode.BadRequest, badLogo.StatusCode);
+        Assert.Equal(["zoneLogo"], await Keys(badLogo));
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(bob, HttpMethod.Put, $"/api/zones/{mine}", settings with { Logo = "" })).StatusCode);
+        Assert.Null((await Zone(anonymous, mine)).Logo);
     }
 
     [Fact]

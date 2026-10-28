@@ -1,0 +1,9 @@
+@* Logo of a zone: an image from the link chosen by its managers (https, never stored by the server).
+   Decorative (the zone's name is next to it): empty alt, so a broken link shows nothing. No Referer. *@
+
+<img class="zn-logo @Class" src="@Url" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
+
+@code {
+    [Parameter, EditorRequired] public string Url { get; set; } = "";
+    [Parameter] public string? Class { get; set; }
+}

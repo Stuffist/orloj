@@ -7,7 +7,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
-@* Settings of a zone. Its managers: name, description, kind, dates, closing by hand. The admins, in
+@* Settings of a zone. Its managers: name, description, logo (link), kind, dates, closing by hand. The admins, in
    addition: creation, dominance mode, visibility, managers, deletion. *@
 
 @if (!_ready)
@@ -53,6 +53,18 @@ else
                 <textarea id="zn-description" class="zn-textarea" rows="4" maxlength="@ZoneRules.MaxDescriptionLength"
                           placeholder="@L.Ui("zones.field.description.placeholder")"
                           @oninput="e => _description = e.Value?.ToString() ?? string.Empty">@_description</textarea>
+            </div>
+            <div class="field">
+                <label for="zn-logo">@L.Ui("zones.field.logo")</label>
+                <div class="zn-logo-field">
+                    @if (ZoneRules.CleanLogo(_logo) is { } preview)
+                    {
+                        <ZoneLogo Url="@preview" />
+                    }
+                    <input id="zn-logo" type="url" inputmode="url" maxlength="@ZoneRules.MaxLogoLength" value="@_logo" autocomplete="off"
+                           spellcheck="false" placeholder="https://…" @onchange="e => _logo = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <span class="hint">@L.Ui("zones.field.logo.help")</span>
             </div>
             <div class="tn-fields">
                 <div class="field">
@@ -132,7 +144,7 @@ else
     private ZoneView? _zone;
     private IReadOnlyList<Problem>? _problems;
 
-    private string _name = "", _description = "", _managers = "";
+    private string _name = "", _description = "", _managers = "", _logo = "";
     private ZoneKind _kind = ZoneKind.Club;
     private DateOnly? _start, _end;
     private bool _closed, _hidden;
@@ -155,6 +167,7 @@ else
             {
                 _name = z.Name;
                 _description = z.Description;
+                _logo = z.Logo ?? "";
                 _kind = z.Kind;
                 _start = z.StartDate;
                 _end = z.EndDate;
@@ -183,7 +196,7 @@ else
             if (IsAdmin)
             {
                 var request = new ZoneAdminRequest(_name.Trim(), _description, _kind, _start, _end, _closed, _mode, _hidden,
-                    _managers.Split(',', ';', ' ').Select(n => n.Trim()).Where(n => n.Length > 0).ToList());
+                    _managers.Split(',', ';', ' ').Select(n => n.Trim()).Where(n => n.Length > 0).ToList(), _logo.Trim());
                 if (IsNew)
                 {
                     var created = await Api.CreateAsync(request);
@@ -197,7 +210,8 @@ else
             }
             else
             {
-                var updated = await Api.UpdateSettingsAsync(Code!, new ZoneSettingsRequest(_name.Trim(), _description, _kind, _start, _end, _closed));
+                var updated = await Api.UpdateSettingsAsync(Code!, new ZoneSettingsRequest(_name.Trim(), _description, _kind, _start, _end, _closed,
+                    _logo.Trim()));
                 _problems = updated.Problems;
                 _saved = updated.Ok;
             }

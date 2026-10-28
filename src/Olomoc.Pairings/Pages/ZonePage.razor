@@ -25,7 +25,13 @@ else
 {
     <section class="panel tn-head">
         <div class="tn-head-main">
-            <h2>@z.Name</h2>
+            <h2 class="zn-title">
+                @if (z.Logo is { } logo)
+                {
+                    <ZoneLogo Url="@logo" />
+                }
+                @z.Name
+            </h2>
             <p class="tn-meta">
                 <span>@L.Ui($"zones.kind.{z.Kind}")</span>
                 @if (L.Period(z.StartDate, z.EndDate) is { Length: > 0 } period)

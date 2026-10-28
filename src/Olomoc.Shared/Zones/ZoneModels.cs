@@ -31,6 +31,8 @@ public sealed class Zone : IStoredDocument
     public string Name { get; set; } = "";
     /// <summary>Place, schedule, contact… (plain text).</summary>
     public string Description { get; set; } = "";
+    /// <summary>Link to an image (https), shown on the map and the zone page; never downloaded by the server.</summary>
+    public string? Logo { get; set; }
     public ZoneKind Kind { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }

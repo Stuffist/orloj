@@ -701,7 +701,17 @@ optional, shown in the list of games, never counted.
   Darkness games, then the leading faction of that alignment; a tie at the top: no dominance.
   Computed live: an open zone is "Dominated by the Light — leading: …", a closed one "Closed under
   the Light, dominated by …".
-- **My zones** (top of the list): zones managed, and zones seen on this device.
+- **Map of the zones** (top of `/zones/`, `Shared/ZoneMap.razor`): a honeycomb, one hexagon per
+  zone (hidden ones left out), placed automatically in the order of the list, on a city plan drawn
+  in CSS. Green: open (with the leading faction's emblem once there is one); hatched: upcoming;
+  pale with a gold edge: closed under the Light; dark brown: closed under the Darkness, with the
+  dominant faction's emblem; grey: closed without dominance (tie, no games). The detailed list
+  stays below.
+- **Logo**: managers and admins can give a zone a logo as a **link** to an image (https only,
+  500 characters at most); the server stores the link, never the image. Shown on the map, the
+  zone page and the list (`Shared/ZoneLogo.razor`, no Referer sent). The CSP accepts `https:`
+  images for that.
+- **My zones** (below the map): zones managed, and zones seen on this device.
 - **Tournaments bound to a zone**: when creating a tournament, an optional zone (not closed). Each
   result entered is copied into it as a duel (`Zones/TournamentZone.cs`, `TournamentZoneSync.cs`):
   factions, cabal played, P1, end, scenario, **without the names** (the zone keeps its games after
@@ -798,10 +808,11 @@ tests/Olomoc.Tests/   xUnit
   rounds, VP entry, drops, export, share links.
 - `Services/TournamentApi.cs` (API calls), `Services/MyTournaments.cs` (tokens kept on the
   device).
-- `Pages/Zones.razor` (list, My zones), `ZonePage.razor` (a zone: entry, games, statistics),
+- `Pages/Zones.razor` (map, My zones, list), `ZonePage.razor` (a zone: entry, games, statistics),
   `ZoneManage.razor` (settings; creation by an admin), `ZoneStatsAll.razor`;
   `Shared/EncounterForm.razor` (entry of a game), `StatsSections.razor` (statistics panels,
-  shared with `/pairings/stats`), `DominanceLine.razor`; `Services/ZoneApi.cs`,
+  shared with `/pairings/stats`), `DominanceLine.razor`, `ZoneMap.razor` (map of the zones),
+  `ZoneLogo.razor`, `ZoneText.cs`; `Services/ZoneApi.cs`,
   `Services/MyZoneEntries.cs` (entry tokens kept on the device).
 
 **`src/Olomoc.Online`** (Razor library, `/online/…` routes)

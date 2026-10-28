@@ -6,8 +6,8 @@
 @inject ZoneApi Api
 @inject MyZoneEntries Mine
 
-@* Dystopian Encounters: the zones (open first, then upcoming, then closed, by year), with their
-   dominance; "My zones" (managed, or where this device entered games) at the top. *@
+@* Dystopian Encounters: the map of the zones, "My zones" (managed, or where this device entered
+   games), then the list (open first, then upcoming, then closed, by year), with their dominance. *@
 
 @if (!_ready)
 {
@@ -27,6 +27,8 @@ else
         </div>
         <Problems Items="_problems" />
     </section>
+
+    <ZoneMap Zones="_zones" />
 
     @if (Accounts.Current is not { IsAdmin: true } && _zones.Any(z => z.CanManage) || Mine.Zones.Count > 0)
     {
@@ -111,14 +113,14 @@ else
     {
         get
         {
-            var open = _zones.Where(z => z.Status == ZoneStatus.Open).OrderBy(z => z.EndDate ?? DateOnly.MaxValue).ThenBy(z => z.Name).ToList();
+            var ordered = ZoneText.Ordered(_zones).ToList();       // same order as the map
+            var open = ordered.Where(z => z.Status == ZoneStatus.Open).ToList();
             if (open.Count > 0) yield return (L.Ui("zones.group.open"), open);
-            var upcoming = _zones.Where(z => z.Status == ZoneStatus.Upcoming).OrderBy(z => z.StartDate).ThenBy(z => z.Name).ToList();
+            var upcoming = ordered.Where(z => z.Status == ZoneStatus.Upcoming).ToList();
             if (upcoming.Count > 0) yield return (L.Ui("zones.group.upcoming"), upcoming);
-            foreach (var year in _zones.Where(z => z.Status == ZoneStatus.Closed).GroupBy(z => (z.EndDate ?? z.StartDate)?.Year)
+            foreach (var year in ordered.Where(z => z.Status == ZoneStatus.Closed).GroupBy(z => (z.EndDate ?? z.StartDate)?.Year)
                          .OrderByDescending(g => g.Key ?? 0))
-                yield return (year.Key is { } y ? L.Ui("zones.group.closedIn", y) : L.Ui("zones.group.closed"),
-                    year.OrderByDescending(z => z.EndDate).ThenBy(z => z.Name).ToList());
+                yield return (year.Key is { } y ? L.Ui("zones.group.closedIn", y) : L.Ui("zones.group.closed"), year.ToList());
         }
     }
 
@@ -126,6 +128,10 @@ else
     private RenderFragment Card(ZoneSummary z, string? forget = null) =>
         @<li class="zn-card">
             <div class="zn-card-head">
+                @if (z.Logo is { } logo)
+                {
+                    <ZoneLogo Url="@logo" Class="small" />
+                }
                 <a class="tn-mine-name" href="zones/@z.Code">@z.Name</a>
                 <span class="tn-phase @ZoneText.StatusClass(z.Status)">@L.Ui($"zones.status.{z.Status}")</span>
                 <span class="tn-role">@L.Ui($"zones.kind.{z.Kind}")</span>

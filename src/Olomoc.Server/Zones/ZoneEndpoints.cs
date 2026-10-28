@@ -58,7 +58,7 @@ public static class ZoneEndpoints
             var manages = access.Manages(z);
             if (z.Hidden && !manages) continue;
             list.Add(new ZoneSummary(z.Code, z.Name, z.Description, z.Kind, z.StartDate, z.EndDate, z.StatusOn(Today), z.Hidden,
-                counts.GetValueOrDefault(z.Code), await stats.DominanceAsync(z), manages));
+                counts.GetValueOrDefault(z.Code), await stats.DominanceAsync(z), manages, z.Logo));
         }
         return Results.Json(list, TournamentJson.Options);
     }
@@ -76,7 +76,7 @@ public static class ZoneEndpoints
                 if (await users.FindByIdAsync(id) is { UserName: { } name }) managers.Add(name);
         }
         return Results.Json(new ZoneView(z.Code, z.Name, z.Description, z.Kind, z.StartDate, z.EndDate, z.StatusOn(Today), z.Dominance,
-            z.Hidden, z.Closed, await stats.DominanceAsync(z), await stats.OfZoneAsync(z.Code), manages, access.IsAdmin, managers),
+            z.Hidden, z.Closed, await stats.DominanceAsync(z), await stats.OfZoneAsync(z.Code), manages, access.IsAdmin, managers, z.Logo),
             TournamentJson.Options);
     }
 
@@ -146,18 +146,18 @@ public static class ZoneEndpoints
 
     // ---- Settings ----
 
-    /// <summary>Managers and admins: name, description, kind, dates, closing by hand.</summary>
+    /// <summary>Managers and admins: name, description, logo, kind, dates, closing by hand.</summary>
     private static async Task<IResult> UpdateSettings(string code, ZoneSettingsRequest body, HttpContext ctx, UserManager<OlomocUser> users,
         ZoneStore zones, ZoneStats stats)
     {
         var access = await Access.OfAsync(ctx, users);
         if (access.UserId is null) return Results.Unauthorized();
-        var problems = ZoneRules.CheckSettings(body.Name, body.Description, body.StartDate, body.EndDate);
+        var problems = ZoneRules.CheckSettings(body.Name, body.Description, body.StartDate, body.EndDate, body.Logo);
         if (problems.Count > 0) return Problems(problems, 400);
         var result = await zones.UpdateAsync(code, z =>
         {
             if (!access.Manages(z)) return (false, Forbidden(true));
-            Apply(z, body.Name, body.Description, body.Kind, body.StartDate, body.EndDate, body.Closed);
+            Apply(z, body.Name, body.Description, body.Kind, body.StartDate, body.EndDate, body.Closed, body.Logo);
             return (true, Results.NoContent());
         });
         if (result is null) return NotFound();
@@ -208,7 +208,7 @@ public static class ZoneEndpoints
     // Settings, and managers found by their username.
     private static async Task<(List<string> Managers, List<Problem> Problems)> CheckAdminAsync(ZoneAdminRequest body, UserManager<OlomocUser> users)
     {
-        var problems = ZoneRules.CheckSettings(body.Name, body.Description, body.StartDate, body.EndDate).ToList();
+        var problems = ZoneRules.CheckSettings(body.Name, body.Description, body.StartDate, body.EndDate, body.Logo).ToList();
         if (!Enum.IsDefined(body.Dominance) || !Enum.IsDefined(body.Kind)) problems.Add(Problem.Of("zoneGame"));
         var names = (body.Managers ?? []).Select(n => n.Trim()).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (names.Count > ZoneRules.MaxManagers) problems.Add(Problem.Of("zoneManagers", ZoneRules.MaxManagers.ToString()));
@@ -221,7 +221,8 @@ public static class ZoneEndpoints
         return (ids, problems);
     }
 
-    private static void Apply(Zone z, string name, string? description, ZoneKind kind, DateOnly? start, DateOnly? end, bool closed)
+    private static void Apply(Zone z, string name, string? description, ZoneKind kind, DateOnly? start, DateOnly? end, bool closed,
+        string? logo)
     {
         z.Name = name.Trim();
         z.Description = description?.Trim() ?? "";
@@ -229,11 +230,12 @@ public static class ZoneEndpoints
         z.StartDate = start;
         z.EndDate = end;
         z.Closed = closed;
+        z.Logo = ZoneRules.CleanLogo(logo);
     }
 
     private static void ApplyAdmin(Zone z, ZoneAdminRequest body, List<string> managers)
     {
-        Apply(z, body.Name, body.Description, body.Kind, body.StartDate, body.EndDate, body.Closed);
+        Apply(z, body.Name, body.Description, body.Kind, body.StartDate, body.EndDate, body.Closed, body.Logo);
         z.Dominance = body.Dominance;
         z.Hidden = body.Hidden;
         z.ManagerIds = managers;

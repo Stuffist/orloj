@@ -12,16 +12,31 @@ public static class ZoneRules
 {
     public const int MaxNameLength = TournamentRules.MaxNameLength, MaxDescriptionLength = 1000;
     public const int MaxZones = 500, MaxGamesPerZone = 10_000, MaxManagers = 10;
+    public const int MaxLogoLength = 500;
 
     public static int PlayersPerSide(GameFormat format) => format == GameFormat.Teams ? 2 : 1;
 
-    public static IReadOnlyList<Problem> CheckSettings(string? name, string? description, DateOnly? start, DateOnly? end)
+    public static IReadOnlyList<Problem> CheckSettings(string? name, string? description, DateOnly? start, DateOnly? end,
+        string? logo = null)
     {
         var problems = new List<Problem>();
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > MaxNameLength) problems.Add(Problem.Of("zoneName", MaxNameLength.ToString()));
         if ((description?.Length ?? 0) > MaxDescriptionLength) problems.Add(Problem.Of("zoneDescription", MaxDescriptionLength.ToString()));
         if (start is { } s && end is { } e && e < s) problems.Add(Problem.Of("zoneDates"));
+        if (!string.IsNullOrWhiteSpace(logo) && CleanLogo(logo) is null) problems.Add(Problem.Of("zoneLogo", MaxLogoLength.ToString()));
         return problems;
+    }
+
+    /// <summary>
+    /// Logo of a zone: an absolute https link to an image (the server stores the link only, never the
+    /// image), without credentials; null when empty or invalid.
+    /// </summary>
+    public static string? CleanLogo(string? logo)
+    {
+        var text = logo?.Trim();
+        if (string.IsNullOrEmpty(text) || text.Length > MaxLogoLength) return null;
+        return Uri.TryCreate(text, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps
+            && uri.UserInfo.Length == 0 && uri.Host.Length > 0 ? text : null;
     }
 
     /// <summary>

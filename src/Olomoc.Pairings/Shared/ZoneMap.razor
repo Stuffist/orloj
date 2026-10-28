@@ -1,0 +1,77 @@
+@* Map of the zones: a honeycomb, one hexagon per zone (hidden ones left out), in the order of the
+   list. Color: open, upcoming, closed under the Light or the Darkness, closed without dominance.
+   Inside: the zone's logo (link), its name, and the dominant faction's emblem (small while open). *@
+@inject LocalizationService L
+
+@if (Shown.Count > 0)
+{
+    <section class="zn-map" aria-labelledby="zn-map-title">
+        <h2 id="zn-map-title" class="zn-map-title">@L.Ui("zones.map.title")</h2>
+        <div class="zn-map-body">
+            <ul class="zn-hexes">
+                @foreach (var z in Shown)
+                {
+                    var label = Label(z);
+                    <li class="zn-hex-cell @ZoneText.MapClass(z)">
+                        <a class="zn-hex" href="zones/@z.Code" title="@label" aria-label="@label"><span class="zn-hex-face">
+                            @if (z.Logo is { } logo)
+                            {
+                                <ZoneLogo Url="@logo" Class="zn-hex-logo" />
+                            }
+                            <span class="zn-hex-name">@z.Name</span>
+                            @switch (z.Status)
+                            {
+                                case ZoneStatus.Open:
+                                    <span class="zn-hex-state">@L.Ui("zones.status.Open")</span>
+                                    @if (z.Dominance.Faction is { } leader)
+                                    {
+                                        <span class="zn-hex-emblem small"><Emblem Faction="@leader" /></span>
+                                    }
+                                    break;
+                                case ZoneStatus.Upcoming:
+                                    <span class="zn-hex-state">@L.Ui("zones.status.Upcoming")</span>
+                                    @if (z.StartDate is { } start)
+                                    {
+                                        <span class="zn-hex-date">@L.Ui("zones.map.startsOn", ZoneText.Date(start))</span>
+                                    }
+                                    break;
+                                default:
+                                    @if (z.Dominance is { Alignment: not null, Faction: { } faction })
+                                    {
+                                        <span class="zn-hex-emblem"><Emblem Faction="@faction" /></span>
+                                    }
+                                    else if (z.Dominance.Alignment is null)
+                                    {
+                                        @* Tie, or no games: nothing to show. *@
+                                        <span class="zn-hex-none" aria-hidden="true">—</span>
+                                    }
+                                    break;
+                            }
+                        </span></a>
+                    </li>
+                }
+            </ul>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ZoneSummary> Zones { get; set; } = [];
+
+    private List<ZoneSummary> Shown => ZoneText.Ordered(Zones.Where(z => !z.Hidden)).ToList();
+
+    // Name, state, period, number of games, dominance: for the tooltip and the screen readers.
+    private string Label(ZoneSummary z)
+    {
+        var parts = new List<string> { z.Name, L.Ui($"zones.status.{z.Status}") };
+        if (L.Period(z.StartDate, z.EndDate) is { Length: > 0 } period) parts.Add(period);
+        parts.Add(L.Ui("zones.games", z.Games));
+        if (z.Dominance.Alignment is { } alignment)
+        {
+            var dominance = L.Ui(z.Status == ZoneStatus.Closed ? "zones.dominance.closedUnder" : "zones.dominance.dominatedBy",
+                L.Ui($"zones.alignment.{alignment}"));
+            parts.Add(z.Dominance.Faction is { } f ? $"{dominance} ({L.FactionName(f)})" : dominance);
+        }
+        return string.Join(" · ", parts);
+    }
+}

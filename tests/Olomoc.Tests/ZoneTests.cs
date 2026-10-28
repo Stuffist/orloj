@@ -132,6 +132,27 @@ public class ZoneTests
         Assert.Equal(["zoneDescription"], ZoneRules.CheckSettings("Club", new string('x', 1001), null, null).Select(p => p.Key));
     }
 
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("  ", true)]
+    [InlineData("https://example.org/logo.png", true)]
+    [InlineData("http://example.org/logo.png", false)]
+    [InlineData("javascript:alert(1)", false)]
+    [InlineData("data:image/png;base64,AAAA", false)]
+    [InlineData("https://user:pass@example.org/logo.png", false)]
+    [InlineData("/img/logo.png", false)]
+    public void Logo_is_an_https_link(string? logo, bool valid)
+    {
+        Assert.Equal(valid ? Array.Empty<string>() : ["zoneLogo"], ZoneRules.CheckSettings("Club", null, null, null, logo).Select(p => p.Key));
+    }
+
+    [Fact]
+    public void Logo_trimmed_and_limited()
+    {
+        Assert.Equal("https://example.org/l.png", ZoneRules.CleanLogo("  https://example.org/l.png "));
+        Assert.Null(ZoneRules.CleanLogo("https://example.org/" + new string('a', ZoneRules.MaxLogoLength)));
+    }
+
     // ---- Statistics and dominance ----
 
     private static async Task<StatsView> Stats(params ZoneGame[] games)

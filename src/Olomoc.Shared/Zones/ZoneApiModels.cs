@@ -15,7 +15,7 @@ public static class ZoneHeaders
 /// manager or admin.
 /// </summary>
 public sealed record ZoneSummary(string Code, string Name, string Description, ZoneKind Kind, DateOnly? StartDate, DateOnly? EndDate,
-    ZoneStatus Status, bool Hidden, int Games, Dominance Dominance, bool CanManage);
+    ZoneStatus Status, bool Hidden, int Games, Dominance Dominance, bool CanManage, string? Logo = null);
 
 /// <summary>
 /// A zone, with its statistics and its dominance. <see cref="Managers"/> (usernames): for its
@@ -23,7 +23,7 @@ public sealed record ZoneSummary(string Code, string Name, string Description, Z
 /// </summary>
 public sealed record ZoneView(string Code, string Name, string Description, ZoneKind Kind, DateOnly? StartDate, DateOnly? EndDate,
     ZoneStatus Status, DominanceMode Mode, bool Hidden, bool Closed, Dominance Dominance, StatsView Stats,
-    bool CanManage, bool IsAdmin, IReadOnlyList<string>? Managers);
+    bool CanManage, bool IsAdmin, IReadOnlyList<string>? Managers, string? Logo = null);
 
 /// <summary>
 /// A recorded game: id, content, date of entry. <see cref="CanEdit"/>: through the account (its
@@ -40,12 +40,12 @@ public sealed record ZoneGamesPage(IReadOnlyList<ZoneGameView> Games, long? Next
 /// <summary>Entry token: returned only once, kept by the device to change or delete the game.</summary>
 public sealed record ZoneGameCreated(long Id, string EditToken);
 
-/// <summary>Settings changed by a manager (or an admin).</summary>
+/// <summary>Settings changed by a manager (or an admin); <see cref="Logo"/>: link to an image (https).</summary>
 public sealed record ZoneSettingsRequest(string Name, string? Description, ZoneKind Kind, DateOnly? StartDate, DateOnly? EndDate,
-    bool Closed);
+    bool Closed, string? Logo = null);
 
 /// <summary>Creation or change by an admin: the settings, plus the dominance mode, the visibility, the managers (usernames).</summary>
 public sealed record ZoneAdminRequest(string Name, string? Description, ZoneKind Kind, DateOnly? StartDate, DateOnly? EndDate,
-    bool Closed, DominanceMode Dominance, bool Hidden, IReadOnlyList<string>? Managers);
+    bool Closed, DominanceMode Dominance, bool Hidden, IReadOnlyList<string>? Managers, string? Logo = null);
 
 public sealed record ZoneCreated(string Code);

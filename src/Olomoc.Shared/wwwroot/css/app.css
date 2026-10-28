@@ -1106,3 +1106,101 @@ body {
     margin: .3rem 0 0; font-size: .85rem; overflow: hidden;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
 }
+
+/* Zone logo: an image from a link (decorative, next to the name) */
+.zn-logo { width: 2.4rem; height: 2.4rem; object-fit: contain; flex: none; vertical-align: middle; }
+.zn-logo.small { width: 1.6rem; height: 1.6rem; }
+.zn-title { display: flex; align-items: center; gap: .55rem; }
+.zn-logo-field { display: flex; align-items: center; gap: .6rem; }
+.zn-logo-field input { flex: 1; min-width: 0; }
+
+/* Map of the zones: an old city plan (CSS only), a honeycomb of hexagons in it.
+   Honeycomb: inline-block cells; the float before them, shaped by shape-outside, shifts every
+   other row by half a hexagon (pure CSS, follows the width). --s: width of a hexagon. */
+.zn-map {
+    position: relative; margin-bottom: 1rem; padding: 1.4rem 1.5rem 1.7rem; border-radius: 10px;
+    border: 1px solid #5f5034; color: #efe6d2;
+    background:
+        radial-gradient(ellipse at 22% 18%, rgba(190, 150, 80, .2), transparent 55%),
+        radial-gradient(ellipse at 80% 85%, rgba(90, 125, 75, .18), transparent 55%),
+        radial-gradient(ellipse at 60% 40%, rgba(120, 90, 60, .14), transparent 45%),
+        repeating-linear-gradient(0deg, rgba(214, 190, 140, .055) 0 1px, transparent 1px 32px),
+        repeating-linear-gradient(90deg, rgba(214, 190, 140, .055) 0 1px, transparent 1px 32px),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .75 0 0 0 0 .55 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+        linear-gradient(160deg, #2c271e, #1c1915 55%, #26211a);
+    box-shadow: inset 0 0 70px rgba(0, 0, 0, .65);
+}
+/* Double gold frame, and Art Deco corners */
+.zn-map::before {
+    content: ""; position: absolute; inset: 7px; pointer-events: none; border-radius: 6px;
+    border: 1px solid rgba(201, 169, 97, .5); outline: 1px solid rgba(201, 169, 97, .22); outline-offset: 3px;
+}
+.zn-map::after {
+    --c: rgba(214, 184, 112, .8);
+    content: ""; position: absolute; inset: 14px; pointer-events: none;
+    background:
+        linear-gradient(var(--c), var(--c)) top left / 22px 2px, linear-gradient(var(--c), var(--c)) top left / 2px 22px,
+        linear-gradient(var(--c), var(--c)) top right / 22px 2px, linear-gradient(var(--c), var(--c)) top right / 2px 22px,
+        linear-gradient(var(--c), var(--c)) bottom left / 22px 2px, linear-gradient(var(--c), var(--c)) bottom left / 2px 22px,
+        linear-gradient(var(--c), var(--c)) bottom right / 22px 2px, linear-gradient(var(--c), var(--c)) bottom right / 2px 22px;
+    background-repeat: no-repeat;
+}
+.zn-map-title {
+    display: flex; align-items: center; gap: .8rem; margin: 0 0 1rem; position: relative; z-index: 1;
+    font-size: .95rem; font-weight: 700; text-transform: uppercase; letter-spacing: .28em; color: #d9c08a;
+}
+.zn-map-title::before, .zn-map-title::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(217, 192, 138, .6), transparent); }
+.zn-map-body { display: flex; position: relative; z-index: 1; }
+.zn-hexes {
+    --s: 8.6rem; --m: 3px; --f: calc(var(--s) * 1.732 + 4 * var(--m) - 1px);
+    flex: 1; min-width: 0; list-style: none; margin: 0; padding: 0 0 calc(var(--s) * .29); font-size: 0;
+}
+.zn-hexes::before {
+    content: ""; float: left; width: calc(var(--s) / 2 + var(--m)); height: 120%;
+    shape-outside: repeating-linear-gradient(#0000 0 calc(var(--f) - 3px), #000 0 var(--f));
+}
+.zn-hex-cell {
+    display: inline-block; vertical-align: top; width: var(--s); height: calc(var(--s) * 1.1547);
+    margin: var(--m); margin-bottom: calc(var(--m) - var(--s) * .2885); font-size: 1rem;
+    transition: filter .15s;
+}
+.zn-hex, .zn-hex-face { clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+.zn-hex { display: block; width: 100%; height: 100%; padding: 2px; background: var(--edge); color: inherit; text-decoration: none; }
+.zn-hex:focus-visible { outline: none; }
+.zn-hex-cell:hover, .zn-hex-cell:focus-within { filter: brightness(1.15) drop-shadow(0 0 7px rgba(232, 205, 140, .55)); }
+.zn-hex-face {
+    width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: .22rem; padding: 0 .7rem; text-align: center; background: var(--fill); color: var(--text, #fff);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .75);
+}
+.zn-hex-name {
+    max-width: 100%; font-size: .74rem; font-weight: 800; line-height: 1.15; letter-spacing: .04em; text-transform: uppercase;
+    overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+}
+.zn-hex-state { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--state, inherit); }
+.zn-hex-date { font-size: .62rem; opacity: .85; }
+.zn-hex-none { font-size: 1.1rem; opacity: .7; line-height: 1; }
+.zn-hex-logo { width: 2.1rem; height: 2.1rem; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .6)); }
+.zn-hex-emblem { display: flex; color: #fff; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .6)); }
+.zn-hex-emblem .emblem { width: 2.5rem; height: 2.5rem; }
+.zn-hex-emblem.small .emblem { width: 1.35rem; height: 1.35rem; }
+.zn-hex-logo + .zn-hex-name + .zn-hex-emblem .emblem { width: 1.9rem; height: 1.9rem; }
+/* Colors: open (green), upcoming (hatched grey), closed under the Light (pale, gold edge), under the
+   Darkness (dark brown), without dominance (grey). Translucent: the plan shows through. */
+.zn-hex-cell.open { --edge: #86c48c; --fill: linear-gradient(180deg, rgba(78, 142, 86, .93), rgba(46, 98, 58, .93)); --state: #cff3d0; }
+.zn-hex-cell.upcoming {
+    --edge: #8c949b; --state: #e4e8eb;
+    --fill: repeating-linear-gradient(135deg, rgba(120, 128, 136, .45) 0 6px, rgba(84, 90, 98, .45) 6px 12px);
+}
+.zn-hex-cell.light { --edge: #e2c46b; --fill: linear-gradient(180deg, rgba(236, 222, 186, .42), rgba(196, 178, 132, .38)); }
+.zn-hex-cell.dark { --edge: #7d5b3b; --fill: linear-gradient(180deg, rgba(64, 44, 30, .96), rgba(32, 23, 17, .96)); --text: #efe2cc; }
+.zn-hex-cell.none { --edge: #7b7b7b; --fill: linear-gradient(180deg, rgba(120, 120, 120, .4), rgba(85, 85, 85, .4)); }
+@media (max-width: 600px) {
+    .zn-map { padding: 1.1rem .8rem 1.3rem; }
+    .zn-map-title { font-size: .8rem; letter-spacing: .18em; }
+    .zn-hexes { --s: 6.7rem; }
+    .zn-hex-face { padding: 0 .45rem; gap: .15rem; }
+    .zn-hex-name { font-size: .64rem; }
+    .zn-hex-logo { width: 1.6rem; height: 1.6rem; }
+    .zn-hex-emblem .emblem { width: 2rem; height: 2rem; }
+}
