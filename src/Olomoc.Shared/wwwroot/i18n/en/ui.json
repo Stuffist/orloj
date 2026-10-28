@@ -1026,6 +1026,7 @@
   "zones.field.logo.help": "https address of an image already online (website, Discord…): Orloj keeps the link only. Shown on the map and the zone page.",
   "zones.map.title": "Zone map",
   "zones.map.startsOn": "From {0}",
+  "zones.map.more": "{0} more zone(s), the oldest: in the list below.",
   "zones.field.start": "Opening",
   "zones.field.end": "Closing",
   "zones.field.closed": "Close the zone now",
