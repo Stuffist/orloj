@@ -130,7 +130,7 @@
       "abilities": [
         {
           "name": "Superstitieux",
-          "gameEffect": "Lors de l'activation d'un rouage allié, vous pouvez aussi activer Robert Kadlec si la phase de planification a bénéficié d'un mécanisme."
+          "gameEffect": "Lors de l'activation d'un rouage allié, si la phase de planification a bénéficié d'un Mécanisme, vous pouvez réattribuer jusqu'à un pion {action} à Robert Kadlec et l'activer."
         }
       ]
     },
@@ -305,12 +305,12 @@
       ]
     },
     "3R20": {
-      "name": "Sergo Dracomir",
+      "name": "Sergo Dragomir",
       "title": "Addict à la Mélisse",
       "abilities": [
         {
           "name": "Provocation",
-          "gameEffect": "Sergo Dracomir gagne un bonus de +2 {melee} lorsqu'il cible avec une attaque frontale un rouage adverse dont la carte d'activation n'est pas révélée."
+          "gameEffect": "Sergo Dragomir gagne un bonus de +2 {melee} lorsqu'il cible avec une attaque frontale un rouage adverse dont la carte d'activation n'est pas révélée."
         }
       ]
     },
@@ -611,7 +611,7 @@
       "abilities": [
         {
           "name": "Leurre ténébreux",
-          "gameEffect": "Poussez vers le rouage équipé tous les rouages hostiles de rang 1 ou 2 situés à 6\" de lui."
+          "gameEffect": "Poussez vers le rouage équipé tous les rouages hostiles de rang 1 ou 2 situés à 4\" de lui."
         }
       ]
     },

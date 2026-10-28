@@ -289,10 +289,10 @@
         "S",
         "S",
         "S",
-        "S",
-        "S",
-        "S",
         "T",
+        "R",
+        "R",
+        "R",
         "R",
         "R",
         "R"
@@ -325,12 +325,12 @@
         "S",
         "S",
         "S",
-        "S",
         "T",
         "S",
         "S",
         "S",
         "T",
+        "S",
         "S",
         "S",
         "S"
@@ -339,7 +339,13 @@
         {
           "timing": "Permanent",
           "actionCost": 0,
-          "darknessCost": 0
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "PLANNING_PHASE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1095,7 +1101,13 @@
         {
           "timing": "Permanent",
           "actionCost": 0,
-          "darknessCost": 0
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "PLANNING_PHASE"
+            }
+          ]
         }
       ],
       "art": {
@@ -1944,7 +1956,7 @@
           "frequencies": [
             {
               "count": 1,
-              "per": "PLANNING_PHASE"
+              "per": "CYCLE"
             },
             {
               "count": 3,
