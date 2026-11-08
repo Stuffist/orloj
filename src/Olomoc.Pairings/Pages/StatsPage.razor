@@ -1,0 +1,118 @@
+@page "/stats"
+@implements IDisposable
+@inject LocalizationService L
+@inject CatalogService Catalog
+@inject TournamentApi Tournaments
+@inject ZoneApi Zones
+
+@* Statistics of Olomòc (/stats/): everything by default, the finished tournaments and the
+   Dystopian Encounters together (a zone game copied from an archived tournament counted once);
+   filters: tournaments only (?source=tournaments), Encounters only (?source=zones). The panels
+   themselves: StatsSections. *@
+
+@if (!_ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else
+{
+    <nav class="zn-tabs" aria-label="@L.Ui("stats.filter.label")">
+        @Filter(null, "stats.filter.all")
+        @Filter("tournaments", "stats.filter.tournaments")
+        @Filter("zones", "stats.filter.zones")
+    </nav>
+
+    @if (_stats is not { } s)
+    {
+        <section class="panel"><Problems Items="_problems" /></section>
+    }
+    else
+    {
+        <section class="panel">
+            @switch (Current)
+            {
+                case "tournaments":
+                    <h2>@L.Ui("pairings.stats.title")</h2>
+                    <p class="tn-meta">@L.Ui("pairings.stats.totals", s.Tournaments, s.Players, s.Games)</p>
+                    <p class="hint">@L.Ui("pairings.stats.method", StatsView.MinGames)</p>
+                    break;
+                case "zones":
+                    <h2>@L.Ui("zones.stats.all")</h2>
+                    <p class="tn-meta">@L.Ui("zones.stats.totals", s.Tournaments, s.Games)</p>
+                    <p class="hint">@L.Ui("zones.stats.method", StatsView.MinGames)</p>
+                    <div class="tn-actions"><a class="btn small" href="zones/">@L.Ui("zones.home")</a></div>
+                    break;
+                default:
+                    <h2>@L.Ui("stats.all.title")</h2>
+                    <p class="tn-meta">@L.Ui("stats.all.totals", s.Tournaments, s.Zones, s.Games)</p>
+                    <p class="hint">@L.Ui("stats.all.method", StatsView.MinGames)</p>
+                    break;
+            }
+        </section>
+
+        @if (Empty(s) is { } empty)
+        {
+            <section class="panel"><p class="empty">@L.Ui(empty)</p></section>
+        }
+        else
+        {
+            <StatsSections Stats="s" Zones="@(Current == "zones")" All="@(Current is null)" />
+        }
+    }
+}
+
+@code {
+    /// <summary>"tournaments", "zones", or nothing: everything.</summary>
+    [SupplyParameterFromQuery] public string? Source { get; set; }
+
+    private bool _ready;
+    private StatsView? _stats;
+    private IReadOnlyList<Problem>? _problems;
+    private string? _loaded;            // filter of _stats
+    private int _request;               // a slower answer for a previous filter is ignored
+
+    private string? Current => Source is "tournaments" or "zones" ? Source : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        await Task.WhenAll(L.EnsureLoadedAsync(), Catalog.EnsureLoadedAsync());
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_ready && _loaded == Current) return;
+        var request = ++_request;
+        var filter = Current;
+        var result = filter switch
+        {
+            "tournaments" => await Tournaments.GetStatsAsync(),
+            "zones" => await Zones.AllStatsAsync(),
+            _ => await Tournaments.GetAllStatsAsync(),
+        };
+        if (request != _request) return;
+        _stats = result.Value;
+        _problems = result.Problems;
+        _loaded = filter;
+        _ready = true;
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnChanged;
+
+    // Nothing to show yet: the message of the filter.
+    private string? Empty(StatsView s) => Current switch
+    {
+        "tournaments" => s.Tournaments == 0 ? "pairings.stats.empty" : null,
+        "zones" => s.Games == 0 ? "zones.noGames" : null,
+        _ => s.Games == 0 && s.Tournaments == 0 ? "stats.empty" : null,
+    };
+
+    private RenderFragment Filter(string? source, string key) => __builder =>
+    {
+        var current = Current == source;
+        <a class="btn @(current ? "primary" : null)" href="@(source is null ? "stats/" : $"stats/?source={source}")"
+           aria-current="@(current ? "page" : null)">@L.Ui(key)</a>
+    };
+}

@@ -61,7 +61,7 @@ the app (`/_framework/`, `/builder/…`, `/pairings/…`) and these files, witho
   version" banner. Each response is copied into the cache on the way.
 - **Offline**, or if the server does not answer within 4 seconds (weak network in a venue), the
   cached copy is used.
-- All the section routes (`/builder/play`, `/pairings/stats`…) are served by the same copy of
+- All the section routes (`/builder/play`, `/stats/`…) are served by the same copy of
   `index.html`. A route never visited therefore also works offline.
 - **The API (`/api/…`) is never cached**: live tournament data, organizer tokens. Offline, the
   Tournaments part shows its interface but not its data.

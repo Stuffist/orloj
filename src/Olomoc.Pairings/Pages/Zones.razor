@@ -19,7 +19,7 @@ else
         <h2>@L.Ui("zones.title")</h2>
         <p class="tn-intro">@L.Ui("zones.intro")</p>
         <div class="tn-actions">
-            <a class="btn" href="zones/stats">@L.Ui("zones.stats.all")</a>
+            <a class="btn" href="stats/?source=zones">@L.Ui("zones.stats.all")</a>
             @if (Accounts.Current is { IsAdmin: true })
             {
                 <a class="btn primary" href="zones/new">@L.Ui("zones.create")</a>

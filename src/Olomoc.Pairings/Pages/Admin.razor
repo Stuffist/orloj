@@ -235,7 +235,7 @@ else
             <input type="checkbox" checked="@v.ExcludeFromStats" disabled="@_busy" @onchange="e => SetExcludeFromStatsAsync(e.Value is true)" />
             <span>@L.Ui("pairings.stats.exclude")</span>
         </label>
-        <p class="hint">@L.Ui("pairings.admin.stats.help") <a href="pairings/stats">@L.Ui("pairings.stats.open")</a></p>
+        <p class="hint">@L.Ui("pairings.admin.stats.help") <a href="stats/?source=tournaments">@L.Ui("pairings.stats.open")</a></p>
     </section>
 
     @* Apart, far from the controls: permanent deletion, confirmed by typing the code again. *@

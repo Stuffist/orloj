@@ -8,14 +8,14 @@
     <h3>@L.Ui("pairings.stats.factions")</h3>
     @foreach (var f in Stats.Factions)
     {
-        <PercentBar Percent="f.Percent" Detail="@L.Ui(Zones ? "zones.stats.participations" : "pairings.stats.players", f.Count)">
+        <PercentBar Percent="f.Percent" Detail="@L.Ui(All ? "stats.all.players" : Zones ? "zones.stats.participations" : "pairings.stats.players", f.Count)">
             <FactionBadge Code="@f.Key" />
         </PercentBar>
     }
 </section>
 
 <section class="panel">
-    <h3>@L.Ui(Zones ? "zones.stats.picks" : "pairings.stats.picks")</h3>
+    <h3>@L.Ui(All ? "stats.all.picks" : Zones ? "zones.stats.picks" : "pairings.stats.picks")</h3>
     @if (Stats.Picks.Count == 0)
     {
         <p class="empty">@L.Ui("pairings.stats.notNoted")</p>
@@ -139,7 +139,10 @@
 @code {
     [Parameter, EditorRequired] public StatsView Stats { get; set; } = default!;
     /// <summary>Games of zones: factions counted on the participations, cogs on the cabals played.</summary>
+    /// <summary>Zones: factions counted on the participations, cog choices on the cabals played.</summary>
     [Parameter] public bool Zones { get; set; }
+    /// <summary>Tournaments and zones together: registered players and participations, registered and played cabals.</summary>
+    [Parameter] public bool All { get; set; }
 
     private string? _faction;
 

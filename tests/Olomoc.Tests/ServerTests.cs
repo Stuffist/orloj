@@ -35,6 +35,8 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
     [InlineData("/pairings/t/ABCDEF/admin")]
     [InlineData("/online/")]
     [InlineData("/online/g/ABCDEF")]
+    [InlineData("/zones/stats")]
+    [InlineData("/stats/")]
     public async Task App_sections(string path)
     {
         var response = await Client().GetAsync(path);

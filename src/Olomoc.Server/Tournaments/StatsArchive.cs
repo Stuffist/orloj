@@ -36,7 +36,7 @@ public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory, ServerCata
             else db.Documents.Add(row = new StoredDocumentRow { Kind = Kind, Code = t.Code, CreatedAt = now, Json = json });
             row.UpdatedAt = now;
             db.SaveChanges();
-            _stats = null;
+            Forget();
         }
     }
 
@@ -45,7 +45,7 @@ public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory, ServerCata
         lock (_lock)
         {
             using var db = factory.CreateDbContext();
-            if (db.Documents.Where(d => d.Kind == Kind && d.Code == code).ExecuteDelete() > 0) _stats = null;
+            if (db.Documents.Where(d => d.Kind == Kind && d.Code == code).ExecuteDelete() > 0) Forget();
         }
     }
 
@@ -62,10 +62,38 @@ public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory, ServerCata
         lock (_lock)
         {
             if (_stats is not null) return _stats;
-            using var db = factory.CreateDbContext();
-            var archives = db.Documents.Where(d => d.Kind == Kind).Select(d => d.Json).AsEnumerable().Select(Read).OfType<ArchivedTournament>();
-            return _stats = TournamentStats.Compute(archives.ToList(), cat.AlignmentOf);
+            return _stats = TournamentStats.Compute(LoadArchives().Tournaments, cat.AlignmentOf);
         }
+    }
+
+    /// <summary>
+    /// The archives and the codes of their tournaments (for the statistics of everything: a zone game
+    /// copied from an archived tournament is not counted twice). The same object until a change.
+    /// </summary>
+    public Archives CurrentArchives()
+    {
+        lock (_lock) return LoadArchives();
+    }
+
+    public sealed record Archives(IReadOnlyList<ArchivedTournament> Tournaments, IReadOnlySet<string> Codes);
+
+    private Archives? _archives;
+
+    // Under the lock: an archive was added, changed or removed.
+    private void Forget()
+    {
+        _stats = null;
+        _archives = null;
+    }
+
+    // Under the lock.
+    private Archives LoadArchives()
+    {
+        if (_archives is { } cached) return cached;
+        using var db = factory.CreateDbContext();
+        var rows = db.Documents.Where(d => d.Kind == Kind).Select(d => new { d.Code, d.Json }).AsEnumerable()
+            .Select(d => (d.Code, Archive: Read(d.Json))).Where(x => x.Archive is not null).ToList();
+        return _archives = new Archives(rows.Select(x => x.Archive!).ToList(), rows.Select(x => x.Code).ToHashSet(StringComparer.OrdinalIgnoreCase));
     }
 
     /// <summary>At startup: archives the finished and counted tournaments that do not have one yet.</summary>

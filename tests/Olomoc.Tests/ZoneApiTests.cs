@@ -372,6 +372,31 @@ public sealed class ZoneApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Statistics_of_everything_count_a_bound_tournament_game_once()
+    {
+        var (_, root, _, _, anonymous) = await StartAsync();
+        var zone = await CreateZone(root, Settings());
+        var hidden = await CreateZone(root, Settings("Essai", hidden: true));
+        await Enter(anonymous, zone, Duel("LIBUS", "OTHERS"));
+        await Enter(anonymous, hidden, Duel("RUBIN", "URKARAS"));
+        var (t, table) = await TournamentInZone(anonymous, zone);
+        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}", t.OrganizerToken, new ResultRequest(9, 4));
+
+        // In progress: its game counts through the zone (no archive yet); the hidden zone is left out.
+        var all = await Read<StatsView>(await anonymous.GetAsync("/api/stats/all"));
+        Assert.Equal((0, 1, 2), (all.Tournaments, all.Zones, all.Games));
+        Assert.DoesNotContain(all.FactionWins, w => w.Key == "RUBIN");
+
+        // Finished: through its archive, no longer through the zone; still in each source's own figures.
+        Assert.Equal(HttpStatusCode.NoContent, (await Organizer(anonymous, HttpMethod.Post, $"/api/tournaments/{t.Code}/finish", t.OrganizerToken)).StatusCode);
+        all = await Read<StatsView>(await anonymous.GetAsync("/api/stats/all"));
+        Assert.Equal((1, 1, 2), (all.Tournaments, all.Zones, all.Games));
+        Assert.Equal(2 + 2, all.Players);                                   // 2 registered + 2 participations
+        Assert.Equal(1, (await Read<StatsView>(await anonymous.GetAsync("/api/stats"))).Games);
+        Assert.Equal(2, (await Read<StatsView>(await anonymous.GetAsync("/api/zones/stats"))).Games);
+    }
+
+    [Fact]
     public async Task A_closed_zone_is_neither_offered_nor_changed()
     {
         var (_, root, _, _, anonymous) = await StartAsync();

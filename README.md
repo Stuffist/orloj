@@ -644,9 +644,22 @@ Planned next steps: the Block (16″ board, terrain, miniatures, measurements), 
 
 ## Statistics
 
-`/pairings/stats` ("Statistics" tab), public, on the **finished** tournaments — except those
-their organizer excludes ("Do not count in the statistics", at creation or at any time in the
-administration):
+`/stats/` ("Statistics" tab, `Pages/StatsPage.razor`), public, with a filter:
+
+- **All** (default, `/api/stats/all`): the finished tournaments and the games of the Dystopian
+  Encounters (visible zones) together. A game of a tournament bound to a zone is copied into the
+  zone: it counts through the zone while the tournament is in progress, then through the
+  tournament's archive once it is finished (the archive and the copy share the tournament's
+  code), never twice. Factions: registered players and participations; cog choices: registered
+  cabals and cabals played.
+- **Tournaments** (`?source=tournaments`, `/api/stats`): the tournaments only, as below.
+- **Dystopian Encounters** (`?source=zones`, `/api/zones/stats`): all the visible zones (see
+  below).
+
+`/pairings/stats` and `/zones/stats` redirect there with the matching filter.
+
+The tournaments counted are the **finished** ones — except those their organizer excludes ("Do
+not count in the statistics", at creation or at any time in the administration):
 
 - **factions played**: share of the players;
 - **cog choices**, per faction (selector) and per rank: share of the faction's registered
@@ -811,9 +824,9 @@ tests/Olomoc.Tests/   xUnit
 - `Services/TournamentApi.cs` (API calls), `Services/MyTournaments.cs` (tokens kept on the
   device).
 - `Pages/Zones.razor` (map, My zones, list), `ZonePage.razor` (a zone: entry, games, statistics),
-  `ZoneManage.razor` (settings; creation by an admin), `ZoneStatsAll.razor`;
+  `ZoneManage.razor` (settings; creation by an admin), `ZoneStatsAll.razor` (former address);
   `Shared/EncounterForm.razor` (entry of a game), `StatsSections.razor` (statistics panels,
-  shared with `/pairings/stats`), `DominanceLine.razor`, `ZoneMap.razor` (map of the zones),
+  shared with `/stats/`), `DominanceLine.razor`, `ZoneMap.razor` (map of the zones),
   `ZoneLogo.razor`, `ZoneText.cs`; `Services/ZoneApi.cs`,
   `Services/MyZoneEntries.cs` (entry tokens kept on the device).
 

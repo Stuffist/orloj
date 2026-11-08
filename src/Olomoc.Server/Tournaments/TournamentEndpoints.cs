@@ -76,6 +76,9 @@ public static class TournamentEndpoints
 
         app.MapGet("/api/stats", async (StatsArchive stats) => Results.Json(await stats.StatsAsync(), TournamentJson.Options))
             .RequireRateLimiting(ReadPolicy);
+        // Everything: the tournaments and the Dystopian Encounters together (/stats/).
+        app.MapGet("/api/stats/all", async (AllStats stats) => Results.Json(await stats.GetAsync(), TournamentJson.Options))
+            .RequireRateLimiting(ReadPolicy);
     }
 
     // ---- Creation and reading ----

@@ -38,6 +38,28 @@ public sealed class ZoneStats(ZoneGameStore games, ZoneStore zones, ServerCatalo
         return stats;
     }
 
+    /// <summary>
+    /// For the statistics of everything: the games of the visible zones, without those copied from
+    /// a tournament in <paramref name="archived"/> (counted in its archive), and the number of
+    /// zones that have games. Kept while neither the zones' games nor the archives change.
+    /// </summary>
+    public async Task<(int Zones, IReadOnlyList<StatGame> Games)> OutsideArchivesAsync(IReadOnlySet<string> archived)
+    {
+        if (_outside is { } cached && ReferenceEquals(cached.Archived, archived)) return (cached.Zones, cached.Games);
+        var version = _version;
+        var counted = (await zones.ListAsync()).Where(z => !z.Hidden).Select(z => z.Code).ToHashSet();
+        var list = (await games.AllWithZoneAsync())
+            .Where(x => counted.Contains(x.Zone) && (x.Game.TournamentCode is not { } code || !archived.Contains(code)))
+            .ToList();
+        var result = new Outside(archived, list.Select(x => x.Zone).Distinct().Count(), list.Select(x => x.Game.Game.ToStatGame()).ToList());
+        if (version == _version) _outside = result;
+        return (result.Zones, result.Games);
+    }
+
+    private sealed record Outside(IReadOnlySet<string> Archived, int Zones, IReadOnlyList<StatGame> Games);
+
+    private Outside? _outside;
+
     public async Task<Dominance> DominanceAsync(Zone zone)
     {
         var cat = await catalog.GetAsync();
@@ -50,5 +72,6 @@ public sealed class ZoneStats(ZoneGameStore games, ZoneStore zones, ServerCatalo
         Interlocked.Increment(ref _version);
         _zones.TryRemove(code, out _);
         _all = null;
+        _outside = null;
     }
 }

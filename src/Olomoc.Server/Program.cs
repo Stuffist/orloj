@@ -39,6 +39,7 @@ builder.Services.AddSingleton<AdminAudit>();      // log of the admins' actions
 builder.Services.AddSingleton(sp => new ZoneStore(sp.GetRequiredService<IDbContextFactory<OlomocDb>>()));
 builder.Services.AddSingleton<ZoneGameStore>();
 builder.Services.AddSingleton<ZoneStats>();
+builder.Services.AddSingleton<AllStats>();         // tournaments and zones together
 builder.Services.AddSingleton<TournamentZoneSync>();      // results of the tournaments bound to a zone
 builder.Services.AddHostedService<TournamentPurge>();
 builder.Services.ConfigureHttpJsonOptions(o => TournamentJson.Configure(o.SerializerOptions));

@@ -8,8 +8,9 @@ Technical overview of Orloj. The details of the rules and features are in the
 ```
 Browser ── one Blazor WebAssembly app (Olomoc.Web), downloaded once
    │         /builder/…  Olomoc.Builder pages   (builder, play, account, editor, admin)
-   │         /pairings/… Olomoc.Pairings pages  (tournaments, statistics)
+   │         /pairings/… Olomoc.Pairings pages  (tournaments)
    │         /zones/…    Olomoc.Pairings pages  (Dystopian Encounters)
+   │         /stats/     Olomoc.Pairings page   (statistics: tournaments and Encounters)
    │         /online/…   Olomoc.Online pages    (two-player online games)
    │         localStorage: cabals, game, language, followed tournaments and online games, zone entries
    │
@@ -28,7 +29,7 @@ Olomoc.Server (ASP.NET Core, one container)
 | `Olomoc.Shared` | Library shared by the browser and the server: models, rules (legality, play, pairings, standings, statistics), browser services, display components, static files. |
 | `Olomoc.Web` | The browser app: startup, router, layout, menu. Brings the three page libraries together; moving from one to another needs no reload. |
 | `Olomoc.Builder` | `/builder/…` pages. |
-| `Olomoc.Pairings` | `/pairings/…` and `/zones/…` pages. |
+| `Olomoc.Pairings` | `/pairings/…`, `/zones/…` and `/stats/` pages. |
 | `Olomoc.Online` | `/online/…` pages; SignalR client. |
 | `Olomoc.Server` | Host: serves the app and the files, API, online games hub, database, emails, background tasks (purges, backup, check email). |
 | `tests/Olomoc.Tests` | xUnit: rules (Shared) and API (in-memory server, temporary database). |
@@ -61,7 +62,7 @@ online game commands).
 | **Play** `/builder/play` | The device's current game, local or online. Local: HP, Darkness, Bile, tokens, limited abilities, 4 cycles; undo; "Open online" takes it online with its cabal. | The cabal started from the builder | `olomoc.game` (localStorage) or `olomoc.game.online` (code of the current online game): one current game per device. Undo history: memory. |
 | ↳ **Online** (games `/online/g/…`; without a game in progress, "Play online" box) | Synchronized two-player game: lobby (cabals secret until "Ready"), player numbers, agenda, cycles; each player tracks their side, the other read-only; shared hunt. Free game (invitation link) or tournament table. Name: account, otherwise device, otherwise random. | `/hubs/online` hub (view specific to each seat) | Game: `Documents` table (kind `online`). Seat tokens: `olomoc.online`, name: `olomoc.online.name` (localStorage); presence: server memory. |
 | **Tournaments** `/pairings/` | Creates or joins a tournament; public page (registration, rounds, standings); administration (rounds, results, drops, export). Refreshed every 30 s. | `/api/tournaments/{code}` | Tournament: `Documents` table (kind `tournament`). Organizer and player tokens: `olomoc.tournaments` (localStorage) and admin link (token in the fragment). |
-| **Stats** `/pairings/stats` | Public statistics of finished tournaments: factions, cogs, wins (alignment, faction, rank 3), scenarios, decks. | `/api/stats`, computed in memory | — (the anonymous archive is written at the end of a tournament: `Documents`, kind `stats`) |
+| **Stats** `/stats/` | Public statistics: everything (finished tournaments and Dystopian Encounters together, a bound tournament's game counted once), or tournaments only, or Encounters only: factions, cogs, wins (alignment, faction, rank 3), scenarios, decks. | `/api/stats/all`, `/api/stats`, `/api/zones/stats`, computed in memory | — (the anonymous archive is written at the end of a tournament: `Documents`, kind `stats`) |
 | **Encounters** `/zones/` | Dystopian Encounters: zones (club, event, period, online), entry of games without an account (duel or 2 v 2, optional names and cabals), each zone's games, statistics and dominance (Light or Darkness, leading faction); statistics of all zones. | `/api/zones`, statistics computed in memory | Zone: `Documents` (kind `zone`); games: `ZoneGames` table. Entry tokens and zones seen: `olomoc.zones` (localStorage). |
 | **Editor** `/builder/admin` (editors, admins) | Creates and edits cogs, equipment, boons, factions, in French and English; publication; zip export. | Merged card catalog, drafts included | `DATA_DIR/catalog/` (JSON in the repository format, changed entries only). The repository is never changed: export, then commit. |
 | **Account** `/builder/account` | Sign-in, creation, email (confirmation, forgotten password), password, other devices, deletion; links to the editor and the admin panel. | `/api/account/me` | Identity tables (accounts, roles), `SavedCabals`. Session: `olomoc_session` cookie. |
