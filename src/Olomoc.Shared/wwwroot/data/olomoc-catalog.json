@@ -1194,6 +1194,52 @@
         "front": "3R27_recto.jpg"
       },
       "published": true
+    },
+    {
+      "id": "3R30",
+      "ministries": [
+        "FRINGE"
+      ],
+      "rank": 1,
+      "baseSize": 30,
+      "stats": {
+        "tech": 2,
+        "melee": 3,
+        "ranged": 0,
+        "dodge": 4
+      },
+      "lifeLine": [
+        "S",
+        "S",
+        "S",
+        "T",
+        "R",
+        "S",
+        "S",
+        "S",
+        "S",
+        "S",
+        "T",
+        "S"
+      ],
+      "abilities": [
+        {
+          "timing": "Active",
+          "actionCost": 1,
+          "darknessCost": 0,
+          "frequencies": [
+            {
+              "count": 1,
+              "per": "PLANNING_PHASE"
+            }
+          ]
+        }
+      ],
+      "set": "Les Premiers Marcheurs",
+      "art": {
+        "front": "3R30_recto.jpg"
+      },
+      "published": true
     }
   ],
   "equipment": [

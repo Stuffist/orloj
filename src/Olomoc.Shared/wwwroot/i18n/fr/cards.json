@@ -333,6 +333,16 @@
           "gameEffect": "Au début du premier cycle, Médic Ruzicka peut être équipée d'un équipement supplémentaire affilié au Ministère de l'Intégrité."
         }
       ]
+    },
+    "3R30": {
+      "name": "Kalès",
+      "title": "Éclaireuse du convoi",
+      "abilities": [
+        {
+          "name": "Progression maîtrisée",
+          "gameEffect": "Ciblez un rouage allié à 4\" possédant un pion de Noirceur.\nRetirez-lui un pion de Noirceur puis poussez-le vers Kalès."
+        }
+      ]
     }
   },
   "equipment": {
