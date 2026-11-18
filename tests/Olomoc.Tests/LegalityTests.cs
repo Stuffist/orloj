@@ -322,7 +322,7 @@ public class LegalityTests
         var issue = Assert.Single(r.Issues);
         Assert.Contains("Hors faction Ligue de Maisel : Le Chasseur", d.L.Describe(issue));
         await d.L.SetLanguageAsync("en");
-        Assert.StartsWith("Outside the Ligue de Maisel faction: The Hunter", d.L.Describe(issue));   // faction: French name assumed
+        Assert.StartsWith("Outside the Maisel League faction: The Hunter", d.L.Describe(issue));
         Assert.False(d.L.FactionName("MAISEL").IsFallback);
         Assert.False(d.L.CogName(d.Cog("2R08")).IsFallback);
     }

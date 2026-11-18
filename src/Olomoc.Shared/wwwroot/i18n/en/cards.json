@@ -32,25 +32,25 @@
   },
   "factions": {
     "OTHERS": {
-      "name": "Les Autres"
+      "name": "The Others"
     },
     "BLOCKHAUS": {
-      "name": "Blockhaus Devet"
+      "name": "Devet Blockhaus"
     },
     "DYKOVIAN": {
-      "name": "Cabale Dykovienne"
+      "name": "Dykovian Cabal"
     },
     "MAISEL": {
-      "name": "Ligue de Maisel"
+      "name": "Maisel League"
     },
     "URKARAS": {
-      "name": "Famille Urkaras"
+      "name": "Urkaras Family"
     },
     "LIBUS": {
-      "name": "Loups de Libus"
+      "name": "Wolves of Libus"
     },
     "RUBIN": {
-      "name": "Réseau Rubin"
+      "name": "Rubin Network"
     }
   },
   "cogs": {
