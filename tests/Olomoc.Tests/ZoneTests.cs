@@ -121,6 +121,24 @@ public class ZoneTests
     }
 
     [Fact]
+    public void Map_slots_kept_and_free_ones_given_center_first_to_the_oldest()
+    {
+        var t0 = DateTimeOffset.UtcNow;
+        var placed = new Zone { Code = "AAAAAA", Slot = 0, CreatedAt = t0 };
+        var newer = new Zone { Code = "BBBBBB", CreatedAt = t0.AddDays(2) };
+        var older = new Zone { Code = "CCCCCC", CreatedAt = t0.AddDays(1) };
+        var changed = ZoneMapLayout.Assign([placed, newer, older]);
+        Assert.Equal([older, newer], changed);
+        Assert.Equal((0, 1, 2), (placed.Slot, older.Slot, newer.Slot));
+
+        // Full map: no slot (the zone is in the list only).
+        var full = Enumerable.Range(0, ZoneMapLayout.Slots.Count).Select(i => new Zone { Code = $"Z{i:00000}", Slot = i }).ToList();
+        var extra = new Zone { Code = "EXTRAA" };
+        Assert.Empty(ZoneMapLayout.Assign([.. full, extra]));
+        Assert.Null(extra.Slot);
+    }
+
+    [Fact]
     public void Comment_optional_trimmed_and_limited()
     {
         var game = Duel("RUBIN", "MAISEL", 5, 3);

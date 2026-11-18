@@ -11,11 +11,11 @@ public static class ZoneHeaders
 }
 
 /// <summary>
-/// Zone in the list: its description, state, number of games, dominance; <see cref="CanManage"/>:
+/// Zone in the list: its description, state, number of games, dominance, hexagon on the map; <see cref="CanManage"/>:
 /// manager or admin.
 /// </summary>
 public sealed record ZoneSummary(string Code, string Name, string Description, ZoneKind Kind, DateOnly? StartDate, DateOnly? EndDate,
-    ZoneStatus Status, bool Hidden, int Games, Dominance Dominance, bool CanManage, string? Logo = null);
+    ZoneStatus Status, bool Hidden, int Games, Dominance Dominance, bool CanManage, string? Logo = null, int? Slot = null);
 
 /// <summary>
 /// A zone, with its statistics and its dominance. <see cref="Managers"/> (usernames): for its

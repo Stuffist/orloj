@@ -1,20 +1,20 @@
 @* Map of the zones: a city plan (img/zones/map.jpg), one hexagon per zone (hidden ones left out) on
-   the slots of a honeycomb laid over its districts, the center first, in the order of the list.
-   Color: open, upcoming, closed under the Light or the Darkness, closed without dominance. Inside:
-   the zone's logo (link), its name, and the dominant faction's emblem (small while open). *@
+   the slot it was given once (ZoneMapLayout, Zone.Slot): adding, changing, closing a zone never
+   moves the others. Color: open, upcoming, closed under the Light or the Darkness, closed without
+   dominance. Inside: the zone's logo (link), its name, and the dominant faction's emblem (small
+   while open). *@
 @using System.Globalization
 @inject LocalizationService L
 
-@if (Shown.Count > 0)
+@if (Placed.Count > 0)
 {
     <section class="panel zn-map-panel" aria-labelledby="zn-map-title">
         <h2 id="zn-map-title">@L.Ui("zones.map.title")</h2>
         <div class="zn-map-scroll">
             <ul class="zn-map">
-                @for (var i = 0; i < Math.Min(Shown.Count, Slots.Length); i++)
+                @foreach (var z in Placed)
                 {
-                    var z = Shown[i];
-                    var (x, y) = Slots[i];
+                    var (x, y) = ZoneMapLayout.Slots[z.Slot!.Value];
                     var label = Label(z);
                     <li class="zn-hex-cell @ZoneText.MapClass(z)" style="@Position(x, y)">
                         <a class="zn-hex" href="bloc/@z.Code" title="@label" aria-label="@label"><span class="zn-hex-face">
@@ -56,9 +56,9 @@
                 }
             </ul>
         </div>
-        @if (Shown.Count > Slots.Length)
+        @if (Visible.Count(z => !OnMap(z)) is > 0 and var more)
         {
-            <p class="hint">@L.Ui("zones.map.more", Shown.Count - Slots.Length)</p>
+            <p class="hint">@L.Ui("zones.map.more", more)</p>
         }
     </section>
 }
@@ -66,20 +66,12 @@
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<ZoneSummary> Zones { get; set; } = [];
 
-    private List<ZoneSummary> Shown => ZoneText.Ordered(Zones.Where(z => !z.Hidden)).ToList();
+    private IEnumerable<ZoneSummary> Visible => Zones.Where(z => !z.Hidden);
 
-    // Centers of the slots, in % of the plan's width and height: a honeycomb of flat-topped hexagons
-    // (14 % of the width wide: columns 10.5 % apart, rows 24.25 % apart, every other column shifted by
-    // half a row), the central district first, then rings outwards over the city.
-    private static readonly (double X, double Y)[] Slots =
-    [
-        (47, 50),
-        (57.5, 37.875), (36.5, 62.125), (47, 25.75), (47, 74.25), (36.5, 37.875), (57.5, 62.125),
-        (68, 50), (26, 50), (68, 25.75), (26, 25.75), (68, 74.25), (26, 74.25),
-        (57.5, 86.375), (36.5, 86.375), (57.5, 13.625), (36.5, 13.625),
-        (78.5, 62.125), (15.5, 37.875), (78.5, 37.875), (15.5, 62.125),
-        (78.5, 86.375), (15.5, 86.375), (78.5, 13.625), (15.5, 13.625),
-    ];
+    private static bool OnMap(ZoneSummary z) => z.Slot is { } s && s >= 0 && s < ZoneMapLayout.Slots.Count;
+
+    // One per slot (a slot shared by mistake: the oldest zone listed first keeps it).
+    private List<ZoneSummary> Placed => Visible.Where(OnMap).GroupBy(z => z.Slot).Select(g => g.First()).ToList();
 
     private static string Position(double x, double y) =>
         string.Create(CultureInfo.InvariantCulture, $"--x: {x}%; --y: {y}%");

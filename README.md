@@ -716,10 +716,12 @@ optional, shown in the list of games, never counted.
   Darkness games, then the leading faction of that alignment; a tie at the top: no dominance.
   Computed live: an open zone is "Dominated by the Light — leading: …", a closed one "Closed under
   the Light, dominated by …".
-- **Map of the zones** (top of `/zones/`, `Shared/ZoneMap.razor`): a city plan
+- **Map of the zones** (top of `/bloc/`, `Shared/ZoneMap.razor`): a city plan
   (`img/zones/map.jpg`) with one hexagon per zone (hidden ones left out), on 25 slots of a
-  honeycomb laid over its districts: the central district first, then rings outwards, in the order
-  of the list (the oldest closed zones beyond 25 stay in the list only). Slightly translucent.
+  honeycomb laid over its districts (`Zones/ZoneMapLayout.cs`). Each zone gets a slot once, the most
+  central free one, and keeps it whatever changes: adding, editing, closing a zone never moves the
+  others; a deleted zone frees its slot for the oldest zone without one (zones beyond 25: in the
+  list only). Slightly translucent.
   Narrow screens scroll the plan. Green: open (with the leading faction's emblem once there is one); hatched: upcoming;
   pale with a gold edge: closed under the Light; dark brown: closed under the Darkness, with the
   dominant faction's emblem; grey: closed without dominance (tie, no games). The detailed list

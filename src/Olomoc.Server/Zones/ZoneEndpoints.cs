@@ -58,7 +58,7 @@ public static class ZoneEndpoints
             var manages = access.Manages(z);
             if (z.Hidden && !manages) continue;
             list.Add(new ZoneSummary(z.Code, z.Name, z.Description, z.Kind, z.StartDate, z.EndDate, z.StatusOn(Today), z.Hidden,
-                counts.GetValueOrDefault(z.Code), await stats.DominanceAsync(z), manages, z.Logo));
+                counts.GetValueOrDefault(z.Code), await stats.DominanceAsync(z), manages, z.Logo, z.Slot));
         }
         return Results.Json(list, TournamentJson.Options);
     }
@@ -174,6 +174,7 @@ public static class ZoneEndpoints
         if (problems.Count > 0) return Problems(problems, 400);
         var z = await zones.CreateAsync(z => ApplyAdmin(z, body, managers));
         if (z is null) return Problems([Problem.Of("zoneStorageFull")], 503);
+        await zones.AssignSlotsAsync();                // its hexagon on the map: the most central free one
         await audit.LogAsync(AdminEndpoints.AdminName(ctx), "createZone", z.Code, z.Name);
         return Results.Json(new ZoneCreated(z.Code), TournamentJson.Options, statusCode: 201);
     }
@@ -200,6 +201,7 @@ public static class ZoneEndpoints
         var name = await zones.DeleteAsync(code, z => (true, z.Name));
         if (name is null) return NotFound();
         var removed = await games.DeleteZoneAsync(code.ToUpperInvariant());
+        await zones.AssignSlotsAsync();                // its hexagon freed: for a zone that had none
         stats.Invalidate(code.ToUpperInvariant());
         await audit.LogAsync(AdminEndpoints.AdminName(ctx), "deleteZone", code.ToUpperInvariant(), $"{name} ({removed})");
         return Results.NoContent();

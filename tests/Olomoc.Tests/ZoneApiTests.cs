@@ -267,6 +267,30 @@ public sealed class ZoneApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Hexagons_stay_put_when_zones_are_added_changed_or_deleted()
+    {
+        var (_, root, _, _, anonymous) = await StartAsync();
+        var first = await CreateZone(root, Settings("Un"));
+        var second = await CreateZone(root, Settings("Deux"));
+        var third = await CreateZone(root, Settings("Trois"));
+        async Task<Dictionary<string, int?>> Slots() =>
+            (await Read<List<ZoneSummary>>(await anonymous.GetAsync("/api/zones"))).ToDictionary(z => z.Code, z => z.Slot);
+        var after = await Slots();
+        Assert.Equal((0, 1, 2), (after[first], after[second], after[third]));      // the center, then the first ring
+
+        // Renamed, closed: nobody moves.
+        await Send(root, HttpMethod.Put, $"/api/admin/zones/{second}", Settings("Deux bis", closed: true));
+        after = await Slots();
+        Assert.Equal((0, 1, 2), (after[first], after[second], after[third]));
+
+        // Deleted: its slot (the center) goes to the next zone created; the others stay.
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(root, HttpMethod.Delete, $"/api/admin/zones/{first}")).StatusCode);
+        var fourth = await CreateZone(root, Settings("Quatre"));
+        after = await Slots();
+        Assert.Equal((1, 2, 0), (after[second], after[third], after[fourth]));
+    }
+
+    [Fact]
     public async Task Games_in_pages_most_recent_first()
     {
         var (_, root, _, _, anonymous) = await StartAsync();

@@ -12,6 +12,32 @@ public sealed class ZoneStore(IDbContextFactory<OlomocDb> db, int maxZones = Zon
     : DocumentStore<Zone>(db, Kind, maxZones, TournamentJson.Options)
 {
     public const string Kind = "zone";
+
+    private readonly SemaphoreSlim _slots = new(1, 1);
+
+    /// <summary>
+    /// Hexagons of the map: the zones without one get the most central free slot, the oldest first
+    /// (after a creation, a deletion, and at startup for the zones created before). A zone keeps its
+    /// slot whatever changes: the others never move.
+    /// </summary>
+    public async Task AssignSlotsAsync()
+    {
+        await _slots.WaitAsync();
+        try
+        {
+            foreach (var z in ZoneMapLayout.Assign(await ListAsync()))
+            {
+                var slot = z.Slot;
+                await UpdateAsync(z.Code, current =>
+                {
+                    if (current.Slot is not null) return (false, current);       // given meanwhile: kept
+                    current.Slot = slot;
+                    return (true, current);
+                });
+            }
+        }
+        finally { _slots.Release(); }
+    }
 }
 
 /// <summary>

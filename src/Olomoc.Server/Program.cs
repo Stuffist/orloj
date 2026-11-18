@@ -151,6 +151,8 @@ if (mailSettings.Host is null)
 
 // Tournaments finished before the statistics existed (or whose archive is missing): archived at startup.
 await app.Services.GetRequiredService<StatsArchive>().BackfillAsync(app.Services.GetRequiredService<TournamentStore>());
+// Zones created before the map kept their hexagons: given one, the oldest first.
+await app.Services.GetRequiredService<ZoneStore>().AssignSlotsAsync();
 
 if (app.Environment.IsDevelopment()) app.UseWebAssemblyDebugging();
 

@@ -41,6 +41,11 @@ public sealed class Zone : IStoredDocument
     public bool Closed { get; set; }
     /// <summary>Test zone: outside the list (reachable by its link) and the overall statistics.</summary>
     public bool Hidden { get; set; }
+    /// <summary>
+    /// Its hexagon on the map (index in <see cref="ZoneMapLayout.Slots"/>): given once, the most central
+    /// free one, and kept whatever changes (a deleted zone frees it). Null: the map is full.
+    /// </summary>
+    public int? Slot { get; set; }
     /// <summary>Accounts (ids) that manage the zone, besides the admins.</summary>
     public List<string> ManagerIds { get; set; } = new();
     public DateTimeOffset CreatedAt { get; set; }
