@@ -2,7 +2,8 @@
    for each player a faction, the cabal played and optionally a name (never counted); VP of each
    side; for the statistics, required too: the side that played first, the scenario and its two
    decks, the end of the game (required fields marked with an asterisk). Optional: a comment (a
-   notable event). All the fields shown at once; each side starts with its VP and P1/P2.
+   notable event). All the fields shown at once: format and date, scenario and decks, then each
+   side (its VP and P1/P2 first; faction list with the logos), the end of the game.
    Typing a name suggests account names; an account's name offers its public cabals. *@
 @inject LocalizationService L
 @inject CatalogService Catalog
@@ -28,6 +29,49 @@
             <label for="zn-date">@L.Ui("zones.form.date")<span class="req" aria-hidden="true">*</span></label>
             <input id="zn-date" type="date" value="@_date.ToString("yyyy-MM-dd")" min="@Zone.StartDate?.ToString("yyyy-MM-dd")"
                    max="@MaxDate.ToString("yyyy-MM-dd")" @onchange="OnDateChanged" />
+        </div>
+    </div>
+
+    @* The scenario and its two decks (required, for the statistics): before the sides. *@
+    <div class="tn-fields zn-scenario">
+        <div class="field">
+            <label for="zn-scenario">@L.Ui("zones.form.scenario")<span class="req" aria-hidden="true">*</span></label>
+            <select id="zn-scenario" value="@_scenario" required @onchange="e => Set(ref _scenario, e)">
+                <option value="">@L.Ui("common.choose")</option>
+                @foreach (var id in Agendas.All)
+                {
+                    <option value="@id">@L.Ui($"agenda.{id}")</option>
+                }
+                <option value="@Agendas.Other">@L.Ui("agenda.OTHER")</option>
+            </select>
+        </div>
+        @if (_scenario == Agendas.Other)
+        {
+            <div class="field grow">
+                <label for="zn-scenario-name">@L.Ui("pairings.scenarios.otherName")<span class="req" aria-hidden="true">*</span></label>
+                <input id="zn-scenario-name" type="text" maxlength="@TournamentRules.MaxNameLength" value="@_scenarioName" required
+                       @oninput="e => _scenarioName = e.Value?.ToString() ?? string.Empty" />
+            </div>
+        }
+        <div class="field">
+            <label for="zn-artifact">@L.Ui("pairings.scenarios.artifact")<span class="req" aria-hidden="true">*</span></label>
+            <select id="zn-artifact" value="@_artifact" required @onchange="e => Set(ref _artifact, e)">
+                <option value="">@L.Ui("common.choose")</option>
+                @foreach (var id in Decks.Artifacts)
+                {
+                    <option value="@id">@L.Ui($"deck.artifact.{id}")</option>
+                }
+            </select>
+        </div>
+        <div class="field">
+            <label for="zn-ministry">@L.Ui("pairings.scenarios.ministry")<span class="req" aria-hidden="true">*</span></label>
+            <select id="zn-ministry" value="@_ministry" required @onchange="e => Set(ref _ministry, e)">
+                <option value="">@L.Ui("common.choose")</option>
+                @foreach (var id in Decks.Ministries)
+                {
+                    <option value="@id">@L.Ui($"deck.ministry.{id}")</option>
+                }
+            </select>
         </div>
     </div>
 
@@ -62,13 +106,18 @@
                         <div class="tn-fields">
                             <div class="field">
                                 <label for="zn-faction-@index">@L.Ui("filter.faction")<span class="req" aria-hidden="true">*</span></label>
-                                <select id="zn-faction-@index" value="@player.Faction" required @onchange="e => SetFaction(index, e.Value?.ToString())">
-                                    <option value="">@L.Ui("common.choose")</option>
-                                    @foreach (var f in FactionsFor(s, index))
-                                    {
-                                        <option value="@f.Code">@L.FactionName(f.Code)</option>
-                                    }
-                                </select>
+                                @* Logos in front of the factions (open list: where the browser allows it, see .emblem-select). *@
+                                <div class="with-emblem">
+                                    <Emblem Faction="@player.Faction" />
+                                    <select id="zn-faction-@index" class="emblem-select" value="@player.Faction" required
+                                            @onchange="e => SetFaction(index, e.Value?.ToString())">
+                                        <option value="">@L.Ui("common.choose")</option>
+                                        @foreach (var f in FactionsFor(s, index))
+                                        {
+                                            <option value="@f.Code"><Emblem Faction="@f.Code" />@L.FactionName(f.Code)</option>
+                                        }
+                                    </select>
+                                </div>
                             </div>
                             <div class="field grow">
                                 <label for="zn-name-@index">@L.Ui("zones.form.name")</label>
@@ -113,48 +162,6 @@
         }
     </div>
 
-    @* The scenario, its two decks and the end of the game: required, for the statistics. *@
-    <div class="tn-fields zn-scenario">
-        <div class="field">
-            <label for="zn-scenario">@L.Ui("zones.form.scenario")<span class="req" aria-hidden="true">*</span></label>
-            <select id="zn-scenario" value="@_scenario" required @onchange="e => Set(ref _scenario, e)">
-                <option value="">@L.Ui("common.choose")</option>
-                @foreach (var id in Agendas.All)
-                {
-                    <option value="@id">@L.Ui($"agenda.{id}")</option>
-                }
-                <option value="@Agendas.Other">@L.Ui("agenda.OTHER")</option>
-            </select>
-        </div>
-        @if (_scenario == Agendas.Other)
-        {
-            <div class="field grow">
-                <label for="zn-scenario-name">@L.Ui("pairings.scenarios.otherName")<span class="req" aria-hidden="true">*</span></label>
-                <input id="zn-scenario-name" type="text" maxlength="@TournamentRules.MaxNameLength" value="@_scenarioName" required
-                       @oninput="e => _scenarioName = e.Value?.ToString() ?? string.Empty" />
-            </div>
-        }
-        <div class="field">
-            <label for="zn-artifact">@L.Ui("pairings.scenarios.artifact")<span class="req" aria-hidden="true">*</span></label>
-            <select id="zn-artifact" value="@_artifact" required @onchange="e => Set(ref _artifact, e)">
-                <option value="">@L.Ui("common.choose")</option>
-                @foreach (var id in Decks.Artifacts)
-                {
-                    <option value="@id">@L.Ui($"deck.artifact.{id}")</option>
-                }
-            </select>
-        </div>
-        <div class="field">
-            <label for="zn-ministry">@L.Ui("pairings.scenarios.ministry")<span class="req" aria-hidden="true">*</span></label>
-            <select id="zn-ministry" value="@_ministry" required @onchange="e => Set(ref _ministry, e)">
-                <option value="">@L.Ui("common.choose")</option>
-                @foreach (var id in Decks.Ministries)
-                {
-                    <option value="@id">@L.Ui($"deck.ministry.{id}")</option>
-                }
-            </select>
-        </div>
-    </div>
     <div class="tn-result-end zn-end" role="group" aria-label="@L.Ui("zones.form.end.title")">
         <span class="tn-result-end-label">@L.Ui("pairings.result.end")<span class="req" aria-hidden="true">*</span></span>
         @foreach (var end in Enum.GetValues<GameEnd>())
