@@ -382,8 +382,8 @@ composition, even incomplete (a warning says so).
 "Save", next to the cabal's name ("Save and export" section), keeps the composition on the
 device (`localStorage`, `olomoc.cabals` key), in the JSON export format. The name is required
 and identifies the cabal: saving under a name already taken replaces it, after confirmation.
-The button shows "Saved ✓" as long as the displayed composition is the one saved under that
-name.
+The button shows "Saved ✓" for 2 seconds after a save, then "Save" again (loading another cabal
+brings it back at once).
 
 "My cabals", at the top of the builder, lists the saved cabals (most recent first): load,
 delete, or **import** a JSON export (from another device, for example; the imported cabal is

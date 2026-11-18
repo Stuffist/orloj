@@ -360,7 +360,7 @@ body {
     display: flex; align-items: center; gap: .5rem; margin: 0; padding: .35rem .6rem; border-radius: 8px;
     border: 1px solid var(--rust); background: rgba(193, 68, 14, .1); color: var(--rust-soft); font-size: .85rem;
 }
-.export-controls > .btn { min-width: 8.5rem; text-align: center; }   /* "Saved ✓" without shifting */
+.export-controls > .btn { min-width: 8.5rem; text-align: center; }   /* "Saved ✓" (2 s after a save) without shifting */
 .export-controls > .save-public { min-height: 2.35rem; display: flex; align-items: center; gap: .35rem; font-size: .9rem; }
 .saved-cabals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
 .saved-cabal {
