@@ -139,6 +139,41 @@ public class ZoneTests
     }
 
     [Fact]
+    public void Map_holds_every_zone_the_hexagons_shrinking_when_they_no_longer_fit()
+    {
+        // A slot per possible zone; the city's slots where they always were (center, then rings).
+        Assert.Equal(ZoneRules.MaxZones, ZoneMapLayout.Slots.Count);
+        Assert.Equal((47, 50), ZoneMapLayout.Center(0, 1));
+        Assert.Equal((57.5, 37.875), ZoneMapLayout.Center(1, 1));
+        Assert.Equal((15.5, 13.625), ZoneMapLayout.Center(24, 1));
+        Assert.Equal(1, ZoneMapLayout.Scale(Enumerable.Range(0, 25)));
+        Assert.Equal(1, ZoneMapLayout.Scale([]));
+
+        var previous = 1.0;
+        foreach (var count in new[] { 30, 54, 100, 250, ZoneRules.MaxZones })
+        {
+            var slots = Enumerable.Range(0, count).ToList();
+            var scale = ZoneMapLayout.Scale(slots);
+            Assert.True(scale <= previous, $"{count} zones: {scale} > {previous}");
+            previous = scale;
+            // All on the plan, none overlapping (centers at least a hexagon's height apart).
+            var w = ZoneMapLayout.Width * scale / 2;
+            var h = ZoneMapLayout.Height * scale / 2;
+            var centers = slots.Select(s => ZoneMapLayout.Center(s, scale)).ToList();
+            Assert.All(centers, c => Assert.True(c.X - w >= -1e-9 && c.X + w <= 100 + 1e-9 && c.Y - h >= -1e-9 && c.Y + h <= 100 + 1e-9,
+                $"{count} zones: hexagon at {c} off the plan"));
+            for (var i = 0; i < centers.Count; i++)
+                for (var j = i + 1; j < centers.Count; j++)
+                {
+                    var dx = centers[i].X - centers[j].X;
+                    var dy = (centers[i].Y - centers[j].Y) / 2;      // the plan is twice as wide as tall
+                    Assert.True(dx * dx + dy * dy >= Math.Pow(ZoneMapLayout.Height * scale / 2, 2) * .99, $"slots {i} and {j} overlap");
+                }
+        }
+        Assert.True(previous > .2, $"{ZoneRules.MaxZones} zones: hexagons too small ({previous})");
+    }
+
+    [Fact]
     public void Photo_type_read_from_the_first_bytes()
     {
         Assert.Equal("image/jpeg", ZoneRules.PhotoType([0xFF, 0xD8, 0xFF, 0xE0]));

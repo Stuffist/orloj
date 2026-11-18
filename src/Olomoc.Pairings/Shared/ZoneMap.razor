@@ -1,6 +1,7 @@
 @* Map of the zones: a city plan (img/zones/map.jpg), one hexagon per zone (hidden ones left out) on
    the slot it was given once (ZoneMapLayout, Zone.Slot): adding, changing, closing a zone never
-   moves the others. Color: open, upcoming, closed under the Light or the Darkness, closed without
+   moves the others; too many zones for the plan: all the hexagons shrink (ZoneMapLayout.Scale),
+   smaller ones show only their colors and emblem (name in the tooltip). Color: open, upcoming, closed under the Light or the Darkness, closed without
    dominance. Inside: the zone's logo (link), its name, and the dominant faction's emblem (small
    while open). *@
 @using System.Globalization
@@ -11,10 +12,10 @@
     <section class="panel zn-map-panel" aria-labelledby="zn-map-title">
         <h2 id="zn-map-title">@L.Ui("zones.map.title")</h2>
         <div class="zn-map-scroll">
-            <ul class="zn-map">
+            <ul class="zn-map @SizeClass" style="@ScaleStyle">
                 @foreach (var z in Placed)
                 {
-                    var (x, y) = ZoneMapLayout.Slots[z.Slot!.Value];
+                    var (x, y) = ZoneMapLayout.Center(z.Slot!.Value, Scale);
                     var label = Label(z);
                     <li class="zn-hex-cell @ZoneText.MapClass(z)" style="@Position(x, y)">
                         <a class="zn-hex" href="bloc/@z.Code" title="@label" aria-label="@label"><span class="zn-hex-face">
@@ -71,10 +72,24 @@
     private static bool OnMap(ZoneSummary z) => z.Slot is { } s && s >= 0 && s < ZoneMapLayout.Slots.Count;
 
     // One per slot (a slot shared by mistake: the oldest zone listed first keeps it).
-    private List<ZoneSummary> Placed => Visible.Where(OnMap).GroupBy(z => z.Slot).Select(g => g.First()).ToList();
+    private List<ZoneSummary> Placed = [];
+
+    // Size of the hexagons: 1 while they all fit at full size on the plan.
+    private double Scale = 1;
+
+    protected override void OnParametersSet()
+    {
+        Placed = Visible.Where(OnMap).GroupBy(z => z.Slot).Select(g => g.First()).ToList();
+        Scale = ZoneMapLayout.Scale(Placed.Select(z => z.Slot!.Value));
+    }
+
+    private string ScaleStyle => string.Create(CultureInfo.InvariantCulture, $"--s: {Scale:0.####}");
+
+    // Small hexagons: name and emblem only; tiny ones: the emblem (the name stays in the tooltip).
+    private string SizeClass => Scale < .45 ? "tiny" : Scale < .7 ? "small" : "";
 
     private static string Position(double x, double y) =>
-        string.Create(CultureInfo.InvariantCulture, $"--x: {x}%; --y: {y}%");
+        string.Create(CultureInfo.InvariantCulture, $"--x: {x:0.####}%; --y: {y:0.####}%");
 
     // Name, state, period, number of games, dominance: for the tooltip and the screen readers.
     private string Label(ZoneSummary z)

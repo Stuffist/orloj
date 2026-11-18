@@ -1133,12 +1133,13 @@ body {
 .zn-map-scroll { overflow-x: auto; border-radius: 8px; }
 .zn-map {
     position: relative; min-width: 680px; aspect-ratio: 2 / 1; margin: 0; padding: 0; list-style: none;
-    container-type: inline-size; border-radius: 8px; border: 1px solid #5f5034;
+    --s: 1; container-type: inline-size; border-radius: 8px; border: 1px solid #5f5034;
     background: #2a241b url("../img/zones/map.jpg") center / 100% 100% no-repeat;
     box-shadow: inset 0 0 40px rgba(0, 0, 0, .55);
 }
 .zn-hex-cell {
-    position: absolute; width: 14%; height: 24.25%; left: calc(var(--x) - 7%); top: calc(var(--y) - 12.125%);
+    position: absolute; width: calc(14% * var(--s)); height: calc(24.25% * var(--s));
+    left: calc(var(--x) - 7% * var(--s)); top: calc(var(--y) - 12.125% * var(--s));
     transform: scale(.96); transition: filter .15s, transform .15s;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .55));
 }
@@ -1157,22 +1158,27 @@ body {
 }
 .zn-hex-face {
     width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: .35cqw; padding: 0 1.1cqw; text-align: center; background: var(--fill); color: var(--text, #fff);
+    gap: calc(.35cqw * var(--s)); padding: 0 calc(1.1cqw * var(--s)); text-align: center; background: var(--fill); color: var(--text, #fff);
     text-shadow: 0 1px 2px var(--shadow, rgba(0, 0, 0, .8));
 }
 .zn-hex-name {
-    max-width: 100%; font-size: clamp(.55rem, 1.1cqw, .82rem); font-weight: 800; line-height: 1.15; letter-spacing: .02em;
+    max-width: 100%; font-size: clamp(.5rem, calc(1.1cqw * var(--s)), .82rem); font-weight: 800; line-height: 1.15; letter-spacing: .02em;
     text-transform: uppercase; overflow: hidden; overflow-wrap: break-word; hyphens: auto;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
 }
 .zn-hex-state { font-size: clamp(.5rem, .85cqw, .66rem); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--state, inherit); }
 .zn-hex-date { font-size: clamp(.5rem, .85cqw, .66rem); opacity: .9; }
-.zn-hex-none { font-size: 1.6cqw; opacity: .75; line-height: 1; }
-.zn-hex-logo { width: 3cqw; height: 3cqw; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .6)); }
+.zn-hex-none { font-size: calc(1.6cqw * var(--s)); opacity: .75; line-height: 1; }
+.zn-hex-logo { width: calc(3cqw * var(--s)); height: calc(3cqw * var(--s)); filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .6)); }
 .zn-hex-emblem { display: flex; color: var(--text, #fff); filter: drop-shadow(0 1px 2px var(--shadow, rgba(0, 0, 0, .6))); }
-.zn-hex-emblem .emblem { width: 3.6cqw; height: 3.6cqw; }
-.zn-hex-emblem.small .emblem { width: 2cqw; height: 2cqw; }
-.zn-hex-logo + .zn-hex-name + .zn-hex-emblem .emblem { width: 2.8cqw; height: 2.8cqw; }
+.zn-hex-emblem .emblem { width: calc(3.6cqw * var(--s)); height: calc(3.6cqw * var(--s)); }
+.zn-hex-emblem.small .emblem { width: calc(2cqw * var(--s)); height: calc(2cqw * var(--s)); }
+.zn-hex-logo + .zn-hex-name + .zn-hex-emblem .emblem { width: calc(2.8cqw * var(--s)); height: calc(2.8cqw * var(--s)); }
+/* Many zones (smaller hexagons): the name and the emblem; tiny ones: the emblem only (larger). */
+.zn-map.small :is(.zn-hex-state, .zn-hex-date, .zn-hex-logo), .zn-map.tiny :is(.zn-hex-name, .zn-hex-state, .zn-hex-date, .zn-hex-logo) { display: none; }
+.zn-map.small .zn-hex-name { -webkit-line-clamp: 3; line-clamp: 3; }
+.zn-map.tiny .zn-hex-emblem .emblem { width: calc(5cqw * var(--s)); height: calc(5cqw * var(--s)); }
+.zn-map.tiny .zn-hex-none { font-size: calc(3cqw * var(--s)); }
 /* Colors, slightly translucent (the plan shows through a little): open (green), upcoming (hatched
    grey), closed under the Light (parchment, gold edge, dark ink), under the Darkness (dark brown),
    without dominance (grey). */

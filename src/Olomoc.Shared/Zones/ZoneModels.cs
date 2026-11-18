@@ -43,7 +43,7 @@ public sealed class Zone : IStoredDocument
     public bool Hidden { get; set; }
     /// <summary>
     /// Its hexagon on the map (index in <see cref="ZoneMapLayout.Slots"/>): given once, the most central
-    /// free one, and kept whatever changes (a deleted zone frees it). Null: the map is full.
+    /// free one, and kept whatever changes (a deleted zone frees it). Null: not given yet.
     /// </summary>
     public int? Slot { get; set; }
     /// <summary>Accounts (ids) that manage the zone, besides the admins.</summary>
