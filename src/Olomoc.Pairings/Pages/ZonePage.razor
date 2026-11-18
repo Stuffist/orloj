@@ -165,6 +165,10 @@ else
                             <span class="zn-score">@game.Game.A.Vp – @game.Game.B.Vp</span>
                             @Side(game.Game, TableSide.B)
                         </div>
+                        @if (game.Game.Comment is { } comment)
+                        {
+                            <p class="zn-comment">@comment</p>
+                        }
                     </li>
                 }
             </ul>

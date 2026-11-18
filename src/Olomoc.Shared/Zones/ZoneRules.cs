@@ -12,7 +12,7 @@ public static class ZoneRules
 {
     public const int MaxNameLength = TournamentRules.MaxNameLength, MaxDescriptionLength = 1000;
     public const int MaxZones = 500, MaxGamesPerZone = 10_000, MaxManagers = 10;
-    public const int MaxLogoLength = 500;
+    public const int MaxLogoLength = 500, MaxCommentLength = 500;
 
     public static int PlayersPerSide(GameFormat format) => format == GameFormat.Teams ? 2 : 1;
 
@@ -44,9 +44,9 @@ public static class ZoneRules
     /// a date in its period and not in the future, the format's number of players, known factions
     /// (in teams: same alignment in a team, opposed teams), VP, and required for the statistics: the
     /// legal cabal of each player, the scenario and its two decks, the side that played first, the end
-    /// of the game. Names stay optional (never counted). Games copied from a tournament do not come
-    /// through here (they keep what the tournament recorded).
-    /// Returns the cleaned game (names trimmed, empty ones removed), or the problems.
+    /// of the game. Names stay optional (never counted), like the comment. Games copied from a
+    /// tournament do not come through here (they keep what the tournament recorded).
+    /// Returns the cleaned game (names and comment trimmed, empty ones removed), or the problems.
     /// </summary>
     public static (ZoneGame? Clean, IReadOnlyList<Problem> Problems) CheckGame(ZoneGame? game, Zone zone, CatalogService catalog,
         DateOnly today, bool manager)
@@ -112,6 +112,8 @@ public static class ZoneRules
         else if (!Enum.IsDefined(first)) problems.Add(Problem.Of("zoneGame"));
         if (game.End is not { } gameEnd) problems.Add(Problem.Of("zoneEnd"));
         else if (!Enum.IsDefined(gameEnd)) problems.Add(Problem.Of("zoneGame"));
+        var comment = game.Comment?.Trim() is { Length: > 0 } c ? c : null;
+        if (comment?.Length > MaxCommentLength) problems.Add(Problem.Of("zoneComment", MaxCommentLength.ToString()));
 
         if (problems.Count > 0) return (null, problems);
         return (game with
@@ -119,6 +121,7 @@ public static class ZoneRules
             A = Clean(game.A),
             B = Clean(game.B),
             Scenario = scenario,
+            Comment = comment,
         }, problems);
     }
 

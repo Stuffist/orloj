@@ -1,7 +1,7 @@
 @* Entry (or change) of a game in a zone: duel or 2 v 2 (a Light team against a Darkness team), date,
    for each player a faction, the cabal played and optionally a name (never counted); VP of each
    side; for the statistics, required too: the side that played first, the scenario and its two
-   decks, the end of the game. All the fields shown at once. *@
+   decks, the end of the game. Optional: a comment (a notable event). All the fields shown at once. *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 @inject CabalLibrary Library
@@ -125,6 +125,11 @@
                     @onclick="() => SetEnd(e)">@L.Ui($"pairings.end.{e}")</button>
         }
     </div>
+    <div class="field">
+        <label for="zn-comment">@L.Ui("zones.form.comment")</label>
+        <textarea id="zn-comment" class="zn-textarea" rows="3" maxlength="@ZoneRules.MaxCommentLength"
+                  placeholder="@L.Ui("zones.form.comment.placeholder")" @oninput="e => _comment = e.Value?.ToString() ?? string.Empty">@_comment</textarea>
+    </div>
     <p class="hint">@L.Ui("zones.form.required")</p>
 
     <Problems Items="_problems" />
@@ -168,7 +173,7 @@
     private string _vpA = "", _vpB = "";
     private TableSide? _first;
     private GameEnd? _end;
-    private string _scenario = "", _scenarioName = "", _artifact = "", _ministry = "";
+    private string _scenario = "", _scenarioName = "", _artifact = "", _ministry = "", _comment = "";
     private bool _busy;
     private IReadOnlyList<Problem>? _problems;
 
@@ -199,6 +204,7 @@
         _vpB = g.B.Vp.ToString();
         _first = g.First;
         _end = g.End;
+        _comment = g.Comment ?? "";
         if (g.Scenario is { } s)
         {
             _scenario = s.Id;
@@ -287,7 +293,8 @@
             .Select(p => new ZonePlayer(p.Faction, p.Name.Trim() is { Length: > 0 } n ? n : null, p.Cabal)).ToList(), Parse(vp) ?? 0);
         var scenario = _scenario.Length == 0 ? null : new Scenario(_scenario, _scenario == Agendas.Other ? _scenarioName.Trim() : null,
             _artifact.Length > 0 ? _artifact : null, _ministry.Length > 0 ? _ministry : null);
-        return new ZoneGame(_format, _date, Side(TableSide.A, _vpA), Side(TableSide.B, _vpB), _first, _end, scenario);
+        return new ZoneGame(_format, _date, Side(TableSide.A, _vpA), Side(TableSide.B, _vpB), _first, _end, scenario,
+            _comment.Trim() is { Length: > 0 } c ? c : null);
     }
 
     private async Task SubmitAsync()

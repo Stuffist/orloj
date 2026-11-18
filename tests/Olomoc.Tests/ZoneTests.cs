@@ -121,6 +121,17 @@ public class ZoneTests
     }
 
     [Fact]
+    public void Comment_optional_trimmed_and_limited()
+    {
+        var game = Duel("RUBIN", "MAISEL", 5, 3);
+        ZoneGame? Clean(string? comment) => ZoneRules.CheckGame(game with { Comment = comment }, OpenZone, Data.Catalog, Today, false).Clean;
+        Assert.Null(Clean(null)!.Comment);
+        Assert.Null(Clean("   ")!.Comment);
+        Assert.Equal("Retournement au cycle 4 !", Clean("  Retournement au cycle 4 !  ")!.Comment);
+        Assert.Null(Clean(new string('x', ZoneRules.MaxCommentLength + 1)));
+    }
+
+    [Fact]
     public async Task Dates_of_the_game_within_the_zone_and_not_in_the_future()
     {
         var game = Duel("RUBIN", "MAISEL", 5, 3);

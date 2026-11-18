@@ -59,11 +59,12 @@ public sealed record ZonePlayer(string Faction, string? Name = null, CabalExport
 public sealed record ZoneSide(IReadOnlyList<ZonePlayer> Players, int Vp);
 
 /// <summary>
-/// A game recorded in a zone: format, date, both sides; optional, for the statistics: the side that
-/// played first, the cause of the end, the scenario (and decks).
+/// A game recorded in a zone: format, date, both sides; for the statistics (required when entered in
+/// the Block, maybe missing from a tournament copy): the side that played first, the cause of the
+/// end, the scenario (and decks); optional: a free comment (a notable event…).
 /// </summary>
 public sealed record ZoneGame(GameFormat Format, DateOnly PlayedOn, ZoneSide A, ZoneSide B,
-    TableSide? First = null, GameEnd? End = null, Scenario? Scenario = null)
+    TableSide? First = null, GameEnd? End = null, Scenario? Scenario = null, string? Comment = null)
 {
     public IEnumerable<ZonePlayer> Players => A.Players.Concat(B.Players);
 
