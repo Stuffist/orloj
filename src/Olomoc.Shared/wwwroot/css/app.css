@@ -1074,9 +1074,14 @@ body {
 .zn-player { display: flex; flex-direction: column; align-items: flex-start; gap: .4rem; }
 .zn-player .tn-fields, .zn-player .tn-picker { width: 100%; }
 .zn-player .field { min-width: 0; flex: 1 1 9rem; }
-.zn-side-result { display: flex; align-items: flex-end; gap: .6rem; margin-top: auto; }
+.zn-side-result { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .6rem; }
 .zn-side-result .field { min-width: 0; width: 7rem; }
-.zn-side-result .tn-first { align-self: flex-end; margin-bottom: 0; }
+.zn-side-result .zn-order { width: auto; }
+.zn-order-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+.zn-order-buttons { display: flex; gap: .4rem; }
+.zn-order-buttons .tn-first { margin: 0; }
+/* Required field */
+.req { color: var(--rust-soft); margin-left: .2em; }
 /* Entry of a game in the Block: P1 and end of the game are required, buttons of normal size */
 .zn-form .tn-first, .zn-form .tn-result-end button { padding: .45rem .85rem; font-size: .9rem; border-radius: 6px; }
 .zn-form .tn-result-end-label { font-size: .78rem; }

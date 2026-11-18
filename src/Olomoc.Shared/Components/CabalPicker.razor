@@ -9,7 +9,7 @@
 
 <div class="tn-picker">
     <div class="tn-picker-head">
-        <span class="tn-picker-title">@(Title ?? L.Ui("pairings.cabalN", Index + 1))</span>
+        <span class="tn-picker-title">@(Title ?? L.Ui("pairings.cabalN", Index + 1))@if (Required) { <span class="req" aria-hidden="true">*</span> }</span>
         <select value="@SelectedSaved" @onchange="OnSavedChanged" disabled="@(Library.Cabals.Count == 0)"
                 aria-label="@L.Ui("pairings.register.fromLibrary")">
             <option value="">@L.Ui(Library.Cabals.Count == 0 ? "pairings.register.libraryEmpty" : "pairings.register.fromLibrary")</option>
@@ -85,6 +85,9 @@
     [Parameter] public int LibraryVersion { get; set; }
     /// <summary>Title of the box (default: "Cabal n").</summary>
     [Parameter] public string? Title { get; set; }
+
+    /// <summary>Required (an asterisk after the title).</summary>
+    [Parameter] public bool Required { get; set; }
 
     // Builder in a new tab, on the chosen faction, with a reminder of the tournament (if there is one).
     private string ComposeLink => "/builder/?" + string.Join("&", new[]

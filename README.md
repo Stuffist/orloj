@@ -702,11 +702,12 @@ optional, shown in the list of games, never counted.
   the mode or the visibility) and moderate the games; editors and admins can do everything on
   every zone (logged in the admin panel's log).
 - **Entering a game** ("Record an encounter"): **anyone, without an account**, in an open zone.
-  Duel (1 v 1) or **2 v 2** (a Light team against a Darkness team, VP per team). Everything is
-  required except the names (optional, never counted): the faction and the cabal played of each
+  Duel (1 v 1) or **2 v 2** (a Light team against a Darkness team, VP per team). Every field is
+  required (marked with an asterisk) except the names (optional, never counted): the faction and the cabal played of each
   player (from "My cabals", composed or pasted, legality checked; typing a name suggests account
-  usernames, `GET /api/accounts/search`, and an account's username offers its public cabals), the VP of each side, the side
-  that played first, the end of the game, the scenario and both its decks; optional too, a free
+  usernames, `GET /api/accounts/search`, and an account's username offers its public cabals), the VP of each side and
+  who played first (each side starts with its VP and P1/P2 buttons: P1 on one side makes the other
+  P2), the end of the game, the scenario and both its decks; optional too, a free
   comment (a notable event, 500 characters at most, shown under the game), and a **photo** when the
   site allows them (admin panel, "Site settings", off by default: files stored on the server, in
   `DATA_DIR/photos/`, outside the database backup; JPEG/PNG/WebP checked from the first bytes,
