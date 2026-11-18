@@ -24,8 +24,11 @@ public static class CabalSyncRules
     public static bool IsNewer(DateTimeOffset change, DateTimeOffset? known) => known is not { } k || change > k;
 }
 
-/// <summary>Save (<see cref="Cabal"/> given) or deletion (null) of a cabal, at a date.</summary>
-public sealed record CabalChange(string Name, DateTimeOffset At, CabalExport? Cabal);
+/// <summary>
+/// Save (<see cref="Cabal"/> given) or deletion (null) of a cabal, at a date. <see cref="Public"/>:
+/// visibility chosen when saving (null: a new cabal public, a replaced one keeps its visibility).
+/// </summary>
+public sealed record CabalChange(string Name, DateTimeOffset At, CabalExport? Cabal, bool? Public = null);
 
 public sealed record CabalSyncRequest(IReadOnlyList<CabalChange> Changes);
 

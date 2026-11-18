@@ -72,9 +72,10 @@ public static class CabalSyncEndpoint
                     db.SavedCabals.Add(row);
                     rows.Add(row);
                 }
-                // A new cabal (or saved again after a deletion): public by default; a replaced one
-                // keeps its visibility.
+                // Visibility chosen when saving; otherwise a new cabal (or saved again after a
+                // deletion) is public, a replaced one keeps its visibility.
                 if (row.Deleted || row.Json is null) row.Public = json is not null;
+                if (json is not null && change.Public is { } chosen) row.Public = chosen;
                 row.Name = name;
                 row.SavedAt = change.At.UtcDateTime;
                 row.Deleted = json is null;

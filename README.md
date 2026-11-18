@@ -408,7 +408,9 @@ current catalog is set aside and reported under the recorded name.
   in batches of 10; deleting the account erases its cabals;
 - **public or private**, per cabal ("Public" in "My cabals", `PUT /api/account/cabals/visibility`):
   a public cabal is offered to whoever types the account's username while entering a game of the
-  Block (`GET /api/accounts/{name}/cabals`). New cabals are public; those saved before this
+  Block (`GET /api/accounts/{name}/cabals`). Signed in, a "Public" box next to "Save" (checked by
+  default) sets it when saving (sent with the cabal; on the composition already saved, changed at
+  once). Without that choice, new cabals are public; those saved before this
   setting existed stay private.
 
 ## Play mode

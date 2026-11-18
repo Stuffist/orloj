@@ -87,6 +87,16 @@ public class CabalSyncTests
     }
 
     [Fact]
+    public async Task Visibility_chosen_when_saving_is_sent_with_the_cabal()
+    {
+        var cloud = new FakeCloud { User = "Bohdan" };
+        var library = await Open(new FakeStorage(), cloud);
+        await library.SaveAsync(Cabal("Discrète"), T0, isPublic: false);
+        await library.SaveAsync(Cabal("Ouverte"), T0.AddMinutes(1));
+        Assert.Equal([("Discrète", (bool?)false), ("Ouverte", null)], cloud.Sent.Select(c => (c.Name, c.Public)).ToArray());
+    }
+
+    [Fact]
     public async Task Offline_the_changes_wait_for_the_network()
     {
         var cloud = new FakeCloud { User = "Bohdan" };
@@ -200,6 +210,7 @@ public class CabalSyncTests
         public int Limit { get; set; } = CabalSyncRules.MaxCabals;
         public int Calls { get; private set; }
         public int MaxChunk { get; private set; }
+        public List<CabalChange> Sent { get; } = new();
 
         public event Action? Changed;
 
@@ -220,6 +231,7 @@ public class CabalSyncTests
             if (!Online) return Task.FromResult(new AccountResult<CabalSyncResult>(null, [Problem.Of("network")]));
             Calls++;
             MaxChunk = Math.Max(MaxChunk, changes.Count);
+            Sent.AddRange(changes);
             if (!_accounts.TryGetValue(User!, out var account)) _accounts[User!] = account = new();
             var applied = 0;
             var problems = new List<Problem>();

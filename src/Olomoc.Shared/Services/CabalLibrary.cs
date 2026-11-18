@@ -85,11 +85,16 @@ public sealed class CabalLibrary
         string.IsNullOrWhiteSpace(name) ? null : _cabals.FirstOrDefault(c => SameName(c.Cabal.Name, name));
 
     /// <summary>Saves the cabal, which must be named; replaces the one with the same name.</summary>
-    public async Task SaveAsync(CabalExport cabal, DateTimeOffset now)
+    /// <summary>
+    /// Saves a cabal (replaces the one of the same name). <paramref name="isPublic"/>: its visibility
+    /// on the account, sent with it (null: public if new, unchanged if replaced).
+    /// </summary>
+    public async Task SaveAsync(CabalExport cabal, DateTimeOffset now, bool? isPublic = null)
     {
         if (string.IsNullOrWhiteSpace(cabal.Name)) throw new ArgumentException("Cabal without a name.", nameof(cabal));
+        var previous = Find(cabal.Name);
         _cabals.RemoveAll(c => SameName(c.Cabal.Name, cabal.Name));
-        _cabals.Insert(0, new SavedCabal(now, cabal, Pending: true));
+        _cabals.Insert(0, new SavedCabal(now, cabal, Pending: true, Public: isPublic ?? previous?.Public));
         _deleted.RemoveAll(d => SameName(d.Name, cabal.Name));
         await StoreAsync();
         await SyncAsync();
@@ -135,7 +140,7 @@ public sealed class CabalLibrary
             if (_owner is not null && _owner != user) _deleted.Clear();     // deletions of the other account
             var sent = _cabals.Where(c => firstSync || c.Pending).ToList();
             var tombstones = _owner == user ? _deleted.ToList() : new List<DeletedCabal>();
-            var changes = sent.Select(c => new CabalChange(c.Cabal.Name!, c.SavedAt, c.Cabal))
+            var changes = sent.Select(c => new CabalChange(c.Cabal.Name!, c.SavedAt, c.Cabal, c.Pending ? c.Public : null))
                 .Concat(tombstones.Select(d => new CabalChange(d.Name, d.At, null)))
                 .ToList();
 

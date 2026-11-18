@@ -81,6 +81,14 @@ else
                 <input id="cabal-name" type="text" maxlength="80" value="@_cabalName" @ref="_nameInput"
                        @oninput="e => { _cabalName = e.Value?.ToString() ?? string.Empty; _nameRequired = false; }" />
             </div>
+            @* Signed in: public or not on the account (checked by default; a saved cabal: changed at once). *@
+            @if (Accounts.Current is not null)
+            {
+                <label class="check save-public" title="@L.Ui("library.public.title")">
+                    <input type="checkbox" checked="@_savePublic" @onchange="e => OnSavePublicChangedAsync(e.Value is true)" />
+                    @L.Ui("library.public")
+                </label>
+            }
             <button class="btn primary" disabled="@_cogs.All(c => c is null)" @onclick="SaveAsync" title="@L.Ui("library.save.title")">
                 @L.Ui(IsSaved() ? "library.saved" : "library.save")
             </button>
@@ -684,7 +692,17 @@ else
         }
         if (Library.Find(cabal.Name) is { } old && !CabalLibrary.SameCards(old.Cabal, cabal)
             && !await JS.InvokeAsync<bool>("confirm", L.Ui("library.replace", old.Cabal.Name!))) return;
-        await Library.SaveAsync(cabal, DateTimeOffset.Now);
+        await Library.SaveAsync(cabal, DateTimeOffset.Now, Accounts.Current is null ? null : _savePublic);
+    }
+
+    // "Public" box next to "Save": used when saving; the composition already saved: its visibility changed at once.
+    private bool _savePublic = true;
+
+    private async Task OnSavePublicChangedAsync(bool isPublic)
+    {
+        _savePublic = isPublic;
+        if (IsSaved() && Library.Find(_cabalName) is { Public: { } current } saved && current != isPublic)
+            await Library.SetPublicAsync(saved, isPublic);
     }
 
     private async Task LoadAsync(CabalExport cabal)
@@ -695,6 +713,7 @@ else
         var resolved = Catalog.Resolve(cabal);
         _faction = resolved.Faction ?? "";
         _cabalName = cabal.Name ?? "";
+        _savePublic = Library.Find(_cabalName)?.Public ?? true;
         for (int i = 0; i < 3; i++) { _cogs[i] = resolved.Cogs[i]; _equipment[i] = resolved.Equipment[i]; }
         _loadNotice = resolved.Missing.Count == 0 ? null : L.Ui("library.missing", string.Join(", ", resolved.Missing));
         _libraryOpen = false;

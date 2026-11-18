@@ -83,6 +83,10 @@ public sealed class CabalSyncApiTests : IDisposable
             (await bohdan.PutAsJsonAsync("/api/account/cabals/visibility", new CabalVisibilityRequest("Inconnue", true), TournamentJson.Options)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized,
             (await anonymous.PutAsJsonAsync("/api/account/cabals/visibility", new CabalVisibilityRequest("Assaut", false), TournamentJson.Options)).StatusCode);
+
+        // Visibility chosen when saving (the builder's "Public" box): a new one private, a replaced one made public.
+        await Sync(bohdan, Save("Discrète", T0.AddMinutes(6)) with { Public = false }, Save("Secrète", T0.AddMinutes(7)) with { Public = true });
+        Assert.Equal(["Secrète", "Assaut"], await Offered("Bohdan"));
     }
 
     [Fact]
