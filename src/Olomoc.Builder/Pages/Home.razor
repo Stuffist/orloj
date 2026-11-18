@@ -90,7 +90,7 @@ else
                 </label>
             }
             <button class="btn primary" disabled="@_cogs.All(c => c is null)" @onclick="SaveAsync" title="@L.Ui("library.save.title")">
-                @L.Ui(_justSaved ? "library.saved" : "library.save")
+                @L.Ui(IsSaved() ? "library.saved" : "library.save")
             </button>
         </div>
 
@@ -481,7 +481,6 @@ else
 
     public void Dispose()
     {
-        _savedTimer?.Cancel();
         L.Changed -= OnLanguageChanged;
         Library.Changed -= OnLanguageChanged;
         Accounts.Changed -= OnLanguageChanged;
@@ -694,29 +693,6 @@ else
         if (Library.Find(cabal.Name) is { } old && !CabalLibrary.SameCards(old.Cabal, cabal)
             && !await JS.InvokeAsync<bool>("confirm", L.Ui("library.replace", old.Cabal.Name!))) return;
         await Library.SaveAsync(cabal, DateTimeOffset.Now, Accounts.Current is null ? null : _savePublic);
-        await ShowSavedAsync();
-    }
-
-    // "Saved ✓" for a moment after a save, then "Save" again (ready for the next change).
-    private bool _justSaved;
-    private CancellationTokenSource? _savedTimer;
-
-    private async Task ShowSavedAsync()
-    {
-        _savedTimer?.Cancel();
-        var timer = _savedTimer = new CancellationTokenSource();
-        _justSaved = true;
-        StateHasChanged();
-        try { await Task.Delay(TimeSpan.FromSeconds(2), timer.Token); }
-        catch (TaskCanceledException) { return; }                  // saved again, another cabal loaded, page left
-        _justSaved = false;
-        StateHasChanged();
-    }
-
-    private void HideSaved()
-    {
-        _savedTimer?.Cancel();
-        _justSaved = false;
     }
 
     // "Public" box next to "Save": used when saving; the composition already saved: its visibility changed at once.
@@ -738,7 +714,6 @@ else
         _faction = resolved.Faction ?? "";
         _cabalName = cabal.Name ?? "";
         _savePublic = Library.Find(_cabalName)?.Public ?? true;
-        HideSaved();
         for (int i = 0; i < 3; i++) { _cogs[i] = resolved.Cogs[i]; _equipment[i] = resolved.Equipment[i]; }
         _loadNotice = resolved.Missing.Count == 0 ? null : L.Ui("library.missing", string.Join(", ", resolved.Missing));
         _libraryOpen = false;
