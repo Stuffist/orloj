@@ -690,12 +690,13 @@ outside tournaments, recorded in **zones** (a club, a convention, a period of th
 with their statistics and their **dominance**. **Never a ranking of people**: player names are
 optional, shown in the list of games, never counted.
 
-- **Zones**: created by the **admins** (`/zones/new`): name, description (place, schedule…),
+- **Zones**: created by the **editors and admins** (`/bloc/new`): name, description (place, schedule…),
   kind, optional opening and closing dates, dominance mode, optional **managers** (accounts, by
   username), hidden (test zone: out of the list and of the all-zones statistics, reachable by its
   link). A zone is *upcoming* before its opening, *open*, then *closed* after its closing date or
   when a manager closes it by hand (reversible). Managers change the settings (not the managers,
-  the mode or the visibility) and moderate the games; an admin can do everything.
+  the mode or the visibility) and moderate the games; editors and admins can do everything on
+  every zone (logged in the admin panel's log).
 - **Entering a game** ("Record an encounter"): **anyone, without an account**, in an open zone.
   Duel (1 v 1) or **2 v 2** (a Light team against a Darkness team, VP per team). Everything is
   required except the names (optional, never counted): the faction and the cabal played of each

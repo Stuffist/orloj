@@ -18,12 +18,13 @@ public sealed record ZoneSummary(string Code, string Name, string Description, Z
     ZoneStatus Status, bool Hidden, int Games, Dominance Dominance, bool CanManage, string? Logo = null, int? Slot = null);
 
 /// <summary>
-/// A zone, with its statistics and its dominance. <see cref="Managers"/> (usernames): for its
-/// managers and the admins only.
+/// A zone, with its statistics and its dominance. <see cref="ZoneAdmin"/>: the requester administers
+/// the zones (editor or admin). <see cref="Managers"/> (usernames): for its
+/// managers and the zone admins only.
 /// </summary>
 public sealed record ZoneView(string Code, string Name, string Description, ZoneKind Kind, DateOnly? StartDate, DateOnly? EndDate,
     ZoneStatus Status, DominanceMode Mode, bool Hidden, bool Closed, Dominance Dominance, StatsView Stats,
-    bool CanManage, bool IsAdmin, IReadOnlyList<string>? Managers, string? Logo = null);
+    bool CanManage, bool ZoneAdmin, IReadOnlyList<string>? Managers, string? Logo = null);
 
 /// <summary>
 /// A recorded game: id, content, date of entry. <see cref="CanEdit"/>: through the account (its

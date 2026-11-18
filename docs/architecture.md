@@ -82,7 +82,7 @@ Language: `olomoc.lang` (localStorage); interface texts `i18n/*/ui.json`, card t
   an optional password; a registration is changed with the player token. An admin does not run a
   tournament: they can generate a new admin link for it (the old one stops working), exclude it
   from the stats or delete it.
-- **Zones** (the Block): created, deleted, hidden by the admins, who also choose the
+- **Zones** (the Block): created, deleted, hidden by the editors and admins, who also choose the
   dominance mode and the managers (optional accounts). Managers: settings, closing, moderation of
   their zone's games. Entering a game: anyone, no account, in an open zone; changing it: the
   entry token of the device, or the author's account, while the zone is open. A tournament can be

@@ -20,7 +20,7 @@ else
         <p class="tn-intro">@L.Ui("zones.intro")</p>
         <div class="tn-actions">
             <a class="btn" href="stats/?source=bloc">@L.Ui("zones.stats.all")</a>
-            @if (Accounts.Current is { IsAdmin: true })
+            @if (Accounts.Current is { CanEdit: true })
             {
                 <a class="btn primary" href="bloc/new">@L.Ui("zones.create")</a>
             }
@@ -30,13 +30,13 @@ else
 
     <ZoneMap Zones="_zones" />
 
-    @if (Accounts.Current is not { IsAdmin: true } && _zones.Any(z => z.CanManage) || Mine.Zones.Count > 0)
+    @if (Accounts.Current is not { CanEdit: true } && _zones.Any(z => z.CanManage) || Mine.Zones.Count > 0)
     {
         <section class="panel">
             <h2>@L.Ui("zones.mine")</h2>
             <ul class="zn-list">
-                @* Managed (for an admin: all of them, below), then seen on this device, most recent first. *@
-                @if (Accounts.Current is not { IsAdmin: true })
+                @* Managed (for a zone admin, editor or admin: all of them, below), then seen on this device, most recent first. *@
+                @if (Accounts.Current is not { CanEdit: true })
                 {
                     @foreach (var z in _zones.Where(z => z.CanManage && !Mine.Knows(z.Code)))
                     {

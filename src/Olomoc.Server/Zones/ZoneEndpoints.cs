@@ -12,8 +12,8 @@ namespace Olomoc.Server.Zones;
 /// <summary>
 /// Zones API (/api/zones): public reading; games entered by anyone (no account needed) in an open
 /// zone, changed or deleted through the entry token, the author's account (while the zone is open),
-/// a manager or an admin; settings by a manager or an admin; creation, managers, dominance mode,
-/// visibility and deletion by an admin (/api/admin/zones, logged).
+/// a manager or a zone admin; settings by a manager or a zone admin; creation, managers, dominance mode,
+/// visibility and deletion by a zone admin: an editor or an admin (/api/admin/zones, logged).
 /// </summary>
 public static class ZoneEndpoints
 {
@@ -36,7 +36,8 @@ public static class ZoneEndpoints
         write.MapDelete("games/{id:long}", DeleteGame);
         write.MapPut("", UpdateSettings);
 
-        var admin = app.MapGroup("/api/admin/zones").RequireAuthorization().AddEndpointFilter(Roles.Require(AccountRole.Admin))
+        // Zone administration: editors and admins.
+        var admin = app.MapGroup("/api/admin/zones").RequireAuthorization().AddEndpointFilter(Roles.Require(AccountRole.Editor))
             .RequireRateLimiting(TournamentEndpoints.WritePolicy);
         admin.MapPost("", Create);
         admin.MapPut("{code}", AdminUpdate);
@@ -76,7 +77,7 @@ public static class ZoneEndpoints
                 if (await users.FindByIdAsync(id) is { UserName: { } name }) managers.Add(name);
         }
         return Results.Json(new ZoneView(z.Code, z.Name, z.Description, z.Kind, z.StartDate, z.EndDate, z.StatusOn(Today), z.Dominance,
-            z.Hidden, z.Closed, await stats.DominanceAsync(z), await stats.OfZoneAsync(z.Code), manages, access.IsAdmin, managers, z.Logo),
+            z.Hidden, z.Closed, await stats.DominanceAsync(z), await stats.OfZoneAsync(z.Code), manages, access.ZoneAdmin, managers, z.Logo),
             TournamentJson.Options);
     }
 
@@ -245,18 +246,21 @@ public static class ZoneEndpoints
 
     // ---- Rights ----
 
-    /// <summary>The requester: account (if signed in) and admin role, read from the database.</summary>
-    private sealed record Access(string? UserId, bool IsAdmin)
+    /// <summary>
+    /// The requester: account (if signed in), and whether it administers the zones (editor or admin
+    /// role, read from the database).
+    /// </summary>
+    private sealed record Access(string? UserId, bool ZoneAdmin)
     {
         private static readonly Access Anonymous = new(null, false);
 
         public static async Task<Access> OfAsync(HttpContext ctx, UserManager<OlomocUser> users)
         {
             if (ctx.User.Identity?.IsAuthenticated != true || await users.GetUserAsync(ctx.User) is not { } user) return Anonymous;
-            return new(user.Id, await Roles.OfAsync(users, user) == AccountRole.Admin);
+            return new(user.Id, await Roles.OfAsync(users, user) >= AccountRole.Editor);
         }
 
-        public bool Manages(Zone z) => IsAdmin || UserId is not null && z.ManagerIds.Contains(UserId);
+        public bool Manages(Zone z) => ZoneAdmin || UserId is not null && z.ManagerIds.Contains(UserId);
 
         /// <summary>
         /// A manager, always; otherwise the author (account or entry token), while the zone is open.

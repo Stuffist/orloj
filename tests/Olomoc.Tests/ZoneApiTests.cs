@@ -104,7 +104,7 @@ public sealed class ZoneApiTests : IDisposable
         await Read<ZoneGamesPage>(await http.GetAsync($"/api/zones/{code}/games" + (before is { } b ? $"?before={b}" : "")));
 
     [Fact]
-    public async Task Only_admins_create_and_delete_zones()
+    public async Task Only_zone_admins_create_and_delete_zones()
     {
         var (_, root, bob, _, anonymous) = await StartAsync();
         Assert.Equal(HttpStatusCode.Unauthorized, (await Send(anonymous, HttpMethod.Post, "/api/admin/zones", Settings())).StatusCode);
@@ -120,6 +120,29 @@ public sealed class ZoneApiTests : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync($"/api/zones/{code}")).StatusCode);
         var audit = await Read<AdminAction[]>(await root.GetAsync("/api/admin/audit"));
         Assert.Equal(["deleteZone", "createZone"], audit.Select(a => a.Action).Take(2));
+    }
+
+    [Fact]
+    public async Task Editors_administer_every_zone()
+    {
+        var (_, root, bob, carl, _) = await StartAsync();
+        Assert.Equal(HttpStatusCode.OK, (await Send(root, HttpMethod.Put, "/api/admin/accounts/Bob/role", new RoleRequest(AccountRole.Editor))).StatusCode);
+
+        // Bob (editor) creates a zone with every setting, changes another's mode and visibility, deletes it.
+        var mine = await CreateZone(bob, Settings("Club de Bob", managers: "Carl"));
+        var other = await CreateZone(root, Settings("Club de Root"));
+        var view = await Zone(bob, other);
+        Assert.True(view.CanManage && view.ZoneAdmin);
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(bob, HttpMethod.Put, $"/api/admin/zones/{other}", Settings("Club de Root", hidden: true) with
+        {
+            Dominance = DominanceMode.WinRate,
+        })).StatusCode);
+        Assert.Equal(DominanceMode.WinRate, (await Zone(root, other)).Mode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(bob, HttpMethod.Delete, $"/api/admin/zones/{other}")).StatusCode);
+
+        // Carl, a mere manager: no zone administration.
+        Assert.False((await Zone(carl, mine)).ZoneAdmin);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Send(carl, HttpMethod.Post, "/api/admin/zones", Settings())).StatusCode);
     }
 
     [Fact]

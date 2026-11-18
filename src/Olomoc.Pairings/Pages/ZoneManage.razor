@@ -7,7 +7,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
-@* Settings of a zone. Its managers: name, description, logo (link), kind, dates, closing by hand. The admins, in
+@* Settings of a zone. Its managers: name, description, logo (link), kind, dates, closing by hand. The zone admins (editors and admins), in
    addition: creation, dominance mode, visibility, managers, deletion. *@
 
 @if (!_ready)
@@ -84,7 +84,7 @@ else
             </div>
             <p class="hint">@L.Ui("zones.field.dates.help")</p>
 
-            @if (IsAdmin)
+            @if (IsZoneAdmin)
             {
                 <fieldset class="tn-modes">
                     <legend>@L.Ui("zones.field.mode")</legend>
@@ -127,7 +127,7 @@ else
         </form>
     </section>
 
-    @if (IsAdmin && !IsNew)
+    @if (IsZoneAdmin && !IsNew)
     {
         <section class="panel tn-danger">
             <h3>@L.Ui("zones.delete.zone")</h3>
@@ -151,8 +151,9 @@ else
     private DominanceMode _mode = DominanceMode.Wins;
 
     private bool IsNew => Code is null;
-    private bool IsAdmin => Accounts.Current is { IsAdmin: true };
-    private bool Allowed => IsNew ? IsAdmin : _zone is { CanManage: true };
+    // Zone administration (creation, mode, managers, visibility, deletion): editors and admins.
+    private bool IsZoneAdmin => Accounts.Current is { CanEdit: true };
+    private bool Allowed => IsNew ? IsZoneAdmin : _zone is { CanManage: true };
 
     protected override async Task OnInitializedAsync()
     {
@@ -193,7 +194,7 @@ else
         _saved = false;
         try
         {
-            if (IsAdmin)
+            if (IsZoneAdmin)
             {
                 var request = new ZoneAdminRequest(_name.Trim(), _description, _kind, _start, _end, _closed, _mode, _hidden,
                     _managers.Split(',', ';', ' ').Select(n => n.Trim()).Where(n => n.Length > 0).ToList(), _logo.Trim());
