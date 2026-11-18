@@ -1,7 +1,7 @@
 @* Entry (or change) of a game in a zone: duel or 2 v 2 (a Light team against a Darkness team), date,
-   for each player a faction, and optionally a name (never counted) and the cabal played; VP of each
-   side; optionally, for the statistics: the side that played first, the end of the game, the
-   scenario and its decks. *@
+   for each player a faction, the cabal played and optionally a name (never counted); VP of each
+   side; for the statistics, required too: the side that played first, the scenario and its two
+   decks, the end of the game. All the fields shown at once. *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 @inject CabalLibrary Library
@@ -42,7 +42,7 @@
                         <div class="tn-fields">
                             <div class="field">
                                 <label for="zn-faction-@index">@L.Ui("filter.faction")</label>
-                                <select id="zn-faction-@index" value="@player.Faction" @onchange="e => SetFaction(index, e.Value?.ToString())">
+                                <select id="zn-faction-@index" value="@player.Faction" required @onchange="e => SetFaction(index, e.Value?.ToString())">
                                     <option value="">@L.Ui("common.choose")</option>
                                     @foreach (var f in FactionsFor(s, index))
                                     {
@@ -57,85 +57,79 @@
                                        @oninput="e => player.Name = e.Value?.ToString() ?? string.Empty" />
                             </div>
                         </div>
-                        @if (player.ShowCabal || player.Cabal is not null)
-                        {
-                            <CabalPicker Index="index" Faction="@player.Faction" Value="player.Cabal" ValueChanged="c => SetCabal(index, c)"
-                                         LibraryVersion="_libraryVersion" Title="@L.Ui("zones.form.cabal", index + 1)" />
-                            @if (player.Cabal is not null)
-                            {
-                                <button type="button" class="btn small" @onclick="() => SetCabal(index, null)">@L.Ui("zones.form.cabal.remove")</button>
-                            }
-                        }
-                        else
-                        {
-                            <button type="button" class="btn small" @onclick="() => player.ShowCabal = true">@L.Ui("zones.form.cabal.add")</button>
-                        }
+                        <CabalPicker Index="index" Faction="@player.Faction" Value="player.Cabal" ValueChanged="c => SetCabal(index, c)"
+                                     LibraryVersion="_libraryVersion" Title="@L.Ui("zones.form.cabal", index + 1)" />
                     </div>
                 }
                 <div class="zn-side-result">
                     <div class="field">
                         <label for="zn-vp-@s">@L.Ui("zones.form.vp")</label>
-                        <input id="zn-vp-@s" type="number" min="0" max="@TournamentRules.MaxVictoryPoints" inputmode="numeric"
+                        <input id="zn-vp-@s" type="number" min="0" max="@TournamentRules.MaxVictoryPoints" inputmode="numeric" required
                                value="@(s == TableSide.A ? _vpA : _vpB)" @oninput="e => SetVp(s, e.Value?.ToString())" />
                     </div>
                     <button type="button" class="tn-first @(_first == s ? "on" : null)" aria-pressed="@(_first == s ? "true" : "false")"
-                            title="@L.Ui("zones.form.first.title")" @onclick="() => _first = _first == s ? null : s">@L.Ui("pairings.result.first")</button>
+                            title="@L.Ui("zones.form.first.title")" @onclick="() => SetFirst(s)">@L.Ui("pairings.result.first")</button>
                 </div>
             </fieldset>
         }
     </div>
 
-    <details class="zn-more" open="@(_moreOpen ? true : null)">
-        <summary>@L.Ui("zones.form.more")</summary>
-        <div class="tn-result-end" role="group" aria-label="@L.Ui("pairings.result.end.title")">
-            <span class="tn-result-end-label">@L.Ui("pairings.result.end")</span>
-            @foreach (var end in Enum.GetValues<GameEnd>())
-            {
-                var e = end;
-                <button type="button" class="@(_end == e ? "on" : null)" aria-pressed="@(_end == e ? "true" : "false")"
-                        @onclick="() => _end = _end == e ? null : e">@L.Ui($"pairings.end.{e}")</button>
-            }
-        </div>
-        <ol class="tn-scenarios">
-            <li>
-                <label for="zn-scenario" class="tn-table-number">@L.Ui("zones.form.scenario")</label>
-                <select id="zn-scenario" value="@_scenario" @onchange="e => _scenario = e.Value?.ToString() ?? string.Empty">
-                    <option value="">@L.Ui("pairings.scenarios.none")</option>
-                    @foreach (var id in Agendas.All)
-                    {
-                        <option value="@id">@L.Ui($"agenda.{id}")</option>
-                    }
-                    <option value="@Agendas.Other">@L.Ui("agenda.OTHER")</option>
-                </select>
-                @if (_scenario == Agendas.Other)
+    @* The scenario, its two decks and the end of the game: required, for the statistics. *@
+    <div class="tn-fields zn-scenario">
+        <div class="field">
+            <label for="zn-scenario">@L.Ui("zones.form.scenario")</label>
+            <select id="zn-scenario" value="@_scenario" required @onchange="e => Set(ref _scenario, e)">
+                <option value="">@L.Ui("common.choose")</option>
+                @foreach (var id in Agendas.All)
                 {
-                    <input type="text" maxlength="@TournamentRules.MaxNameLength" value="@_scenarioName"
-                           placeholder="@L.Ui("pairings.scenarios.otherName")" aria-label="@L.Ui("pairings.scenarios.otherName")"
-                           @oninput="e => _scenarioName = e.Value?.ToString() ?? string.Empty" />
+                    <option value="@id">@L.Ui($"agenda.{id}")</option>
                 }
-                <select class="tn-deck" value="@_artifact" disabled="@(_scenario.Length == 0)" aria-label="@L.Ui("pairings.scenarios.artifact")"
-                        title="@L.Ui("pairings.scenarios.artifact")" @onchange="e => _artifact = e.Value?.ToString() ?? string.Empty">
-                    <option value="">@L.Ui("pairings.scenarios.none")</option>
-                    @foreach (var id in Decks.Artifacts)
-                    {
-                        <option value="@id">@L.Ui($"deck.artifact.{id}")</option>
-                    }
-                </select>
-                <select class="tn-deck" value="@_ministry" disabled="@(_scenario.Length == 0)" aria-label="@L.Ui("pairings.scenarios.ministry")"
-                        title="@L.Ui("pairings.scenarios.ministry")" @onchange="e => _ministry = e.Value?.ToString() ?? string.Empty">
-                    <option value="">@L.Ui("pairings.scenarios.none")</option>
-                    @foreach (var id in Decks.Ministries)
-                    {
-                        <option value="@id">@L.Ui($"deck.ministry.{id}")</option>
-                    }
-                </select>
-            </li>
-        </ol>
-    </details>
+                <option value="@Agendas.Other">@L.Ui("agenda.OTHER")</option>
+            </select>
+        </div>
+        @if (_scenario == Agendas.Other)
+        {
+            <div class="field grow">
+                <label for="zn-scenario-name">@L.Ui("pairings.scenarios.otherName")</label>
+                <input id="zn-scenario-name" type="text" maxlength="@TournamentRules.MaxNameLength" value="@_scenarioName" required
+                       @oninput="e => _scenarioName = e.Value?.ToString() ?? string.Empty" />
+            </div>
+        }
+        <div class="field">
+            <label for="zn-artifact">@L.Ui("pairings.scenarios.artifact")</label>
+            <select id="zn-artifact" value="@_artifact" required @onchange="e => Set(ref _artifact, e)">
+                <option value="">@L.Ui("common.choose")</option>
+                @foreach (var id in Decks.Artifacts)
+                {
+                    <option value="@id">@L.Ui($"deck.artifact.{id}")</option>
+                }
+            </select>
+        </div>
+        <div class="field">
+            <label for="zn-ministry">@L.Ui("pairings.scenarios.ministry")</label>
+            <select id="zn-ministry" value="@_ministry" required @onchange="e => Set(ref _ministry, e)">
+                <option value="">@L.Ui("common.choose")</option>
+                @foreach (var id in Decks.Ministries)
+                {
+                    <option value="@id">@L.Ui($"deck.ministry.{id}")</option>
+                }
+            </select>
+        </div>
+    </div>
+    <div class="tn-result-end zn-end" role="group" aria-label="@L.Ui("zones.form.end.title")">
+        <span class="tn-result-end-label">@L.Ui("pairings.result.end")</span>
+        @foreach (var end in Enum.GetValues<GameEnd>())
+        {
+            var e = end;
+            <button type="button" class="@(_end == e ? "on" : null)" aria-pressed="@(_end == e ? "true" : "false")"
+                    @onclick="() => SetEnd(e)">@L.Ui($"pairings.end.{e}")</button>
+        }
+    </div>
+    <p class="hint">@L.Ui("zones.form.required")</p>
 
     <Problems Items="_problems" />
     <div class="tn-actions">
-        <button class="btn primary" type="submit" disabled="@(_busy || !Complete)">@L.Ui(Existing is null ? "zones.form.submit" : "zones.form.save")</button>
+        <button class="btn primary" type="submit" disabled="@_busy">@L.Ui(Existing is null ? "zones.form.submit" : "zones.form.save")</button>
         @if (OnCancel.HasDelegate)
         {
             <button class="btn" type="button" @onclick="OnCancel">@L.Ui("pairings.cancel")</button>
@@ -165,7 +159,6 @@
         public string Faction = "";
         public string Name = "";
         public CabalExport? Cabal;
-        public bool ShowCabal;
     }
 
     private GameFormat _format = GameFormat.Duel;
@@ -176,7 +169,7 @@
     private TableSide? _first;
     private GameEnd? _end;
     private string _scenario = "", _scenarioName = "", _artifact = "", _ministry = "";
-    private bool _moreOpen, _busy;
+    private bool _busy;
     private IReadOnlyList<Problem>? _problems;
 
     private int PerSide => ZoneRules.PlayersPerSide(_format);
@@ -213,7 +206,6 @@
             _artifact = s.Artifact ?? "";
             _ministry = s.Ministry ?? "";
         }
-        _moreOpen = g.End is not null || g.Scenario is not null;
     }
 
     // Duel ↔ 2 v 2: the first player of each side keeps their place.
@@ -253,7 +245,6 @@
     {
         var player = _players[index];
         player.Cabal = cabal;
-        player.ShowCabal = cabal is not null;
         // Cabal chosen first: its faction becomes the player's.
         if (player.Faction.Length == 0 && cabal?.Faction is { } f) player.Faction = f.Code;
         _problems = null;
@@ -270,13 +261,25 @@
         if (DateOnly.TryParse(e.Value?.ToString(), out var d)) _date = d;
     }
 
+    private void SetFirst(TableSide side)
+    {
+        _first = _first == side ? null : side;
+        _problems = null;
+    }
+
+    private void SetEnd(GameEnd end)
+    {
+        _end = _end == end ? null : end;
+        _problems = null;
+    }
+
+    private void Set(ref string field, ChangeEventArgs e)
+    {
+        field = e.Value?.ToString() ?? string.Empty;
+        _problems = null;
+    }
+
     private static int? Parse(string s) => int.TryParse(s, out var n) ? n : null;
-
-    private IEnumerable<PlayerRow> Playing => _players.Take(2 * PerSide);
-
-    private bool Complete => Playing.All(p => p.Faction.Length > 0)
-        && Parse(_vpA) is >= 0 and <= TournamentRules.MaxVictoryPoints && Parse(_vpB) is >= 0 and <= TournamentRules.MaxVictoryPoints
-        && (_scenario != Agendas.Other || _scenarioName.Trim().Length > 0);
 
     private ZoneGame Build()
     {
@@ -289,13 +292,16 @@
 
     private async Task SubmitAsync()
     {
-        if (!Complete || _busy) return;
+        if (_busy) return;
         _busy = true;
         try
         {
             var game = Build();
-            // Same checks as the server, before sending (the zone's state is checked by the server).
+            // Same checks as the server, before sending (the zone's state is checked by the server):
+            // everything missing is listed at once. VP not typed: not taken for 0.
             var (_, problems) = ZoneRules.CheckGame(game, new Zone { StartDate = Zone.StartDate, EndDate = Zone.EndDate }, Catalog, Today, manager: true);
+            if (Parse(_vpA) is null || Parse(_vpB) is null)
+                problems = [Problem.Of("zoneVictoryPoints", TournamentRules.MaxVictoryPoints.ToString()), .. problems.Where(p => p.Key != "zoneVictoryPoints")];
             _problems = problems.Count > 0 ? problems : await Submit(game);
         }
         finally { _busy = false; }

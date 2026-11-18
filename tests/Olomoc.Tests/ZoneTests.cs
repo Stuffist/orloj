@@ -15,12 +15,23 @@ public class ZoneTests
 
     private static Zone OpenZone => new() { Code = "ZZZZZZ", Name = "Club", StartDate = new(2026, 1, 1), EndDate = new(2026, 12, 31) };
 
+    private static AppData Data => AppData.GetAsync().GetAwaiter().GetResult();
+
+    /// <summary>A complete scenario: agenda and both decks.</summary>
+    internal static Scenario FullScenario(string id = "SABOTAGE", string? name = null) => new(id, name, Decks.Artifacts[0], Decks.Ministries[0]);
+
+    // A player with a legal cabal of their faction (an unknown faction: none).
+    private static ZonePlayer Player(string faction, string? name = null) =>
+        new(faction, name, Data.Catalog.AllFactions.Any(f => f.Code == faction) ? Data.LegalCabal(faction) : null);
+
+    // Complete games: cabals, P1, end of the game, scenario and decks (all required).
     private static ZoneGame Duel(string a, string b, int vpA, int vpB, string? nameA = null) =>
-        new(GameFormat.Duel, Today, new ZoneSide([new ZonePlayer(a, nameA)], vpA), new ZoneSide([new ZonePlayer(b)], vpB));
+        new(GameFormat.Duel, Today, new ZoneSide([Player(a, nameA)], vpA), new ZoneSide([Player(b)], vpB),
+            TableSide.A, GameEnd.FourthCycle, FullScenario());
 
     private static ZoneGame Teams(string a1, string a2, string b1, string b2, int vpA, int vpB) =>
-        new(GameFormat.Teams, Today, new ZoneSide([new ZonePlayer(a1), new ZonePlayer(a2)], vpA),
-            new ZoneSide([new ZonePlayer(b1), new ZonePlayer(b2)], vpB));
+        new(GameFormat.Teams, Today, new ZoneSide([Player(a1), Player(a2)], vpA),
+            new ZoneSide([Player(b1), Player(b2)], vpB), TableSide.B, GameEnd.Bile, FullScenario());
 
     private static async Task<string[]> Problems(ZoneGame game, Zone? zone = null, bool manager = false)
     {
@@ -42,7 +53,7 @@ public class ZoneTests
     public async Task Duel_accepted_and_cleaned()
     {
         var d = await AppData.GetAsync();
-        var game = Duel("RUBIN", "MAISEL", 7, 4, nameA: "  Ana  ") with { Scenario = new Scenario("SABOTAGE", "ignored") };
+        var game = Duel("RUBIN", "MAISEL", 7, 4, nameA: "  Ana  ") with { Scenario = FullScenario(name: "ignored") };
         var (clean, problems) = ZoneRules.CheckGame(game, OpenZone, d.Catalog, Today, manager: false);
         Assert.Empty(problems);
         Assert.Equal("Ana", clean!.A.Players[0].Name);
@@ -94,6 +105,19 @@ public class ZoneTests
         var d = await AppData.GetAsync();
         var problem = Assert.Single(ZoneRules.CheckGame(wrong, OpenZone, d.Catalog, Today, false).Problems);
         Assert.Equal(("cabalFaction", 0), (problem.Key, problem.Cabal));     // "Cabal 1": the first player
+    }
+
+    [Fact]
+    public async Task Everything_but_the_names_is_required()
+    {
+        var game = Duel("RUBIN", "MAISEL", 5, 3);
+        Assert.Empty(await Problems(game));                                   // names left out: accepted
+        var noCabal = game with { B = new ZoneSide([new ZonePlayer("MAISEL")], 3) };
+        var missing = ZoneRules.CheckGame(noCabal, OpenZone, Data.Catalog, Today, false).Problems;
+        Assert.Equal(("zoneCabal", "2"), (missing.Single().Key, missing.Single().Args![0]));    // player 2
+        Assert.Equal(["zoneScenario", "zoneFirst", "zoneEnd"], await Problems(game with { Scenario = null, First = null, End = null }));
+        Assert.Equal(["zoneDecks"], await Problems(game with { Scenario = new Scenario("SABOTAGE", null, Decks.Artifacts[0], null) }));
+        Assert.Equal(["zoneDecks"], await Problems(game with { Scenario = new Scenario("SABOTAGE") }));
     }
 
     [Fact]
@@ -187,7 +211,12 @@ public class ZoneTests
     public async Task Rank_3_and_picks_from_the_cabals_played()
     {
         var cabal = await MaiselCabal();
-        var game = Duel("RUBIN", "MAISEL", 2, 6) with { B = new ZoneSide([new ZonePlayer("MAISEL", null, cabal)], 6) };
+        // Rubin without a cabal (a game copied from a tournament can lack it): only Maisel's counts.
+        var game = Duel("RUBIN", "MAISEL", 2, 6) with
+        {
+            A = new ZoneSide([new ZonePlayer("RUBIN")], 2),
+            B = new ZoneSide([new ZonePlayer("MAISEL", null, cabal)], 6),
+        };
         var s = await Stats(game);
         var rank3 = Assert.Single(s.Rank3Wins);
         Assert.Equal(("1R01", 1), (rank3.Key, rank3.Wins));            // the rank 3 cog of the cabal

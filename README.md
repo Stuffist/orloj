@@ -697,10 +697,11 @@ optional, shown in the list of games, never counted.
   when a manager closes it by hand (reversible). Managers change the settings (not the managers,
   the mode or the visibility) and moderate the games; an admin can do everything.
 - **Entering a game** ("Record an encounter"): **anyone, without an account**, in an open zone.
-  Duel (1 v 1) or **2 v 2** (a Light team against a Darkness team, VP per team). Required: the
-  faction of each player and the VP of each side. Optional: names, the cabal played (from
-  "My cabals", composed or pasted, legality checked), the side that played first, the end of the
-  game, the scenario and its decks. Checked by `Zones/ZoneRules.cs` in the browser, then again on
+  Duel (1 v 1) or **2 v 2** (a Light team against a Darkness team, VP per team). Everything is
+  required except the names (optional, never counted): the faction and the cabal played of each
+  player (from "My cabals", composed or pasted, legality checked), the VP of each side, the side
+  that played first, the end of the game, the scenario and both its decks; all the fields shown at
+  once. Games copied from a tournament keep what it recorded. Checked by `Zones/ZoneRules.cs` in the browser, then again on
   the server: date within the zone's period and not in the future, alignments of the teams.
 - **Changing or deleting a game**: the device that entered it (entry token in the localStorage,
   `olomoc.zones`), or the author's account on any device, while the zone is open; its managers

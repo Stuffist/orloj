@@ -42,7 +42,10 @@ public static class ZoneRules
     /// <summary>
     /// A game entered in the zone: the zone open (except for its managers, <paramref name="manager"/>),
     /// a date in its period and not in the future, the format's number of players, known factions
-    /// (in teams: same alignment in a team, opposed teams), VP, optional names, cabals and scenario.
+    /// (in teams: same alignment in a team, opposed teams), VP, and required for the statistics: the
+    /// legal cabal of each player, the scenario and its two decks, the side that played first, the end
+    /// of the game. Names stay optional (never counted). Games copied from a tournament do not come
+    /// through here (they keep what the tournament recorded).
     /// Returns the cleaned game (names trimmed, empty ones removed), or the problems.
     /// </summary>
     public static (ZoneGame? Clean, IReadOnlyList<Problem> Problems) CheckGame(ZoneGame? game, Zone zone, CatalogService catalog,
@@ -84,6 +87,7 @@ public static class ZoneRules
             }
             if ((p.Name?.Trim().Length ?? 0) > MaxNameLength) problems.Add(Problem.Of("zonePlayerName", MaxNameLength.ToString()));
             if (p.Cabal is { } cabal) problems.AddRange(TournamentRules.CheckCabal(catalog, p.Faction, cabal, i));
+            else problems.Add(Problem.Of("zoneCabal", (i + 1).ToString()));
         }
         if (known && game.Format == GameFormat.Teams)
         {
@@ -94,15 +98,20 @@ public static class ZoneRules
             else if (alignmentA == alignmentB) problems.Add(Problem.Of("teamsOpposed"));
         }
 
+        // Required: the scenario and both its decks, the side that played first, the end of the game.
         Scenario? scenario = null;
-        if (game.Scenario is { } s)
+        if (game.Scenario is not { } s) problems.Add(Problem.Of("zoneScenario"));
+        else
         {
             var (clean, problem) = TournamentRules.CheckScenario(s);
             if (problem is not null) problems.Add(problem);
+            else if (s.Artifact is null || s.Ministry is null) problems.Add(Problem.Of("zoneDecks"));
             scenario = clean;
         }
-        if (game.First is { } first && !Enum.IsDefined(first) || game.End is { } gameEnd && !Enum.IsDefined(gameEnd))
-            problems.Add(Problem.Of("zoneGame"));
+        if (game.First is not { } first) problems.Add(Problem.Of("zoneFirst"));
+        else if (!Enum.IsDefined(first)) problems.Add(Problem.Of("zoneGame"));
+        if (game.End is not { } gameEnd) problems.Add(Problem.Of("zoneEnd"));
+        else if (!Enum.IsDefined(gameEnd)) problems.Add(Problem.Of("zoneGame"));
 
         if (problems.Count > 0) return (null, problems);
         return (game with

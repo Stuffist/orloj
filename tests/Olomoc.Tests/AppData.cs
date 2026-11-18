@@ -42,6 +42,41 @@ public sealed class AppData
     /// <summary>Equipment/boon by its id (stable, unlike the name, which the editor can change).</summary>
     public Equipment Equipment(string id) => Catalog.EquipmentById(id) ?? throw new ArgumentException($"unknown equipment/boon: {id}");
 
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, CabalExport> _legal = new();
+
+    /// <summary>
+    /// A legal cabal of the faction, found in the current catalog (cogs of the faction, then equipment
+    /// accepted by the legality check): for tests that need any valid cabal, whatever the errata.
+    /// </summary>
+    public CabalExport LegalCabal(string faction) => _legal.GetOrAdd(faction, f =>
+    {
+        var cat = Catalog;
+        var none = new Equipment?[3];
+        // Cogs of each rank the faction recruits without a composition rule.
+        List<Cog> Recruits(int rank) => cat.Catalog.Cogs.Where(c => c.Published && c.Rank == rank)
+            .Where(c => !cat.CheckLegality(f, [c, null, null], none).Issues.Any(i => i.Key == "outsideFaction")).ToList();
+        var (ones, twos, threes) = (Recruits(1), Recruits(2), Recruits(3));
+        foreach (var c3 in threes)
+        foreach (var c2 in twos)
+        foreach (var c1 in ones)
+        {
+            Cog?[] cogs = [c1, c2, c3];
+            if (cat.CheckLegality(f, cogs, none).Issues.Any(i => i.Key is "duplicateCog" or "composition" or "outsideFaction")) continue;
+            // Equipment of each slot: its own, the faction's, or a Ministry of one of the cogs.
+            List<Equipment> For(Cog c) => cat.Catalog.Equipment.Where(e => e.Published
+                && (e.CogId == c.Id || e.Faction == f || e.Ministry is { } m && cogs.Any(x => x!.Ministries.Contains(m)))).Take(12).ToList();
+            foreach (var e1 in For(c1))
+            foreach (var e2 in For(c2))
+            foreach (var e3 in For(c3))
+            {
+                Equipment?[] equipment = [e1, e2, e3];
+                if (cat.CheckLegality(f, cogs, equipment).IsLegal)
+                    return new CabalExporter(L).ToModel("Test", f, cogs, equipment);
+            }
+        }
+        throw new InvalidOperationException($"no legal cabal found for {f}");
+    });
+
     private static string FindRoot()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)

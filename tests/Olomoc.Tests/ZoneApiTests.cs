@@ -82,8 +82,14 @@ public sealed class ZoneApiTests : IDisposable
         return (await Read<ZoneCreated>(response)).Code;
     }
 
+    private static AppData Data => AppData.GetAsync().GetAwaiter().GetResult();
+
+    // A player with a legal cabal of their faction (required, like P1, the end and the scenario).
+    private static ZonePlayer Player(string faction, string? name = null) => new(faction, name, Data.LegalCabal(faction));
+
     private static ZoneGame Duel(string a = "RUBIN", string b = "MAISEL", int vpA = 7, int vpB = 4) =>
-        new(GameFormat.Duel, Today, new ZoneSide([new ZonePlayer(a, "Ana")], vpA), new ZoneSide([new ZonePlayer(b)], vpB));
+        new(GameFormat.Duel, Today, new ZoneSide([Player(a, "Ana")], vpA), new ZoneSide([Player(b)], vpB),
+            TableSide.A, GameEnd.FourthCycle, ZoneTests.FullScenario());
 
     private static async Task<ZoneGameCreated> Enter(HttpClient http, string zone, ZoneGame? game = null)
     {
@@ -152,8 +158,8 @@ public sealed class ZoneApiTests : IDisposable
     {
         var (_, root, _, _, anonymous) = await StartAsync();
         var code = await CreateZone(root, Settings());
-        var teams = new ZoneGame(GameFormat.Teams, Today, new ZoneSide([new("RUBIN"), new("LIBUS")], 5),
-            new ZoneSide([new("URKARAS"), new("DYKOVIAN")], 3));
+        var teams = new ZoneGame(GameFormat.Teams, Today, new ZoneSide([Player("RUBIN"), Player("LIBUS")], 5),
+            new ZoneSide([Player("URKARAS"), Player("DYKOVIAN")], 3), TableSide.A, GameEnd.Bile, ZoneTests.FullScenario());
         var response = await Send(anonymous, HttpMethod.Post, $"/api/zones/{code}/games", teams);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(["teamsOpposed"], await Keys(response));
