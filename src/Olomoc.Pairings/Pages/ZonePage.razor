@@ -289,9 +289,12 @@ else
     // afterwards, hence StateHasChanged. New game: confirmation, and a fresh form (same format and
     // date) for the next one;
     // change: form closed. Either way the game is highlighted in the list.
-    private async Task<IReadOnlyList<Problem>> SaveAsync(ZoneGame game)
+    // Photo of a new game (chosen in the form): sent once the game is recorded; refused (too large…),
+    // the game stays recorded and the problem shows above the list.
+    private async Task<IReadOnlyList<Problem>> SaveAsync(ZoneGame game, byte[]? photo)
     {
         if (_zone is not { } z) return [];
+        IReadOnlyList<Problem>? photoProblems = null;
         if (_editing is { } editing)
         {
             var updated = await Api.UpdateGameAsync(z.Code, editing.Id, game, Mine.TokenOf(z.Code, editing.Id));
@@ -305,6 +308,7 @@ else
             var created = await Api.AddGameAsync(z.Code, game);
             if (created.Value is not { } c) return created.Problems;
             await Mine.RememberAsync(z.Code, z.Name, c.Id, c.EditToken);
+            if (photo is not null && z.Photos && !await SendPhotoAsync(z, c.Id, photo, c.EditToken)) photoProblems = _listProblems;
             _highlighted = c.Id;
             _notice = "zones.enter.saved";
             _nextFormat = game.Format;
@@ -313,6 +317,7 @@ else
         }
         _tab = Tab.Games;
         await LoadAsync();
+        if (photoProblems is { Count: > 0 }) _listProblems = photoProblems;
         StateHasChanged();
         return [];
     }
@@ -327,19 +332,24 @@ else
         _photoBusy = g.Id;
         try
         {
-            var image = await e.File.RequestImageFileAsync("image/jpeg", ZoneRules.PhotoMaxSide, ZoneRules.PhotoMaxSide);
-            using var stream = image.OpenReadStream(ZoneRules.MaxPhotoBytes);
-            using var buffer = new MemoryStream();
-            await stream.CopyToAsync(buffer);
-            var result = await Api.UploadPhotoAsync(z.Code, g.Id, buffer.ToArray(), "image/jpeg", Mine.TokenOf(z.Code, g.Id));
-            _listProblems = result.Problems;
-            if (!result.Ok) return;
-            _photoVersions[g.Id] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            await LoadAsync();
+            var (image, problem) = await ZonePhotoFile.ReadAsync(e.File);
+            if (image is null)
+            {
+                _listProblems = [problem!];
+                return;
+            }
+            if (await SendPhotoAsync(z, g.Id, image, Mine.TokenOf(z.Code, g.Id))) await LoadAsync();
         }
-        catch (IOException) { _listProblems = [Problem.Of("photoTooLarge", (ZoneRules.MaxPhotoBytes / (1024 * 1024)).ToString())]; }
-        catch (JSException) { _listProblems = [Problem.Of("photoType")]; }        // not an image the browser can read
         finally { _photoBusy = null; }
+    }
+
+    // Photo sent (chosen in the list, or with the form of a new game): problems shown above the list.
+    private async Task<bool> SendPhotoAsync(ZoneView z, long id, byte[] image, string? token)
+    {
+        var result = await Api.UploadPhotoAsync(z.Code, id, image, ZonePhotoFile.ContentType, token);
+        _listProblems = result.Problems;
+        if (result.Ok) _photoVersions[id] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        return result.Ok;
     }
 
     private async Task DeletePhotoAsync(ZoneGameView g)

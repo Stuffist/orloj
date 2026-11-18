@@ -711,8 +711,9 @@ optional, shown in the list of games, never counted.
   comment (a notable event, 500 characters at most, shown under the game), and a **photo** when the
   site allows them (admin panel, "Site settings", off by default: files stored on the server, in
   `DATA_DIR/photos/`, outside the database backup; JPEG/PNG/WebP checked from the first bytes,
-  5 MB at most, reduced to 1600 px and re-encoded by the browser, which drops the location; added,
-  replaced or removed by whoever can change the game; deleted with the game or the zone; turned
+  5 MB at most, reduced to 1600 px and re-encoded by the browser, which drops the location;
+  chosen in the form of a new game, next to the comment, and sent once the game is recorded, or
+  added, replaced or removed from the list by whoever can change the game; deleted with the game or the zone; turned
   off, the photos are hidden, not deleted); all the fields shown at
   once. Games copied from a tournament keep what it recorded. Checked by `Zones/ZoneRules.cs` in the browser, then again on
   the server: date within the zone's period and not in the future, alignments of the teams.

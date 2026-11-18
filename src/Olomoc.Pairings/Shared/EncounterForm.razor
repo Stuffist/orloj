@@ -2,8 +2,9 @@
    for each player a faction, the cabal played and optionally a name (never counted); VP of each
    side; for the statistics, required too: the side that played first, the scenario and its two
    decks, the end of the game (required fields marked with an asterisk). Optional: a comment (a
-   notable event). All the fields shown at once: format and date, scenario and decks, then each
-   side (its VP and P1/P2 first; faction list with the logos), the end of the game.
+   notable event), and a photo when the site allows them (new game: sent once it is recorded).
+   All the fields shown at once: format and date, scenario and decks, then each side (its VP and
+   P1/P2 first; faction list with the logos), the end of the game, the comment and the photo.
    Typing a name suggests account names; an account's name offers its public cabals. *@
 @inject LocalizationService L
 @inject CatalogService Catalog
@@ -171,10 +172,33 @@
                     @onclick="() => SetEnd(e)">@L.Ui($"pairings.end.{e}")</button>
         }
     </div>
-    <div class="field">
-        <label for="zn-comment">@L.Ui("zones.form.comment")</label>
-        <textarea id="zn-comment" class="zn-textarea" rows="3" maxlength="@ZoneRules.MaxCommentLength"
-                  placeholder="@L.Ui("zones.form.comment.placeholder")" @oninput="e => _comment = e.Value?.ToString() ?? string.Empty">@_comment</textarea>
+    <div class="zn-comment-row">
+        <div class="field grow">
+            <label for="zn-comment">@L.Ui("zones.form.comment")</label>
+            <textarea id="zn-comment" class="zn-textarea" rows="3" maxlength="@ZoneRules.MaxCommentLength"
+                      placeholder="@L.Ui("zones.form.comment.placeholder")" @oninput="e => _comment = e.Value?.ToString() ?? string.Empty">@_comment</textarea>
+        </div>
+        @* Photo (site setting), new game only: reduced at once by the browser, sent with the game.
+           A recorded game's photo is changed from the list. *@
+        @if (Zone.Photos && Existing is null)
+        {
+            <div class="zn-form-photo">
+                @if (_photo is not null)
+                {
+                    <img class="zn-photo" src="@_photoPreview" alt="@L.Ui("zones.photo.alt")" />
+                }
+                <div class="zn-photo-row">
+                    <label class="btn @(_busy ? "disabled" : null)">
+                        @L.Ui(_photo is null ? "zones.photo.add" : "zones.photo.replace")
+                        <InputFile accept="image/*" disabled="@_busy" OnChange="ChoosePhotoAsync" />
+                    </label>
+                    @if (_photo is not null)
+                    {
+                        <button type="button" class="btn small danger" disabled="@_busy" @onclick="RemovePhoto">@L.Ui("zones.photo.remove")</button>
+                    }
+                </div>
+            </div>
+        }
     </div>
     <p class="hint">@L.Ui("zones.form.required")</p>
 
@@ -196,8 +220,8 @@
     [Parameter, EditorRequired] public ZoneView Zone { get; set; } = default!;
     /// <summary>Game being changed (null: new game).</summary>
     [Parameter] public ZoneGame? Existing { get; set; }
-    /// <summary>Submit: returns the problems (none if the game is accepted).</summary>
-    [Parameter, EditorRequired] public Func<ZoneGame, Task<IReadOnlyList<Problem>>> Submit { get; set; } = default!;
+    /// <summary>Submit (the game, and the photo chosen for a new one): returns the problems (none if the game is accepted).</summary>
+    [Parameter, EditorRequired] public Func<ZoneGame, byte[]?, Task<IReadOnlyList<Problem>>> Submit { get; set; } = default!;
     [Parameter] public EventCallback OnCancel { get; set; }
     /// <summary>New game: format and date proposed (those of the previous one).</summary>
     [Parameter] public GameFormat Format { get; set; }
@@ -244,6 +268,30 @@
     private string _scenario = "", _scenarioName = "", _artifact = "", _ministry = "", _comment = "";
     private bool _busy;
     private IReadOnlyList<Problem>? _problems;
+    // Photo chosen (already reduced), and its preview.
+    private byte[]? _photo;
+    private string? _photoPreview;
+
+    private async Task ChoosePhotoAsync(InputFileChangeEventArgs e)
+    {
+        if (_busy) return;
+        _busy = true;
+        try
+        {
+            var (image, problem) = await ZonePhotoFile.ReadAsync(e.File);
+            _problems = problem is null ? null : [problem];
+            if (image is null) return;
+            _photo = image;
+            _photoPreview = $"data:{ZonePhotoFile.ContentType};base64,{Convert.ToBase64String(image)}";
+        }
+        finally { _busy = false; }
+    }
+
+    private void RemovePhoto()
+    {
+        _photo = null;
+        _photoPreview = null;
+    }
 
     private int PerSide => ZoneRules.PlayersPerSide(_format);
 
@@ -380,7 +428,7 @@
             var (_, problems) = ZoneRules.CheckGame(game, new Zone { StartDate = Zone.StartDate, EndDate = Zone.EndDate }, Catalog, Today, manager: true);
             if (Parse(_vpA) is null || Parse(_vpB) is null)
                 problems = [Problem.Of("zoneVictoryPoints", TournamentRules.MaxVictoryPoints.ToString()), .. problems.Where(p => p.Key != "zoneVictoryPoints")];
-            _problems = problems.Count > 0 ? problems : await Submit(game);
+            _problems = problems.Count > 0 ? problems : await Submit(game, Existing is null ? _photo : null);
         }
         finally { _busy = false; }
     }
