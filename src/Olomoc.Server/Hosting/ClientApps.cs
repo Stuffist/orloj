@@ -3,22 +3,34 @@ namespace Olomoc.Server.Hosting;
 /// <summary>
 /// The site in the browser: a single Blazor WebAssembly app (Olomoc.Web), served at the root
 /// (_framework/…, index.html), whose pages live under five sections: the builder (/builder/…),
-/// the tournaments (/pairings/…), the online games (/online/…), the Dystopian Encounters
-/// (/zones/…) and the statistics (/stats/). Any address in a section without a matching file
+/// the tournaments (/pairings/…), the online games (/online/…), the Block and its zones
+/// (/bloc/…) and the statistics (/stats/). Any address in a section without a matching file
 /// returns index.html: the Blazor router takes over, without reloading from one section to another.
 /// </summary>
 public static class ClientApps
 {
-    public static readonly string[] Sections = ["builder", "pairings", "online", "zones", "stats"];
+    public static readonly string[] Sections = ["builder", "pairings", "online", "bloc", "stats"];
+
+    /// <summary>Former section addresses: redirected to the new section, the rest of the address kept.</summary>
+    private static readonly (string From, string To)[] Renamed = [("zones", "bloc")];
 
     public static void Map(WebApplication app)
     {
-        // "/builder" without a trailing slash: redirected to "/builder/", the section's canonical address.
         app.Use((ctx, next) =>
         {
+            var path = ctx.Request.Path.Value ?? "";
+            // "/zones/ABCDEF" (the Block's former address): "/bloc/ABCDEF".
+            foreach (var (from, to) in Renamed)
+            {
+                if (!path.Equals("/" + from, StringComparison.OrdinalIgnoreCase)
+                    && !path.StartsWith($"/{from}/", StringComparison.OrdinalIgnoreCase)) continue;
+                ctx.Response.Redirect($"/{to}/{path[(from.Length + 1)..].TrimStart('/')}{ctx.Request.QueryString}", permanent: true);
+                return Task.CompletedTask;
+            }
+            // "/builder" without a trailing slash: redirected to "/builder/", the section's canonical address.
             foreach (var section in Sections)
             {
-                if (!ctx.Request.Path.Equals("/" + section, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!path.Equals("/" + section, StringComparison.OrdinalIgnoreCase)) continue;
                 ctx.Response.Redirect($"/{section}/{ctx.Request.QueryString}");
                 return Task.CompletedTask;
             }

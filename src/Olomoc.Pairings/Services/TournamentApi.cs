@@ -69,7 +69,7 @@ public sealed class TournamentApi(HttpClient http)
     public Task<ApiResult<Olomoc.Tournaments.Stats.StatsView>> GetStatsAsync() =>
         SendAsync<Olomoc.Tournaments.Stats.StatsView>(HttpMethod.Get, "/api/stats", null);
 
-    /// <summary>Statistics of everything: the tournaments and the Dystopian Encounters together.</summary>
+    /// <summary>Statistics of everything: the tournaments and the Block together.</summary>
     public Task<ApiResult<Olomoc.Tournaments.Stats.StatsView>> GetAllStatsAsync() =>
         SendAsync<Olomoc.Tournaments.Stats.StatsView>(HttpMethod.Get, "/api/stats/all", null);
 

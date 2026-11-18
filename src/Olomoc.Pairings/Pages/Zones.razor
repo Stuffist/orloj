@@ -1,4 +1,4 @@
-@page "/zones"
+@page "/bloc"
 @implements IDisposable
 @inject LocalizationService L
 @inject CatalogService Catalog
@@ -6,7 +6,7 @@
 @inject ZoneApi Api
 @inject MyZoneEntries Mine
 
-@* Dystopian Encounters: the map of the zones, "My zones" (managed, or where this device entered
+@* The Block: the map of the zones, "My zones" (managed, or where this device entered
    games), then the list (open first, then upcoming, then closed, by year), with their dominance. *@
 
 @if (!_ready)
@@ -19,10 +19,10 @@ else
         <h2>@L.Ui("zones.title")</h2>
         <p class="tn-intro">@L.Ui("zones.intro")</p>
         <div class="tn-actions">
-            <a class="btn" href="stats/?source=zones">@L.Ui("zones.stats.all")</a>
+            <a class="btn" href="stats/?source=bloc">@L.Ui("zones.stats.all")</a>
             @if (Accounts.Current is { IsAdmin: true })
             {
-                <a class="btn primary" href="zones/new">@L.Ui("zones.create")</a>
+                <a class="btn primary" href="bloc/new">@L.Ui("zones.create")</a>
             }
         </div>
         <Problems Items="_problems" />
@@ -55,7 +55,7 @@ else
                         @* Hidden zone reached by its link (or deleted): only its name. *@
                         <li class="zn-card">
                             <div class="zn-card-head">
-                                <a class="tn-mine-name" href="zones/@mine.Code">@mine.Name</a>
+                                <a class="tn-mine-name" href="bloc/@mine.Code">@mine.Name</a>
                                 <button class="btn small danger tn-mine-actions" @onclick="() => Mine.ForgetZoneAsync(mine.Code)">@L.Ui("pairings.mine.forget")</button>
                             </div>
                         </li>
@@ -132,7 +132,7 @@ else
                 {
                     <ZoneLogo Url="@logo" Class="small" />
                 }
-                <a class="tn-mine-name" href="zones/@z.Code">@z.Name</a>
+                <a class="tn-mine-name" href="bloc/@z.Code">@z.Name</a>
                 <span class="tn-phase @ZoneText.StatusClass(z.Status)">@L.Ui($"zones.status.{z.Status}")</span>
                 <span class="tn-role">@L.Ui($"zones.kind.{z.Kind}")</span>
                 @if (z.Hidden)
@@ -142,7 +142,7 @@ else
                 <span class="tn-mine-actions">
                     @if (z.CanManage)
                     {
-                        <a class="btn small" href="zones/@z.Code/manage">@L.Ui("zones.manage")</a>
+                        <a class="btn small" href="bloc/@z.Code/manage">@L.Ui("zones.manage")</a>
                     }
                     @if (forget is not null)
                     {

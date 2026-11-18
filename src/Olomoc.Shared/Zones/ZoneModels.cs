@@ -4,7 +4,7 @@ using Olomoc.Tournaments.Stats;
 
 namespace Olomoc.Zones;
 
-// Dystopian Encounters: games played outside tournaments, recorded in zones (a club, an event, a
+// The Block: games played outside tournaments, recorded in zones (a club, an event, a
 // period of the year, online). Each zone has its statistics and its dominance (Light or Darkness,
 // and the leading faction of that alignment). Never a ranking of people: player names are optional,
 // shown in the list of games, never counted.

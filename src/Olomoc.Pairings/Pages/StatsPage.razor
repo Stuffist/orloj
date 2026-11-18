@@ -6,8 +6,8 @@
 @inject ZoneApi Zones
 
 @* Statistics of Olomòc (/stats/): everything by default, the finished tournaments and the
-   Dystopian Encounters together (a zone game copied from an archived tournament counted once);
-   filters: tournaments only (?source=tournaments), Encounters only (?source=zones). The panels
+   games of the Block together (a zone game copied from an archived tournament counted once);
+   filters: tournaments only (?source=tournaments), the Block only (?source=bloc). The panels
    themselves: StatsSections. *@
 
 @if (!_ready)
@@ -19,7 +19,7 @@ else
     <nav class="zn-tabs" aria-label="@L.Ui("stats.filter.label")">
         @Filter(null, "stats.filter.all")
         @Filter("tournaments", "stats.filter.tournaments")
-        @Filter("zones", "stats.filter.zones")
+        @Filter("bloc", "stats.filter.zones")
     </nav>
 
     @if (_stats is not { } s)
@@ -36,11 +36,11 @@ else
                     <p class="tn-meta">@L.Ui("pairings.stats.totals", s.Tournaments, s.Players, s.Games)</p>
                     <p class="hint">@L.Ui("pairings.stats.method", StatsView.MinGames)</p>
                     break;
-                case "zones":
+                case "bloc":
                     <h2>@L.Ui("zones.stats.all")</h2>
                     <p class="tn-meta">@L.Ui("zones.stats.totals", s.Tournaments, s.Games)</p>
                     <p class="hint">@L.Ui("zones.stats.method", StatsView.MinGames)</p>
-                    <div class="tn-actions"><a class="btn small" href="zones/">@L.Ui("zones.home")</a></div>
+                    <div class="tn-actions"><a class="btn small" href="bloc/">@L.Ui("zones.home")</a></div>
                     break;
                 default:
                     <h2>@L.Ui("stats.all.title")</h2>
@@ -56,13 +56,13 @@ else
         }
         else
         {
-            <StatsSections Stats="s" Zones="@(Current == "zones")" All="@(Current is null)" />
+            <StatsSections Stats="s" Zones="@(Current == "bloc")" All="@(Current is null)" />
         }
     }
 }
 
 @code {
-    /// <summary>"tournaments", "zones", or nothing: everything.</summary>
+    /// <summary>"tournaments", "bloc" (the zones of the Block), or nothing: everything.</summary>
     [SupplyParameterFromQuery] public string? Source { get; set; }
 
     private bool _ready;
@@ -71,7 +71,7 @@ else
     private string? _loaded;            // filter of _stats
     private int _request;               // a slower answer for a previous filter is ignored
 
-    private string? Current => Source is "tournaments" or "zones" ? Source : null;
+    private string? Current => Source is "tournaments" or "bloc" ? Source : null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -87,7 +87,7 @@ else
         var result = filter switch
         {
             "tournaments" => await Tournaments.GetStatsAsync(),
-            "zones" => await Zones.AllStatsAsync(),
+            "bloc" => await Zones.AllStatsAsync(),
             _ => await Tournaments.GetAllStatsAsync(),
         };
         if (request != _request) return;
@@ -105,7 +105,7 @@ else
     private string? Empty(StatsView s) => Current switch
     {
         "tournaments" => s.Tournaments == 0 ? "pairings.stats.empty" : null,
-        "zones" => s.Games == 0 ? "zones.noGames" : null,
+        "bloc" => s.Games == 0 ? "zones.noGames" : null,
         _ => s.Games == 0 && s.Tournaments == 0 ? "stats.empty" : null,
     };
 

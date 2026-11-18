@@ -646,17 +646,17 @@ Planned next steps: the Block (16″ board, terrain, miniatures, measurements), 
 
 `/stats/` ("Statistics" tab, `Pages/StatsPage.razor`), public, with a filter:
 
-- **All** (default, `/api/stats/all`): the finished tournaments and the games of the Dystopian
-  Encounters (visible zones) together. A game of a tournament bound to a zone is copied into the
+- **All** (default, `/api/stats/all`): the finished tournaments and the games of the Block
+  (visible zones) together. A game of a tournament bound to a zone is copied into the
   zone: it counts through the zone while the tournament is in progress, then through the
   tournament's archive once it is finished (the archive and the copy share the tournament's
   code), never twice. Factions: registered players and participations; cog choices: registered
   cabals and cabals played.
 - **Tournaments** (`?source=tournaments`, `/api/stats`): the tournaments only, as below.
-- **Dystopian Encounters** (`?source=zones`, `/api/zones/stats`): all the visible zones (see
+- **Block** (`?source=bloc`, `/api/zones/stats`): all the visible zones (see
   below).
 
-`/pairings/stats` and `/zones/stats` redirect there with the matching filter.
+`/pairings/stats` and `/bloc/stats` redirect there with the matching filter.
 
 The tournaments counted are the **finished** ones — except those their organizer excludes ("Do
 not count in the statistics", at creation or at any time in the administration):
@@ -683,9 +683,9 @@ archive; at startup, a finished tournament without an archive gets one.
 The computation shared with the zones is in `Tournaments/Stats/GameStats.cs` (games in a neutral
 form: a side is one player or a team of two).
 
-## Dystopian Encounters (zones)
+## The Block (zones)
 
-`/zones/` ("Encounters" tab) replaces Occicat's "Rencontres dystopiques" form: games played
+`/bloc/` ("Block" tab; formerly `/zones/`, which redirects) replaces Occicat's "Rencontres dystopiques" form: games played
 outside tournaments, recorded in **zones** (a club, a convention, a period of the year, online),
 with their statistics and their **dominance**. **Never a ranking of people**: player names are
 optional, shown in the list of games, never counted.
@@ -752,7 +752,7 @@ src/Olomoc.Web/       the site's Blazor WebAssembly app (served at the root): ro
                       reloading from one to another
 src/Olomoc.Builder/   pages of the builder, play mode, account, editor and admin panel (/builder/…)
 src/Olomoc.Pairings/  pages of the tournaments and statistics (/pairings/…), and of the
-                      Dystopian Encounters (/zones/…)
+                      Block (/bloc/…)
 src/Olomoc.Online/    pages of the online games (/online/…)
 src/Olomoc.Server/    ASP.NET Core host: app, shared files, API, online games hub
 tests/Olomoc.Tests/   xUnit
@@ -794,7 +794,7 @@ tests/Olomoc.Tests/   xUnit
 - `Tournaments/` — tournament (`TournamentModels.cs`), standings (`Standings.cs`), pairings
   (`Pairer.cs`), rules of the phases and registrations (`TournamentRules.cs`), exchanges with
   the API (`TournamentApiModels.cs`); statistics (`Stats/`: `GameStats.cs`, `TournamentStats.cs`).
-- `Zones/` — Dystopian Encounters: zone and game (`ZoneModels.cs`), rules (`ZoneRules.cs`),
+- `Zones/` — the Block: zone and game (`ZoneModels.cs`), rules (`ZoneRules.cs`),
   dominance (`ZoneDominance.cs`), exchanges with the API (`ZoneApiModels.cs`).
 - `wwwroot/` — card catalog (`data/`), languages (`i18n/`), pictograms (`img/`), styles
   (`css/app.css`), file download and service worker registration (`js/olomoc.js`), installable
@@ -874,7 +874,7 @@ tests/Olomoc.Tests/   xUnit
   (`OnlineStore.cs`: one document per game, kind `online`), players' presence
   (`OnlinePresence.cs`).
 - `Hosting/ClientApps.cs` — the WebAssembly app at the root (`_framework/`); routes of the
-  `/builder/…`, `/pairings/…`, `/online/…` and `/zones/…` sections sent to `index.html`.
+  `/builder/…`, `/pairings/…`, `/online/…`, `/bloc/…` and `/stats/` sections sent to `index.html` (`/zones/…`: redirected to `/bloc/…`).
 - `Hosting/SecurityHeaders.cs` — CSP, frames forbidden, Referrer-Policy, HSTS over HTTPS.
 - `wwwroot/service-worker.js` — offline: network first, cached copy if the network is missing
   (never the API); at the root to cover the app and `/_content/` (see `docs/pwa.md`).

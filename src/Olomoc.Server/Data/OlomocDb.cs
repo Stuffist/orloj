@@ -27,7 +27,7 @@ public sealed class OlomocDb(DbContextOptions<OlomocDb> options) : IdentityDbCon
     /// <summary>Log of the admins' actions (admin panel), kept for a year.</summary>
     public DbSet<AdminActionRow> AdminActions => Set<AdminActionRow>();
 
-    /// <summary>Games recorded in the zones (Dystopian Encounters); the zones are documents.</summary>
+    /// <summary>Games recorded in the zones (the Block); the zones are documents.</summary>
     public DbSet<ZoneGameRow> ZoneGames => Set<ZoneGameRow>();
 
     protected override void OnModelCreating(ModelBuilder model)

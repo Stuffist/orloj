@@ -1,8 +1,8 @@
-@page "/zones/stats"
+@page "/bloc/stats"
 @inject NavigationManager Nav
 
-@* Former address of the statistics of all the zones: now /stats/, filter "Dystopian Encounters". *@
+@* Statistics of all the zones of the Block: on /stats/, filter "Block" (former /zones/stats redirects here). *@
 
 @code {
-    protected override void OnInitialized() => Nav.NavigateTo("stats/?source=zones", replace: true);
+    protected override void OnInitialized() => Nav.NavigateTo("stats/?source=bloc", replace: true);
 }

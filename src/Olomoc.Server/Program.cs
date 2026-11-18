@@ -35,7 +35,7 @@ builder.Services.AddSingleton(sp => new CatalogStore(sp.GetRequiredService<IWebH
     Path.Combine(dataDirectory, "catalog"), sp.GetRequiredService<ILogger<CatalogStore>>()));
 builder.Services.AddSingleton<ServerCatalog>();
 builder.Services.AddSingleton<AdminAudit>();      // log of the admins' actions
-// Dystopian Encounters: zones (documents, kind "zone") and their games (ZoneGames table).
+// The Block: zones (documents, kind "zone") and their games (ZoneGames table).
 builder.Services.AddSingleton(sp => new ZoneStore(sp.GetRequiredService<IDbContextFactory<OlomocDb>>()));
 builder.Services.AddSingleton<ZoneGameStore>();
 builder.Services.AddSingleton<ZoneStats>();
@@ -173,7 +173,7 @@ app.MapTournaments();
 app.MapAccounts();
 app.MapCatalog();                           // before the static files: merged card catalog
 app.MapOnline();
-app.MapZones();                             // Dystopian Encounters
+app.MapZones();                             // the Block
 app.MapAdmin(dataDirectory);                // admin panel (admins)
 app.MapGet("/", () => Results.Redirect("/builder/"));
 app.MapGet("/healthz", () => "ok\n");

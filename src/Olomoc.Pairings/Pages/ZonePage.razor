@@ -1,4 +1,4 @@
-@page "/zones/{Code}"
+@page "/bloc/{Code}"
 @implements IDisposable
 @inject LocalizationService L
 @inject CatalogService Catalog
@@ -18,7 +18,7 @@ else if (_zone is not { } z)
 {
     <section class="panel">
         <Problems Items="_problems" />
-        <a class="btn" href="zones/">@L.Ui("zones.home")</a>
+        <a class="btn" href="bloc/">@L.Ui("zones.home")</a>
     </section>
 }
 else
@@ -57,10 +57,10 @@ else
             <DominanceLine Dominance="z.Dominance" Closed="@(z.Status == ZoneStatus.Closed)" />
         </div>
         <div class="tn-head-tools">
-            <a class="btn small" href="zones/">@L.Ui("zones.home")</a>
+            <a class="btn small" href="bloc/">@L.Ui("zones.home")</a>
             @if (z.CanManage)
             {
-                <a class="btn small" href="zones/@z.Code/manage">@L.Ui("zones.manage")</a>
+                <a class="btn small" href="bloc/@z.Code/manage">@L.Ui("zones.manage")</a>
             }
         </div>
     </section>

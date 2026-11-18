@@ -1053,7 +1053,7 @@ body {
 .tn-online { margin-left: .4rem; font-size: .72rem; color: var(--ok); text-decoration: none; border: 1px solid; border-radius: 999px; padding: 0 .4rem; }
 .online-head a { color: var(--rust-soft); }
 
-/* Dystopian Encounters (zones): list, zone page, entry form */
+/* The Block (zones): list, zone page, entry form */
 .zn-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
 .zn-card { padding: .55rem .7rem; background: var(--panel-2); border-radius: 8px; }
 .zn-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; }

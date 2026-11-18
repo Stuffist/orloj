@@ -17,10 +17,25 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
     [InlineData("/builder?x=1", "/builder/?x=1")]
     [InlineData("/pairings", "/pairings/")]
     [InlineData("/online", "/online/")]
+    [InlineData("/bloc", "/bloc/")]
+    [InlineData("/stats", "/stats/")]
     public async Task Redirections(string path, string location)
     {
         var response = await Client().GetAsync(path);
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal(location, response.Headers.Location?.OriginalString);
+    }
+
+    // The Block's former address (/zones/…): permanently moved to /bloc/…, the rest kept.
+    [Theory]
+    [InlineData("/zones", "/bloc/")]
+    [InlineData("/zones/", "/bloc/")]
+    [InlineData("/zones/ABCDEF", "/bloc/ABCDEF")]
+    [InlineData("/zones/ABCDEF/manage?x=1", "/bloc/ABCDEF/manage?x=1")]
+    public async Task Former_block_address(string path, string location)
+    {
+        var response = await Client().GetAsync(path);
+        Assert.Equal(HttpStatusCode.MovedPermanently, response.StatusCode);
         Assert.Equal(location, response.Headers.Location?.OriginalString);
     }
 
@@ -35,7 +50,8 @@ public class ServerTests(TempDataServer factory) : IClassFixture<TempDataServer>
     [InlineData("/pairings/t/ABCDEF/admin")]
     [InlineData("/online/")]
     [InlineData("/online/g/ABCDEF")]
-    [InlineData("/zones/stats")]
+    [InlineData("/bloc/")]
+    [InlineData("/bloc/stats")]
     [InlineData("/stats/")]
     public async Task App_sections(string path)
     {

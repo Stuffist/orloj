@@ -1,5 +1,5 @@
-@page "/zones/new"
-@page "/zones/{Code}/manage"
+@page "/bloc/new"
+@page "/bloc/{Code}/manage"
 @implements IDisposable
 @inject LocalizationService L
 @inject AccountService Accounts
@@ -24,7 +24,7 @@ else if (!Allowed)
             {
                 <a class="btn primary" href="builder/account">@L.Ui("account.signIn")</a>
             }
-            <a class="btn" href="zones/">@L.Ui("zones.home")</a>
+            <a class="btn" href="bloc/">@L.Ui("zones.home")</a>
         </div>
     </section>
 }
@@ -118,7 +118,7 @@ else
             <Problems Items="_problems" />
             <div class="tn-actions">
                 <button class="btn primary" type="submit" disabled="@(_busy || _name.Trim().Length == 0)">@L.Ui(IsNew ? "zones.create.submit" : "zones.manage.save")</button>
-                <a class="btn" href="@(IsNew ? "zones/" : $"zones/{Code}")">@L.Ui("pairings.cancel")</a>
+                <a class="btn" href="@(IsNew ? "bloc/" : $"bloc/{Code}")">@L.Ui("pairings.cancel")</a>
                 @if (_saved)
                 {
                     <span class="tn-legal" role="status">@L.Ui("zones.manage.saved")</span>
@@ -201,7 +201,7 @@ else
                 {
                     var created = await Api.CreateAsync(request);
                     _problems = created.Problems;
-                    if (created.Value is { } c) Nav.NavigateTo($"zones/{c.Code}");
+                    if (created.Value is { } c) Nav.NavigateTo($"bloc/{c.Code}");
                     return;
                 }
                 var updated = await Api.AdminUpdateAsync(Code!, request);
@@ -226,6 +226,6 @@ else
         var result = await Api.DeleteAsync(z.Code);
         _busy = false;
         _problems = result.Problems;
-        if (result.Ok) Nav.NavigateTo("zones/");
+        if (result.Ok) Nav.NavigateTo("bloc/");
     }
 }

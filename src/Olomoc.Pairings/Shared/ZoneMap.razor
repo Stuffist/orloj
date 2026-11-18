@@ -17,7 +17,7 @@
                     var (x, y) = Slots[i];
                     var label = Label(z);
                     <li class="zn-hex-cell @ZoneText.MapClass(z)" style="@Position(x, y)">
-                        <a class="zn-hex" href="zones/@z.Code" title="@label" aria-label="@label"><span class="zn-hex-face">
+                        <a class="zn-hex" href="bloc/@z.Code" title="@label" aria-label="@label"><span class="zn-hex-face">
                             @if (z.Logo is { } logo)
                             {
                                 <ZoneLogo Url="@logo" Class="zn-hex-logo" />

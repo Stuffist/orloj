@@ -9,8 +9,8 @@ Technical overview of Orloj. The details of the rules and features are in the
 Browser ── one Blazor WebAssembly app (Olomoc.Web), downloaded once
    │         /builder/…  Olomoc.Builder pages   (builder, play, account, editor, admin)
    │         /pairings/… Olomoc.Pairings pages  (tournaments)
-   │         /zones/…    Olomoc.Pairings pages  (Dystopian Encounters)
-   │         /stats/     Olomoc.Pairings page   (statistics: tournaments and Encounters)
+   │         /bloc/…     Olomoc.Pairings pages  (the Block: zones)
+   │         /stats/     Olomoc.Pairings page   (statistics: tournaments and the Block)
    │         /online/…   Olomoc.Online pages    (two-player online games)
    │         localStorage: cabals, game, language, followed tournaments and online games, zone entries
    │
@@ -63,7 +63,7 @@ online game commands).
 | ↳ **Online** (games `/online/g/…`; without a game in progress, "Play online" box) | Synchronized two-player game: lobby (cabals secret until "Ready"), player numbers, agenda, cycles; each player tracks their side, the other read-only; shared hunt. Free game (invitation link) or tournament table. Name: account, otherwise device, otherwise random. | `/hubs/online` hub (view specific to each seat) | Game: `Documents` table (kind `online`). Seat tokens: `olomoc.online`, name: `olomoc.online.name` (localStorage); presence: server memory. |
 | **Tournaments** `/pairings/` | Creates or joins a tournament; public page (registration, rounds, standings); administration (rounds, results, drops, export). Refreshed every 30 s. | `/api/tournaments/{code}` | Tournament: `Documents` table (kind `tournament`). Organizer and player tokens: `olomoc.tournaments` (localStorage) and admin link (token in the fragment). |
 | **Stats** `/stats/` | Public statistics: everything (finished tournaments and Dystopian Encounters together, a bound tournament's game counted once), or tournaments only, or Encounters only: factions, cogs, wins (alignment, faction, rank 3), scenarios, decks. | `/api/stats/all`, `/api/stats`, `/api/zones/stats`, computed in memory | — (the anonymous archive is written at the end of a tournament: `Documents`, kind `stats`) |
-| **Encounters** `/zones/` | Dystopian Encounters: zones (club, event, period, online), entry of games without an account (duel or 2 v 2, optional names and cabals), each zone's games, statistics and dominance (Light or Darkness, leading faction); statistics of all zones. | `/api/zones`, statistics computed in memory | Zone: `Documents` (kind `zone`); games: `ZoneGames` table. Entry tokens and zones seen: `olomoc.zones` (localStorage). |
+| **Block** `/bloc/` | The Block: zones (club, event, period, online), entry of games without an account (duel or 2 v 2, optional names and cabals), each zone's games, statistics and dominance (Light or Darkness, leading faction); statistics of all zones. | `/api/zones`, statistics computed in memory | Zone: `Documents` (kind `zone`); games: `ZoneGames` table. Entry tokens and zones seen: `olomoc.zones` (localStorage). |
 | **Editor** `/builder/admin` (editors, admins) | Creates and edits cogs, equipment, boons, factions, in French and English; publication; zip export. | Merged card catalog, drafts included | `DATA_DIR/catalog/` (JSON in the repository format, changed entries only). The repository is never changed: export, then commit. |
 | **Account** `/builder/account` | Sign-in, creation, email (confirmation, forgotten password), password, other devices, deletion; links to the editor and the admin panel. | `/api/account/me` | Identity tables (accounts, roles), `SavedCabals`. Session: `olomoc_session` cookie. |
 | **Admin** `/builder/control` (admins) | Database figures; accounts (role, temporary password, unlock, sign out, deletion); everyone's tournaments (new admin link, stats, deletion); online games (deletion); backup and purges by hand; log. | `/api/admin/…` (overview, accounts, tournaments, online, audit) | Identity tables, `Documents`, `DATA_DIR/backups/`; each action in the `AdminActions` table (kept for a year). |
@@ -82,7 +82,7 @@ Language: `olomoc.lang` (localStorage); interface texts `i18n/*/ui.json`, card t
   an optional password; a registration is changed with the player token. An admin does not run a
   tournament: they can generate a new admin link for it (the old one stops working), exclude it
   from the stats or delete it.
-- **Zones** (Dystopian Encounters): created, deleted, hidden by the admins, who also choose the
+- **Zones** (the Block): created, deleted, hidden by the admins, who also choose the
   dominance mode and the managers (optional accounts). Managers: settings, closing, moderation of
   their zone's games. Entering a game: anyone, no account, in an open zone; changing it: the
   entry token of the device, or the author's account, while the zone is open. A tournament can be

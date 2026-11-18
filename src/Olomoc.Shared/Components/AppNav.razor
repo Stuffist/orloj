@@ -24,7 +24,7 @@
         </a>
         @Tab("pairings", "pairings/", L.Ui("nav.pairings"), L.Ui("nav.pairings"), TournamentIcon, active)
         @Tab("stats", "stats/", L.Ui("nav.stats"), L.Ui("nav.stats.short"), StatsIcon, active)
-        @Tab("zones", "zones/", L.Ui("nav.zones"), L.Ui("nav.zones.short"), ZoneIcon, active)
+        @Tab("zones", "bloc/", L.Ui("nav.zones"), L.Ui("nav.zones.short"), ZoneIcon, active)
         @if (account is { CanEdit: true })
         {
             @Tab("editor", "builder/admin", L.Ui("nav.editor"), L.Ui("nav.editor"), EditorIcon, active, "editor push")
@@ -62,7 +62,7 @@
             {
                 "pairings" => page == "stats" ? "stats" : "pairings",
                 "online" => "play",                         // online games: under "Play"
-                "zones" => page == "stats" ? "stats" : "zones",
+                "bloc" => page == "stats" ? "stats" : "zones",
                 "stats" => "stats",
                 "builder" => page switch
                 {

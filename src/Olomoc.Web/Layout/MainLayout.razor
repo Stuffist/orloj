@@ -47,8 +47,8 @@
     // Address without the base: "builder/play", "pairings/t/ABCDEF"…
     private string[] Segments => Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-    // Section: "builder", "pairings", "online", "zones" or "stats" (builder by default).
-    private string Section => Segments.FirstOrDefault() is "pairings" or "online" or "zones" or "stats" ? Segments[0] : "builder";
+    // Section: "builder", "pairings", "online", "bloc" (zones) or "stats" (builder by default).
+    private string Section => Segments.FirstOrDefault() is "pairings" or "online" or "bloc" or "stats" ? Segments[0] : "builder";
 
     // Builder page: "play", "equipment"…; empty for the home page.
     private string Page => Segments.ElementAtOrDefault(1) ?? "";
@@ -57,19 +57,19 @@
     {
         "pairings" => "pairings.home",
         "online" => "online.home",
-        "zones" => "zones.home",
+        "bloc" => "zones.home",
         "stats" => "nav.stats",
         _ => "nav.builder",
     };
 
     // Online games: under the Play tab, with the site's title (own subtitle).
-    private string Title => Section switch { "pairings" => "pairings.title", "zones" => "zones.title", "stats" => "stats.title", _ => "app.title" };
+    private string Title => Section switch { "pairings" => "pairings.title", "bloc" => "zones.title", "stats" => "stats.title", _ => "app.title" };
 
     private string Subtitle => Section switch
     {
         "pairings" => "pairings.subtitle",
         "online" => "online.subtitle",
-        "zones" => "zones.subtitle",
+        "bloc" => "zones.subtitle",
         "stats" => "stats.subtitle",
         _ => Page switch
         {

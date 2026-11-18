@@ -28,7 +28,7 @@ builder.Services.AddScoped<CabalImport>();              // pasted cabal (text or
 builder.Services.AddScoped<TournamentApi>();
 builder.Services.AddScoped<MyTournaments>();
 
-// Dystopian Encounters (zones).
+// The Block (zones).
 builder.Services.AddScoped<ZoneApi>();
 builder.Services.AddScoped<MyZoneEntries>();             // games entered from this device
 
