@@ -53,6 +53,690 @@
       "name": "Réseau Rubin"
     }
   },
-  "cogs": {},
-  "equipment": {}
+  "cogs": {
+    "1R01": {
+      "name": "Pétra Kantor",
+      "title": "Black Guard Sergeant",
+      "abilities": [
+        {
+          "name": "Broken Veteran",
+          "gameEffect": "Until the end of the cycle, allied cogs can coordinate Pétra Kantor regardless of her rank."
+        }
+      ]
+    },
+    "1R03": {
+      "name": "Jana Alena Novak",
+      "title": "Logistician of the Econome",
+      "abilities": [
+        {
+          "name": "Sense of Effort",
+          "gameEffect": "Target an allied cog within 4\" of Jana Alena Novak.\nIt immediately makes a free advance or free melee attack."
+        }
+      ]
+    },
+    "1R09": {
+      "name": "The Queen",
+      "title": "Class 4 Aberrant",
+      "abilities": [
+        {
+          "name": "The King's Choice",
+          "gameEffect": "Target an enemy cog within 4\" of the Queen. That cog chooses one of the following two effects:\n• Set all of its stats to 0 until the end of this planning phase.\n• Or assign it one Darkness token."
+        }
+      ]
+    },
+    "1R12": {
+      "name": "Ivo Andrazy",
+      "title": "Uncompromising Architect",
+      "abilities": [
+        {
+          "name": "Shadow Dynasty",
+          "gameEffect": "Your opponent cannot play a cog activation card during a planning phase in which you reveal Ivo Andrazy."
+        }
+      ]
+    },
+    "1R16": {
+      "name": "Indra",
+      "title": "Piéta – Cartomancer",
+      "abilities": [
+        {
+          "name": "Configuration Tarot",
+          "gameEffect": "During setup, secretly draw the bottom 3 cards of the Artefact deck. Throughout the game, when resolving a Mechanism, you may discard the drawn Artefact card without applying its effects and replace it with one of the 3 cards drawn during setup."
+        }
+      ]
+    },
+    "1R19": {
+      "name": "Madame Fugger",
+      "title": "High-Society Cult Leader",
+      "abilities": [
+        {
+          "name": "Occult Philanthropist",
+          "gameEffect": "At the end of each cycle, enemy cogs within 2\" of Madame Fugger that have 2 Darkness tokens are considered corrupt."
+        }
+      ]
+    },
+    "1R22": {
+      "name": "Victor Goran",
+      "title": "Charismatic Baron",
+      "abilities": [
+        {
+          "name": "Intimidation",
+          "gameEffect": "During a planning phase in which you reveal Victor Goran, enemy cogs cannot target Victor Goran with an attack."
+        }
+      ]
+    },
+    "1R23": {
+      "name": "Robert Kadlec",
+      "title": "Dirty-Handed Cartographer",
+      "abilities": [
+        {
+          "name": "Superstitious",
+          "gameEffect": "During the activation of an allied cog, if this planning phase benefited from a Mechanism, you may reassign up to 1{action} to Robert Kadlec and activate him."
+        }
+      ]
+    },
+    "1R29": {
+      "name": "Corporal Vlach",
+      "title": "Survivor of the 44th Watch",
+      "abilities": [
+        {
+          "name": "Echo of the Jizni Squad",
+          "gameEffect": "Assign a Bile token to your reserve.\nThen assign 1 action token to Corporal Vlach and each allied cog."
+        }
+      ]
+    },
+    "2R02": {
+      "name": "Kubik Oktobar",
+      "title": "Scientist",
+      "abilities": [
+        {
+          "name": "Quantum Flux Detector",
+          "gameEffect": "Remove one Darkness token from Kubik Oktobar or from an allied cog within 1\" of him."
+        }
+      ]
+    },
+    "2R04": {
+      "name": "Hynek Novotny",
+      "title": "Liaison Officer",
+      "abilities": [
+        {
+          "name": "Discreet",
+          "gameEffect": "If Hynek Novotny is revealed simultaneously with an opponent’s Ministry card during the planning phase, it may still be activated."
+        }
+      ]
+    },
+    "2R08": {
+      "name": "The Hunter",
+      "title": "Bile-Blooded",
+      "abilities": [
+        {
+          "name": "Dark Appetite",
+          "gameEffect": "When the Hunter makes an attack, it gains a +X bonus to its {melee} stat, where X is the number of Darkness tokens on the cog targeted by that attack."
+        }
+      ]
+    },
+    "2R11": {
+      "name": "Lukas",
+      "title": "Cultist Watchmaker",
+      "abilities": [
+        {
+          "name": "Vitiation",
+          "gameEffect": "When Lukas performs an agenda-specific ability that generates at least one Darkness token, he may assign one of those tokens to a cog within 2\" of him."
+        }
+      ]
+    },
+    "2R15": {
+      "name": "Yago",
+      "title": "Guitar Virtuoso",
+      "abilities": [
+        {
+          "name": "Synchronous Cadence",
+          "gameEffect": "If Yago is not stunned and his activation card is revealed, enemy cogs within 2\" of him must spend 1 additional {action} token to perform a rest."
+        }
+      ]
+    },
+    "2R18": {
+      "name": "The Vagabond",
+      "title": "Predatory Quadruped",
+      "abilities": [
+        {
+          "name": "No Hygiene, No Reason",
+          "gameEffect": "The Vagabond suffers a -X{melee} penalty when making a melee attack, where X is the number of Darkness tokens on the cog targeted by the attack."
+        }
+      ]
+    },
+    "2R21": {
+      "name": "Oskar Borgo",
+      "title": "Hitman",
+      "abilities": [
+        {
+          "name": "One Shot, One Kill",
+          "gameEffect": "When Oskar Borgo makes a ranged attack, if his activation card has already been revealed, he may gain a +X bonus to his {ranged} stat, where X is the slot number occupied by his activation card in your planning row."
+        }
+      ]
+    },
+    "2R28": {
+      "name": "Operator Sikora",
+      "title": "Hothead",
+      "abilities": [
+        {
+          "name": "Suppressive Fire",
+          "gameEffect": "During Operator Sikora's next ranged attack, the target cannot dodge."
+        }
+      ]
+    },
+    "3R05": {
+      "name": "Dominik Kralov",
+      "title": "Unionist",
+      "abilities": [
+        {
+          "name": "Industrial Wrench",
+          "gameEffect": "Dominik Kralov gains +2{melee} when targeting a stunned cog with a melee attack."
+        }
+      ]
+    },
+    "3R06": {
+      "name": "Bohdan Gross",
+      "title": "Official Portraitist",
+      "abilities": [
+        {
+          "name": "Prophetic Visions",
+          "gameEffect": "Each cycle, at the start of planning, before placing your own planning cards, your opponent must place the first card of their planning row face up."
+        }
+      ]
+    },
+    "3R07": {
+      "name": "The Vermin",
+      "title": "Subject 107 DT",
+      "abilities": [
+        {
+          "name": "Putrid Influence",
+          "gameEffect": "Target a cog within 4\" that has a Darkness token.\nPush it toward the Vermin."
+        }
+      ]
+    },
+    "3R10": {
+      "name": "Herman Zofie",
+      "title": "Decontaminator",
+      "abilities": [
+        {
+          "name": "Integrity Detergent",
+          "gameEffect": "Place the movement gauge in contact with Herman Zofie. All other cogs in contact with the gauge suffer X wounds, where X is the number of Darkness tokens they have. Then remove all Darkness tokens from those cogs."
+        }
+      ]
+    },
+    "3R14": {
+      "name": "Maja",
+      "title": "Hardened Seductress",
+      "abilities": [
+        {
+          "name": "Kalbélia Dance",
+          "gameEffect": "Assign 1{stunned} token to an enemy cog engaged by Maja, then push her."
+        }
+      ]
+    },
+    "3R17": {
+      "name": "Jakub Myasnik",
+      "title": "Nightmare Butcher",
+      "abilities": [
+        {
+          "name": "Selective Cut",
+          "gameEffect": "Jakub Myasnik may perform the following combat tactic for 2 successes: mark 1 tainted HP on the health track of the cog targeted by this attack."
+        }
+      ]
+    },
+    "3R20": {
+      "name": "Sergo Dragomir",
+      "title": "Lemon Balm Addict",
+      "abilities": [
+        {
+          "name": "Provocation",
+          "gameEffect": "Sergo Dragomir gains a +2 bonus to his {melee} stat when making a melee attack against an enemy cog whose activation card has not been revealed."
+        }
+      ]
+    },
+    "3R27": {
+      "name": "Medic Ruzicka",
+      "title": "Field Emergency Medic",
+      "abilities": [
+        {
+          "name": "First-Aid Kit",
+          "gameEffect": "At the start of the first cycle, Medic Ruzicka may be equipped with one additional equipment card affiliated with the Ministry of Integrity."
+        }
+      ]
+    }
+  },
+  "equipment": {
+    "D01": {
+      "name": "Carapace",
+      "abilities": [
+        {
+          "name": "Carapace",
+          "gameEffect": "The equipped cog gains two additional reinforced HP at the start of its health track."
+        }
+      ]
+    },
+    "D02": {
+      "name": "Venal Flattery",
+      "abilities": [
+        {
+          "name": "Venal Flattery",
+          "gameEffect": "Target a cog within 1\" of the equipped cog. Hostile cogs treat it as rank 4 until the end of the cycle."
+        }
+      ]
+    },
+    "D03": {
+      "name": "Stigmata",
+      "abilities": [
+        {
+          "name": "Stigmata",
+          "gameEffect": "Choose a terrain feature within 1\" of the equipped cog.\nIt becomes tainted until the end of the cycle."
+        }
+      ]
+    },
+    "D04": {
+      "name": "Hushed Whispers",
+      "abilities": [
+        {
+          "name": "Hushed Whispers",
+          "gameEffect": "Choose a rank 1 or 2 hostile cog within 1\" of the equipped cog.\nMove it."
+        }
+      ]
+    },
+    "D05": {
+      "name": "Alms",
+      "abilities": [
+        {
+          "name": "Alms",
+          "gameEffect": "After resolving a Mechanism, remove one Darkness token from the equipped cog."
+        }
+      ]
+    },
+    "D06": {
+      "name": "Synchronous Caress",
+      "abilities": [
+        {
+          "name": "Synchronous Caress",
+          "gameEffect": "During a planning phase that benefited from a Mechanism, the equipped cog may make a free melee attack."
+        }
+      ]
+    },
+    "D07": {
+      "name": "Pack Mentality",
+      "abilities": [
+        {
+          "name": "Pack Mentality",
+          "gameEffect": "The equipped cog gains support from hostile cogs when it targets an enemy cog with a melee attack, or when an enemy cog targets it with a melee attack."
+        }
+      ]
+    },
+    "D08": {
+      "name": "Nocturnal Call",
+      "abilities": [
+        {
+          "name": "Nocturnal Call",
+          "gameEffect": "Resolve a Mechanism."
+        }
+      ]
+    },
+    "E01": {
+      "name": "Ministry of Progress Manual",
+      "abilities": [
+        {
+          "name": "Ministry of Progress Manual",
+          "gameEffect": "The equipped cog, or an allied cog within 1\" of it, will benefit from support on its next {tech} stat roll."
+        }
+      ]
+    },
+    "E02": {
+      "name": "Manifesto of the God-Object",
+      "abilities": [
+        {
+          "name": "Manifesto of the God-Object",
+          "gameEffect": "Immediately after resolving a Mechanism, the equipped cog may make a free advance."
+        }
+      ]
+    },
+    "E03": {
+      "name": "Pheromones",
+      "abilities": [
+        {
+          "name": "Pheromones",
+          "gameEffect": "Hostile cogs treat the equipped cog as being rank 1."
+        }
+      ]
+    },
+    "E04": {
+      "name": "KO Capsule",
+      "abilities": [
+        {
+          "name": "KO Capsule",
+          "gameEffect": "Target a cog within 1\" of the equipped cog. Increase the difficulty of all its stat rolls by 1 until the end of this planning phase."
+        }
+      ]
+    },
+    "E05": {
+      "name": "Confidential Capsule",
+      "abilities": [
+        {
+          "name": "Confidential Capsule",
+          "gameEffect": "The equipped cog is worth 1 fewer victory point when taken out of action."
+        }
+      ]
+    },
+    "E06": {
+      "name": "Tetra Union Card",
+      "abilities": [
+        {
+          "name": "Tetra Union Card",
+          "gameEffect": "During a planning phase in which the equipped cog is activated by a propaganda card, it may perform a free melee attack."
+        }
+      ]
+    },
+    "E07": {
+      "name": "Ration",
+      "abilities": [
+        {
+          "name": "Ration",
+          "gameEffect": "The equipped cog may perform a free generic ability."
+        }
+      ]
+    },
+    "E08": {
+      "name": "Lumen",
+      "abilities": [
+        {
+          "name": "Lumen",
+          "gameEffect": "When an allied cog targets a cog within 4\" of the equipped cog with a ranged attack, it does not suffer the range penalty."
+        }
+      ]
+    },
+    "E09": {
+      "name": "High-Velocity Ammunition",
+      "abilities": [
+        {
+          "name": "High-Velocity Ammunition",
+          "gameEffect": "When making a ranged attack, the equipped cog may perform a combat tactic to push the target directly away from the attacker."
+        }
+      ]
+    },
+    "E10": {
+      "name": "Quantum Catalyst",
+      "abilities": [
+        {
+          "name": "Quantum Catalyst",
+          "gameEffect": "Target a tainted cog engaged by the equipped cog.\nRemove an action token from it."
+        }
+      ]
+    },
+    "E11": {
+      "name": "Harmonium",
+      "abilities": [
+        {
+          "name": "Harmonium",
+          "gameEffect": "You may recruit a rank 1 or rank 2 cog affiliated with the Ministry of the Axis into your cabal."
+        }
+      ]
+    },
+    "E12": {
+      "name": "Chronograph",
+      "abilities": [
+        {
+          "name": "Chronograph",
+          "gameEffect": "When resolving a Mechanism, you may discard the drawn Artefact card, ignore its effects, and draw a new one."
+        }
+      ]
+    },
+    "E13": {
+      "name": "Mind Enslaver",
+      "abilities": [
+        {
+          "name": "Mind Enslaver",
+          "gameEffect": "The equipped cog, rank 1 or 2, may be recruited into the Others faction."
+        }
+      ]
+    },
+    "E14": {
+      "name": "Effort Manual",
+      "abilities": [
+        {
+          "name": "Effort Manual",
+          "gameEffect": "When the equipped cog is activated through coordination during a planning phase, it may make a free advance."
+        }
+      ]
+    },
+    "E15": {
+      "name": "Stabilising Pills",
+      "abilities": [
+        {
+          "name": "Stabilising Pills",
+          "gameEffect": "The equipped cog may replace one failure with one success on its next {melee} stat roll."
+        }
+      ]
+    },
+    "E16": {
+      "name": "Integrity Kit",
+      "abilities": [
+        {
+          "name": "Integrity Kit",
+          "gameEffect": "Heal up to 2 HP on the equipped cog."
+        }
+      ]
+    },
+    "E17": {
+      "name": "Hazmat Suit",
+      "abilities": [
+        {
+          "name": "Hazmat Suit",
+          "gameEffect": "The equipped cog suffers a -1{melee} penalty. In return, it does not gain any Darkness tokens when performing agenda-specific abilities that generate them."
+        }
+      ]
+    },
+    "E18": {
+      "name": "Demolition Notice",
+      "abilities": [
+        {
+          "name": "Demolition Notice",
+          "gameEffect": "Target a terrain feature in contact with the equipped cog that is not an objective terrain feature. From the next cycle until the end of the game, the equipped cog gains the following ability:\n{active} {darkness} {freq:game:1} Demolish: All cogs within 2\" of the targeted terrain feature suffer 1D3 wounds that ignore protection and become stunned. Then remove that terrain feature from the Block."
+        }
+      ]
+    },
+    "E19": {
+      "name": "Hidden Access Plans",
+      "abilities": [
+        {
+          "name": "Hidden Access Plans",
+          "gameEffect": "Choose a terrain feature in contact with the equipped cog. Place the equipped cog within 4\" of its current position, in contact with that terrain feature."
+        }
+      ]
+    },
+    "E20": {
+      "name": "Prime Union Card",
+      "abilities": [
+        {
+          "name": "Prime Union Card",
+          "gameEffect": "The equipped cog may perform a coordination when activated by a propaganda card."
+        }
+      ]
+    },
+    "E21": {
+      "name": "Devotion Collar",
+      "abilities": [
+        {
+          "name": "Devotion Collar",
+          "gameEffect": "The equipped cog may tempt fate without receiving a Darkness token."
+        }
+      ]
+    },
+    "E22": {
+      "name": "Food Supplement",
+      "abilities": [
+        {
+          "name": "Food Supplement",
+          "gameEffect": "Reassign 1{action} token to the equipped cog."
+        }
+      ]
+    },
+    "E23": {
+      "name": "Gloom Decoy",
+      "abilities": [
+        {
+          "name": "Gloom Decoy",
+          "gameEffect": "Push all rank 1 or 2 hostile cogs within 4\" of the equipped cog toward it."
+        }
+      ]
+    },
+    "E24": {
+      "name": "Brawler's Manual",
+      "abilities": [
+        {
+          "name": "Brawler's Manual",
+          "gameEffect": "The equipped cog has a {melee} stat value of 3 when making a melee attack against an enemy cog that has no {action} tokens left."
+        }
+      ]
+    },
+    "E25": {
+      "name": "Dissonance Explosive",
+      "abilities": [
+        {
+          "name": "Dissonance Explosive",
+          "gameEffect": "After resolving a Mechanism, cogs within 1\" of the equipped cog suffer X wounds that ignore protection, where X is the first digit of the number on the revealed Artefact card."
+        }
+      ]
+    },
+    "E26": {
+      "name": "Lemon Balm Dose",
+      "abilities": [
+        {
+          "name": "Lemon Balm Dose",
+          "gameEffect": "The equipped cog suffers 1D3 wounds that ignore protection, then may replace X failures with X successes on its next {melee} stat roll, where X is the result of the D3."
+        }
+      ]
+    },
+    "E27": {
+      "name": "Chrono Dose",
+      "abilities": [
+        {
+          "name": "Chrono Dose",
+          "gameEffect": "The equipped cog suffers 1D3 wounds that ignore protection, then push the equipped cog X times, where X is the result of the D3."
+        }
+      ]
+    },
+    "E28": {
+      "name": "Diktat Manual",
+      "abilities": [
+        {
+          "name": "Diktat Manual",
+          "gameEffect": "You may place your Ministry card without having to use the slot matching its planning constraint."
+        }
+      ]
+    },
+    "E29": {
+      "name": "Census Pass",
+      "abilities": [
+        {
+          "name": "Census Pass",
+          "gameEffect": "The equipped cog cannot be targeted by an attack of opportunity."
+        }
+      ]
+    },
+    "E30": {
+      "name": "Dogma Manual",
+      "abilities": [
+        {
+          "name": "Dogma Manual",
+          "gameEffect": "When you must resolve the effect of one of your Ministry cards, you may resolve the fallen Ministry's effect instead."
+        }
+      ]
+    },
+    "E31": {
+      "name": "Bug",
+      "abilities": [
+        {
+          "name": "Bug",
+          "gameEffect": "At the start of planning each cycle, before placing your own planning cards, you may force your opponent to place one of their propaganda cards face up in their planning row."
+        }
+      ]
+    },
+    "E32": {
+      "name": "Liturgical Loudspeaker",
+      "abilities": [
+        {
+          "name": "Liturgical Loudspeaker",
+          "gameEffect": "When the equipped cog performs a rest, it may target an allied cog within 4\"."
+        }
+      ]
+    },
+    "E33": {
+      "name": "Harmony Manual",
+      "abilities": [
+        {
+          "name": "Harmony Manual",
+          "gameEffect": "When the equipped cog tempts fate on a {tech} stat roll, it rerolls only failures."
+        }
+      ]
+    },
+    "E34": {
+      "name": "Camouflage",
+      "abilities": [
+        {
+          "name": "Camouflage",
+          "gameEffect": "When the equipped cog is targeted by a ranged attack, reduce the attacking cog's {ranged} stat value by 1."
+        }
+      ]
+    },
+    "E40": {
+      "name": "Response Siren",
+      "abilities": [
+        {
+          "name": "Response Siren",
+          "gameEffect": "A cog engaged by the equipped cog cannot coordinate or be coordinated."
+        }
+      ]
+    },
+    "E41": {
+      "name": "Concussive Ammunition",
+      "abilities": [
+        {
+          "name": "Concussive Ammunition",
+          "gameEffect": "When making a ranged attack, the equipped cog may perform a combat tactic to stun the targeted cog."
+        }
+      ]
+    },
+    "E42": {
+      "name": "Telescopic Binoculars",
+      "abilities": [
+        {
+          "name": "Telescopic Binoculars",
+          "gameEffect": "Secretly look at the next Artefact card."
+        }
+      ]
+    },
+    "E43": {
+      "name": "Smoke Grenades",
+      "abilities": [
+        {
+          "name": "Smoke Grenades",
+          "gameEffect": "Until the end of this planning phase, the equipped cog and cogs within 2\" of it cannot be targeted by ranged attacks or charges."
+        }
+      ]
+    },
+    "E44": {
+      "name": "Anabolic Steroid",
+      "abilities": [
+        {
+          "name": "Anabolic Steroid",
+          "gameEffect": "Until the end of the cycle, all standard HP of the equipped cog or an allied cog within 1\" of it become reinforced."
+        }
+      ]
+    },
+    "E45": {
+      "name": "Mood Stabiliser",
+      "abilities": [
+        {
+          "name": "Mood Stabiliser",
+          "gameEffect": "Remove 2 Darkness tokens from the equipped cog or an allied cog within 1\" of it."
+        }
+      ]
+    }
+  }
 }

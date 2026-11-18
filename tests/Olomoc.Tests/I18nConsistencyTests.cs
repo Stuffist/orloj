@@ -134,8 +134,9 @@ public class I18nConsistencyTests
         var d = await AppData.CreateAsync();
         await d.L.SetLanguageAsync("en");
         Assert.Equal("Ministry of Security", d.L.MinistryName("SECURITY").Text);
-        var name = d.L.CogName(d.Cog("1R01"));
-        Assert.Equal("Petra Kantor", name.Text);
+        Assert.False(d.L.CogName(d.Cog("1R01")).IsFallback);
+        var name = d.L.CogName(d.Cog("1R26"));   // English card still printed in French: no English text
+        Assert.Equal("Adel Varadi", name.Text);
         Assert.True(name.IsFallback);
         Assert.Equal("Rank 2", d.L.Ui("slot.rank", 2));
     }

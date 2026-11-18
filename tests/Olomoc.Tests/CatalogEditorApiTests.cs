@@ -208,7 +208,7 @@ public sealed class CatalogEditorApiTests : IDisposable
         // Back to the repository version: dodge, English text and factions.
         Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync("/api/admin/catalog/cogs/3R06")).StatusCode);
         Assert.Equal(6, (await Get(visitor, "data/olomoc-catalog.json"))["cogs"]!.AsArray().First(c => c!["id"]!.GetValue<string>() == "3R06")!["stats"]!["dodge"]!.GetValue<int>());
-        Assert.Null((await Get(visitor, "i18n/en/cards.json"))["cogs"]!["3R06"]);
+        Assert.Equal("Official Portraitist", (await Get(visitor, "i18n/en/cards.json"))["cogs"]!["3R06"]!["title"]!.GetValue<string>());
         Assert.DoesNotContain("3R06", Members(await Get(visitor, "data/olomoc-factions.json"), "LIBUS"));
         Assert.Empty((await admin.GetFromJsonAsync<CatalogStatus>("/api/admin/catalog/status", TournamentJson.Options))!.Entries.SelectMany(e => e.Value));
     }
