@@ -14,6 +14,19 @@ public static class ZoneRules
     public const int MaxZones = 500, MaxGamesPerZone = 10_000, MaxManagers = 10;
     public const int MaxLogoLength = 500, MaxCommentLength = 500;
 
+    /// <summary>
+    /// Photo of a game: JPEG, PNG or WebP, 5 MB at most. The browser sends it reduced to
+    /// <see cref="PhotoMaxSide"/> pixels and re-encoded in JPEG (location and other metadata dropped).
+    /// </summary>
+    public const int MaxPhotoBytes = 5 * 1024 * 1024, PhotoMaxSide = 1600;
+
+    /// <summary>Type of an image from its first bytes: "image/jpeg", "image/png", "image/webp", or null.</summary>
+    public static string? PhotoType(ReadOnlySpan<byte> head) =>
+        head is [0xFF, 0xD8, 0xFF, ..] ? "image/jpeg"
+        : head is [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, ..] ? "image/png"
+        : head.Length >= 12 && head[..4].SequenceEqual("RIFF"u8) && head[8..12].SequenceEqual("WEBP"u8) ? "image/webp"
+        : null;
+
     public static int PlayersPerSide(GameFormat format) => format == GameFormat.Teams ? 2 : 1;
 
     public static IReadOnlyList<Problem> CheckSettings(string? name, string? description, DateOnly? start, DateOnly? end,

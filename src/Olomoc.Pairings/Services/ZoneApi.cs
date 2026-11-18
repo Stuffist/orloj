@@ -33,6 +33,21 @@ public sealed class ZoneApi(HttpClient http)
     public Task<ApiResult<bool>> DeleteGameAsync(string code, long id, string? token) =>
         SendAsync<bool>(HttpMethod.Delete, $"{Root}/{Esc(code)}/games/{id}", null, token);
 
+    /// <summary>Address of a game's photo (<paramref name="version"/>: changes after an upload, so that it is read again).</summary>
+    public static string PhotoUrl(string code, long id, long version = 0) =>
+        $"{Root}/{Esc(code)}/games/{id}/photo" + (version > 0 ? $"?v={version}" : "");
+
+    /// <summary>Photo of a game (an image already reduced by the browser).</summary>
+    public async Task<ApiResult<bool>> UploadPhotoAsync(string code, long id, byte[] image, string contentType, string? token)
+    {
+        using var content = new ByteArrayContent(image);
+        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+        return await SendContentAsync(HttpMethod.Put, $"{Root}/{Esc(code)}/games/{id}/photo", content, token);
+    }
+
+    public Task<ApiResult<bool>> DeletePhotoAsync(string code, long id, string? token) =>
+        SendAsync<bool>(HttpMethod.Delete, $"{Root}/{Esc(code)}/games/{id}/photo", null, token);
+
     /// <summary>Settings (managers and admins).</summary>
     public Task<ApiResult<bool>> UpdateSettingsAsync(string code, ZoneSettingsRequest request) =>
         SendAsync<bool>(HttpMethod.Put, $"{Root}/{Esc(code)}", request);
@@ -47,10 +62,16 @@ public sealed class ZoneApi(HttpClient http)
 
     private static string Esc(string code) => Uri.EscapeDataString(code);
 
-    private async Task<ApiResult<T>> SendAsync<T>(HttpMethod method, string url, object? body, string? entryToken = null)
+    private Task<ApiResult<T>> SendAsync<T>(HttpMethod method, string url, object? body, string? entryToken = null) =>
+        SendContentAsync<T>(method, url, body is null ? null : JsonContent.Create(body, body.GetType(), options: TournamentJson.Options), entryToken);
+
+    private Task<ApiResult<bool>> SendContentAsync(HttpMethod method, string url, HttpContent content, string? entryToken) =>
+        SendContentAsync<bool>(method, url, content, entryToken);
+
+    private async Task<ApiResult<T>> SendContentAsync<T>(HttpMethod method, string url, HttpContent? content, string? entryToken)
     {
         using var request = new HttpRequestMessage(method, url);
-        if (body is not null) request.Content = JsonContent.Create(body, body.GetType(), options: TournamentJson.Options);
+        request.Content = content;
         if (!string.IsNullOrEmpty(entryToken)) request.Headers.Add(ZoneHeaders.Entry, entryToken);
         try
         {

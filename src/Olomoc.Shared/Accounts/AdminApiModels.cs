@@ -17,6 +17,12 @@ public sealed record TournamentMetrics(int Total, int Max, int Registration, int
 
 public sealed record OnlineMetrics(int Total, int Max, int ActiveLastDay);
 
+/// <summary>
+/// Site settings changed in the admin panel (/api/admin/settings, logged): <see cref="BlockPhotos"/>,
+/// a photo per game of the Block (files stored on the server: off until the hosting allows it).
+/// </summary>
+public sealed record SiteSettings(bool BlockPhotos = false);
+
 /// <summary>The Block: zones (open now) and games recorded.</summary>
 public sealed record ZoneMetrics(int Total, int Max, int Open, int Games);
 

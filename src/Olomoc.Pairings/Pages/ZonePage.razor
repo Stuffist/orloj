@@ -169,6 +169,28 @@ else
                         {
                             <p class="zn-comment">@comment</p>
                         }
+                        @* Photo (site setting): shown; added, replaced or removed by whoever can change the game. *@
+                        @if (z.Photos)
+                        {
+                            var url = ZoneApi.PhotoUrl(z.Code, game.Id, _photoVersions.GetValueOrDefault(game.Id));
+                            <div class="zn-photo-row">
+                                @if (game.Photo)
+                                {
+                                    <a href="@url" target="_blank" rel="noopener"><img class="zn-photo" src="@url" loading="lazy" alt="@L.Ui("zones.photo.alt")" /></a>
+                                }
+                                @if (CanEdit(game) && game.Tournament is null)
+                                {
+                                    <label class="btn small @(_photoBusy == game.Id ? "disabled" : null)">
+                                        @L.Ui(game.Photo ? "zones.photo.replace" : "zones.photo.add")
+                                        <InputFile accept="image/*" disabled="@(_photoBusy is not null)" OnChange="e => UploadPhotoAsync(game, e)" />
+                                    </label>
+                                    @if (game.Photo)
+                                    {
+                                        <button class="btn small danger" disabled="@(_photoBusy is not null)" @onclick="() => DeletePhotoAsync(game)">@L.Ui("zones.photo.remove")</button>
+                                    }
+                                }
+                            </div>
+                        }
                     </li>
                 }
             </ul>
@@ -293,6 +315,39 @@ else
         await LoadAsync();
         StateHasChanged();
         return [];
+    }
+
+    private long? _photoBusy;                                   // game whose photo is being sent
+    private readonly Dictionary<long, long> _photoVersions = new();     // photo sent: read again
+
+    // The browser reduces the image (PhotoMaxSide, JPEG): lighter, without its location and other metadata.
+    private async Task UploadPhotoAsync(ZoneGameView g, InputFileChangeEventArgs e)
+    {
+        if (_zone is not { } z || _photoBusy is not null) return;
+        _photoBusy = g.Id;
+        try
+        {
+            var image = await e.File.RequestImageFileAsync("image/jpeg", ZoneRules.PhotoMaxSide, ZoneRules.PhotoMaxSide);
+            using var stream = image.OpenReadStream(ZoneRules.MaxPhotoBytes);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+            var result = await Api.UploadPhotoAsync(z.Code, g.Id, buffer.ToArray(), "image/jpeg", Mine.TokenOf(z.Code, g.Id));
+            _listProblems = result.Problems;
+            if (!result.Ok) return;
+            _photoVersions[g.Id] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            await LoadAsync();
+        }
+        catch (IOException) { _listProblems = [Problem.Of("photoTooLarge", (ZoneRules.MaxPhotoBytes / (1024 * 1024)).ToString())]; }
+        catch (JSException) { _listProblems = [Problem.Of("photoType")]; }        // not an image the browser can read
+        finally { _photoBusy = null; }
+    }
+
+    private async Task DeletePhotoAsync(ZoneGameView g)
+    {
+        if (_zone is not { } z || !await JS.InvokeAsync<bool>("confirm", L.Ui("zones.photo.remove.confirm"))) return;
+        var result = await Api.DeletePhotoAsync(z.Code, g.Id, Mine.TokenOf(z.Code, g.Id));
+        _listProblems = result.Problems;
+        if (result.Ok) await LoadAsync();
     }
 
     private async Task DeleteAsync(ZoneGameView g)

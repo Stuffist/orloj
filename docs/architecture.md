@@ -66,7 +66,7 @@ online game commands).
 | **Block** `/bloc/` | The Block: zones (club, event, period, online), entry of games without an account (duel or 2 v 2, cabals, P1, end, scenario and decks required, optional names), each zone's games, statistics and dominance (Light or Darkness, leading faction); statistics of all zones. | `/api/zones`, statistics computed in memory | Zone: `Documents` (kind `zone`); games: `ZoneGames` table. Entry tokens and zones seen: `olomoc.zones` (localStorage). |
 | **Editor** `/builder/admin` (editors, admins) | Creates and edits cogs, equipment, boons, factions, in French and English; publication; zip export. | Merged card catalog, drafts included | `DATA_DIR/catalog/` (JSON in the repository format, changed entries only). The repository is never changed: export, then commit. |
 | **Account** `/builder/account` | Sign-in, creation, email (confirmation, forgotten password), password, other devices, deletion; links to the editor and the admin panel. | `/api/account/me` | Identity tables (accounts, roles), `SavedCabals`. Session: `olomoc_session` cookie. |
-| **Admin** `/builder/control` (admins) | Database figures; accounts (role, temporary password, unlock, sign out, deletion); everyone's tournaments (new admin link, stats, deletion); online games (deletion); backup and purges by hand; log. | `/api/admin/…` (overview, accounts, tournaments, online, audit) | Identity tables, `Documents`, `DATA_DIR/backups/`; each action in the `AdminActions` table (kept for a year). |
+| **Admin** `/builder/control` (admins) | Site settings (photos of the Block: `DATA_DIR/settings.json`); database figures; accounts (role, temporary password, unlock, sign out, deletion); everyone's tournaments (new admin link, stats, deletion); online games (deletion); backup and purges by hand; log. | `/api/admin/…` (overview, accounts, tournaments, online, audit) | Identity tables, `Documents`, `DATA_DIR/backups/`; each action in the `AdminActions` table (kept for a year). |
 
 Language: `olomoc.lang` (localStorage); interface texts `i18n/*/ui.json`, card texts
 `i18n/*/cards.json` (French fallback).
@@ -128,5 +128,7 @@ Language: `olomoc.lang` (localStorage); interface texts `i18n/*/ui.json`, card t
   - 500 zones and 10,000 games per zone; zones are never purged;
   - entries without an account are only limited per IP address (`RATE_ZONE_ENTRIES_PER_HOUR`):
     managers delete the unwanted ones;
+  - photos of the games (when turned on): files in `DATA_DIR/photos/`, not in the daily database
+    backup (to back up with the data folder);
   - a zone's logo is a link to an image on another site (the CSP accepts `https:` images for it):
     that site sees the visitors' IP address, and the image disappears if the link breaks.

@@ -19,21 +19,23 @@ public sealed record ZoneSummary(string Code, string Name, string Description, Z
 
 /// <summary>
 /// A zone, with its statistics and its dominance. <see cref="ZoneAdmin"/>: the requester administers
-/// the zones (editor or admin). <see cref="Managers"/> (usernames): for its
+/// the zones (editor or admin). <see cref="Photos"/>: a photo per game is allowed (site setting).
+/// <see cref="Managers"/> (usernames): for its
 /// managers and the zone admins only.
 /// </summary>
 public sealed record ZoneView(string Code, string Name, string Description, ZoneKind Kind, DateOnly? StartDate, DateOnly? EndDate,
     ZoneStatus Status, DominanceMode Mode, bool Hidden, bool Closed, Dominance Dominance, StatsView Stats,
-    bool CanManage, bool ZoneAdmin, IReadOnlyList<string>? Managers, string? Logo = null);
+    bool CanManage, bool ZoneAdmin, IReadOnlyList<string>? Managers, string? Logo = null, bool Photos = false);
 
 /// <summary>
 /// A recorded game: id, content, date of entry. <see cref="CanEdit"/>: through the account (its
 /// author while the zone is open, a manager, an admin); the device's entry tokens are checked by the
 /// browser itself. <see cref="Tournament"/>: code of the tournament it was copied from (then changed
-/// through the tournament only), and its name.
+/// through the tournament only), and its name. <see cref="Photo"/>: it has a photo (shown while photos
+/// are allowed).
 /// </summary>
 public sealed record ZoneGameView(long Id, ZoneGame Game, DateTimeOffset CreatedAt, bool CanEdit,
-    string? Tournament = null, string? TournamentName = null);
+    string? Tournament = null, string? TournamentName = null, bool Photo = false);
 
 /// <summary>A page of games, most recent first; <see cref="Next"/>: to ask for the following ones (before=).</summary>
 public sealed record ZoneGamesPage(IReadOnlyList<ZoneGameView> Games, long? Next, int Total);

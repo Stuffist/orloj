@@ -707,7 +707,12 @@ optional, shown in the list of games, never counted.
   player (from "My cabals", composed or pasted, legality checked; typing a name suggests account
   usernames, `GET /api/accounts/search`, and an account's username offers its public cabals), the VP of each side, the side
   that played first, the end of the game, the scenario and both its decks; optional too, a free
-  comment (a notable event, 500 characters at most, shown under the game); all the fields shown at
+  comment (a notable event, 500 characters at most, shown under the game), and a **photo** when the
+  site allows them (admin panel, "Site settings", off by default: files stored on the server, in
+  `DATA_DIR/photos/`, outside the database backup; JPEG/PNG/WebP checked from the first bytes,
+  5 MB at most, reduced to 1600 px and re-encoded by the browser, which drops the location; added,
+  replaced or removed by whoever can change the game; deleted with the game or the zone; turned
+  off, the photos are hidden, not deleted); all the fields shown at
   once. Games copied from a tournament keep what it recorded. Checked by `Zones/ZoneRules.cs` in the browser, then again on
   the server: date within the zone's period and not in the future, alignments of the teams.
 - **Changing or deleting a game**: the device that entered it (entry token in the localStorage,

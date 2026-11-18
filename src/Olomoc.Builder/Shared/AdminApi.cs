@@ -62,6 +62,11 @@ public sealed class AdminApi(HttpClient http)
 
     public Task<AccountResult<List<AdminAction>>> AuditAsync() => SendAsync<List<AdminAction>>(HttpMethod.Get, "audit", null);
 
+    /// <summary>Site settings (photos of the games of the Block).</summary>
+    public Task<AccountResult<SiteSettings>> SettingsAsync() => SendAsync<SiteSettings>(HttpMethod.Get, "settings", null);
+
+    public Task<AccountResult<bool>> SetSettingsAsync(SiteSettings settings) => SendAsync<bool>(HttpMethod.Put, "settings", settings);
+
     private static string Name(string userName) => Uri.EscapeDataString(userName.Trim());
 
     private async Task<AccountResult<T>> SendAsync<T>(HttpMethod method, string path, object? body)

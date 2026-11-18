@@ -40,6 +40,8 @@ builder.Services.AddSingleton(sp => new ZoneStore(sp.GetRequiredService<IDbConte
 builder.Services.AddSingleton<ZoneGameStore>();
 builder.Services.AddSingleton<ZoneStats>();
 builder.Services.AddSingleton<AllStats>();         // tournaments and zones together
+builder.Services.AddSingleton(sp => new SiteSettingsStore(dataDirectory, sp.GetRequiredService<ILogger<SiteSettingsStore>>()));
+builder.Services.AddSingleton(new ZonePhotos(dataDirectory));     // photos of the games of the Block (when allowed)
 builder.Services.AddSingleton<TournamentZoneSync>();      // results of the tournaments bound to a zone
 builder.Services.AddHostedService<TournamentPurge>();
 builder.Services.ConfigureHttpJsonOptions(o => TournamentJson.Configure(o.SerializerOptions));

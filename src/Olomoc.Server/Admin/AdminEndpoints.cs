@@ -5,6 +5,7 @@ using Olomoc.Accounts;
 using Olomoc.Server.Accounts;
 using Olomoc.Server.CardCatalog;
 using Olomoc.Server.Data;
+using Olomoc.Server.Hosting;
 using Olomoc.Server.Online;
 using Olomoc.Server.Tournaments;
 using Olomoc.Server.Zones;
@@ -44,6 +45,14 @@ public static class AdminEndpoints
         write.MapDelete("online/{code}", DeleteOnline);
         write.MapPost("maintenance/backup", Backup);
         write.MapPost("maintenance/purge", Purge);
+        // Site settings: photos of the games of the Block (off until the hosting allows files).
+        read.MapGet("settings", (SiteSettingsStore settings) => Results.Json(settings.Current, TournamentJson.Options));
+        write.MapPut("settings", async (SiteSettings body, SiteSettingsStore settings, AdminAudit audit, HttpContext ctx) =>
+        {
+            settings.Set(body);
+            await audit.LogAsync(AdminName(ctx), "settings", "photos", body.BlockPhotos ? "on" : "off");
+            return Results.NoContent();
+        });
     }
 
     // ---- Overview ----

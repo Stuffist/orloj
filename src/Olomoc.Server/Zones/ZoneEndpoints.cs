@@ -3,6 +3,7 @@ using Olomoc.Accounts;
 using Olomoc.Server.Accounts;
 using Olomoc.Server.Admin;
 using Olomoc.Server.Data;
+using Olomoc.Server.Hosting;
 using Olomoc.Server.Tournaments;
 using Olomoc.Tournaments;
 using Olomoc.Zones;
@@ -29,11 +30,14 @@ public static class ZoneEndpoints
         read.MapGet("stats", async (ZoneStats stats) => Results.Json(await stats.AllAsync(), TournamentJson.Options));
         read.MapGet("{code}", Get);
         read.MapGet("{code}/games", Games);
+        read.MapGet("{code}/games/{id:long}/photo", GetPhoto);
 
         api.MapPost("{code}/games", AddGame).RequireRateLimiting(EntryPolicy);
+        api.MapPut("{code}/games/{id:long}/photo", PutPhoto).RequireRateLimiting(EntryPolicy);
         var write = api.MapGroup("{code}").RequireRateLimiting(TournamentEndpoints.WritePolicy);
         write.MapPut("games/{id:long}", UpdateGame);
         write.MapDelete("games/{id:long}", DeleteGame);
+        write.MapDelete("games/{id:long}/photo", DeletePhoto);
         write.MapPut("", UpdateSettings);
 
         // Zone administration: editors and admins.
@@ -64,7 +68,8 @@ public static class ZoneEndpoints
         return Results.Json(list, TournamentJson.Options);
     }
 
-    private static async Task<IResult> Get(string code, HttpContext ctx, UserManager<OlomocUser> users, ZoneStore zones, ZoneStats stats)
+    private static async Task<IResult> Get(string code, HttpContext ctx, UserManager<OlomocUser> users, ZoneStore zones, ZoneStats stats,
+        SiteSettingsStore settings)
     {
         if (await zones.LoadAsync(code) is not { } z) return NotFound();
         var access = await Access.OfAsync(ctx, users);
@@ -77,24 +82,26 @@ public static class ZoneEndpoints
                 if (await users.FindByIdAsync(id) is { UserName: { } name }) managers.Add(name);
         }
         return Results.Json(new ZoneView(z.Code, z.Name, z.Description, z.Kind, z.StartDate, z.EndDate, z.StatusOn(Today), z.Dominance,
-            z.Hidden, z.Closed, await stats.DominanceAsync(z), await stats.OfZoneAsync(z.Code), manages, access.ZoneAdmin, managers, z.Logo),
+            z.Hidden, z.Closed, await stats.DominanceAsync(z), await stats.OfZoneAsync(z.Code), manages, access.ZoneAdmin, managers, z.Logo,
+            settings.Current.BlockPhotos),
             TournamentJson.Options);
     }
 
     private static async Task<IResult> Games(string code, long? before, int? take, HttpContext ctx, UserManager<OlomocUser> users,
-        ZoneStore zones, ZoneGameStore games, TournamentStore tournaments)
+        ZoneStore zones, ZoneGameStore games, TournamentStore tournaments, SiteSettingsStore settings, ZonePhotos photos)
     {
         if (await zones.LoadAsync(code) is not { } z) return NotFound();
         var access = await Access.OfAsync(ctx, users);
         var count = Math.Clamp(take ?? PageSize, 1, PageSize);
         var page = await games.PageAsync(z.Code, before, count + 1);
         var open = z.StatusOn(Today) == ZoneStatus.Open;
+        var photosOn = settings.Current.BlockPhotos;
         // Games copied from tournaments: their name, while the tournament exists (purged after 90 days).
         var names = new Dictionary<string, string?>();
         foreach (var t in page.Select(g => g.TournamentCode).OfType<string>().Distinct())
             names[t] = (await tournaments.LoadAsync(t))?.Name;
         var views = page.Take(count).Select(g => new ZoneGameView(g.Id, g.Game, g.CreatedAt, access.CanEdit(z, g, open, null),
-            g.TournamentCode, g.TournamentCode is { } t ? names[t] : null)).ToList();
+            g.TournamentCode, g.TournamentCode is { } t ? names[t] : null, photosOn && photos.Find(z.Code, g.Id) is not null)).ToList();
         return Results.Json(new ZoneGamesPage(views, page.Count > count ? views[^1].Id : null, await games.CountAsync(z.Code)),
             TournamentJson.Options);
     }
@@ -131,7 +138,7 @@ public static class ZoneEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> DeleteGame(string code, long id, HttpContext ctx, UserManager<OlomocUser> users,
+    private static async Task<IResult> DeleteGame(string code, long id, HttpContext ctx, UserManager<OlomocUser> users, ZonePhotos photos,
         ZoneStore zones, ZoneGameStore games, ZoneStats stats)
     {
         if (await zones.LoadAsync(code) is not { } z) return NotFound();
@@ -141,7 +148,51 @@ public static class ZoneEndpoints
         if (stored.TournamentCode is not null) return FromTournament();
         if (!access.CanEdit(z, stored, open, ctx.Request.Headers[ZoneHeaders.Entry])) return Forbidden(open);
         if (!await games.DeleteAsync(z.Code, id)) return NotFoundGame();
+        photos.Delete(z.Code, id);
         stats.Invalidate(z.Code);
+        return Results.NoContent();
+    }
+
+    // ---- Photos (site setting: off until the hosting allows files) ----
+
+    /// <summary>The game's photo, while photos are allowed.</summary>
+    private static IResult GetPhoto(string code, long id, SiteSettingsStore settings, ZonePhotos photos)
+    {
+        if (!settings.Current.BlockPhotos || ZoneStore.Normalize(code) is not { } zone || photos.Find(zone, id) is not { } photo)
+            return Results.NotFound();
+        return Results.File(photo.Path, photo.Type, enableRangeProcessing: false);
+    }
+
+    /// <summary>
+    /// A photo for the game (body: the image, 5 MB at most; replaces the previous one): whoever can
+    /// change the game (its author while the zone is open, a manager, a zone admin), never a game
+    /// copied from a tournament.
+    /// </summary>
+    private static async Task<IResult> PutPhoto(string code, long id, HttpContext ctx, UserManager<OlomocUser> users, ZoneStore zones,
+        ZoneGameStore games, SiteSettingsStore settings, ZonePhotos photos)
+    {
+        if (!settings.Current.BlockPhotos) return Problems([Problem.Of("photosOff")], 403);
+        if (await zones.LoadAsync(code) is not { } z) return NotFound();
+        if (await games.GetAsync(z.Code, id) is not { } stored) return NotFoundGame();
+        var access = await Access.OfAsync(ctx, users);
+        var open = z.StatusOn(Today) == ZoneStatus.Open;
+        if (stored.TournamentCode is not null) return FromTournament();
+        if (!access.CanEdit(z, stored, open, ctx.Request.Headers[ZoneHeaders.Entry])) return Forbidden(open);
+        if (ctx.Request.ContentLength > ZoneRules.MaxPhotoBytes) return Problems([Problem.Of("photoTooLarge", "5")], 413);
+        return await photos.SaveAsync(z.Code, id, ctx.Request.Body, ctx.RequestAborted) is { } problem
+            ? Problems([Problem.Of(problem, "5")], problem == "photoTooLarge" ? 413 : 400)
+            : Results.NoContent();
+    }
+
+    private static async Task<IResult> DeletePhoto(string code, long id, HttpContext ctx, UserManager<OlomocUser> users, ZoneStore zones,
+        ZoneGameStore games, ZonePhotos photos)
+    {
+        if (await zones.LoadAsync(code) is not { } z) return NotFound();
+        if (await games.GetAsync(z.Code, id) is not { } stored) return NotFoundGame();
+        var access = await Access.OfAsync(ctx, users);
+        var open = z.StatusOn(Today) == ZoneStatus.Open;
+        if (!access.CanEdit(z, stored, open, ctx.Request.Headers[ZoneHeaders.Entry])) return Forbidden(open);
+        photos.Delete(z.Code, id);
         return Results.NoContent();
     }
 
@@ -197,11 +248,13 @@ public static class ZoneEndpoints
     }
 
     /// <summary>The zone and its games.</summary>
-    private static async Task<IResult> Delete(string code, HttpContext ctx, ZoneStore zones, ZoneGameStore games, ZoneStats stats, AdminAudit audit)
+    private static async Task<IResult> Delete(string code, HttpContext ctx, ZoneStore zones, ZoneGameStore games, ZoneStats stats, AdminAudit audit,
+        ZonePhotos photos)
     {
         var name = await zones.DeleteAsync(code, z => (true, z.Name));
         if (name is null) return NotFound();
         var removed = await games.DeleteZoneAsync(code.ToUpperInvariant());
+        photos.DeleteZone(code.ToUpperInvariant());
         await zones.AssignSlotsAsync();                // its hexagon freed: for a zone that had none
         stats.Invalidate(code.ToUpperInvariant());
         await audit.LogAsync(AdminEndpoints.AdminName(ctx), "deleteZone", code.ToUpperInvariant(), $"{name} ({removed})");

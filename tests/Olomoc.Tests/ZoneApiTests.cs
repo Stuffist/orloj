@@ -313,6 +313,59 @@ public sealed class ZoneApiTests : IDisposable
         Assert.Equal((1, 2, 0), (after[second], after[third], after[fourth]));
     }
 
+    // A tiny JPEG (its first bytes are enough for the type) and a photo upload, with the device's entry token.
+    private static readonly byte[] Jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0xFF, 0xD9];
+
+    private static Task<HttpResponseMessage> SendPhoto(HttpClient http, string zone, long id, byte[] bytes, string? entry)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/zones/{zone}/games/{id}/photo") { Content = new ByteArrayContent(bytes) };
+        request.Content.Headers.ContentType = new("image/jpeg");
+        if (entry is not null) request.Headers.Add(ZoneHeaders.Entry, entry);
+        return http.SendAsync(request);
+    }
+
+    [Fact]
+    public async Task Photos_off_by_default_then_one_per_game_for_its_author()
+    {
+        var (_, root, _, _, anonymous) = await StartAsync();
+        var zone = await CreateZone(root, Settings());
+        var entry = await Enter(anonymous, zone);
+        var photo = $"/api/zones/{zone}/games/{entry.Id}/photo";
+
+        // Off: refused, nothing shown.
+        var off = await SendPhoto(anonymous, zone, entry.Id, Jpeg, entry.EditToken);
+        Assert.Equal(HttpStatusCode.Forbidden, off.StatusCode);
+        Assert.Equal(["photosOff"], await Keys(off));
+        Assert.False((await Zone(anonymous, zone)).Photos);
+
+        // An admin turns them on (logged); the author adds one.
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Send(anonymous, HttpMethod.Put, "/api/admin/settings", new SiteSettings(true))).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(root, HttpMethod.Put, "/api/admin/settings", new SiteSettings(true))).StatusCode);
+        Assert.True((await Read<SiteSettings>(await root.GetAsync("/api/admin/settings"))).BlockPhotos);
+        Assert.True((await Zone(anonymous, zone)).Photos);
+        Assert.Equal(HttpStatusCode.Forbidden, (await SendPhoto(anonymous, zone, entry.Id, Jpeg, null)).StatusCode);     // without its token
+        Assert.Equal(["photoType"], await Keys(await SendPhoto(anonymous, zone, entry.Id, "pas une image"u8.ToArray(), entry.EditToken)));
+        var tooLarge = await SendPhoto(anonymous, zone, entry.Id, [.. Jpeg, .. new byte[ZoneRules.MaxPhotoBytes]], entry.EditToken);
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, tooLarge.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await SendPhoto(anonymous, zone, entry.Id, Jpeg, entry.EditToken)).StatusCode);
+
+        Assert.True(Assert.Single((await Games(anonymous, zone)).Games).Photo);
+        var shown = await anonymous.GetAsync(photo);
+        Assert.Equal(HttpStatusCode.OK, shown.StatusCode);
+        Assert.Equal("image/jpeg", shown.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(Jpeg, await shown.Content.ReadAsByteArrayAsync());
+
+        // Turned off: hidden (kept); deleted with its game.
+        await Send(root, HttpMethod.Put, "/api/admin/settings", new SiteSettings(false));
+        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync(photo)).StatusCode);
+        Assert.False(Assert.Single((await Games(anonymous, zone)).Games).Photo);
+        await Send(root, HttpMethod.Put, "/api/admin/settings", new SiteSettings(true));
+        Assert.Equal(HttpStatusCode.OK, (await anonymous.GetAsync(photo)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(anonymous, HttpMethod.Delete, $"/api/zones/{zone}/games/{entry.Id}", entry: entry.EditToken)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync(photo)).StatusCode);
+        Assert.Contains(await Read<AdminAction[]>(await root.GetAsync("/api/admin/audit")), a => a.Action == "settings");
+    }
+
     [Fact]
     public async Task Games_in_pages_most_recent_first()
     {

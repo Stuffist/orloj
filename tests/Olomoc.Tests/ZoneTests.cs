@@ -139,6 +139,16 @@ public class ZoneTests
     }
 
     [Fact]
+    public void Photo_type_read_from_the_first_bytes()
+    {
+        Assert.Equal("image/jpeg", ZoneRules.PhotoType([0xFF, 0xD8, 0xFF, 0xE0]));
+        Assert.Equal("image/png", ZoneRules.PhotoType([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00]));
+        Assert.Equal("image/webp", ZoneRules.PhotoType("RIFF\0\0\0\0WEBPVP8 "u8));
+        Assert.Null(ZoneRules.PhotoType("<svg onload=alert(1)>"u8));
+        Assert.Null(ZoneRules.PhotoType([]));
+    }
+
+    [Fact]
     public void Comment_optional_trimmed_and_limited()
     {
         var game = Duel("RUBIN", "MAISEL", 5, 3);
