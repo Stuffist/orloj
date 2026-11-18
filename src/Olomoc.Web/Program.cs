@@ -31,6 +31,7 @@ builder.Services.AddScoped<MyTournaments>();
 // The Block (zones).
 builder.Services.AddScoped<ZoneApi>();
 builder.Services.AddScoped<MyZoneEntries>();             // games entered from this device
+builder.Services.AddScoped<AccountDirectory>();          // account names and public cabals, when entering a game
 
 // Online games.
 builder.Services.AddScoped<OnlineApi>();

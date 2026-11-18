@@ -34,3 +34,16 @@ public sealed record CabalSyncRequest(IReadOnlyList<CabalChange> Changes);
 /// of the refused changes (args: cabal name…).
 /// </summary>
 public sealed record CabalSyncResult(IReadOnlyList<SavedCabal> Cabals, int Applied, IReadOnlyList<Problem> Problems);
+
+/// <summary>
+/// A cabal of the account made public (offered to whoever types the account's name when entering a
+/// game of the Block) or private. Kept on the account, outside the synchronization by date.
+/// </summary>
+public sealed record CabalVisibilityRequest(string Name, bool Public);
+
+/// <summary>Public cabals of an account, offered when entering a game of the Block.</summary>
+public static class AccountDirectoryRules
+{
+    /// <summary>Account names suggested: from this many characters typed, at most this many.</summary>
+    public const int MinPrefix = 2, MaxSuggestions = 8;
+}

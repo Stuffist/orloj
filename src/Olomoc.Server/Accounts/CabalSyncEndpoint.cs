@@ -72,6 +72,9 @@ public static class CabalSyncEndpoint
                     db.SavedCabals.Add(row);
                     rows.Add(row);
                 }
+                // A new cabal (or saved again after a deletion): public by default; a replaced one
+                // keeps its visibility.
+                if (row.Deleted || row.Json is null) row.Public = json is not null;
                 row.Name = name;
                 row.SavedAt = change.At.UtcDateTime;
                 row.Deleted = json is null;
@@ -82,12 +85,47 @@ public static class CabalSyncEndpoint
 
             var cabals = rows.Where(r => !r.Deleted && r.Json is not null)
                 .OrderByDescending(r => r.SavedAt)
-                .Select(r => Read(r.Json!) is { } c ? new SavedCabal(Utc(r.SavedAt), c) : null)
+                .Select(r => Read(r.Json!) is { } c ? new SavedCabal(Utc(r.SavedAt), c, Public: r.Public) : null)
                 .OfType<SavedCabal>()
                 .ToList();
             return Results.Json(new CabalSyncResult(cabals, applied, problems), TournamentJson.Options);
         }
         finally { gate.Release(); }
+    }
+
+    /// <summary>
+    /// PUT /api/account/cabals/visibility: a cabal of the account made public (offered to whoever
+    /// types the account's name in a game of the Block) or private. 404: not on the account (yet).
+    /// </summary>
+    public static async Task<IResult> SetVisibility(CabalVisibilityRequest body, HttpContext ctx, UserManager<OlomocUser> users,
+        IDbContextFactory<OlomocDb> factory)
+    {
+        if (await users.GetUserAsync(ctx.User) is not { } user) return Results.Unauthorized();
+        var key = CabalSyncRules.Key(body.Name ?? "");
+        var gate = Locks.GetOrAdd(user.Id, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
+        try
+        {
+            await using var db = await factory.CreateDbContextAsync();
+            var row = await db.SavedCabals.FirstOrDefaultAsync(c => c.UserId == user.Id && c.NormalizedName == key && !c.Deleted);
+            if (row is null)
+                return Results.Json(new ProblemList([Problem.Of("cabalNotFound", body.Name ?? "")]), TournamentJson.Options, statusCode: 404);
+            row.Public = body.Public;
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        }
+        finally { gate.Release(); }
+    }
+
+    /// <summary>The public cabals of an account (by its username), most recent first; none for an unknown name.</summary>
+    public static async Task<List<CabalExport>> PublicAsync(string userName, UserManager<OlomocUser> users, IDbContextFactory<OlomocDb> factory)
+    {
+        if (await users.FindByNameAsync(userName) is not { } user) return [];
+        await using var db = await factory.CreateDbContextAsync();
+        var rows = await db.SavedCabals.AsNoTracking()
+            .Where(c => c.UserId == user.Id && c.Public && !c.Deleted && c.Json != null)
+            .OrderByDescending(c => c.SavedAt).Select(c => c.Json!).ToListAsync();
+        return rows.Select(Read).OfType<CabalExport>().ToList();
     }
 
     // Shape of a builder cabal: at most three cogs, each one identified.

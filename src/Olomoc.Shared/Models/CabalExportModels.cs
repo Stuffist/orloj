@@ -24,6 +24,7 @@ public sealed record CabalExport(
 
 /// <summary>
 /// Saved cabal (CabalLibrary) and its save date. <see cref="Pending"/>: not sent to the account
-/// yet (saved offline, or without an account).
+/// yet (saved offline, or without an account). <see cref="Public"/>: as known by the account (offered to
+/// whoever types its name in a game of the Block); null: not on the account yet.
 /// </summary>
-public sealed record SavedCabal(DateTimeOffset SavedAt, CabalExport Cabal, bool Pending = false);
+public sealed record SavedCabal(DateTimeOffset SavedAt, CabalExport Cabal, bool Pending = false, bool? Public = null);

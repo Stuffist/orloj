@@ -1,10 +1,12 @@
 @* Entry (or change) of a game in a zone: duel or 2 v 2 (a Light team against a Darkness team), date,
    for each player a faction, the cabal played and optionally a name (never counted); VP of each
    side; for the statistics, required too: the side that played first, the scenario and its two
-   decks, the end of the game. Optional: a comment (a notable event). All the fields shown at once. *@
+   decks, the end of the game. Optional: a comment (a notable event). All the fields shown at once.
+   Typing a name suggests account names; an account's name offers its public cabals. *@
 @inject LocalizationService L
 @inject CatalogService Catalog
 @inject CabalLibrary Library
+@inject AccountDirectory Directory
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
@@ -52,13 +54,41 @@
                             </div>
                             <div class="field grow">
                                 <label for="zn-name-@index">@L.Ui("zones.form.name")</label>
+                                @* Account names suggested as the name is typed (datalist). *@
                                 <input id="zn-name-@index" type="text" maxlength="@ZoneRules.MaxNameLength" value="@player.Name"
-                                       placeholder="@L.Ui("zones.form.name.placeholder")" autocomplete="off"
-                                       @oninput="e => player.Name = e.Value?.ToString() ?? string.Empty" />
+                                       placeholder="@L.Ui("zones.form.name.placeholder")" autocomplete="off" list="zn-names-@index"
+                                       @oninput="e => OnNameInputAsync(index, e.Value?.ToString())" />
+                                <datalist id="zn-names-@index">
+                                    @foreach (var suggestion in player.Suggestions)
+                                    {
+                                        <option value="@suggestion"></option>
+                                    }
+                                </datalist>
                             </div>
                         </div>
                         <CabalPicker Index="index" Faction="@player.Faction" Value="player.Cabal" ValueChanged="c => SetCabal(index, c)"
                                      LibraryVersion="_libraryVersion" Title="@L.Ui("zones.form.cabal", index + 1)" />
+                        @* The name is an account's: its public cabals (of the faction chosen), one click away. *@
+                        @if (player.Account is { } account && player.AccountCabals is { } offered)
+                        {
+                            var matching = offered.Where(c => player.Faction.Length == 0 || c.Faction?.Code == player.Faction).ToList();
+                            <div class="zn-account-cabals">
+                                <span class="hint">@L.Ui(matching.Count > 0 ? "zones.form.accountCabals" : "zones.form.accountCabals.none", account)</span>
+                                @foreach (var c in matching)
+                                {
+                                    var cabal = c;
+                                    var chosen = player.Cabal is { } current && CabalLibrary.SameCards(current, cabal);
+                                    <button type="button" class="btn small @(chosen ? "primary" : null)" aria-pressed="@(chosen ? "true" : "false")"
+                                            @onclick="() => SetCabal(index, cabal)">
+                                        @if (cabal.Faction is { } f)
+                                        {
+                                            <Emblem Faction="@f.Code" />
+                                        }
+                                        @cabal.Name
+                                    </button>
+                                }
+                            </div>
+                        }
                     </div>
                 }
                 <div class="zn-side-result">
@@ -164,6 +194,28 @@
         public string Faction = "";
         public string Name = "";
         public CabalExport? Cabal;
+        // Account names suggested for the name typed; the account it names, and its public cabals.
+        public IReadOnlyList<string> Suggestions = [];
+        public string? Account;
+        public IReadOnlyList<CabalExport>? AccountCabals;
+        public int Search;                    // a slower answer to a previous search is ignored
+    }
+
+    // Name typed: account names suggested (after a short pause); an account's exact name: its public cabals.
+    private async Task OnNameInputAsync(int index, string? value)
+    {
+        var player = _players[index];
+        player.Name = value ?? "";
+        var search = ++player.Search;
+        await Task.Delay(250);
+        if (search != player.Search) return;
+        var names = await Directory.SearchAsync(player.Name);
+        if (search != player.Search) return;
+        player.Suggestions = names;
+        player.Account = names.FirstOrDefault(n => string.Equals(n, player.Name.Trim(), StringComparison.OrdinalIgnoreCase));
+        player.AccountCabals = player.Account is { } account ? await Directory.PublicCabalsAsync(account) : null;
+        if (search != player.Search) return;
+        StateHasChanged();
     }
 
     private GameFormat _format = GameFormat.Duel;

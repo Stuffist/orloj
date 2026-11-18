@@ -407,6 +407,14 @@ else
                             }
                         </ul>
                         <div class="saved-actions">
+                            @* On the account: public (offered when someone types the account's name in a game of the Block) or private. *@
+                            @if (Accounts.Current is not null && saved.Public is { } isPublic)
+                            {
+                                <label class="check saved-public" title="@L.Ui("library.public.title")">
+                                    <input type="checkbox" checked="@isPublic" @onchange="e => SetPublicAsync(saved, e.Value is true)" />
+                                    @L.Ui("library.public")
+                                </label>
+                            }
                             <button class="btn small primary" @onclick="() => LoadAsync(cabal)">@L.Ui("library.load")</button>
                             <button class="btn small danger" @onclick="() => DeleteAsync(saved)">@L.Ui("library.delete")</button>
                         </div>
@@ -692,6 +700,12 @@ else
         _libraryOpen = false;
         _nameRequired = false;
         Recompute();
+    }
+
+    private async Task SetPublicAsync(SavedCabal saved, bool isPublic)
+    {
+        var problems = await Library.SetPublicAsync(saved, isPublic);
+        if (problems.Count > 0) await JS.InvokeVoidAsync("alert", string.Join(" ", problems.Select(p => L.Describe(p))));
     }
 
     private async Task DeleteAsync(SavedCabal saved)

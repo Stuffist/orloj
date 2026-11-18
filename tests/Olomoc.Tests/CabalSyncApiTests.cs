@@ -58,6 +58,47 @@ public sealed class CabalSyncApiTests : IDisposable
     private static string[] Names(CabalSyncResult r) => r.Cabals.Select(c => c.Cabal.Name!).ToArray();
 
     [Fact]
+    public async Task Public_by_default_offered_by_username_until_made_private()
+    {
+        var bohdan = await Device();
+        var saved = await Sync(bohdan, Save("Assaut", T0), Save("Secrète", T0.AddMinutes(1)));
+        Assert.All(saved.Cabals, c => Assert.True(c.Public));                // new cabals: public
+
+        var anonymous = _server.CreateClient();
+        async Task<string[]> Offered(string user) =>
+            (await anonymous.GetFromJsonAsync<List<CabalExport>>($"/api/accounts/{user}/cabals", TournamentJson.Options))!.Select(c => c.Name!).ToArray();
+        Assert.Equal(["Secrète", "Assaut"], await Offered("bohdan"));          // username: case-insensitive
+        Assert.Empty(await Offered("Nobody"));
+
+        // Made private: no longer offered; the account still has it (and knows it is private).
+        var hide = await bohdan.PutAsJsonAsync("/api/account/cabals/visibility", new CabalVisibilityRequest("secrète", false), TournamentJson.Options);
+        Assert.Equal(HttpStatusCode.NoContent, hide.StatusCode);
+        Assert.Equal(["Assaut"], await Offered("Bohdan"));
+        Assert.False((await Sync(bohdan)).Cabals.Single(c => c.Cabal.Name == "Secrète").Public);
+
+        // Saved again (changed): stays private. Unknown name, or without a session: refused.
+        await Sync(bohdan, Save("Secrète", T0.AddMinutes(5), cog: "3R07"));
+        Assert.Equal(["Assaut"], await Offered("Bohdan"));
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await bohdan.PutAsJsonAsync("/api/account/cabals/visibility", new CabalVisibilityRequest("Inconnue", true), TournamentJson.Options)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await anonymous.PutAsJsonAsync("/api/account/cabals/visibility", new CabalVisibilityRequest("Assaut", false), TournamentJson.Options)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Account_names_suggested_from_two_characters()
+    {
+        foreach (var user in new[] { "Bohdan", "Boris", "Carl" }) await Device(user);
+        var anonymous = _server.CreateClient();
+        async Task<string[]> Search(string q) =>
+            (await anonymous.GetFromJsonAsync<List<string>>($"/api/accounts/search?q={Uri.EscapeDataString(q)}", TournamentJson.Options))!.ToArray();
+        Assert.Equal(["Bohdan", "Boris"], await Search("bo"));
+        Assert.Equal(["Boris"], await Search("BOR"));
+        Assert.Empty(await Search("b"));                                      // one character: nothing
+        Assert.Empty(await Search("zz"));
+    }
+
+    [Fact]
     public async Task Refused_without_a_session()
     {
         var response = await _server.CreateClient().PostAsJsonAsync("/api/account/cabals/sync", new CabalSyncRequest([]), TournamentJson.Options);

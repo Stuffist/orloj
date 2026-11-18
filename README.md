@@ -405,7 +405,11 @@ current catalog is set aside and reported under the recorded name.
   account of the copy);
 - signed out, the copy stays on the device;
 - 200 cabals at most per account (beyond that, the cabal stays on the device, reported); upload
-  in batches of 10; deleting the account erases its cabals.
+  in batches of 10; deleting the account erases its cabals;
+- **public or private**, per cabal ("Public" in "My cabals", `PUT /api/account/cabals/visibility`):
+  a public cabal is offered to whoever types the account's username while entering a game of the
+  Block (`GET /api/accounts/{name}/cabals`). New cabals are public; those saved before this
+  setting existed stay private.
 
 ## Play mode
 
@@ -700,7 +704,8 @@ optional, shown in the list of games, never counted.
 - **Entering a game** ("Record an encounter"): **anyone, without an account**, in an open zone.
   Duel (1 v 1) or **2 v 2** (a Light team against a Darkness team, VP per team). Everything is
   required except the names (optional, never counted): the faction and the cabal played of each
-  player (from "My cabals", composed or pasted, legality checked), the VP of each side, the side
+  player (from "My cabals", composed or pasted, legality checked; typing a name suggests account
+  usernames, `GET /api/accounts/search`, and an account's username offers its public cabals), the VP of each side, the side
   that played first, the end of the game, the scenario and both its decks; optional too, a free
   comment (a notable event, 500 characters at most, shown under the game); all the fields shown at
   once. Games copied from a tournament keep what it recorded. Checked by `Zones/ZoneRules.cs` in the browser, then again on

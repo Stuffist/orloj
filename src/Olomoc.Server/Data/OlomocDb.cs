@@ -100,8 +100,9 @@ public sealed class StoredDocumentRow
 
 /// <summary>
 /// An account's cabal, under its name (unique per account, case-insensitive): JSON of the export,
-/// save date (UTC). Deleted: <see cref="Deleted"/>, without content, kept so that the other
-/// devices learn about it.
+/// save date (UTC), <see cref="Public"/> (offered to whoever types the account's name in a game of the
+/// Block: public at creation, private for the cabals saved before). Deleted: <see cref="Deleted"/>,
+/// without content, kept so that the other devices learn about it.
 /// </summary>
 public sealed class SavedCabalRow
 {
@@ -111,6 +112,7 @@ public sealed class SavedCabalRow
     public string NormalizedName { get; set; } = "";
     public DateTime SavedAt { get; set; }
     public bool Deleted { get; set; }
+    public bool Public { get; set; }
     public string? Json { get; set; }
 }
 

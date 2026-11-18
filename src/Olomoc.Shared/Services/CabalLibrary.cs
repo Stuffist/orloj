@@ -105,6 +105,22 @@ public sealed class CabalLibrary
     }
 
     /// <summary>
+    /// Makes a cabal of the account public (offered to whoever types the account's name in a game of
+    /// the Block) or private. Only once it is on the account (<see cref="SavedCabal.Public"/> known).
+    /// </summary>
+    public async Task<IReadOnlyList<Problem>> SetPublicAsync(SavedCabal saved, bool isPublic)
+    {
+        if (_cloud is null || saved.Public is null) return [Problem.Of("signedOut")];
+        var result = await _cloud.SetCabalVisibilityAsync(saved.Cabal.Name!, isPublic);
+        if (!result.Ok) return result.Problems;
+        var index = _cabals.FindIndex(c => SameName(c.Cabal.Name, saved.Cabal.Name));
+        if (index >= 0) _cabals[index] = _cabals[index] with { Public = isPublic };
+        await StoreAsync();
+        Changed?.Invoke();
+        return [];
+    }
+
+    /// <summary>
     /// Sends this device's changes to the signed-in account and takes back its cabals. Without an
     /// account or without network: nothing changes (the changes wait); returns null.
     /// </summary>

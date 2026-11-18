@@ -21,6 +21,9 @@ public interface ICabalCloud
     event Action? Changed;
 
     Task<AccountResult<CabalSyncResult>> SyncCabalsAsync(IReadOnlyList<CabalChange> changes);
+
+    /// <summary>A cabal of the account made public or private.</summary>
+    Task<AccountResult<bool>> SetCabalVisibilityAsync(string name, bool isPublic);
 }
 
 /// <summary>
@@ -101,6 +104,9 @@ public sealed class AccountService(HttpClient http) : ICabalCloud
 
     public Task<AccountResult<CabalSyncResult>> SyncCabalsAsync(IReadOnlyList<CabalChange> changes) =>
         SendAsync<CabalSyncResult>(HttpMethod.Post, "cabals/sync", new CabalSyncRequest(changes));
+
+    public Task<AccountResult<bool>> SetCabalVisibilityAsync(string name, bool isPublic) =>
+        SendAsync<bool>(HttpMethod.Put, "cabals/visibility", new CabalVisibilityRequest(name, isPublic));
 
     private async Task<AccountResult<AccountView>> SignInAsync(string action, object request)
     {

@@ -46,6 +46,14 @@ public static class AccountEndpoints
         mine.MapPost("confirm/send", SendConfirmation).RequireRateLimiting(MailPolicy);
         mine.MapPost("delete", Delete).RequireRateLimiting(TournamentEndpoints.LoginPolicy);
         mine.MapPost("cabals/sync", CabalSyncEndpoint.Sync).RequireRateLimiting(TournamentEndpoints.WritePolicy);
+        mine.MapPut("cabals/visibility", CabalSyncEndpoint.SetVisibility).RequireRateLimiting(TournamentEndpoints.WritePolicy);
+
+        // Entry of a game in the Block: account names suggested as a name is typed, and the public
+        // cabals of the account chosen. Public, no account needed.
+        var directory = app.MapGroup("/api/accounts").RequireRateLimiting(TournamentEndpoints.ReadPolicy);
+        directory.MapGet("search", SearchNames);
+        directory.MapGet("{userName}/cabals", async (string userName, UserManager<OlomocUser> users, IDbContextFactory<OlomocDb> factory) =>
+            Results.Json(await CabalSyncEndpoint.PublicAsync(userName, users, factory), TournamentJson.Options));
 
         // Admin (admin panel): account roles; temporary password for an account whose email cannot be
         // used for recovery; unlock, sign out, deletion. All logged.
@@ -59,6 +67,21 @@ public static class AccountEndpoints
     }
 
     // ---- Without an account ----
+
+    /// <summary>
+    /// Account names starting with <paramref name="q"/> (case-insensitive, from
+    /// <see cref="AccountDirectoryRules.MinPrefix"/> characters), at most
+    /// <see cref="AccountDirectoryRules.MaxSuggestions"/>, alphabetical.
+    /// </summary>
+    private static async Task<IResult> SearchNames(string? q, UserManager<OlomocUser> users)
+    {
+        var prefix = q?.Trim() ?? "";
+        if (prefix.Length < AccountDirectoryRules.MinPrefix || prefix.Length > 64) return Results.Json(Array.Empty<string>(), TournamentJson.Options);
+        var normalized = users.NormalizeName(prefix);
+        var names = await users.Users.Where(u => u.NormalizedUserName != null && u.NormalizedUserName.StartsWith(normalized))
+            .OrderBy(u => u.NormalizedUserName).Take(AccountDirectoryRules.MaxSuggestions).Select(u => u.UserName!).ToListAsync();
+        return Results.Json(names, TournamentJson.Options);
+    }
 
     /// <summary>Session account; 204 without a session.</summary>
     private static async Task<IResult> Me(HttpContext ctx, UserManager<OlomocUser> users) =>

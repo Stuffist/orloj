@@ -295,6 +295,9 @@ namespace Olomoc.Server.Data.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Public")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("SavedAt")
                         .HasColumnType("TEXT");
 

@@ -370,7 +370,8 @@ body {
 .saved-meta { font-size: .75rem; color: var(--muted); }
 .saved-slots { list-style: none; margin: 0; padding: 0; font-size: .82rem; }
 .saved-slots .stars { display: inline-block; width: 2.6em; color: var(--rust); font-size: .75rem; }
-.saved-actions { display: flex; gap: .5rem; justify-content: flex-end; }
+.saved-actions { display: flex; gap: .5rem; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+.saved-public { margin-right: auto; font-size: .85rem; color: var(--muted); }
 .library-import { display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; border-top: 1px solid var(--line); padding-top: .7rem; }
 .library-import input[type="file"] { display: none; }
 .library-import .export-warning { margin: 0; }
@@ -1094,6 +1095,8 @@ body {
 .zn-game-side.right .zn-game-player { justify-content: flex-end; }
 .zn-score { font-weight: 700; font-size: 1.1rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .zn-cabal { font-size: .8rem; }
+.zn-account-cabals { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
+.zn-account-cabals .btn { display: inline-flex; align-items: center; gap: .3rem; }
 .zn-comment { margin: 0; padding: .3rem .5rem; border-left: 3px solid var(--line); white-space: pre-line; font-size: .88rem; color: var(--ink); overflow-wrap: anywhere; }
 .zn-cabal summary { cursor: pointer; color: var(--muted); }
 .zn-cabal[open] { flex-basis: 100%; }

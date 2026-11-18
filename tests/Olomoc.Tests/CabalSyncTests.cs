@@ -176,6 +176,20 @@ public class CabalSyncTests
         Assert.Equal(25, library.LastSync!.Uploaded);
     }
 
+    [Fact]
+    public async Task Cabal_made_private_on_the_account_and_on_the_device()
+    {
+        var cloud = new FakeCloud { User = "Bohdan" };
+        var library = await Open(new FakeStorage(), cloud);
+        await library.SaveAsync(Cabal("Assaut"), T0);
+        var saved = library.Find("Assaut")!;
+        Assert.True(saved.Public);                                            // public once on the account
+        Assert.Empty(await library.SetPublicAsync(saved, false));
+        Assert.False(library.Find("Assaut")!.Public);
+        await library.SyncAsync();
+        Assert.False(library.Find("Assaut")!.Public);                         // the account says so too
+    }
+
     /// <summary>In-memory account: same rules as the server (most recent wins, limit).</summary>
     private sealed class FakeCloud : ICabalCloud
     {
@@ -222,8 +236,17 @@ public class CabalSyncTests
                 applied++;
             }
             var cabals = account.Values.Where(v => v.Cabal is not null).OrderByDescending(v => v.At)
-                .Select(v => new SavedCabal(v.At, v.Cabal!)).ToList();
+                .Select(v => new SavedCabal(v.At, v.Cabal!, Public: !_private.Contains(CabalSyncRules.Key(v.Cabal!.Name!)))).ToList();
             return Task.FromResult(new AccountResult<CabalSyncResult>(new(cabals, applied, problems), []));
+        }
+
+        private readonly HashSet<string> _private = new();
+
+        public Task<AccountResult<bool>> SetCabalVisibilityAsync(string name, bool isPublic)
+        {
+            if (isPublic) _private.Remove(CabalSyncRules.Key(name));
+            else _private.Add(CabalSyncRules.Key(name));
+            return Task.FromResult(new AccountResult<bool>(true, []));
         }
     }
 
