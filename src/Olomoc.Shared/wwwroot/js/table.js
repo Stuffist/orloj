@@ -4,7 +4,8 @@
 //   a press without moving: Selected(id);
 // - press on the board: Clicked(x, y) (placing a piece, deselecting); with the ruler, the distance
 //   from the press to the pointer is drawn until the next press;
-// - drag on the board (no ruler): pan; wheel or zoom(): zoom. The viewBox belongs to this script.
+// - drag on the board (no ruler): pan; wheel or zoom(): zoom. The viewBox belongs to this script;
+// - keys 0 to 9 (top row): AuraKey(n), the ranges of the selected piece.
 window.olomocTable = {
     _tables: new Map(),
 
@@ -100,6 +101,17 @@ window.olomocTable = {
         svg.addEventListener("pointerup", t.up);
         svg.addEventListener("pointercancel", t.up);
         svg.addEventListener("wheel", t.wheel, { passive: false });
+        // Keys 0 to 9 of the top row (whatever the layout: AZERTY gives &é"… without Shift), outside the
+        // text fields: ranges of the selected piece.
+        t.key = e => {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            const m = /^Digit([0-9])$/.exec(e.code);
+            const el = document.activeElement;
+            if (!m || (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)))) return;
+            e.preventDefault();
+            dotnet.invokeMethodAsync("AuraKey", +m[1]);
+        };
+        document.addEventListener("keydown", t.key);
         apply();
         const id = Math.random().toString(36).slice(2);
         window.olomocTable._tables.set(id, t);
@@ -114,6 +126,7 @@ window.olomocTable = {
         t.svg.removeEventListener("pointerup", t.up);
         t.svg.removeEventListener("pointercancel", t.up);
         t.svg.removeEventListener("wheel", t.wheel);
+        document.removeEventListener("keydown", t.key);
         window.olomocTable._tables.delete(id);
     },
 

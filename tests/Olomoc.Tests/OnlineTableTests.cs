@@ -129,6 +129,26 @@ public class OnlineTableTests
     }
 
     [Fact]
+    public async Task Ranges_around_a_piece_set_by_either_player_and_seen_by_everyone()
+    {
+        var (d, g) = await InCycle();
+        var mine = Cog(g, 0, "2R08");
+        Ok(Do(g, 1, new(OnlineCommandType.SetAuras, PieceId: mine.Id, Auras: [3, 1, 3]), d));       // as on Vassal: either player
+        Assert.Equal([1, 3], mine.Auras);
+        Assert.Equal([1, 3], OnlineRules.View(g, null, new HashSet<int>()).Table!.Pieces.Single(p => p.Id == mine.Id).Auras);
+        Ok(Do(g, 0, new(OnlineCommandType.SetAuras, PieceId: mine.Id, Auras: []), d));
+        Assert.Empty(mine.Auras);
+
+        Assert.Equal("onlineTableAura", Key(Do(g, 0, new(OnlineCommandType.SetAuras, PieceId: mine.Id, Auras: [10]), d)));
+        Assert.Equal("onlineTableAura", Key(Do(g, 0, new(OnlineCommandType.SetAuras, PieceId: mine.Id, Auras: [0]), d)));
+        Assert.Equal("onlineTableAura", Key(Do(g, 0, new(OnlineCommandType.SetAuras, PieceId: mine.Id), d)));
+        var cuve = Manifest.Value.Terrain[0].Id;
+        Ok(Do(g, 0, new(OnlineCommandType.AddPiece, cuve, Piece: PieceKind.Terrain, X: 100, Y: 100), d));
+        var terrain = g.Table!.Pieces.Single(p => p.Kind == PieceKind.Terrain);
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetAuras, PieceId: terrain.Id, Auras: [2]), d)));
+    }
+
+    [Fact]
     public async Task Table_only_between_the_start_and_the_end_and_limited()
     {
         var (d, g) = await InCycle();

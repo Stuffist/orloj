@@ -14,6 +14,8 @@ public static class TableRules
     public const int MaxPieces = 80;
     /// <summary>A piece may stick out of the board by this much (mm), not more.</summary>
     public const double Margin = 30;
+    /// <summary>Ranges shown around a piece: 1 to this many inches.</summary>
+    public const int MaxAura = 9;
 
     /// <summary>The table at the start (or of a game stored before the table): each side's cogs, off the board.</summary>
     public static OnlineTable Create(OnlineGame g)
@@ -35,6 +37,7 @@ public static class TableRules
             OnlineCommandType.AddPiece => Add(g, table, seat, c, manifest, now),
             OnlineCommandType.MovePiece => Move(table, seat, c),
             OnlineCommandType.RemovePiece => Remove(g, table, seat, c.PieceId, now),
+            OnlineCommandType.SetAuras => SetAuras(table, c.PieceId, c.Auras),
             _ => Problem.Of("onlineCommand"),
         };
     }
@@ -85,6 +88,16 @@ public static class TableRules
             (piece.X, piece.Y) = (null, null);
         }
         if (c.Rotation is { } r) piece.Rotation = Normal(r);
+        return null;
+    }
+
+    // Ranges around a piece (any player, any piece but terrain, as on Vassal): the list replaces the
+    // previous one (empty: none).
+    private static Problem? SetAuras(OnlineTable table, int? id, IReadOnlyList<int>? auras)
+    {
+        if (Find(table, id) is not { Kind: not PieceKind.Terrain } piece) return Problem.Of("onlineTablePiece");
+        if (auras is null || auras.Any(a => a is < 1 or > MaxAura)) return Problem.Of("onlineTableAura", MaxAura.ToString());
+        piece.Auras = auras.Distinct().Order().ToList();
         return null;
     }
 

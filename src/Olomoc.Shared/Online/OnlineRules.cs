@@ -37,6 +37,7 @@ public static class OnlineRules
             OnlineCommandType.Undo => One(Undo(g, seat, now)),
             OnlineCommandType.SetEndCycle => One(SetEndCycle(g, seat, c.Flag == true, now)),
             OnlineCommandType.SetBoard or OnlineCommandType.AddPiece or OnlineCommandType.MovePiece or OnlineCommandType.RemovePiece
+                or OnlineCommandType.SetAuras
                 => One(TableRules.Apply(g, seat, c, table, now)),
             OnlineCommandType.ConfirmResult => One(ConfirmResult(g, seat, c.Vp, now)),
             _ => One(Problem.Of("onlineCommand")),

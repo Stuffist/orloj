@@ -22,7 +22,7 @@ public enum OnlineCommandType
     RollInitiative,                          // player numbers
     ChooseAgenda, DrawAgenda,                // agenda
     UpdateState, Undo, SetEndCycle,          // cycles
-    SetBoard, AddPiece, MovePiece, RemovePiece,   // table (from the initiative on)
+    SetBoard, AddPiece, MovePiece, RemovePiece, SetAuras,   // table (from the initiative on)
     ConfirmResult,                           // end of the game
 }
 
@@ -30,7 +30,7 @@ public enum OnlineCommandType
 /// A player's command. Text: name, agenda, board, ref of a new piece; Flag: ready, end of cycle; State
 /// and BasedOn: new state of their side and the revision it starts from; Note: report for the log.
 /// Table: Piece (kind of a new piece), PieceId, X and Y (mm; both null: off the board), Rotation.
-/// Vp: victory points of each seat, for the result.
+// Auras: ranges shown around a piece (inches, 1 to 9; empty: none). Vp: victory points of each seat, for the result.
 /// </summary>
 public sealed record OnlineCommand(
     OnlineCommandType Type,
@@ -45,7 +45,8 @@ public sealed record OnlineCommand(
     double? X = null,
     double? Y = null,
     int? Rotation = null,
-    IReadOnlyList<int>? Vp = null);
+    IReadOnlyList<int>? Vp = null,
+    IReadOnlyList<int>? Auras = null);
 
 /// <summary>Answer to Join (hub): the game's view, or the problem that prevents joining it (notFound, forbidden).</summary>
 public sealed record OnlineJoin(OnlineView? View, string? Error = null);

@@ -69,7 +69,7 @@ public enum PieceKind { Cog, Equipment, Terrain, Marker }
 /// A piece of the table. Ref: cog or equipment id (card catalog), terrain or marker id
 /// (<see cref="TableManifest"/>). Seat: owner of a cog or an equipment token (null: terrain and markers,
 /// moved by either player). X and Y: centre, in mm from the top-left corner of the board; both null
-/// for a cog off the board (its tray). Rotation: degrees, clockwise.
+/// for a cog off the board (its tray). Rotation: degrees, clockwise. Auras: ranges shown around it.
 /// </summary>
 public sealed class TablePiece
 {
@@ -80,6 +80,8 @@ public sealed class TablePiece
     public double? X { get; set; }
     public double? Y { get; set; }
     public int Rotation { get; set; }
+    /// <summary>Ranges shown around the piece, in inches from the edge of its base (1 to 9), seen by everyone.</summary>
+    public List<int> Auras { get; set; } = new();
 
     public bool OnBoard => X is not null && Y is not null;
 }

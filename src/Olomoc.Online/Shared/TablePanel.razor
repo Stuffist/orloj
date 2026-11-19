@@ -31,8 +31,6 @@ else
                 }
                 <button class="btn small @(_ruler ? "primary" : null)" type="button" aria-pressed="@_ruler" title="@L.Ui("online.table.ruler.title")"
                         @onclick="ToggleRulerAsync">📏 @L.Ui("online.table.ruler")</button>
-                <button class="btn small @(_auras ? "primary" : null)" type="button" aria-pressed="@_auras" title="@L.Ui("online.table.auras.title")"
-                        @onclick="() => _auras = !_auras">◎ @L.Ui("online.table.auras")</button>
                 <button class="btn small @(_grid ? "primary" : null)" type="button" aria-pressed="@_grid"
                         @onclick="() => _grid = !_grid">@L.Ui("online.table.grid")</button>
                 <button class="btn small" type="button" title="@L.Ui("online.table.zoomIn")" @onclick="() => ZoomAsync(0.8)">+</button>
@@ -107,12 +105,13 @@ else
                         </g>
                     }
 
-                    @if (_auras && SelectedPiece(table) is { OnBoard: true } sel && sel.Kind != PieceKind.Terrain)
+                    @* Ranges (keys 1 to 9 on the selected piece, 0: none), seen by both players. *@
+                    @foreach (var p in OnBoard(table).Where(p => p.Kind != PieceKind.Terrain && AurasOf(p).Count > 0))
                     {
-                        var (x, y, _) = At(sel);
-                        var radius = Radius(sel);
-                        <g class="tb-auras" pointer-events="none">
-                            @for (var n = 1; n <= 8; n++)
+                        var (x, y, _) = At(p);
+                        var radius = Radius(p);
+                        <g class="tb-auras @SeatClass(p)" pointer-events="none">
+                            @foreach (var n in AurasOf(p))
                             {
                                 <g>
                                     <circle cx="@Num(x)" cy="@Num(y)" r="@Num(radius + n * Inch)" />
@@ -146,6 +145,19 @@ else
                     else if (SelectedPiece(table) is { } s)
                     {
                         <strong>@Name(s)</strong>
+                        @if (CanAura && s.Kind != PieceKind.Terrain)
+                        {
+                            <span class="tb-aura-keys" title="@L.Ui("online.table.auras.title")">
+                                @for (var n = 1; n <= TableRules.MaxAura; n++)
+                                {
+                                    var inches = n;
+                                    var on = AurasOf(s).Contains(n);
+                                    <button class="btn small @(on ? "primary" : null)" type="button" aria-pressed="@on" @onclick="() => ToggleAuraAsync(s, inches)">@n</button>
+                                }
+                                <button class="btn small" type="button" title="@L.Ui("online.table.auras.clear")" disabled="@(AurasOf(s).Count == 0)"
+                                        @onclick="() => SetAurasAsync(s, [])">0</button>
+                            </span>
+                        }
                         @if (Movable(s))
                         {
                             <button class="btn small" type="button" title="@L.Ui("online.table.rotateLeft")" @onclick="() => RotateAsync(s, -15)">⟲</button>
@@ -281,12 +293,13 @@ else
     private ElementReference _svg;
     private DotNetObjectReference<TablePanel>? _self;
     private string? _js;
-    private bool _ruler, _auras = true, _grid;
+    private bool _ruler, _grid;
     private int? _selected;
     private Placing? _placing;
     private Measure? _measure;
     // Positions shown before the server confirms them (drop, placing), until the next view.
     private readonly Dictionary<int, (double? X, double? Y, int R)> _local = new();
+    private readonly Dictionary<int, IReadOnlyList<int>> _localAuras = new();
     private int _revision = -1;
 
     private sealed record Placing(PieceKind Kind, string Ref, int? PieceId, string Label);
@@ -305,6 +318,7 @@ else
         if (View.Revision == _revision) return;
         _revision = View.Revision;
         _local.Clear();
+        _localAuras.Clear();
         if (_selected is { } id && View.Table?.Pieces.Any(p => p.Id == id) != true) _selected = null;
     }
 
@@ -519,6 +533,33 @@ else
     {
         _selected = null;
         return Send(new(OnlineCommandType.RemovePiece, PieceId: p.Id));
+    }
+
+    // ---- Ranges (as on Vassal: keys 1 to 9 toggle a range around the selected piece, 0 removes them) ----
+
+    private bool CanAura => Playing && View.Me is not null;
+
+    private IReadOnlyList<int> AurasOf(TablePiece p) => _localAuras.TryGetValue(p.Id, out var a) ? a : p.Auras;
+
+    private Task ToggleAuraAsync(TablePiece p, int inches)
+    {
+        var auras = AurasOf(p);
+        return SetAurasAsync(p, auras.Contains(inches) ? auras.Where(a => a != inches).ToList() : [.. auras, inches]);
+    }
+
+    private Task SetAurasAsync(TablePiece p, IReadOnlyList<int> auras)
+    {
+        _localAuras[p.Id] = auras.Order().ToList();
+        StateHasChanged();
+        return Send(new(OnlineCommandType.SetAuras, PieceId: p.Id, Auras: _localAuras[p.Id]));
+    }
+
+    /// <summary>Key 0 to 9 of the top row (js/table.js), outside the text fields: on the selected piece.</summary>
+    [JSInvokable]
+    public Task AuraKey(int key)
+    {
+        if (!CanAura || View.Table?.Pieces.FirstOrDefault(p => p.Id == _selected) is not { Kind: not PieceKind.Terrain } piece) return Task.CompletedTask;
+        return key == 0 ? SetAurasAsync(piece, []) : ToggleAuraAsync(piece, key);
     }
 
     public async ValueTask DisposeAsync()
