@@ -204,15 +204,14 @@ The card catalog is **language-neutral**; texts live in per-language packs.
   in the alpha channel) tinted in CSS, like the pictograms: logos in the text color, emblems in
   rust. Extracted from Occicat's PDFs (embedded images; rendered at 600 dpi for the vector logos
   of Dykovia and Maisel).
-- `src/Olomoc.Shared/wwwroot/data/olomoc-table.json` and `img/table/boards|terrain|markers|tokens/` — what can
-  be put on the table of an online game: the 40 cm game mats, the terrain (size, obstructing or
-  not, outline), the markers, and the token of each cog and equipment/boon (catalog id, base
-  diameter). Sizes in mm. Imported from Occicat's Vassal module, with their permission, by
+- `src/Olomoc.Shared/wwwroot/data/olomoc-table.json` and `img/table/boards|terrain|markers|tokens|templates/` —
+  what can be put on the table of an online game: the 40 cm game mats, the terrain (size,
+  obstructing or not, outline), the markers, the token of each cog and equipment/boon (catalog id,
+  base diameter), and the movement templates (length, width). Sizes in mm. Imported from Occicat's Vassal module, with their permission, by
   `tools/VassalImport` (images copied as they are; in the module, 1.2 px = 1 mm). With a new
   version of the module:
   `dotnet run --project tools/VassalImport -- path/to/OLOMOC_2P_V1.x.vmod` (empties `img/table/`,
-  movement templates (`templates/`),   rewrites the manifest, lists the pieces left out: NPCs, proxies, cards without a French
-  version). Names: matched on the French card names and titles ("« Sonar »"), with a few overrides
+  rewrites the manifest, lists the pieces left out: NPCs, proxies, cards without a French version). Names: matched on the French card names and titles ("« Sonar »"), with a few overrides
   in the tool.
 
 Each file references its schema through `$schema` (validation and autocompletion in the
