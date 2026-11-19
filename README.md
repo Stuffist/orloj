@@ -673,8 +673,8 @@ connection.
     move wins, piece by piece; no log line per move (terrain put down or removed: logged).
   - Gestures in `js/table.js` (SVG in mm): drag a piece (the server hears of the drop only), zoom
     (wheel, buttons), pan (drag the background); from the list or the palettes, a click on the item then on the mat.
-    A cog out of action on its sheet is faded. Bases have no orientation (no rotation); terrain
-    turns by 15°.
+    A cog out of action on its sheet is faded. Bases have no orientation (no rotation); the selected terrain
+    turns with its handles (one at each end, like the movement template), or by 15°.
   - **Both cabals**, always listed next to the mat: a card per cog with its HP left, action tokens,
     Darkness and state (out of action, otherwise sane, tainted or corrupted; stunned; **off the Block**
     when none of its tokens is on the mat), read from its side's sheet, and its cards below (a click

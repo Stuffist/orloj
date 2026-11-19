@@ -1214,7 +1214,7 @@
   "online.table.templates": "Réglettes de mouvement",
   "online.table.template.move": "Réglette de déplacement",
   "online.table.template.push": "Réglette de poussée",
-  "online.table.template.turn": "Glissez pour tourner la réglette",
+  "online.table.turn": "Glissez pour tourner",
   "online.table.magnet": "Aimantée",
   "online.table.magnet.title": "Aimantée : lâchée près d’un socle, la réglette vient le toucher ; un socle lâché près d’elle vient la toucher (vu par les deux joueurs).",
   "online.table.copied": "Copié : Ctrl+V pour coller à côté."

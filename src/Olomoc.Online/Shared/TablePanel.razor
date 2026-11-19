@@ -130,19 +130,17 @@ else
                         </g>
                     }
 
-                    @* Handles of the selected movement template, one at each end: above the bases, which never hide
-                       them (js/table.js turns the template and them together). *@
-                    @if (SelectedPiece(table) is { Kind: PieceKind.Template } turned && Shown(turned) && Movable(turned)
-                         && Files.Manifest.Template(turned.Ref) is { } shape && shape.Length > shape.Width)
+                    @* Handles of the selected movement template or terrain, one at each end: above the bases,
+                       which never hide them (js/table.js turns the piece and them together). *@
+                    @if (SelectedPiece(table) is { } turned && Shown(turned) && Movable(turned) && HalfLength(turned) is { } end)
                     {
                         var (x, y, r) = At(turned);
-                        var end = shape.Length / 2;
                         <g class="tb-handles" data-handles-for="@turned.Id" transform="translate(@Num(x) @Num(y)) rotate(@r)">
                             @foreach (var (side, sign) in new[] { ("front", -1), ("back", 1) })
                             {
                                 <g>
                                     <line class="tb-handle-arm" x1="0" y1="@Num(sign * end)" x2="0" y2="@Num(sign * (end + 7))" />
-                                    <circle class="tb-handle" data-handle="@side" cx="0" cy="@Num(sign * (end + 7))" r="3.5"><title>@L.Ui("online.table.template.turn")</title></circle>
+                                    <circle class="tb-handle" data-handle="@side" cx="0" cy="@Num(sign * (end + 7))" r="3.5"><title>@L.Ui("online.table.turn")</title></circle>
                                 </g>
                             }
                         </g>
@@ -406,6 +404,15 @@ else
         _local.TryGetValue(p.Id, out var l) ? (l.X ?? 0, l.Y ?? 0, l.R) : (p.X ?? 0, p.Y ?? 0, p.Rotation);
 
     private TablePiece? SelectedPiece(OnlineTable table) => table.Pieces.FirstOrDefault(p => p.Id == _selected);
+
+    // Half the length of a piece that turns with handles (terrain, the movement template), along its
+    // axis; null: no handles (bases, the round push template).
+    private double? HalfLength(TablePiece p) => p.Kind switch
+    {
+        PieceKind.Terrain => Files.Manifest.TerrainOf(p.Ref)?.Height / 2,
+        PieceKind.Template => Files.Manifest.Template(p.Ref) is { } t && t.Length > t.Width ? t.Length / 2 : null,
+        _ => null,
+    };
 
     // A piece with a round base: cogs, equipment tokens, markers (ranges, measures, magnets).
     private static bool HasBase(TablePiece p) => p.Kind is PieceKind.Cog or PieceKind.Equipment or PieceKind.Marker;
