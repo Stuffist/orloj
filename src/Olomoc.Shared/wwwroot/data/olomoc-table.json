@@ -4470,5 +4470,19 @@
       "image": "img/table/tokens/E45.png",
       "base": 30
     }
+  ],
+  "templates": [
+    {
+      "id": "move",
+      "image": "img/table/templates/move.png",
+      "length": 74.2,
+      "width": 30.8
+    },
+    {
+      "id": "push",
+      "image": "img/table/templates/push.png",
+      "length": 25,
+      "width": 25
+    }
   ]
 }

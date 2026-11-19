@@ -149,6 +149,26 @@ public class OnlineTableTests
     }
 
     [Fact]
+    public async Task Movement_templates_put_down_moved_and_magnetic_by_either_player()
+    {
+        var (d, g) = await InCycle();
+        Ok(Do(g, 0, new(OnlineCommandType.AddPiece, "move", Piece: PieceKind.Template, X: 100, Y: 100), d));
+        var template = g.Table!.Pieces.Single(p => p.Kind == PieceKind.Template);
+        Assert.Equal((null, false), (template.Seat, template.Magnet));
+        Ok(Do(g, 1, new(OnlineCommandType.MovePiece, PieceId: template.Id, X: 120, Y: 90, Rotation: 45), d));
+        Assert.Equal((120.0, 90.0, 45), (template.X, template.Y, template.Rotation));
+        Ok(Do(g, 1, new(OnlineCommandType.SetMagnet, PieceId: template.Id, Flag: true), d));
+        Assert.True(OnlineRules.View(g, 0, new HashSet<int>()).Table!.Pieces.Single(p => p.Id == template.Id).Magnet);
+        Ok(Do(g, 0, new(OnlineCommandType.SetMagnet, PieceId: template.Id, Flag: false), d));
+        Assert.False(template.Magnet);
+
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetMagnet, PieceId: Cog(g, 0, "2R08").Id, Flag: true), d)));
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetAuras, PieceId: template.Id, Auras: [1]), d)));
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "ladder", Piece: PieceKind.Template, X: 10, Y: 10), d)));
+        Ok(Do(g, 1, new(OnlineCommandType.RemovePiece, PieceId: template.Id), d));
+    }
+
+    [Fact]
     public async Task Table_only_between_the_start_and_the_end_and_limited()
     {
         var (d, g) = await InCycle();
@@ -232,7 +252,7 @@ public class OnlineTableTests
         var m = Manifest.Value;
         Assert.NotEmpty(m.Boards);
         Assert.Contains(m.Boards, b => b.Id == TableRules.DefaultBoard);
-        var images = m.Boards.Select(b => b.Image).Concat(m.Terrain.Select(t => t.Image)).Concat(m.Markers.Select(x => x.Image)).Concat(m.Tokens.Select(t => t.Image));
+        var images = m.Boards.Select(b => b.Image).Concat(m.Terrain.Select(t => t.Image)).Concat(m.Markers.Select(x => x.Image)).Concat(m.Tokens.Select(t => t.Image)).Concat((m.Templates ?? []).Select(t => t.Image));
         Assert.All(images, image =>
         {
             Assert.StartsWith(TableManifest.Images, image);
@@ -240,6 +260,8 @@ public class OnlineTableTests
         });
         Assert.All(m.Boards, b => Assert.Equal(TableManifest.BoardSize, b.Size));
         Assert.All(m.Terrain, t => Assert.True(t.Width > 0 && t.Height > 0, t.Id));
+        Assert.Equal(["move", "push"], (m.Templates ?? []).Select(t => t.Id));
+        Assert.All(m.Templates!, t => Assert.True(t.Length >= t.Width && t.Width > 0, t.Id));
     }
 
     [Fact]
@@ -259,7 +281,8 @@ public class OnlineTableTests
         var m = Manifest.Value;
         var keys = m.Boards.Select(b => $"online.table.board.{b.Id}")
             .Concat(m.Terrain.Select(t => t.Type).Distinct().Select(t => $"online.table.terrain.{t}"))
-            .Concat(m.Markers.Select(x => $"online.table.marker.{x.Id}"));
+            .Concat(m.Markers.Select(x => $"online.table.marker.{x.Id}"))
+            .Concat((m.Templates ?? []).Select(x => $"online.table.template.{x.Id}"));
         foreach (var lang in new[] { "fr", "en" })
         {
             var ui = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppData.WwwRoot, "i18n", lang, "ui.json"))).RootElement;

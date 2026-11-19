@@ -77,6 +77,15 @@ foreach (var (id, image) in new[] { ("objective-p1", "pion_objectif_J1.png"), ("
     markers.Add(new TableMarker(id, path, Mm(Math.Max(w, h))));
 }
 
+// ---- Movement templates: the ruler of a normal move (stadium), the push one (disc) ----
+var templates = new List<TableTemplate>();
+foreach (var (id, image) in new[] { ("move", "reglette2024.png"), ("push", "poussee2024.png") })
+{
+    if (Copy(image, "templates", id) is not { } path) continue;
+    var (w, h) = Size(image);
+    templates.Add(new TableTemplate(id, path, Mm(Math.Max(w, h)), Mm(Math.Min(w, h))));
+}
+
 // ---- Tokens: "Player: <name>" prototypes (base: 30Rims, 40Rims, 50Rims), matched to the catalog ----
 var cards = JsonNode.Parse(File.ReadAllText(Path.Combine(web, "i18n", "fr", "cards.json")))!;
 // Names, and titles ("« Sonar »"): the module names some cogs by their nickname.
@@ -102,11 +111,11 @@ foreach (var (key, definition) in prototypes.Where(p => p.Key.StartsWith("Player
 }
 
 var manifest = new TableManifest(TableManifest.CurrentVersion, $"Occicat Games, Vassal module {version}",
-    boards, terrain, markers, tokens.OrderBy(t => t.Id).ToList());
+    boards, terrain, markers, tokens.OrderBy(t => t.Id).ToList(), templates);
 File.WriteAllText(Path.Combine(web, TableManifest.File.Replace('/', Path.DirectorySeparatorChar)),
     JsonSerializer.Serialize(manifest, new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true }) + "\n");
 
-Console.WriteLine($"Module {version}: {boards.Count} boards, {terrain.Count} terrain, {markers.Count} markers, {tokens.Count} tokens.");
+Console.WriteLine($"Module {version}: {boards.Count} boards, {terrain.Count} terrain, {markers.Count} markers, {tokens.Count} tokens, {templates.Count} templates.");
 if (unmatched.Count > 0) Console.WriteLine($"Not in the catalog (left out): {string.Join(", ", unmatched)}");
 return 0;
 

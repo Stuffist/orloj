@@ -12,7 +12,7 @@ public sealed class TableAssets(HttpClient http)
 {
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    public TableManifest Manifest { get; private set; } = new(TableManifest.CurrentVersion, "", [], [], [], []);
+    public TableManifest Manifest { get; private set; } = new(TableManifest.CurrentVersion, "", [], [], [], [], []);
     public bool Loaded { get; private set; }
 
     private Task? _loading;

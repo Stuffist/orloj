@@ -211,7 +211,7 @@ The card catalog is **language-neutral**; texts live in per-language packs.
   `tools/VassalImport` (images copied as they are; in the module, 1.2 px = 1 mm). With a new
   version of the module:
   `dotnet run --project tools/VassalImport -- path/to/OLOMOC_2P_V1.x.vmod` (empties `img/table/`,
-  rewrites the manifest, lists the pieces left out: NPCs, proxies, cards without a French
+  movement templates (`templates/`),   rewrites the manifest, lists the pieces left out: NPCs, proxies, cards without a French
   version). Names: matched on the French card names and titles ("« Sonar »"), with a few overrides
   in the tool.
 
@@ -679,6 +679,12 @@ connection.
     and state (out of action, stunned, tainted or corrupted, off the mat), read from its side's sheet,
     and its cards below (one's own: a click puts their token down). A click on a cog shows it on the
     mat, or puts it down there if it is not on it yet.
+  - **Movement templates** (from the module: the ruler of a normal move, a stadium, and the push one,
+    a disc), put down, moved and turned by either player; the selected one turns with its handle.
+    **Magnetic** (option of the selected template, shared): dropped near a base (within 8 mm between
+    the edges), the template moves without turning until its closest point touches it; a base dropped
+    near a magnetic template comes to touch it at that place. Shown while dragging (`js/table.js`:
+    a template is a capsule, its contact with a round base is exact). Placement stays free otherwise.
   - **Ruler** (for the viewer only): distance in inches; as soon as a miniature is involved (start or
     end), from the edge of its base (between two: edge to edge), while dragging too. **Ranges**, as on Vassal:
     keys 1 to 9 of the top row (or the buttons) toggle a circle of that many inches around the selected

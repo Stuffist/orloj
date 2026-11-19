@@ -76,7 +76,34 @@ else
                         </g>
                     }
 
-                    @foreach (var p in OnBoard(table).Where(p => p.Kind != PieceKind.Terrain).OrderBy(p => p.Kind == PieceKind.Cog))
+                    @* Movement templates: under the bases; the selected one has a handle to turn it. *@
+                    @foreach (var p in OnBoard(table).Where(p => p.Kind == PieceKind.Template))
+                    {
+                        if (Files.Manifest.Template(p.Ref) is not { } t) continue;
+                        var (x, y, r) = At(p);
+                        var (w, l) = (t.Width, t.Length);
+                        <g class="tb-piece tb-template @(p.Magnet ? "magnet" : null) @(p.Id == _selected ? "selected" : null)" data-piece="@p.Id"
+                           data-movable="@(Movable(p) ? "" : null)" data-at="@Num(x) @Num(y)" data-rotate="@r" data-capsule="@Num(l) @Num(w)"
+                           data-magnet="@(p.Magnet ? "" : null)" transform="translate(@Num(x) @Num(y)) rotate(@r)">
+                            <title>@Name(p)</title>
+                            <image href="@Src(t.Image)" x="@Num(-w / 2)" y="@Num(-l / 2)" width="@Num(w)" height="@Num(l)" preserveAspectRatio="none" />
+                            @if (p.Magnet)
+                            {
+                                <rect class="tb-magnet" x="@Num(-w / 2)" y="@Num(-l / 2)" width="@Num(w)" height="@Num(l)" rx="@Num(w / 2)" />
+                            }
+                            @if (p.Id == _selected)
+                            {
+                                <rect class="tb-select" x="@Num(-w / 2 - 1)" y="@Num(-l / 2 - 1)" width="@Num(w + 2)" height="@Num(l + 2)" rx="@Num(w / 2 + 1)" />
+                                @if (Movable(p) && l > w)
+                                {
+                                    <line class="tb-handle-arm" x1="0" y1="@Num(-l / 2)" x2="0" y2="@Num(-l / 2 - 7)" />
+                                    <circle class="tb-handle" data-handle="rotate" cx="0" cy="@Num(-l / 2 - 7)" r="3.5"><title>@L.Ui("online.table.template.turn")</title></circle>
+                                }
+                            }
+                        </g>
+                    }
+
+                    @foreach (var p in OnBoard(table).Where(HasBase).OrderBy(p => p.Kind == PieceKind.Cog))
                     {
                         var (x, y, r) = At(p);
                         var radius = Radius(p);
@@ -106,7 +133,7 @@ else
                     }
 
                     @* Ranges (keys 1 to 9 on the selected piece, 0: none), seen by both players. *@
-                    @foreach (var p in OnBoard(table).Where(p => p.Kind != PieceKind.Terrain && AurasOf(p).Count > 0))
+                    @foreach (var p in OnBoard(table).Where(p => HasBase(p) && AurasOf(p).Count > 0))
                     {
                         var (x, y, _) = At(p);
                         var radius = Radius(p);
@@ -145,7 +172,7 @@ else
                     else if (SelectedPiece(table) is { } s)
                     {
                         <strong>@Name(s)</strong>
-                        @if (CanAura && s.Kind != PieceKind.Terrain)
+                        @if (CanAura && HasBase(s))
                         {
                             <span class="tb-aura-keys" title="@L.Ui("online.table.auras.title")">
                                 @for (var n = 1; n <= TableRules.MaxAura; n++)
@@ -160,6 +187,11 @@ else
                         }
                         @if (Movable(s))
                         {
+                            @if (s.Kind == PieceKind.Template)
+                            {
+                                <button class="btn small @(s.Magnet ? "primary" : null)" type="button" aria-pressed="@s.Magnet" title="@L.Ui("online.table.magnet.title")"
+                                        @onclick="() => Send(new(OnlineCommandType.SetMagnet, PieceId: s.Id, Flag: !s.Magnet))">🧲 @L.Ui("online.table.magnet")</button>
+                            }
                             <button class="btn small" type="button" title="@L.Ui("online.table.rotateLeft")" @onclick="() => RotateAsync(s, -15)">⟲</button>
                             <button class="btn small" type="button" title="@L.Ui("online.table.rotateRight")" @onclick="() => RotateAsync(s, 15)">⟳</button>
                             @if (s.Kind == PieceKind.Cog)
@@ -275,6 +307,20 @@ else
                             }
                         </div>
                     </details>
+                    <details class="tb-palette" open>
+                        <summary>@L.Ui("online.table.templates")</summary>
+                        <div class="tb-items tb-thumbs">
+                            @foreach (var tp in Files.Manifest.Templates ?? [])
+                            {
+                                var (tid, tlabel) = (tp.Id, L.Ui($"online.table.template.{tp.Id}"));
+                                <button class="tb-item @(_placing?.Ref == tp.Id ? "on" : null)" type="button"
+                                        @onclick="() => StartPlacing(new(PieceKind.Template, tid, null, tlabel))">
+                                    <img src="@Src(tp.Image)" alt="" />
+                                    <span>@tlabel</span>
+                                </button>
+                            }
+                        </div>
+                    </details>
                 }
             </aside>
         </div>
@@ -340,6 +386,9 @@ else
 
     private TablePiece? SelectedPiece(OnlineTable table) => table.Pieces.FirstOrDefault(p => p.Id == _selected);
 
+    // A piece with a round base: cogs, equipment tokens, markers (ranges, measures, magnets).
+    private static bool HasBase(TablePiece p) => p.Kind is PieceKind.Cog or PieceKind.Equipment or PieceKind.Marker;
+
     private bool Movable(TablePiece p) => Playing && View.Me is { } me && (p.Seat is null || p.Seat == me);
 
     private double Radius(TablePiece p) => p.Kind switch
@@ -364,6 +413,7 @@ else
         PieceKind.Cog => Catalog.CogById(p.Ref) is { } c ? L.CogName(c).Text : p.Ref,
         PieceKind.Equipment => Catalog.EquipmentById(p.Ref) is { } e ? L.EquipmentName(e).Text : p.Ref,
         PieceKind.Terrain => Files.Manifest.TerrainOf(p.Ref) is { } t ? TerrainName(t) : p.Ref,
+        PieceKind.Template => L.Ui($"online.table.template.{p.Ref}"),
         _ => L.Ui($"online.table.marker.{p.Ref}"),
     } + (p.Seat is { } s && View.Seats.ElementAtOrDefault(s) is { } seat ? $" ({seat.Name})" : "");
 
@@ -421,13 +471,13 @@ else
     // ---- Gestures (js/table.js) ----
 
     [JSInvokable]
-    public async Task Dropped(int id, double x, double y)
+    public async Task Dropped(int id, double x, double y, int? rotation)
     {
         if (View.Table?.Pieces.FirstOrDefault(p => p.Id == id) is not { } p) return;
         _selected = id;
-        _local[id] = (x, y, At(p).R);
+        _local[id] = (x, y, rotation ?? At(p).R);
         StateHasChanged();
-        await Send(new(OnlineCommandType.MovePiece, PieceId: id, X: x, Y: y));
+        await Send(new(OnlineCommandType.MovePiece, PieceId: id, X: x, Y: y, Rotation: rotation));
     }
 
     [JSInvokable]
@@ -471,8 +521,8 @@ else
     [JSInvokable]
     public Task Measured(int? from, int? to, double x1, double y1, double x2, double y2)
     {
-        var a = View.Table?.Pieces.FirstOrDefault(p => p.Id == from && p.Kind != PieceKind.Terrain);
-        var b = View.Table?.Pieces.FirstOrDefault(p => p.Id == to && p.Kind != PieceKind.Terrain && p.Id != from);
+        var a = View.Table?.Pieces.FirstOrDefault(p => p.Id == from && HasBase(p));
+        var b = View.Table?.Pieces.FirstOrDefault(p => p.Id == to && HasBase(p) && p.Id != from);
         if (a is not null) (x1, y1, _) = At(a);
         if (b is not null) (x2, y2, _) = At(b);
         var centre = Math.Sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));

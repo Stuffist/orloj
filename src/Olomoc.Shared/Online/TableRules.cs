@@ -5,7 +5,7 @@ namespace Olomoc.Online;
 /// <summary>
 /// The table of an online game, played freely as on Vassal: the server keeps and relays the
 /// positions, it does not check movements. It only checks who moves what (a player's cogs and
-/// equipment tokens: that player; terrain and markers: either player), that the piece exists, and
+/// equipment tokens: that player; terrain, markers and movement templates: either player), that the piece exists, and
 /// that it stays around the board. From the initiative (cabals known) to the end of the game.
 /// </summary>
 public static class TableRules
@@ -38,6 +38,7 @@ public static class TableRules
             OnlineCommandType.MovePiece => Move(table, seat, c),
             OnlineCommandType.RemovePiece => Remove(g, table, seat, c.PieceId, now),
             OnlineCommandType.SetAuras => SetAuras(table, c.PieceId, c.Auras),
+            OnlineCommandType.SetMagnet => SetMagnet(table, c.PieceId, c.Flag == true),
             _ => Problem.Of("onlineCommand"),
         };
     }
@@ -58,6 +59,7 @@ public static class TableRules
         {
             PieceKind.Terrain => manifest?.TerrainOf(c.Text) is not null,
             PieceKind.Marker => manifest?.Marker(c.Text) is not null,
+            PieceKind.Template => manifest?.Template(c.Text) is not null,
             // An equipment/boon token: one of the player's own cards.
             PieceKind.Equipment => c.Text is { } id && (g.Seats[seat].State?.Cogs ?? []).Any(x => x.EquipmentId == id || x.ExtraEquipmentId == id),
             _ => false,                     // cogs: created with the table
@@ -91,13 +93,21 @@ public static class TableRules
         return null;
     }
 
-    // Ranges around a piece (any player, any piece but terrain, as on Vassal): the list replaces the
+    // Ranges around a piece (any player, any piece with a base, as on Vassal): the list replaces the
     // previous one (empty: none).
     private static Problem? SetAuras(OnlineTable table, int? id, IReadOnlyList<int>? auras)
     {
-        if (Find(table, id) is not { Kind: not PieceKind.Terrain } piece) return Problem.Of("onlineTablePiece");
+        if (Find(table, id) is not { Kind: not (PieceKind.Terrain or PieceKind.Template) } piece) return Problem.Of("onlineTablePiece");
         if (auras is null || auras.Any(a => a is < 1 or > MaxAura)) return Problem.Of("onlineTableAura", MaxAura.ToString());
         piece.Auras = auras.Distinct().Order().ToList();
+        return null;
+    }
+
+    // A movement template magnetic or not (either player).
+    private static Problem? SetMagnet(OnlineTable table, int? id, bool on)
+    {
+        if (Find(table, id) is not { Kind: PieceKind.Template } piece) return Problem.Of("onlineTablePiece");
+        piece.Magnet = on;
         return null;
     }
 

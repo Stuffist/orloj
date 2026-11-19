@@ -1074,6 +1074,9 @@ body {
 .tb-seat-1 .tb-ring { fill: none; }
 .tb-initials { fill: var(--ink); font-size: 9px; font-weight: 700; pointer-events: none; }
 .tb-out { opacity: .35; filter: grayscale(1); }
+.tb-magnet { fill: none; stroke: #7fd4ff; stroke-width: 1.2; pointer-events: none; filter: drop-shadow(0 0 1.5px #7fd4ff); }
+.tb-handle-arm { stroke: #f5d76e; stroke-width: .6; pointer-events: none; }
+.tb-handle { fill: #f5d76e; stroke: #0d1013; stroke-width: .6; cursor: grab; }
 .tb-auras circle { fill: none; stroke: rgba(245, 215, 110, .7); stroke-width: .6; stroke-dasharray: 2 2; }
 .tb-auras.tb-seat-0 circle { stroke: rgba(217, 103, 58, .85); }
 .tb-auras.tb-seat-1 circle { stroke: rgba(79, 159, 214, .85); }

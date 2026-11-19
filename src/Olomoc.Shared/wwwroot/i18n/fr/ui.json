@@ -1140,7 +1140,7 @@
   "online.table.board.bloc-minier-1": "Bloc minier 1",
   "online.table.board.bloc-minier-2": "Bloc minier 2",
   "online.table.board.plain": "Uni",
-  "online.table.ruler": "Réglette",
+  "online.table.ruler": "Mesurer",
   "online.table.ruler.title": "Mesurer une distance : glissez d’un point (ou d’une figurine) à un autre",
   "online.table.ruler.help": "Glissez d’un point ou d’une figurine à un autre pour mesurer. Dès qu’une figurine est concernée, depuis le bord de son socle.",
   "online.table.ruler.edges": "{0}″ bord à bord",
@@ -1211,5 +1211,11 @@
   "pairings.problem.onlineTableCog": "Un rouage ne se retire pas : remettez-le hors du tapis.",
   "pairings.problem.onlineTableAura": "Une portée va de 1 à {0} pouces.",
   "pairings.problem.onlineNotOver": "La partie n’est pas finie : le résultat se valide après le 4e cycle, ou quand un Fiel ou la traque atteint 3.",
-  "pairings.problem.zoneGameFromOnline": "Cette partie vient du jeu en ligne : elle se corrige depuis la partie en ligne (« Corriger le résultat »)."
+  "pairings.problem.zoneGameFromOnline": "Cette partie vient du jeu en ligne : elle se corrige depuis la partie en ligne (« Corriger le résultat »).",
+  "online.table.templates": "Réglettes de mouvement",
+  "online.table.template.move": "Réglette de déplacement",
+  "online.table.template.push": "Réglette de poussée",
+  "online.table.template.turn": "Glissez pour tourner la réglette",
+  "online.table.magnet": "Aimantée",
+  "online.table.magnet.title": "Aimantée : lâchée près d’un socle, la réglette vient le toucher ; un socle lâché près d’elle vient la toucher (vu par les deux joueurs)."
 }

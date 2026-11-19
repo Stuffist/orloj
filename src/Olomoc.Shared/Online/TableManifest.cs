@@ -2,7 +2,7 @@ namespace Olomoc.Online;
 
 // What can be put on the table of an online game (data/olomoc-table.json, written by
 // tools/VassalImport from Occicat's Vassal module): boards, terrain, markers, and the token of each
-// cog and equipment/boon. Sizes and positions in millimetres, on a board of BoardSize × BoardSize.
+// cog and equipment/boon, the movement templates. Sizes and positions in millimetres, on a board of BoardSize × BoardSize.
 
 /// <summary>A board (the 40 cm game mat): image, side in mm.</summary>
 public sealed record TableBoard(string Id, string Image, double Size);
@@ -18,11 +18,18 @@ public sealed record TableTerrain(string Id, string Type, int? Number, string Im
 /// <summary>A marker (objectives, PoliSec, Fiel…, texts "online.table.marker.{id}"): image, diameter (mm).</summary>
 public sealed record TableMarker(string Id, string Image, double Size);
 
+/// <summary>
+/// A movement template (texts "online.table.template.{id}"): "move" (the ruler of a normal move, a
+/// stadium) or "push" (a disc). Its shape: a capsule of <see cref="Length"/> × <see cref="Width"/> (mm),
+/// lengthwise along the image's height (rotation 0: pointing up).
+/// </summary>
+public sealed record TableTemplate(string Id, string Image, double Length, double Width);
+
 /// <summary>Token of a cog or of an equipment/boon (card catalog id): image, base diameter (mm).</summary>
 public sealed record TableToken(string Id, string Image, int Base);
 
 public sealed record TableManifest(int Version, string Source, IReadOnlyList<TableBoard> Boards, IReadOnlyList<TableTerrain> Terrain,
-    IReadOnlyList<TableMarker> Markers, IReadOnlyList<TableToken> Tokens)
+    IReadOnlyList<TableMarker> Markers, IReadOnlyList<TableToken> Tokens, IReadOnlyList<TableTemplate>? Templates = null)
 {
     public const int CurrentVersion = 1;
     public const string File = "data/olomoc-table.json";
@@ -38,4 +45,5 @@ public sealed record TableManifest(int Version, string Source, IReadOnlyList<Tab
     public TableTerrain? TerrainOf(string? id) => Terrain.FirstOrDefault(t => t.Id == id);
     public TableMarker? Marker(string? id) => Markers.FirstOrDefault(m => m.Id == id);
     public TableToken? Token(string? id) => Tokens.FirstOrDefault(t => t.Id == id);
+    public TableTemplate? Template(string? id) => Templates?.FirstOrDefault(t => t.Id == id);
 }

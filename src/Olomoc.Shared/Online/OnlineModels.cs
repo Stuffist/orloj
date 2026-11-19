@@ -62,12 +62,12 @@ public sealed class Seat
     public bool EndCycleReady { get; set; }
 }
 
-/// <summary>Kind of a piece of the table: a cog, an equipment/boon token, terrain, a marker.</summary>
-public enum PieceKind { Cog, Equipment, Terrain, Marker }
+/// <summary>Kind of a piece of the table: a cog, an equipment/boon token, terrain, a marker, a movement template.</summary>
+public enum PieceKind { Cog, Equipment, Terrain, Marker, Template }
 
 /// <summary>
 /// A piece of the table. Ref: cog or equipment id (card catalog), terrain or marker id
-/// (<see cref="TableManifest"/>). Seat: owner of a cog or an equipment token (null: terrain and markers,
+/// (<see cref="TableManifest"/>), template id. Seat: owner of a cog or an equipment token (null: terrain and markers,
 /// moved by either player). X and Y: centre, in mm from the top-left corner of the board; both null
 /// for a cog off the board (its tray). Rotation: degrees, clockwise. Auras: ranges shown around it.
 /// </summary>
@@ -82,6 +82,11 @@ public sealed class TablePiece
     public int Rotation { get; set; }
     /// <summary>Ranges shown around the piece, in inches from the edge of its base (1 to 9), seen by everyone.</summary>
     public List<int> Auras { get; set; } = new();
+    /// <summary>
+    /// A magnetic movement template: put down near a base, it comes to touch it; a base dropped near it
+    /// comes to touch it too (the gestures do it, in the browser).
+    /// </summary>
+    public bool Magnet { get; set; }
 
     public bool OnBoard => X is not null && Y is not null;
 }
