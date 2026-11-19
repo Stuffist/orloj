@@ -1120,6 +1120,16 @@ body {
 }
 .tb-cog-add:hover { border-color: #f5d76e; color: #f5d76e; }
 .tb-piece.locked { cursor: default; }
+.tb-control { cursor: pointer; }
+.tb-control circle { fill: rgba(13, 16, 19, .85); stroke: rgba(255, 255, 255, .55); stroke-width: .6; }
+.tb-control text { font-size: 4.2px; pointer-events: none; }
+.tb-control.lock.on circle { stroke: #f5d76e; }
+.tb-control.tb-seat-0 circle { fill: rgba(217, 103, 58, .22); stroke: var(--rust-soft); }
+.tb-control.tb-seat-0.on circle { fill: var(--rust-soft); stroke: #fff; }
+.tb-control.tb-seat-1 circle { fill: rgba(79, 159, 214, .22); stroke: #4f9fd6; }
+.tb-control.tb-seat-1.on circle { fill: #4f9fd6; stroke: #fff; }
+.tb-control:hover circle { stroke-width: 1; }
+.tb-controls.idle { pointer-events: none; opacity: .75; }
 .tb-claim.tb-seat-0 { fill: rgba(217, 103, 58, .62); }
 .tb-claim.tb-seat-1 { fill: rgba(79, 159, 214, .62); }
 .tb-claim-toggle.tb-seat-0.on { background: var(--rust-soft); border-color: var(--rust-soft); color: #fff; }

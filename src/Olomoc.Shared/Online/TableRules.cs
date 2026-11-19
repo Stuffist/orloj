@@ -115,10 +115,10 @@ public static class TableRules
         return null;
     }
 
-    // Terrain locked in place or not (either player).
+    // Terrain or a marker (an objective) locked in place or not (either player).
     private static Problem? SetLock(OnlineTable table, int? id, bool on)
     {
-        if (Find(table, id) is not { Kind: PieceKind.Terrain } piece) return Problem.Of("onlineTablePiece");
+        if (Find(table, id) is not { Kind: PieceKind.Terrain or PieceKind.Marker } piece) return Problem.Of("onlineTablePiece");
         piece.Locked = on;
         return null;
     }

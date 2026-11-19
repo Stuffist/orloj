@@ -37,6 +37,7 @@ window.olomocTable = {
 
         t.down = e => {
             if (e.button !== undefined && e.button !== 0) return;
+            if (e.target.closest("[data-control]")) return;       // a control on a piece: its own click
             const p = point(e);
             const handle = !t.ruler && e.target.closest("[data-handle]");
             const handles = handle && handle.closest("[data-handles-for]");

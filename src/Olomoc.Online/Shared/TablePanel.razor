@@ -162,6 +162,32 @@ else
                         </g>
                     }
 
+                    @* Controls on the piece itself, to its right (upright whatever its rotation): padlock of the
+                       terrain and objectives, colors of the objectives. On the selected piece; elsewhere, a locked
+                       piece only shows its padlock. js/table.js leaves [data-control] to these clicks. *@
+                    @foreach (var p in OnBoard(table).Where(p => ControlsAt(p) is not null && (p.Id == _selected && Movable(p) || p.Locked)))
+                    {
+                        var (x, y, _) = At(p);
+                        var active = p.Id == _selected && Movable(p);
+                        var controls = active ? Controls(p) : [new Control("lock", null)];
+                        <g class="tb-controls @(active ? null : "idle")" transform="translate(@Num(x + ControlsAt(p)!.Value) @Num(y - (controls.Count - 1) * 4.5))">
+                            @for (var i = 0; i < controls.Count; i++)
+                            {
+                                var control = controls[i];
+                                var on = control.Seat is { } cs ? p.Claims.Contains(cs) : p.Locked;
+                                <g class="tb-control @(control.Seat is { } seatOf ? SeatClass(seatOf) : "lock") @(on ? "on" : null)" data-control="@control.Kind"
+                                   transform="translate(0 @Num(i * 9))" @onclick="() => ControlAsync(p, control)" @onclick:stopPropagation>
+                                    <title>@(control.Seat is { } ts ? L.Ui("online.table.claim.title", View.Seats[ts].Name) : L.Ui(p.Locked ? "online.table.unlock" : "online.table.lock"))</title>
+                                    <circle r="3.6" />
+                                    @if (control.Seat is null)
+                                    {
+                                        <g><text text-anchor="middle" dominant-baseline="central">@(p.Locked ? "🔒" : "🔓")</text></g>
+                                    }
+                                </g>
+                            }
+                        </g>
+                    }
+
                     @* Ranges (keys 1 to 9 on the selected piece, 0: none), seen by both players. *@
                     @foreach (var p in OnBoard(table).Where(p => HasBase(p) && AurasOf(p).Count > 0))
                     {
@@ -228,7 +254,7 @@ else
                                             @onclick="() => Send(new(OnlineCommandType.SetClaim, PieceId: s.Id, Side: claimSide, Flag: !claimed))">● @View.Seats[i].Name</button>
                                 }
                             }
-                            @if (s.Kind == PieceKind.Terrain)
+                            @if (Lockable(s))
                             {
                                 <button class="btn small @(s.Locked ? "primary" : null)" type="button" aria-pressed="@s.Locked"
                                         title="@L.Ui(s.Locked ? "online.table.unlock" : "online.table.lock")"
@@ -458,6 +484,27 @@ else
 
     // Movable and not locked (terrain locked by its padlock: neither moved nor removed).
     private bool Free(TablePiece p) => Movable(p) && !p.Locked;
+
+    // ---- Controls on the piece (padlock, colors of an objective) ----
+
+    private sealed record Control(string Kind, int? Seat);
+
+    private static bool Lockable(TablePiece p) => p.Kind is PieceKind.Terrain or PieceKind.Marker;
+
+    // Where the controls start, to the right of the centre (mm); null: none for this piece.
+    private double? ControlsAt(TablePiece p) => p.Kind switch
+    {
+        PieceKind.Terrain => Files.Manifest.TerrainOf(p.Ref) is { } t ? Math.Sqrt(t.Width * t.Width + t.Height * t.Height) / 2 + 5 : null,
+        PieceKind.Marker => Radius(p) + 5,
+        _ => null,
+    };
+
+    private List<Control> Controls(TablePiece p) =>
+        [new("lock", null), .. p.Kind == PieceKind.Marker ? View.Seats.Select((_, i) => new Control("claim", i)) : []];
+
+    private Task ControlAsync(TablePiece p, Control control) => control.Seat is { } seat
+        ? Send(new(OnlineCommandType.SetClaim, PieceId: p.Id, Side: seat, Flag: !p.Claims.Contains(seat)))
+        : Movable(p) ? Send(new(OnlineCommandType.SetLock, PieceId: p.Id, Flag: !p.Locked)) : Task.CompletedTask;
 
     /// <summary>The only marker offered: the objective (taken by a side: its color).</summary>
     private const string ObjectiveMarker = "objective";

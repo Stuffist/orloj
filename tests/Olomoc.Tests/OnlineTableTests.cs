@@ -170,7 +170,11 @@ public class OnlineTableTests
 
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetClaim, PieceId: objective.Id, Side: 2, Flag: true), d)));
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetClaim, PieceId: terrain.Id, Side: 0, Flag: true), d)));
-        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetLock, PieceId: objective.Id, Flag: true), d)));
+        // An objective locks too (its colors still change).
+        Ok(Do(g, 0, new(OnlineCommandType.SetLock, PieceId: objective.Id, Flag: true), d));
+        Assert.Equal("onlineTableLocked", Key(Do(g, 1, new(OnlineCommandType.MovePiece, PieceId: objective.Id, X: 10, Y: 10), d)));
+        Ok(Do(g, 1, new(OnlineCommandType.SetClaim, PieceId: objective.Id, Side: 1, Flag: true), d));
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetLock, PieceId: Cog(g, d, 0, "2R08").Id, Flag: true), d)));
     }
 
     [Fact]

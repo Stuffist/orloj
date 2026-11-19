@@ -87,7 +87,7 @@ public sealed class TablePiece
     /// comes to touch it too (the gestures do it, in the browser).
     /// </summary>
     public bool Magnet { get; set; }
-    /// <summary>Terrain locked in place (padlock): neither moved nor removed until unlocked.</summary>
+    /// <summary>Terrain or a marker locked in place (padlock): neither moved nor removed until unlocked.</summary>
     public bool Locked { get; set; }
     /// <summary>An objective marker taken by these sides (its colors: one, or split diagonally for both).</summary>
     public List<int> Claims { get; set; } = new();

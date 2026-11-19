@@ -681,11 +681,12 @@ connection.
     puts their token down). A cog is put down as **tokens, as many as wanted** (a copy marks a place):
     the card is linked to all of them. A click on the card selects them in turn (the others outlined),
     or puts one down if there is none; "＋" puts one more. Selecting a token lights its card.
-  - **Terrain padlock** (selected terrain, shared): locked, it is neither moved, turned nor removed
-    (server-side too) until unlocked.
-  - **Objectives**: the palette offers only the objective marker (yellow ring); on a selected one, a
-    toggle per player marks it as taken by that side (its color; both: split diagonally), to track who
-    took what during the game.
+  - **Padlock** of the terrain and the objectives (shared): locked, the piece is neither moved, turned
+    nor removed (server-side too) until unlocked; a locked piece shows its padlock.
+  - **Objectives**: the palette offers only the objective marker (yellow ring); a toggle per player
+    marks it as taken by that side (its color; both: split diagonally), to track who took what.
+  - These toggles (padlock, colors) are **on the selected piece itself**, to its right, like the
+    rotation handles, and also in the line under the mat.
   - **Movement templates** (from the module: the ruler of a normal move, a stadium, and the push one,
     a disc), put down, moved and turned by either player; the selected one turns with its handles (one
     at each end, drawn above the bases so that a cog never hides them).
