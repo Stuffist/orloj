@@ -29,7 +29,8 @@ public enum OnlineCommandType
 /// <summary>
 /// A player's command. Text: name, agenda, board, ref of a new piece; Flag: ready, end of cycle, magnet; State
 /// and BasedOn: new state of their side and the revision it starts from; Note: report for the log.
-/// Table: Piece (kind of a new piece), PieceId, X and Y (mm; both null: off the board), Rotation.
+/// Table: Piece (kind of a new piece), Side (the side a new cog or equipment token belongs to), PieceId,
+/// X and Y (mm), Rotation.
 // Auras: ranges shown around a piece (inches, 1 to 9; empty: none). Vp: victory points of each seat, for the result.
 /// </summary>
 public sealed record OnlineCommand(
@@ -46,7 +47,8 @@ public sealed record OnlineCommand(
     double? Y = null,
     int? Rotation = null,
     IReadOnlyList<int>? Vp = null,
-    IReadOnlyList<int>? Auras = null);
+    IReadOnlyList<int>? Auras = null,
+    int? Side = null);
 
 /// <summary>Answer to Join (hub): the game's view, or the problem that prevents joining it (notFound, forbidden).</summary>
 public sealed record OnlineJoin(OnlineView? View, string? Error = null);

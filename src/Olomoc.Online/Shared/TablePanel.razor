@@ -102,7 +102,7 @@ else
                     {
                         var (x, y, r) = At(p);
                         var radius = Radius(p);
-                        <g class="tb-piece tb-token @SeatClass(p) @(Out(p) ? "tb-out" : null) @(p.Id == _selected ? "selected" : null)"
+                        <g class="tb-piece tb-token @SeatClass(p) @(Out(p) ? "tb-out" : null) @(p.Id == _selected ? "selected" : null) @(Sibling(p) ? "linked" : null)"
                            data-piece="@p.Id" data-movable="@(Movable(p) ? "" : null)" data-at="@Num(x) @Num(y)" data-rotate="@r" data-radius="@Num(radius)"
                            transform="translate(@Num(x) @Num(y)) rotate(@r)">
                             <title>@Name(p)</title>
@@ -122,6 +122,10 @@ else
                             @if (p.Id == _selected)
                             {
                                 <circle r="@Num(radius + 1.5)" class="tb-select" />
+                            }
+                            else if (Sibling(p))
+                            {
+                                <circle r="@Num(radius + 1.5)" class="tb-linked" />
                             }
                         </g>
                     }
@@ -209,14 +213,7 @@ else
                                 <button class="btn small" type="button" title="@L.Ui("online.table.rotateLeft")" @onclick="() => RotateAsync(s, -15)">⟲</button>
                                 <button class="btn small" type="button" title="@L.Ui("online.table.rotateRight")" @onclick="() => RotateAsync(s, 15)">⟳</button>
                             }
-                            @if (s.Kind == PieceKind.Cog && !s.Copy)
-                            {
-                                <button class="btn small" type="button" @onclick="() => OffBoardAsync(s)">@L.Ui("online.table.offBoard")</button>
-                            }
-                            else
-                            {
-                                <button class="btn small" type="button" @onclick="() => RemoveAsync(s)">@L.Ui("online.table.remove")</button>
-                            }
+                            <button class="btn small" type="button" @onclick="() => RemoveAsync(s)">@L.Ui("online.table.remove")</button>
                         }
                     }
                     else
@@ -239,52 +236,51 @@ else
                     var mine = seat == View.Me;
                     <h3 class="@SeatClass(seat)">@(mine ? L.Ui("online.table.myCabal") : L.Ui("online.table.cabalOf", View.Seats[seat].Name))</h3>
                     <ul class="tb-roster">
-                        @foreach (var p in table.Pieces.Where(p => p.Kind == PieceKind.Cog && p.Seat == seat && !p.Copy).OrderByDescending(p => CogStateOf(p)?.Rank ?? 0))
+                        @foreach (var cog in (View.Seats[seat].State?.Cogs ?? []).OrderByDescending(c => c.Rank))
                         {
-                            var piece = p;
-                            var cog = CogStateOf(p);
-                            var placed = Shown(p);
-                            <li class="tb-cog @SeatClass(seat) @(cog?.OutOfAction == true ? "ooa" : null) @(p.Id == _selected || _placing?.PieceId == p.Id ? "on" : null)">
-                                <button class="tb-cog-main" type="button" disabled="@(!placed && !Movable(p))"
-                                        title="@L.Ui(placed ? "online.table.cog.select" : "online.table.cog.place")" @onclick="() => CogClicked(piece)">
-                                    @if (Image(p) is { } src)
-                                    {
-                                        <img src="@src" alt="" />
-                                    }
-                                    else
-                                    {
-                                        <span class="tb-cog-initials">@Initials(CogName(p))</span>
-                                    }
-                                    <span class="tb-cog-name">@CogName(p)</span>
-                                    @if (cog is not null)
-                                    {
-                                        <span class="tb-cog-rank">@(new string('★', cog.Rank))</span>
-                                    }
-                                </button>
-                                @if (cog is not null)
-                                {
-                                    <div class="tb-cog-stats">
-                                        <span class="tb-hp" title="@L.Ui("online.table.hp")">♥ @cog.Remaining<small>/@cog.LifeLine.Count</small></span>
-                                        <span title="@L.Ui("play.actions")"><TokenTrack Token="action" Count="cog.Actions" Max="GameSession.ActionsPerCycle" /></span>
-                                        <span title="@L.Ui("play.darkness")"><TokenTrack Token="darkness" Count="cog.Darkness" Max="GameSession.MaxDarkness" /></span>
-                                    </div>
-                                }
-                                @if (States(cog, placed).ToList() is { Count: > 0 } states)
-                                {
-                                    <div class="tb-cog-badges">
-                                        @foreach (var (key, css) in states)
+                            var (side, cogId) = (seat, cog.CogId);
+                            var tokens = Tokens(table, seat, cog.CogId);
+                            var placed = tokens.Count > 0;
+                            var linked = Linked(seat, cog.CogId);
+                            var name = CogName(cog.CogId);
+                            <li class="tb-cog @SeatClass(seat) @(cog.OutOfAction ? "ooa" : null) @(linked || _placing is { Kind: PieceKind.Cog } pl && pl.Ref == cog.CogId && pl.Side == seat ? "on" : null)">
+                                <div class="tb-cog-head">
+                                    <button class="tb-cog-main" type="button" disabled="@(!placed && !CanPlace)"
+                                            title="@L.Ui(placed ? "online.table.cog.select" : "online.table.cog.place")" @onclick="() => CogClicked(side, cogId)">
+                                        @if (TokenImage(cog.CogId) is { } src)
                                         {
-                                            <span class="status-badge @css">@L.Ui(key)</span>
+                                            <img src="@src" alt="" />
                                         }
-                                    </div>
-                                }
-                                @foreach (var id in new[] { cog?.EquipmentId, cog?.ExtraEquipmentId }.OfType<string>())
+                                        else
+                                        {
+                                            <span class="tb-cog-initials">@Initials(name)</span>
+                                        }
+                                        <span class="tb-cog-name">@name</span>
+                                        <span class="tb-cog-rank">@(new string('★', cog.Rank))@(tokens.Count > 1 ? $" ×{tokens.Count}" : "")</span>
+                                    </button>
+                                    @if (placed && CanPlace)
+                                    {
+                                        <button class="tb-cog-add" type="button" title="@L.Ui("online.table.cog.another")"
+                                                @onclick="() => StartPlacing(new(PieceKind.Cog, cogId, null, name, side))">＋</button>
+                                    }
+                                </div>
+                                <div class="tb-cog-stats">
+                                    <span class="tb-hp" title="@L.Ui("online.table.hp")">♥ @cog.Remaining<small>/@cog.LifeLine.Count</small></span>
+                                    <span title="@L.Ui("play.actions")"><TokenTrack Token="action" Count="cog.Actions" Max="GameSession.ActionsPerCycle" /></span>
+                                    <span title="@L.Ui("play.darkness")"><TokenTrack Token="darkness" Count="cog.Darkness" Max="GameSession.MaxDarkness" /></span>
+                                </div>
+                                <div class="tb-cog-badges">
+                                    @foreach (var (key, css) in States(cog, placed))
+                                    {
+                                        <span class="status-badge @css">@L.Ui(key)</span>
+                                    }
+                                </div>
+                                @foreach (var id in new[] { cog.EquipmentId, cog.ExtraEquipmentId }.OfType<string>())
                                 {
                                     var (eid, elabel) = (id, EquipmentName(id));
-                                    var canPlace = Playing && View.Me is not null;
-                                    <button class="tb-cog-gear @(_placing?.Kind == PieceKind.Equipment && _placing.Ref == id ? "on" : null)" type="button"
-                                            disabled="@(!canPlace)" title="@(canPlace ? L.Ui("online.table.equipment.place", elabel) : elabel)"
-                                            @onclick="() => StartPlacing(new(PieceKind.Equipment, eid, null, elabel))">
+                                    <button class="tb-cog-gear @(_placing?.Kind == PieceKind.Equipment && _placing.Ref == id && _placing.Side == seat ? "on" : null)" type="button"
+                                            disabled="@(!CanPlace)" title="@(CanPlace ? L.Ui("online.table.equipment.place", elabel) : elabel)"
+                                            @onclick="() => StartPlacing(new(PieceKind.Equipment, eid, null, elabel, side))">
                                         @if (Files.Manifest.Token(id) is { } tok)
                                         {
                                             <img src="@Src(tok.Image)" alt="" />
@@ -367,7 +363,7 @@ else
     private readonly Dictionary<int, IReadOnlyList<int>> _localAuras = new();
     private int _revision = -1;
 
-    private sealed record Placing(PieceKind Kind, string Ref, int? PieceId, string Label);
+    private sealed record Placing(PieceKind Kind, string Ref, int? PieceId, string Label, int? Side = null);
     private sealed record Measure(double X1, double Y1, double X2, double Y2, string Label);
 
     // From the initiative to the end of the game: pieces can be moved.
@@ -448,10 +444,6 @@ else
     private string TerrainTitle(TableTerrain t) =>
         $"{TerrainName(t)} · {Num(t.Width / Inch, 1)}″ × {Num(t.Height / Inch, 1)}″ · {L.Ui(t.Obstructing ? "online.table.obstructing" : "online.table.notObstructing")}";
 
-    // The sheet of a cog of the table (its side's state), null before the start.
-    private CogState? CogStateOf(TablePiece p) => p.Seat is { } seat
-        ? View.Seats.ElementAtOrDefault(seat)?.State?.Cogs.FirstOrDefault(c => c.CogId == p.Ref) : null;
-
     private string CogName(TablePiece p) => Catalog.CogById(p.Ref) is { } c ? L.CogName(c).Text : p.Ref;
 
     private string EquipmentName(string id) => Catalog.EquipmentById(id) is { } e ? L.EquipmentName(e).Text : id;
@@ -471,17 +463,37 @@ else
         if (!placed) yield return ("online.table.offBoard", "offboard");
     }
 
-    // A cog of the list: shown on the mat (selected), or put down if it is not there yet.
-    private void CogClicked(TablePiece p)
+    // ---- A cog of the cabals and its tokens on the mat (as many as wanted; none: off the Block) ----
+
+    private bool CanPlace => Playing && View.Me is not null;
+
+    private List<TablePiece> Tokens(OnlineTable table, int seat, string cog) =>
+        OnBoard(table).Where(p => p.Kind == PieceKind.Cog && p.Seat == seat && p.Ref == cog).OrderBy(p => p.Id).ToList();
+
+    // The selected piece is one of the tokens of this cog: its card is lit, and its other tokens.
+    private bool Linked(int seat, string cog) =>
+        View.Table?.Pieces.FirstOrDefault(p => p.Id == _selected) is { Kind: PieceKind.Cog } s && s.Seat == seat && s.Ref == cog;
+
+    private bool Sibling(TablePiece p) => p.Kind == PieceKind.Cog && p.Id != _selected && p.Seat is { } seat && Linked(seat, p.Ref);
+
+    // A card of the list: selects its tokens in turn on the mat, or puts one down if there is none.
+    private void CogClicked(int seat, string cog)
     {
-        if (Shown(p))
+        _placing = null;
+        if (View.Table is not { } table) return;
+        var tokens = Tokens(table, seat, cog);
+        if (tokens.Count == 0)
         {
-            _placing = null;
-            _selected = _selected == p.Id ? null : p.Id;
+            if (CanPlace) StartPlacing(new(PieceKind.Cog, cog, null, CogName(cog), seat));
             return;
         }
-        if (Movable(p)) StartPlacing(new(PieceKind.Cog, p.Ref, p.Id, CogName(p)));
+        var current = tokens.FindIndex(p => p.Id == _selected);
+        _selected = tokens[(current + 1) % tokens.Count].Id;
     }
+
+    private string CogName(string id) => Catalog.CogById(id) is { } c ? L.CogName(c).Text : id;
+
+    private string? TokenImage(string id) => Files.Manifest.Token(id) is { } t ? Src(t.Image) : null;
 
     private IEnumerable<int> SeatOrder() => View.Me is { } me ? [me, 1 - me] : [0, 1];
 
@@ -537,7 +549,7 @@ else
         else
         {
             StateHasChanged();
-            await Send(new(OnlineCommandType.AddPiece, placing.Ref, Piece: placing.Kind, X: x, Y: y));
+            await Send(new(OnlineCommandType.AddPiece, placing.Ref, Piece: placing.Kind, X: x, Y: y, Side: placing.Side));
         }
     }
 
@@ -599,16 +611,6 @@ else
         return Send(new(OnlineCommandType.MovePiece, PieceId: p.Id, Rotation: _local[p.Id].R));
     }
 
-    private Task OffBoardAsync(TablePiece p)
-    {
-        _local[p.Id] = (null, null, p.Rotation);
-        _selected = null;
-        return Send(new(OnlineCommandType.MovePiece, PieceId: p.Id));
-    }
-
-    // Off the table: a cog of the cabal goes back off the mat, any other piece (a cog's copy too) is removed.
-    private Task TakeAwayAsync(TablePiece p) => p.Kind == PieceKind.Cog && !p.Copy ? OffBoardAsync(p) : RemoveAsync(p);
-
     private Task RemoveAsync(TablePiece p)
     {
         _selected = null;
@@ -639,7 +641,7 @@ else
     // Ctrl+X: cut; Delete or Backspace: remove (a cog of the cabal: off the mat); arrows: move by 0.1″ (Shift: 1″);
     // Ctrl+arrows: turn by 5° (Shift: 15°), terrain and templates.
 
-    private sealed record Copied(PieceKind Kind, string Ref, int Rotation, double X, double Y);
+    private sealed record Copied(PieceKind Kind, string Ref, int Rotation, double X, double Y, int? Side);
 
     private Copied? _copied;
     private (string Ref, int After)? _pasted;      // the pasted piece gets selected when it arrives
@@ -656,9 +658,9 @@ else
         {
             case "c" or "x" when ctrl && selected is not null:
                 var (x, y, r) = At(selected);
-                _copied = new Copied(selected.Kind, selected.Ref, r, x, y);
+                _copied = new Copied(selected.Kind, selected.Ref, r, x, y, selected.Seat);
                 _notice = "online.table.copied";
-                if (key == "x" && Movable(selected)) await TakeAwayAsync(selected);
+                if (key == "x" && Movable(selected)) await RemoveAsync(selected);
                 break;
             case "v" when ctrl && _copied is { } c && Playing && View.Me is not null:
                 // Next to the copied piece (each paste a step further), inside the mat.
@@ -666,10 +668,10 @@ else
                 var (px, py) = (Math.Clamp(c.X + step, 0, TableManifest.BoardSize), Math.Clamp(c.Y + step, 0, TableManifest.BoardSize));
                 _copied = c with { X = px, Y = py };
                 _pasted = (c.Ref, View.Table?.Pieces.Max(p => p.Id) ?? 0);
-                await Send(new(OnlineCommandType.AddPiece, c.Ref, Piece: c.Kind, X: Math.Round(px, 1), Y: Math.Round(py, 1), Rotation: c.Rotation));
+                await Send(new(OnlineCommandType.AddPiece, c.Ref, Piece: c.Kind, X: Math.Round(px, 1), Y: Math.Round(py, 1), Rotation: c.Rotation, Side: c.Side));
                 break;
             case "Delete" or "Backspace" when selected is not null && Movable(selected):
-                await TakeAwayAsync(selected);
+                await RemoveAsync(selected);
                 break;
             case "ArrowLeft" or "ArrowRight" or "ArrowUp" or "ArrowDown" when selected is not null && Movable(selected) && Shown(selected):
                 var (sx, sy, sr) = At(selected);

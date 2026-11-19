@@ -1112,6 +1112,14 @@ body {
 .tb-cog.tb-seat-1 { border-left-color: #4f9fd6; }
 .tb-cog.on { border-color: #f5d76e; }
 .tb-cog.ooa { opacity: .55; }
+.tb-cog-head { display: flex; align-items: center; gap: .3rem; min-width: 0; }
+.tb-cog-head .tb-cog-main { flex: 1; }
+.tb-cog-add {
+    flex: none; width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 1px solid var(--line); background: var(--panel);
+    color: var(--ink); cursor: pointer; font-size: .85rem; line-height: 1; padding: 0;
+}
+.tb-cog-add:hover { border-color: #f5d76e; color: #f5d76e; }
+.tb-linked { fill: none; stroke: #f5d76e; stroke-width: .8; stroke-dasharray: 1.5 1.5; pointer-events: none; }
 .tb-cog-main {
     display: flex; align-items: center; gap: .4rem; background: none; border: 0; padding: 0; color: var(--ink);
     font: inherit; text-align: left; cursor: pointer; min-width: 0;

@@ -665,20 +665,22 @@ connection.
   the last 30 states of one's side, until the end of the cycle.
 - **Table** (`Shared/TablePanel.razor`, `Online/TableRules.cs`), from the initiative on, played
   freely as on Vassal: the server keeps and relays the positions, it does not check the movements.
-  - Created when both players are ready: each side's cogs, off the mat (their tray). Mat chosen
-    among those of the manifest (default "Bloc (Mez)").
+  - Created when both players are ready, empty: every cog is off the Block. Mat chosen among those of
+    the manifest (default "Bloc (Mez)").
   - **Either player moves any piece**, as on Vassal: both sides' cogs, the equipment/boon tokens (a
     card of either cabal, colored by its side), terrain, markers and templates; spectators watch. Only
     checks: the piece exists, the position stays around the mat (3 cm), 80 pieces at most. The last
     move wins, piece by piece; no log line per move (terrain put down or removed: logged).
   - Gestures in `js/table.js` (SVG in mm): drag a piece (the server hears of the drop only), zoom
-    (wheel, buttons), pan (drag the background); from the tray, a click on the item then on the mat.
+    (wheel, buttons), pan (drag the background); from the list or the palettes, a click on the item then on the mat.
     A cog out of action on its sheet is faded. Bases have no orientation (no rotation); terrain
     turns by 15°.
-  - **Both cabals**, always listed next to the mat: each cog with its HP left, action tokens, Darkness
-    and state (out of action, otherwise sane, tainted or corrupted, stunned, off the mat), read from its side's sheet,
-    and its cards below (one's own: a click puts their token down). A click on a cog shows it on the
-    mat, or puts it down there if it is not on it yet.
+  - **Both cabals**, always listed next to the mat: a card per cog with its HP left, action tokens,
+    Darkness and state (out of action, otherwise sane, tainted or corrupted; stunned; **off the Block**
+    when none of its tokens is on the mat), read from its side's sheet, and its cards below (a click
+    puts their token down). A cog is put down as **tokens, as many as wanted** (a copy marks a place):
+    the card is linked to all of them. A click on the card selects them in turn (the others outlined),
+    or puts one down if there is none; "＋" puts one more. Selecting a token lights its card.
   - **Movement templates** (from the module: the ruler of a normal move, a stadium, and the push one,
     a disc), put down, moved and turned by either player; the selected one turns with its handles (one
     at each end, drawn above the bases so that a cog never hides them).
@@ -689,8 +691,7 @@ connection.
   - **Keyboard** (outside the text fields), on the selected piece: arrows move it by 0.1″ (Shift:
     1″; sent once the keys stop for a moment), Ctrl+arrows turn terrain and templates by 5° (Shift:
     15°), 1 to 9 toggle its ranges (0 removes them), Ctrl+C then Ctrl+V paste a copy half an inch
-    away (each paste further; the copy gets selected; a cog's token too: its copy is removed like a
-    token), Ctrl+X or Delete remove it (a cog of the cabal: back off the mat). Without a selected piece, the browser keeps its keys.
+    away (each paste further; the copy gets selected; a cog's token too), Ctrl+X or Delete remove it. Without a selected piece, the browser keeps its keys.
   - **Ruler** (for the viewer only): distance in inches; as soon as a miniature is involved (start or
     end), from the edge of its base (between two: edge to edge), while dragging too. **Ranges**, as on Vassal:
     keys 1 to 9 of the top row (or the buttons) toggle a circle of that many inches around the selected

@@ -51,49 +51,64 @@ public class OnlineTableTests
 
     private static string Key(OnlineResult r) => Assert.Single(r.Problems).Key;
 
-    private static TablePiece Cog(OnlineGame g, int seat, string id) => g.Table!.Pieces.Single(p => p.Kind == PieceKind.Cog && p.Seat == seat && p.Ref == id);
+    // A token of a cog of the side's cabal, put down by a player (either one).
+    private static TablePiece Cog(OnlineGame g, AppData d, int side, string id, int by = 0, double x = 50, double y = 50)
+    {
+        Ok(Do(g, by, new(OnlineCommandType.AddPiece, id, Piece: PieceKind.Cog, Side: side, X: x, Y: y), d));
+        return g.Table!.Pieces.Last();
+    }
 
     // ---- Table ----
 
     [Fact]
-    public async Task Table_created_at_the_start_with_each_sides_cogs_off_the_board()
+    public async Task Table_created_at_the_start_empty_on_the_default_mat()
     {
         var (_, g) = await Started();
         var table = Assert.IsType<OnlineTable>(g.Table);
         Assert.Equal(TableRules.DefaultBoard, table.Board);
-        Assert.Equal(6, table.Pieces.Count);
-        Assert.All(table.Pieces, p => Assert.Equal(PieceKind.Cog, p.Kind));
-        Assert.Equal(3, table.Pieces.Count(p => p.Seat == 0));
-        Assert.All(table.Pieces, p => Assert.False(p.OnBoard));
-        Assert.Equal(table.Pieces.Count, table.Pieces.Select(p => p.Id).Distinct().Count());
+        Assert.Empty(table.Pieces);                 // every cog off the Block: no token yet
 
         // Nothing secret on a table: the same for a spectator.
-        Assert.Equal(6, OnlineRules.View(g, null, new HashSet<int>()).Table!.Pieces.Count);
+        Assert.Equal(TableRules.DefaultBoard, OnlineRules.View(g, null, new HashSet<int>()).Table!.Board);
     }
 
     [Fact]
-    public async Task Either_player_moves_any_cog()
+    public async Task Cogs_are_tokens_as_many_as_wanted_moved_and_removed_by_either_player()
     {
         var (d, g) = await InCycle();
-        var mine = Cog(g, 0, "2R08");
+        var mine = Cog(g, d, 0, "2R08");
+        Assert.Equal((PieceKind.Cog, 0, "2R08"), (mine.Kind, mine.Seat, mine.Ref));
         var rev = g.Revision;
         Ok(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: mine.Id, X: 50, Y: 120.5), d));
         Assert.Equal((50.0, 120.5), (mine.X, mine.Y));
         Assert.True(g.Revision > rev);
 
-        // Rotation alone keeps the place; nothing: back off the board.
+        // Rotation alone keeps the place; the opponent moves it too, as on Vassal.
         Ok(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: mine.Id, Rotation: -30), d));
         Assert.Equal((50.0, 120.5, 330), (mine.X, mine.Y, mine.Rotation));
-        Ok(Do(g, 1, new(OnlineCommandType.MovePiece, PieceId: mine.Id, X: 10, Y: 10), d));      // the opponent too, as on Vassal
+        Ok(Do(g, 1, new(OnlineCommandType.MovePiece, PieceId: mine.Id, X: 10, Y: 10), d));
         Assert.Equal((10.0, 10.0), (mine.X, mine.Y));
-        Assert.Equal("onlineTableCog", Key(Do(g, 0, new(OnlineCommandType.RemovePiece, PieceId: mine.Id), d)));
-        Ok(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: mine.Id), d));
-        Assert.False(mine.OnBoard);
+
+        // A second token of the same cog (a copy: handy to mark a place); each one removed alone.
+        var second = Cog(g, d, 0, "2R08", by: 1);
+        Assert.Equal(2, g.Table!.Pieces.Count(p => p.Ref == "2R08" && p.Seat == 0));
+        Ok(Do(g, 1, new(OnlineCommandType.RemovePiece, PieceId: mine.Id), d));
+        Assert.Equal(second.Id, Assert.Single(g.Table.Pieces).Id);
+
+        // A cog of a cabal only, on the side asked for (3R06: in both cabals); none asked: the player's.
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "1R03", Piece: PieceKind.Cog, X: 10, Y: 10), d)));
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "2R11", Piece: PieceKind.Cog, Side: 0, X: 10, Y: 10), d)));
+        Assert.Equal(1, Cog(g, d, 1, "3R06").Seat);
+        Ok(Do(g, 0, new(OnlineCommandType.AddPiece, "3R06", Piece: PieceKind.Cog, X: 10, Y: 10), d));
+        Assert.Equal(0, g.Table.Pieces.Last().Seat);
+        Assert.Equal(1, Cog(g, d, 1, "2R11", by: 0).Seat);           // Bo's cog, found without asking
 
         // Around the board only, both coordinates.
-        Assert.Equal("onlineTablePosition", Key(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: mine.Id, X: 500, Y: 10), d)));
-        Assert.Equal("onlineTablePosition", Key(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: mine.Id, X: 10), d)));
-        Assert.Equal("onlineTablePosition", Key(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: mine.Id, X: double.NaN, Y: 10), d)));
+        Assert.Equal("onlineTablePosition", Key(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: second.Id), d)));
+        Assert.Equal("onlineTablePosition", Key(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: second.Id, X: 500, Y: 10), d)));
+        Assert.Equal("onlineTablePosition", Key(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: second.Id, X: 10), d)));
+        Assert.Equal("onlineTablePosition", Key(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: second.Id, X: double.NaN, Y: 10), d)));
+        Assert.Equal("onlineTablePosition", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "2R08", Piece: PieceKind.Cog), d)));
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: 999, X: 10, Y: 10), d)));
     }
 
@@ -108,20 +123,11 @@ public class OnlineTableTests
         Ok(Do(g, 1, new(OnlineCommandType.MovePiece, PieceId: terrain.Id, X: 180, Y: 220), d));
         Assert.Equal((180.0, 220.0, 90), (terrain.X, terrain.Y, terrain.Rotation));
         Assert.Equal("tableAdd", g.Log[^1].Key);
-        Assert.Equal("onlineTablePosition", Key(Do(g, 1, new(OnlineCommandType.MovePiece, PieceId: terrain.Id), d)));     // terrain never off the board
         Ok(Do(g, 1, new(OnlineCommandType.RemovePiece, PieceId: terrain.Id), d));
         Assert.Equal("tableRemove", g.Log[^1].Key);
 
         Ok(Do(g, 1, new(OnlineCommandType.AddPiece, "objective", Piece: PieceKind.Marker, X: 10, Y: 10), d));
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "nothing", Piece: PieceKind.Terrain, X: 10, Y: 10), d)));
-        // A copy of a cog's token (Ctrl+C / Ctrl+V): a cog of either cabal, removed like a token; never off the mat.
-        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "1R03", Piece: PieceKind.Cog, X: 10, Y: 10), d)));
-        Ok(Do(g, 1, new(OnlineCommandType.AddPiece, "2R08", Piece: PieceKind.Cog, X: 10, Y: 10), d));
-        var copy = g.Table.Pieces.Single(p => p.Kind == PieceKind.Cog && p.Copy);
-        Assert.Equal(("2R08", 0), (copy.Ref, copy.Seat));                         // Ana's cog
-        Assert.Equal("onlineTablePosition", Key(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: copy.Id), d)));
-        Ok(Do(g, 0, new(OnlineCommandType.RemovePiece, PieceId: copy.Id), d));
-        Assert.Equal(6, g.Table.Pieces.Count(p => p.Kind == PieceKind.Cog));
 
         // Equipment: a card of either cabal (Carapace: Ana's, Ration: Bo's), put down by either player, of its side.
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "E01", Piece: PieceKind.Equipment, X: 10, Y: 10), d)));
@@ -129,6 +135,8 @@ public class OnlineTableTests
         var token = g.Table.Pieces.Single(p => p.Kind == PieceKind.Equipment);
         Assert.Equal(1, token.Seat);
         Ok(Do(g, 0, new(OnlineCommandType.RemovePiece, PieceId: token.Id), d));
+        Ok(Do(g, 0, new(OnlineCommandType.AddPiece, "E03", Piece: PieceKind.Equipment, Side: 1, X: 30, Y: 30), d));     // in both cabals: Bo's
+        Assert.Equal(1, g.Table.Pieces.Last().Seat);
 
         // Board: one of the manifest's.
         Ok(Do(g, 1, new(OnlineCommandType.SetBoard, "karst"), d));
@@ -140,7 +148,7 @@ public class OnlineTableTests
     public async Task Ranges_around_a_piece_set_by_either_player_and_seen_by_everyone()
     {
         var (d, g) = await InCycle();
-        var mine = Cog(g, 0, "2R08");
+        var mine = Cog(g, d, 0, "2R08");
         Ok(Do(g, 1, new(OnlineCommandType.SetAuras, PieceId: mine.Id, Auras: [3, 1, 3]), d));       // as on Vassal: either player
         Assert.Equal([1, 3], mine.Auras);
         Assert.Equal([1, 3], OnlineRules.View(g, null, new HashSet<int>()).Table!.Pieces.Single(p => p.Id == mine.Id).Auras);
@@ -170,7 +178,7 @@ public class OnlineTableTests
         Ok(Do(g, 0, new(OnlineCommandType.SetMagnet, PieceId: template.Id, Flag: true), d));
         Assert.True(template.Magnet);
 
-        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetMagnet, PieceId: Cog(g, 0, "2R08").Id, Flag: true), d)));
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetMagnet, PieceId: Cog(g, d, 0, "2R08").Id, Flag: true), d)));
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetAuras, PieceId: template.Id, Auras: [1]), d)));
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "ladder", Piece: PieceKind.Template, X: 10, Y: 10), d)));
         Ok(Do(g, 1, new(OnlineCommandType.RemovePiece, PieceId: template.Id), d));
@@ -189,17 +197,15 @@ public class OnlineTableTests
     }
 
     [Fact]
-    public async Task A_game_stored_before_the_table_gets_one_at_its_first_move()
+    public async Task A_game_stored_before_the_table_gets_one_at_its_first_command()
     {
         var (d, g) = await InCycle();
         var json = JsonSerializer.Serialize(g, TournamentJson.Options);
         var old = JsonSerializer.Deserialize<OnlineGame>(json.Replace("\"table\":", "\"oldTable\":"), TournamentJson.Options)!;
         Assert.Null(old.Table);
-        var id = old.Seats[0].State!.Cogs[0].CogId;
-        Ok(Do(old, 0, new(OnlineCommandType.MovePiece, PieceId: 1, X: 100, Y: 100), d));
-        Assert.Equal(6, old.Table!.Pieces.Count);
-        Assert.True(old.Table.Pieces.Single(p => p.Id == 1).OnBoard);
-        Assert.Contains(old.Table.Pieces, p => p.Ref == id);
+        var token = Cog(old, d, 0, old.Seats[0].State!.Cogs[0].CogId, x: 100, y: 100);
+        Assert.Equal((TableRules.DefaultBoard, 1), (old.Table!.Board, old.Table.Pieces.Count));
+        Assert.True(token.OnBoard);
     }
 
     // ---- Result ----
