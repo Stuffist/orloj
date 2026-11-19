@@ -478,7 +478,8 @@ Optional: without an account, everything works as before, on the device. `/build
   nobody out.
 - **Roles**, stored in the database (Identity roles):
   - **player** (default): the whole site, except the editor;
-  - **editor**: in addition, the card catalog editor (and its drafts);
+  - **editor**: in addition, the card catalog editor (and its drafts), the zones of the Block and
+    the data export (see "Statistics");
   - **admin**: everything, including the **admin panel** (see below). An admin never changes
     their own role: there is always one left. A role change applies at once for the API, within
     a minute for the served drafts.
@@ -700,6 +701,25 @@ archive; at startup, a finished event without an archive gets one.
 
 The computation shared with the zones is in `Tournaments/Stats/GameStats.cs` (games in a neutral
 form: a side is one player or a team of two).
+
+### Data export (editors and admins)
+
+On `/stats/`, editors and admins get an "Export the data" button (`GET /api/admin/export`,
+`Admin/DataExport.cs`, logged): a ZIP to compute the statistics again or make other figures.
+It holds every game of the archives (finished and counted events) and of every zone, hidden ones
+included, anonymous like the archives (no player names, no comments, no tokens):
+
+- `data.json`: everything, structured (events, zones, games with their sides, players and cabals);
+- CSV tables for a spreadsheet (UTF-8 with BOM, `;` separator, dates `yyyy-MM-dd`, booleans `1`/`0`):
+  `tournaments.csv`, `zones.csv`, `games.csv` (one row per game), `players.csv` (one row per
+  player of a game: faction, VP for and against, result, P1, opposing factions, rank 3 cog) and
+  `cards.csv` (one row per card of a cabal played, with its result).
+
+Ids: `T-{event}-{n}` for an event's game, `Z-{id}` for a zone's. Card ids are the catalog's, with
+their names in the reference language. An event's players are numbered (registration order);
+a zone's are not followed from one game to the next. The `counted` column marks the games counted
+in "All": a zone game copied from an archived event (`copied_from`) is counted in the event, and
+hidden zones never count.
 
 ## The Block (zones)
 

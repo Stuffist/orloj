@@ -1072,6 +1072,8 @@
   "stats.all.method": "Les événements terminés (sauf ceux que leur orga a exclus) et les parties du Bloc, réunis. Une partie d’un événement rattaché à une zone ne compte qu’une fois. Données anonymes : les noms ne sont jamais comptés. Victoires : chaque joueur compte (en 2 contre 2, les deux joueurs de l’équipe gagnante gagnent). En dessous de {0} parties, un taux est estompé : peu significatif.",
   "stats.all.players": "{0} joueur(s) inscrit(s) ou participation(s)",
   "stats.all.picks": "Choix des rouages (cabales inscrites à un événement ou jouées en zone)",
+  "stats.export": "Exporter les données",
+  "stats.export.help": "Pour les éditeurs : toutes les parties (événements terminés et comptés, Bloc avec les zones masquées) en tableaux CSV (séparateur « ; ») et en JSON, sans noms de joueurs ni commentaires. La colonne counted repère les parties comptées dans « Tout ».",
   "stats.empty": "Pas encore de partie comptée : les statistiques apparaîtront avec le premier événement terminé ou la première partie du Bloc.",
   "zones.stats.totals": "{0} zone(s) · {1} partie(s)",
   "zones.stats.method": "Chaque joueur compte (en 2 contre 2, les deux joueurs de l’équipe gagnante gagnent). Les noms ne sont jamais comptés. En dessous de {0} parties, un taux est estompé : peu significatif.",

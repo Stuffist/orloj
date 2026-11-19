@@ -4,6 +4,7 @@
 @inject CatalogService Catalog
 @inject TournamentApi Tournaments
 @inject ZoneApi Zones
+@inject AccountService Accounts
 
 @* Statistics of Olomòc (/stats/): everything by default, the finished tournaments and the
    games of the Block together (a zone game copied from an archived tournament counted once);
@@ -48,6 +49,13 @@ else
                     <p class="hint">@L.Ui("stats.all.method", StatsView.MinGames)</p>
                     break;
             }
+            @if (Accounts.Current is { CanEdit: true })
+            {
+                <div class="tn-actions">
+                    <a class="btn small" href="api/admin/export" download>@L.Ui("stats.export")</a>
+                </div>
+                <p class="hint">@L.Ui("stats.export.help")</p>
+            }
         </section>
 
         @if (Empty(s) is { } empty)
@@ -76,7 +84,8 @@ else
     protected override async Task OnInitializedAsync()
     {
         L.Changed += OnChanged;
-        await Task.WhenAll(L.EnsureLoadedAsync(), Catalog.EnsureLoadedAsync());
+        Accounts.Changed += OnChanged;
+        await Task.WhenAll(L.EnsureLoadedAsync(), Catalog.EnsureLoadedAsync(), Accounts.EnsureLoadedAsync());
     }
 
     protected override async Task OnParametersSetAsync()
@@ -99,7 +108,11 @@ else
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => L.Changed -= OnChanged;
+    public void Dispose()
+    {
+        L.Changed -= OnChanged;
+        Accounts.Changed -= OnChanged;
+    }
 
     // Nothing to show yet: the message of the filter.
     private string? Empty(StatsView s) => Current switch

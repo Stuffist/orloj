@@ -179,6 +179,7 @@ app.MapCatalog();                           // before the static files: merged c
 app.MapOnline();
 app.MapZones();                             // the Block
 app.MapAdmin(dataDirectory);                // admin panel (admins)
+app.MapDataExport();                        // data behind the statistics (editors)
 app.MapGet("/", () => Results.Redirect("/builder/"));
 app.MapGet("/healthz", () => "ok\n");
 ClientApps.MapFallbacks(app);               // app routes: index.html

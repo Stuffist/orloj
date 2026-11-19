@@ -76,9 +76,10 @@ Language: `olomoc.lang` (localStorage); interface texts `i18n/*/ui.json`, card t
 - **Visitor**: everything except the editor; cabals and game on the device only.
 - **Account**: in addition, their cabals on all their devices; its username is suggested when a
   game of the Block is entered, with its public cabals (per cabal; new ones public).
-- **Editor**: in addition, the editor and the drafts. **Admin**: in addition, the admin panel:
-  other accounts (role, never their own; deletion, never of an admin), everyone's events and
-  online games (limited actions, logged). First admin: `OLOMOC_ADMINS`.
+- **Editor**: in addition, the editor and the drafts, the zones and the data export
+  (`/api/admin/export`). **Admin**: in addition, the admin panel: other accounts (role, never
+  their own; deletion, never of an admin), everyone's events and online games
+  (limited actions, logged). First admin: `OLOMOC_ADMINS`.
 - **Events**: no account. Administration through the organizer token (in the admin link) or
   an optional password; a registration is changed with the player token. An admin does not run a
   event: they can generate a new admin link for it (the old one stops working), exclude it

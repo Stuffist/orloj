@@ -22,6 +22,9 @@ public sealed class CatalogService
     public FactionReference FactionReference { get; private set; } = new();
     public bool Loaded { get; private set; }
 
+    /// <summary>Texts of the cards (names, in the current language or the reference one).</summary>
+    public LocalizationService Texts => _l;
+
     private readonly HttpClient _http;
     private readonly LocalizationService _l;
     private Dictionary<string, Cog> _cogById = new();

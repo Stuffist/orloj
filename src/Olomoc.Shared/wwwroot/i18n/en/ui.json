@@ -1072,6 +1072,8 @@
   "stats.all.method": "The finished events (except those their organizer excluded) and the games of the Block, together. A game of an event bound to a zone counts once. Anonymous data: names are never counted. Wins: each player counts (in 2 v 2, both players of the winning team win). Below {0} games, a rate is faded: not very meaningful.",
   "stats.all.players": "{0} registered player(s) or participation(s)",
   "stats.all.picks": "Cog choices (cabals registered for events or played in zones)",
+  "stats.export": "Export the data",
+  "stats.export.help": "For editors: every game (finished and counted events, the Block including hidden zones) as CSV tables (\";\" separator) and JSON, without player names or comments. The counted column marks the games counted in \"All\".",
   "stats.empty": "No game counted yet: statistics will appear with the first finished event or the first game of the Block.",
   "zones.stats.totals": "{0} zone(s) · {1} game(s)",
   "zones.stats.method": "Each player counts (in 2 v 2, both players of the winning team win). Names are never counted. Below {0} games, a rate is faded: not very meaningful.",

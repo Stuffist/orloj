@@ -521,4 +521,64 @@ public sealed class ZoneApiTests : IDisposable
         Assert.Equal(["zoneNotFound"], await Keys(await Send(anonymous, HttpMethod.Post, "/api/tournaments",
             new CreateTournamentRequest("Nulle part", Today, 3, 1, Zone: "ABCDEF"))));
     }
+
+    // ---- Data export ----
+
+    private static Dictionary<string, string> Unzip(byte[] zip)
+    {
+        using var archive = new System.IO.Compression.ZipArchive(new MemoryStream(zip));
+        return archive.Entries.ToDictionary(e => e.FullName, e =>
+        {
+            using var reader = new StreamReader(e.Open());
+            return reader.ReadToEnd();
+        });
+    }
+
+    [Fact]
+    public async Task Editors_export_the_data_behind_the_statistics()
+    {
+        var (_, root, bob, carl, anonymous) = await StartAsync();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/admin/export")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await carl.GetAsync("/api/admin/export")).StatusCode);
+        await Send(root, HttpMethod.Put, "/api/admin/accounts/Bob/role", new RoleRequest(AccountRole.Editor));
+
+        var zone = await CreateZone(root, Settings());
+        var hidden = await CreateZone(root, Settings("Essai; test", hidden: true));
+        await Enter(anonymous, zone, Duel("LIBUS", "OTHERS"));
+        await Enter(anonymous, hidden, Duel("RUBIN", "URKARAS", 3, 3));
+        var (t, table) = await TournamentInZone(anonymous, zone);
+        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}", t.OrganizerToken, new ResultRequest(9, 4));
+        await Organizer(anonymous, HttpMethod.Post, $"/api/tournaments/{t.Code}/finish", t.OrganizerToken);
+
+        var response = await bob.GetAsync("/api/admin/export");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/zip", response.Content.Headers.ContentType?.MediaType);
+        var files = Unzip(await response.Content.ReadAsByteArrayAsync());
+        Assert.Equal(["cards.csv", "data.json", "games.csv", "players.csv", "tournaments.csv", "zones.csv"], files.Keys.Order());
+
+        // Every game: the tournament's (archive), the zones' (hidden one and the tournament's copy included,
+        // not counted in "All"); no names, no comments.
+        var data = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(files["data.json"])!;
+        var games = data["games"]!.AsArray();
+        Assert.Equal(4, games.Count);
+        Assert.Equal(2, games.Count(g => (bool)g!["counted"]!));
+        Assert.DoesNotContain("Ana", files["data.json"]);
+        Assert.DoesNotContain("Bea", files["data.json"]);
+
+        var rows = files["games.csv"].TrimStart('\uFEFF').Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal("game;source;event;copied_from;date;format;counted;vp_a;vp_b;winner;first;end;scenario;artifact;ministry", rows[0]);
+        Assert.Contains(rows, r => r.StartsWith($"T-{t.Code}-1;tournament;{t.Code};;") && r.Contains(";Duel;1;9;4;A;"));
+        Assert.Contains(rows, r => r.StartsWith("Z-") && r.Contains($";zone;{zone};{t.Code};") && r.Contains(";Duel;0;9;4;A;"));
+        Assert.Contains(rows, r => r.Contains($";zone;{hidden};;") && r.Contains(";Duel;0;3;3;draw;"));
+        Assert.Contains("\"Essai; test\"", files["zones.csv"]);
+
+        var players = files["players.csv"].Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(1 + 4 * 2, players.Length);
+        Assert.Contains(players, r => r.Contains(";A;1;1;MAISEL;") && r.Contains(";9;4;win;"));
+        Assert.Contains(players, r => r.Contains(";B;1;;OTHERS;") && r.Contains(";4;7;loss;"));
+        Assert.Equal(1 + 8 * 3, files["cards.csv"].Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Length);
+
+        var audit = await Read<AdminAction[]>(await root.GetAsync("/api/admin/audit"));
+        Assert.Equal(("Bob", "export"), (audit[0].Admin, audit[0].Action));
+    }
 }
