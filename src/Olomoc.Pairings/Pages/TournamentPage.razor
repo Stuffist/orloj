@@ -108,7 +108,14 @@ else
         </section>
         <section class="panel">
             <h3>@L.Ui("pairings.standings")</h3>
-            <StandingsTable View="v" />
+            @if (v.StandingsHidden && !v.IsOrganizer)
+            {
+                <p class="empty">@L.Ui("pairings.standings.hidden")</p>
+            }
+            else
+            {
+                <StandingsTable View="v" />
+            }
         </section>
     }
 

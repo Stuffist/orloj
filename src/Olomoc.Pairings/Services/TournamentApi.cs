@@ -65,6 +65,10 @@ public sealed class TournamentApi(HttpClient http)
     public Task<ApiResult<bool>> SetExcludeFromStatsAsync(string code, bool exclude, string organizer) =>
         SendAsync<bool>(HttpMethod.Put, $"{Root}/{code}/stats", new StatsRequest(exclude), organizer);
 
+    /// <summary>Hides the standings from the players (or shows them).</summary>
+    public Task<ApiResult<bool>> SetHideStandingsAsync(string code, bool hidden, string organizer) =>
+        SendAsync<bool>(HttpMethod.Put, $"{Root}/{code}/standings", new StandingsRequest(hidden), organizer);
+
     /// <summary>Statistics of the finished and counted tournaments.</summary>
     public Task<ApiResult<Olomoc.Tournaments.Stats.StatsView>> GetStatsAsync() =>
         SendAsync<Olomoc.Tournaments.Stats.StatsView>(HttpMethod.Get, "/api/stats", null);

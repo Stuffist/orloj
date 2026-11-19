@@ -103,7 +103,7 @@ public static class AdminEndpoints
     /// <summary>All tournaments, most recently modified first.</summary>
     private static async Task<IResult> ListTournaments(TournamentStore store) =>
         Results.Json((await store.ListAsync()).OrderByDescending(t => t.UpdatedAt).Select(t => new AdminTournament(
-            t.Code, t.Name, t.Date, t.Phase, t.Players.Count, t.Rounds.Count, t.RoundCount, t.OrganizerPasswordHash.Length > 0,
+            t.Code, t.Name, t.Date, t.Phase, t.Players.Count, t.Rounds.Count, TournamentRules.PlannedRounds(t), t.OrganizerPasswordHash.Length > 0,
             t.ExcludeFromStats, t.CreatedAt, t.UpdatedAt)).ToList(), TournamentJson.Options);
 
     /// <summary>

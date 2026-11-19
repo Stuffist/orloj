@@ -1,5 +1,5 @@
 @* Statistics panels, for the tournaments, a zone or all the zones: factions played, cog choices per
-   faction, wins per alignment, per faction and per rank 3 cog; where they are recorded: P1 wins, game
+   faction, wins per faction and per rank 3 cog; where they are recorded: P1 wins, game
    endings, scenarios and decks played. *@
 @inject LocalizationService L
 @inject CatalogService Catalog
@@ -44,20 +44,6 @@
                 }
             }
         }
-    }
-</section>
-
-<section class="panel">
-    <h3>@L.Ui("pairings.stats.alignmentWins")</h3>
-    @if (Stats.AlignmentWins.Count == 0)
-    {
-        <p class="empty">@L.Ui("pairings.stats.alignmentEmpty")</p>
-    }
-    @foreach (var w in Stats.AlignmentWins)
-    {
-        <PercentBar Percent="w.Percent" Detail="@Record(w)" Muted="@(w.Games < StatsView.MinGames)" Title="@LowSample(w)">
-            <span class="tn-alignment @w.Key.ToLowerInvariant()">@L.Ui($"pairings.alignment.{w.Key}")</span>
-        </PercentBar>
     }
 </section>
 

@@ -1,33 +1,32 @@
-using Olomoc.Models;
-
 namespace Olomoc.Tournaments;
 
 /// <summary>Paired round, and the compromises that had to be made for lack of anything better.</summary>
-public sealed record PairingOutcome(Round Round, int Rematches, int SameAlignment);
+public sealed record PairingOutcome(Round Round, int Rematches, int Mirrors);
 
 /// <summary>
-/// Pairing of the next round, between the active players (drops excluded).
+/// Pairing of the next round of an event, between the active players (drops excluded):
 /// <list type="bullet">
-/// <item><b>Swiss</b>: round 1 at random; then by standings, each player against the closest one
-/// in points still available (1 v. 2, 3 v. 4…), going down to the next points group if needed.
-/// Option: for an equal points gap, prefer the opposite alignment.</item>
-/// <item><b>Alignment</b>: Light against Darkness, at random; the surplus of the larger side
-/// plays among itself.</item>
+/// <item><b>Tournament</b> (Swiss rounds): at random among the players with the same points (round 1:
+/// everyone), from the highest points group down; a player left over plays the closest points
+/// still available. No rematch; mirror matches allowed.</item>
+/// <item><b>Dystopian Encounter</b>: at random every round, whatever the points; no rematch and no
+/// mirror match (two players of the same faction).</item>
 /// </list>
-/// In both cases, no rematch (backtracking search); if that is impossible, the rematch is allowed
-/// and reported. A bye if the number is odd: the lowest-ranked player who has not had one yet (in
-/// Alignment mode, in the larger side).
+/// <para>If the rules cannot all be kept (backtracking search), the mirror match is allowed first,
+/// then the rematch, and the compromises are reported.</para>
+/// A bye if the number is odd: a player who has not had one yet, the lowest-ranked (tournament) or
+/// drawn at random (Encounter).
 /// </summary>
 public static class Pairer
 {
-    private const int SearchBudget = 200_000;     // search steps; beyond that, rematches allowed
+    private const int SearchBudget = 200_000;     // search steps per attempt; beyond that, the next compromise
 
-    public static PairingOutcome Pair(Tournament t, Func<string, Alignment?> alignmentOf, int seed)
+    public static PairingOutcome Pair(Tournament t, int seed)
     {
         var rng = new Random(seed);
         var active = t.ActivePlayers.Select(p => p.Id).ToList();
         var standing = Standings.Compute(t).ToDictionary(s => s.PlayerId);
-        var alignment = t.ActivePlayers.ToDictionary(p => p.Id, p => alignmentOf(p.Faction));
+        var faction = t.ActivePlayers.ToDictionary(p => p.Id, p => p.Faction);
         var random = active.ToDictionary(id => id, _ => rng.Next());
 
         var met = new HashSet<(string, string)>();
@@ -38,59 +37,46 @@ public static class Pairer
             else { met.Add((table.PlayerA, table.PlayerB!)); met.Add((table.PlayerB!, table.PlayerA)); }
         }
 
-        bool SameAlignment(string a, string b) => alignment[a] is { } x && alignment[b] == x;
-        int CampSize(string id) => alignment[id] is { } a ? active.Count(o => alignment[o] == a) : 0;
+        bool Mirror(string a, string b) => faction[a] == faction[b];
+        bool Rematch(string a, string b) => met.Contains((a, b));
 
-        // From the first to the last of the standings (ties broken at random).
+        // From the first to the last of the standings (ties broken at random): for the bye.
         var ranking = active.OrderByDescending(id => standing[id].Points).ThenByDescending(id => standing[id].Diff)
                             .ThenByDescending(id => standing[id].VpFor).ThenBy(id => random[id]).ToList();
 
-        // Processing order (each one, in turn, chooses their opponent) and preference between opponents.
-        List<string> order;
-        Func<string, string, (int, int)> preference;
-        if (t.Pairing == PairingMode.Swiss)
-        {
-            order = t.Rounds.Count == 0 ? active.OrderBy(id => random[id]).ToList() : ranking;
-            preference = (p, q) => (Math.Abs(standing[p].Points - standing[q].Points),
-                                    t.AvoidSameAlignment && SameAlignment(p, q) ? 1 : 0);
-        }
-        else
-        {
-            // Smaller side first: each of its players takes an opponent from the other side.
-            order = active.OrderBy(id => alignment[id] is null ? int.MaxValue : CampSize(id)).ThenBy(id => random[id]).ToList();
-            preference = (p, q) => (SameAlignment(p, q) ? 1 : 0, 0);
-        }
+        // Processing order: each one, in turn, chooses their opponent (the first one possible in this
+        // order, after the rules). Swiss: by points groups, at random within a group; Encounter: at random.
+        var swiss = t.Format == EventFormat.Tournament;
+        var order = swiss
+            ? active.OrderByDescending(id => standing[id].Points).ThenBy(id => random[id]).ToList()
+            : active.OrderBy(id => random[id]).ToList();
         var position = order.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
 
-        // Bye: whoever has not had one first, (Alignment) in the larger side, from the bottom of the standings.
+        // Bye: whoever has not had one first, from the bottom of the standings (Encounter: at random).
         var rankPosition = ranking.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
         var byeCandidates = active.Count % 2 == 0
             ? new List<string?> { null }
-            : active.OrderBy(id => hadBye.Contains(id))
-                    .ThenByDescending(id => t.Pairing == PairingMode.Alignment ? CampSize(id) : 0)
-                    .ThenByDescending(id => rankPosition[id])
-                    .Cast<string?>().ToList();
+            : active.OrderBy(id => hadBye.Contains(id)).ThenByDescending(id => swiss ? rankPosition[id] : random[id]).Cast<string?>().ToList();
 
-        foreach (var allowRematch in new[] { false, true })
+        (int, int, int, int) Key(string p, string q) =>
+            (Rematch(p, q) ? 1 : 0, !swiss && Mirror(p, q) ? 1 : 0, swiss ? Math.Abs(standing[p].Points - standing[q].Points) : 0, position[q]);
+
+        // Successive compromises: everything kept, then mirror matches (Encounter), then rematches.
+        var attempts = swiss ? new[] { (true, false), (true, true) } : new[] { (false, false), (true, false), (true, true) };
+        foreach (var (allowMirror, allowRematch) in attempts)
         {
+            bool Allowed(string p, string q) => (allowRematch || !Rematch(p, q)) && (allowMirror || !Mirror(p, q));
             var budget = SearchBudget;
             foreach (var bye in byeCandidates)
             {
                 var players = order.Where(id => id != bye).ToList();
                 var pairs = new List<(string A, string B)>();
                 if (Search(players, new HashSet<string>(), pairs, Allowed, Key, ref budget))
-                    return Outcome(t, pairs, bye, met, SameAlignment);
+                    return Outcome(t, pairs, bye, Rematch, (a, b) => !swiss && Mirror(a, b));
                 if (budget < 0) break;
             }
-
-            bool Allowed(string p, string q) => allowRematch || !met.Contains((p, q));
-            (int, int, int, int) Key(string p, string q)
-            {
-                var (first, second) = preference(p, q);
-                return (met.Contains((p, q)) ? 1 : 0, first, second, position[q]);
-            }
         }
-        throw new InvalidOperationException("Pairing impossible.");   // unreachable: rematches allowed
+        throw new InvalidOperationException("Pairing impossible.");   // unreachable: everything allowed
     }
 
     // Backtracking: the first free player in the order tries their possible opponents, from the
@@ -116,13 +102,13 @@ public static class Pairer
     }
 
     private static PairingOutcome Outcome(Tournament t, List<(string A, string B)> pairs, string? bye,
-        HashSet<(string, string)> met, Func<string, string, bool> sameAlignment)
+        Func<string, string, bool> rematch, Func<string, string, bool> mirror)
     {
         var round = new Round { Number = t.Rounds.Count + 1 };
         foreach (var (a, b) in pairs)
             round.Tables.Add(new Table { Number = round.Tables.Count + 1, PlayerA = a, PlayerB = b });
         if (bye is not null)
             round.Tables.Add(new Table { Number = round.Tables.Count + 1, PlayerA = bye });
-        return new PairingOutcome(round, pairs.Count(x => met.Contains((x.A, x.B))), pairs.Count(x => sameAlignment(x.A, x.B)));
+        return new PairingOutcome(round, pairs.Count(x => rematch(x.A, x.B)), pairs.Count(x => mirror(x.A, x.B)));
     }
 }

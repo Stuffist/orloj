@@ -154,7 +154,6 @@ public sealed class ZoneApiTests : IDisposable
 
         var view = await Zone(anonymous, code);
         Assert.Equal((ZoneStatus.Open, 1, false), (view.Status, view.Stats.Games, view.CanManage));
-        Assert.Equal((Olomoc.Models.Alignment?)Olomoc.Models.Alignment.LIGHT, view.Dominance.Alignment);
         Assert.Equal("RUBIN", view.Dominance.Faction);
         Assert.Null(view.Managers);
 
@@ -169,7 +168,7 @@ public sealed class ZoneApiTests : IDisposable
         Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
         Assert.Equal(["zoneForbidden"], await Keys(refused));
         Assert.Equal(HttpStatusCode.NoContent, (await Send(other, HttpMethod.Put, $"/api/zones/{code}/games/{entry.Id}", changed, entry.EditToken)).StatusCode);
-        Assert.Equal(Olomoc.Models.Alignment.DARK, (await Zone(anonymous, code)).Dominance.Alignment);     // statistics computed again
+        Assert.Equal("MAISEL", (await Zone(anonymous, code)).Dominance.Faction);     // statistics computed again
 
         Assert.Equal(HttpStatusCode.Forbidden, (await Send(other, HttpMethod.Delete, $"/api/zones/{code}/games/{entry.Id}", entry: "nope")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Send(other, HttpMethod.Delete, $"/api/zones/{code}/games/{entry.Id}", entry: entry.EditToken)).StatusCode);
@@ -182,10 +181,10 @@ public sealed class ZoneApiTests : IDisposable
         var (_, root, _, _, anonymous) = await StartAsync();
         var code = await CreateZone(root, Settings());
         var teams = new ZoneGame(GameFormat.Teams, Today, new ZoneSide([Player("RUBIN"), Player("LIBUS")], 5),
-            new ZoneSide([Player("URKARAS"), Player("DYKOVIAN")], 3), TableSide.A, GameEnd.Bile, ZoneTests.FullScenario());
+            new ZoneSide([Player("URKARAS")], 3), TableSide.A, GameEnd.Bile, ZoneTests.FullScenario());
         var response = await Send(anonymous, HttpMethod.Post, $"/api/zones/{code}/games", teams);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal(["teamsOpposed"], await Keys(response));
+        Assert.Equal(["zonePlayers"], await Keys(response));
         Assert.Equal(HttpStatusCode.NotFound, (await Send(anonymous, HttpMethod.Post, "/api/zones/ABCDEF/games", Duel())).StatusCode);
     }
 
@@ -255,7 +254,7 @@ public sealed class ZoneApiTests : IDisposable
 
         var view = await Zone(anonymous, code);
         Assert.Equal(ZoneStatus.Closed, view.Status);
-        Assert.Equal(Olomoc.Models.Alignment.LIGHT, view.Dominance.Alignment);        // "Closed under the Light"
+        Assert.Equal("RUBIN", view.Dominance.Faction);        // "Closed, dominated by Rubin"
 
         var refused = await Send(anonymous, HttpMethod.Post, $"/api/zones/{code}/games", Duel());
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
@@ -420,7 +419,7 @@ public sealed class ZoneApiTests : IDisposable
     private static async Task<(TournamentCreated T, Olomoc.Tournaments.Table Table)> TournamentInZone(HttpClient http, string zone)
     {
         var created = await Send(http, HttpMethod.Post, "/api/tournaments",
-            new CreateTournamentRequest("Open du club", Today, 3, 1, PairingMode.Swiss, false, Zone: zone));
+            new CreateTournamentRequest("Open du club", Today, 3, 1, Zone: zone));
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var t = await Read<TournamentCreated>(created);
         var d = await AppData.GetAsync();
@@ -517,9 +516,9 @@ public sealed class ZoneApiTests : IDisposable
 
         // And a new tournament cannot be bound to it.
         var refused = await Send(anonymous, HttpMethod.Post, "/api/tournaments",
-            new CreateTournamentRequest("Trop tard", Today, 3, 1, PairingMode.Swiss, false, Zone: zone));
+            new CreateTournamentRequest("Trop tard", Today, 3, 1, Zone: zone));
         Assert.Equal(["zoneClosed"], await Keys(refused));
         Assert.Equal(["zoneNotFound"], await Keys(await Send(anonymous, HttpMethod.Post, "/api/tournaments",
-            new CreateTournamentRequest("Nulle part", Today, 3, 1, PairingMode.Swiss, false, Zone: "ABCDEF"))));
+            new CreateTournamentRequest("Nulle part", Today, 3, 1, Zone: "ABCDEF"))));
     }
 }

@@ -41,11 +41,11 @@
                                     }
                                     break;
                                 default:
-                                    @if (z.Dominance is { Alignment: not null, Faction: { } faction })
+                                    @if (z.Dominance.Faction is { } faction)
                                     {
                                         <span class="zn-hex-emblem"><Emblem Faction="@faction" /></span>
                                     }
-                                    else if (z.Dominance.Alignment is null)
+                                    else
                                     {
                                         @* Tie, or no games: nothing to show. *@
                                         <span class="zn-hex-none" aria-hidden="true">—</span>
@@ -97,12 +97,8 @@
         var parts = new List<string> { z.Name, L.Ui($"zones.status.{z.Status}") };
         if (L.Period(z.StartDate, z.EndDate) is { Length: > 0 } period) parts.Add(period);
         parts.Add(L.Ui("zones.games", z.Games));
-        if (z.Dominance.Alignment is { } alignment)
-        {
-            var dominance = L.Ui(z.Status == ZoneStatus.Closed ? "zones.dominance.closedUnder" : "zones.dominance.dominatedBy",
-                L.Ui($"zones.alignment.{alignment}"));
-            parts.Add(z.Dominance.Faction is { } f ? $"{dominance} ({L.FactionName(f)})" : dominance);
-        }
+        if (z.Dominance.Faction is { } f)
+            parts.Add($"{L.Ui(z.Status == ZoneStatus.Closed ? "zones.dominance.closedUnder" : "zones.dominance.dominatedBy")} {L.FactionName(f)}");
         return string.Join(" · ", parts);
     }
 }

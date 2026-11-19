@@ -138,6 +138,14 @@ else
         </section>
         <section class="panel">
             <h3>@L.Ui("pairings.standings")</h3>
+            <label class="tn-check">
+                <input type="checkbox" checked="@v.StandingsHidden" disabled="@_busy" @onchange="e => SetHideStandingsAsync(e.Value is true)" />
+                <span>@L.Ui("pairings.hideStandings")</span>
+            </label>
+            @if (v.StandingsHidden)
+            {
+                <p class="hint">@L.Ui("pairings.admin.standings.help")</p>
+            }
             <StandingsTable View="v" />
         </section>
     }
@@ -315,7 +323,7 @@ else
     {
         L.Ui("pairings.admin.paired", s.Round),
         s.Rematches > 0 ? L.Ui("pairings.admin.rematches", s.Rematches) : null,
-        s.SameAlignment > 0 && (View!.Pairing == PairingMode.Alignment || View.AvoidSameAlignment) ? L.Ui("pairings.admin.sameAlignment", s.SameAlignment) : null,
+        s.Mirrors > 0 ? L.Ui("pairings.admin.mirrors", s.Mirrors) : null,
     }.Where(x => x is not null)));
 
     private async Task UndoAsync()
@@ -495,6 +503,10 @@ else
         }
         finally { _busy = false; }
     }
+
+    private Task SetHideStandingsAsync(bool hidden) =>
+        RunAsync(() => Api.SetHideStandingsAsync(Code, hidden, Token),
+            _ => L.Ui(hidden ? "pairings.admin.standings.hidden" : "pairings.admin.standings.shown"));
 
     private Task SetExcludeFromStatsAsync(bool exclude) =>
         RunAsync(() => Api.SetExcludeFromStatsAsync(Code, exclude, Token),

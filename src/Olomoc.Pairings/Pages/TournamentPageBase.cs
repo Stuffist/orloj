@@ -92,11 +92,11 @@ public abstract class TournamentPageBase : ComponentBase, IDisposable
     protected static string DateLabel(DateOnly? date) =>
         date?.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture) ?? "";
 
-    /// <summary>"Swiss rounds · 3 rounds · 2 cabals per player".</summary>
+    /// <summary>"Tournament · 3 rounds · 2 cabals per player".</summary>
     protected string Settings(TournamentView v) => string.Join(" · ", new[]
     {
-        L.Ui(v.Pairing == PairingMode.Swiss ? (v.AvoidSameAlignment ? "pairings.mode.swissAligned" : "pairings.mode.swiss") : "pairings.mode.alignment"),
-        L.Ui("pairings.roundCount", v.RoundCount),
+        L.Ui($"pairings.format.{v.Format}"),
+        L.Ui(v.AutoRounds && v.Phase == TournamentPhase.Registration ? "pairings.roundCount.auto" : "pairings.roundCount", v.RoundCount),
         L.Ui(v.CabalsPerPlayer == 1 ? "pairings.cabalsPerPlayer.one" : "pairings.cabalsPerPlayer.many", v.CabalsPerPlayer),
     });
 

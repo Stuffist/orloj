@@ -54,10 +54,9 @@ public static class ZoneRules
 
     /// <summary>
     /// A game entered in the zone: the zone open (except for its managers, <paramref name="manager"/>),
-    /// a date in its period and not in the future, the format's number of players, known factions
-    /// (in teams: same alignment in a team, opposed teams), VP, and required for the statistics: the
-    /// legal cabal of each player, the scenario and its two decks, the side that played first, the end
-    /// of the game. Names stay optional (never counted), like the comment. Games copied from a
+    /// a date in its period and not in the future, the format's number of players, known factions,
+    /// VP, and required for the statistics: the legal cabal of each player, the scenario and its two
+    /// decks, the side that played first, the end of the game. Names stay optional (never counted), like the comment. Games copied from a
     /// tournament do not come through here (they keep what the tournament recorded).
     /// Returns the cleaned game (names and comment trimmed, empty ones removed), or the problems.
     /// </summary>
@@ -88,27 +87,17 @@ public static class ZoneRules
             problems.Add(Problem.Of("zoneVictoryPoints", TournamentRules.MaxVictoryPoints.ToString()));
 
         var players = a.Concat(b).ToList();
-        var known = true;
         for (var i = 0; i < players.Count; i++)
         {
             var p = players[i];
             if (p?.Faction is null || catalog.AllFactions.All(f => f.Code != p.Faction))
             {
                 problems.Add(Problem.Of("zoneFaction", (i + 1).ToString()));
-                known = false;
                 continue;
             }
             if ((p.Name?.Trim().Length ?? 0) > MaxNameLength) problems.Add(Problem.Of("zonePlayerName", MaxNameLength.ToString()));
             if (p.Cabal is { } cabal) problems.AddRange(TournamentRules.CheckCabal(catalog, p.Faction, cabal, i));
             else problems.Add(Problem.Of("zoneCabal", (i + 1).ToString()));
-        }
-        if (known && game.Format == GameFormat.Teams)
-        {
-            Alignment? Of(IReadOnlyList<ZonePlayer> side) =>
-                side.Select(p => catalog.AlignmentOf(p.Faction)).Distinct().ToList() is [{ } single] ? single : null;
-            var (alignmentA, alignmentB) = (Of(a), Of(b));
-            if (alignmentA is null || alignmentB is null) problems.Add(Problem.Of("teamAlignment"));
-            else if (alignmentA == alignmentB) problems.Add(Problem.Of("teamsOpposed"));
         }
 
         // Required: the scenario and both its decks, the side that played first, the end of the game.

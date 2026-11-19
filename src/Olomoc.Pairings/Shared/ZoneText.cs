@@ -31,19 +31,14 @@ public static class ZoneText
     };
 
     /// <summary>
-    /// Color of a zone on the map: open, upcoming, closed under the Light or the Darkness, or closed
+    /// Color of a zone on the map: open, upcoming, closed and dominated by a faction, or closed
     /// without dominance (tie, no games).
     /// </summary>
     public static string MapClass(ZoneSummary z) => z.Status switch
     {
         ZoneStatus.Open => "open",
         ZoneStatus.Upcoming => "upcoming",
-        _ => z.Dominance.Alignment switch
-        {
-            Alignment.LIGHT => "light",
-            Alignment.DARK => "dark",
-            _ => "none",
-        },
+        _ => z.Dominance.Faction is null ? "none" : "dominated",
     };
 
     /// <summary>Open zones (the closest end first), upcoming (the closest start first), then closed (the most recent first).</summary>

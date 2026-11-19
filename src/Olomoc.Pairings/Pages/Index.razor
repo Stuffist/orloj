@@ -73,7 +73,9 @@ else
             <div class="tn-fields">
                 <div class="field">
                     <label for="t-rounds">@L.Ui("pairings.create.rounds")</label>
+                    @* 0: automatic, from the number of players (fixed at the start). *@
                     <select id="t-rounds" value="@_rounds" @onchange="e => _rounds = int.Parse(e.Value!.ToString()!)">
+                        <option value="0">@L.Ui("pairings.create.rounds.auto")</option>
                         @for (var n = 1; n <= TournamentRules.MaxRounds; n++)
                         {
                             <option value="@n">@n</option>
@@ -88,21 +90,19 @@ else
                     </select>
                 </div>
             </div>
+            @if (_rounds == 0)
+            {
+                <p class="hint">@L.Ui("pairings.create.rounds.auto.help")</p>
+            }
             <fieldset class="tn-modes">
                 <legend>@L.Ui("pairings.create.mode")</legend>
-                <label>
-                    <input type="radio" name="mode" checked="@(_mode == PairingMode.Swiss)" @onchange="() => _mode = PairingMode.Swiss" />
-                    <span><strong>@L.Ui("pairings.mode.swiss")</strong> — @L.Ui("pairings.mode.swiss.help")</span>
-                </label>
-                <label class="tn-sub @(_mode == PairingMode.Swiss ? null : "off")">
-                    <input type="checkbox" checked="@_avoidSame" disabled="@(_mode != PairingMode.Swiss)"
-                           @onchange="e => _avoidSame = e.Value is true" />
-                    <span>@L.Ui("pairings.mode.avoidSame")</span>
-                </label>
-                <label>
-                    <input type="radio" name="mode" checked="@(_mode == PairingMode.Alignment)" @onchange="() => _mode = PairingMode.Alignment" />
-                    <span><strong>@L.Ui("pairings.mode.alignment")</strong> — @L.Ui("pairings.mode.alignment.help")</span>
-                </label>
+                @foreach (var format in Enum.GetValues<EventFormat>())
+                {
+                    <label>
+                        <input type="radio" name="format" checked="@(_format == format)" @onchange="() => SetFormat(format)" />
+                        <span><strong>@L.Ui($"pairings.format.{format}")</strong> — @L.Ui($"pairings.format.{format}.help")</span>
+                    </label>
+                }
             </fieldset>
             @if (_zones.Count > 0)
             {
@@ -119,16 +119,20 @@ else
                     <span class="hint">@L.Ui("pairings.create.zone.help")</span>
                 </div>
             }
+            <label class="tn-check">
+                <input type="checkbox" checked="@_hideStandings" @onchange="e => _hideStandings = e.Value is true" />
+                <span>@L.Ui("pairings.hideStandings")</span>
+            </label>
+            <label class="tn-check">
+                <input type="checkbox" checked="@_excludeFromStats" @onchange="e => _excludeFromStats = e.Value is true" />
+                <span>@L.Ui("pairings.stats.exclude")</span>
+            </label>
             <div class="field">
                 <label for="t-password">@L.Ui("pairings.create.password")</label>
                 <input id="t-password" type="password" autocomplete="new-password" maxlength="@TournamentRules.MaxPasswordLength"
                        value="@_password" @oninput="e => _password = e.Value?.ToString() ?? string.Empty" />
                 <span class="hint">@L.Ui("pairings.create.password.help", TournamentRules.MinPasswordLength)</span>
             </div>
-            <label class="tn-check">
-                <input type="checkbox" checked="@_excludeFromStats" @onchange="e => _excludeFromStats = e.Value is true" />
-                <span>@L.Ui("pairings.stats.exclude")</span>
-            </label>
             <Problems Items="_problems" />
             <div class="tn-actions">
                 <button class="btn primary" type="submit" disabled="@(_busy || _name.Trim().Length == 0)">@L.Ui("pairings.create.submit")</button>
@@ -142,16 +146,22 @@ else
     private string _joinCode = "";
     private string _name = "";
     private DateOnly? _date;
-    private int _rounds = 3;
+    private int _rounds = 0;                     // 0: automatic
     private int _cabals = 2;
-    private PairingMode _mode = PairingMode.Swiss;
-    private bool _avoidSame;
     private string _password = "";
     private bool _excludeFromStats;
+    private EventFormat _format = EventFormat.Tournament;
+    private bool _hideStandings;                 // by default: hidden for an Encounter, shown for a tournament
     private string _zone = "";
     private List<ZoneSummary> _zones = new();        // zones not closed, for the results to count there
     private IReadOnlyList<Problem>? _problems;
     private bool _busy;
+
+    private void SetFormat(EventFormat format)
+    {
+        _format = format;
+        _hideStandings = format == EventFormat.Encounter;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -180,8 +190,9 @@ else
         _busy = true;
         try
         {
-            var result = await Api.CreateAsync(new CreateTournamentRequest(_name.Trim(), _date, _rounds, _cabals, _mode, _avoidSame,
-                _password.Length == 0 ? null : _password, _excludeFromStats, _zone.Length == 0 ? null : _zone));
+            var result = await Api.CreateAsync(new CreateTournamentRequest(_name.Trim(), _date, Math.Max(_rounds, 1), _cabals,
+                _password.Length == 0 ? null : _password, _excludeFromStats, _zone.Length == 0 ? null : _zone, _format,
+                AutoRounds: _rounds == 0, HideStandings: _hideStandings));
             if (result.Value is not { } created)
             {
                 _problems = result.Problems;

@@ -200,7 +200,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
         var http = server.CreateClient();
         var (cabalA, cabalB) = await MaiselCabals();
         var t = await Read<TournamentCreated>(await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Open", null, 3, 2, PairingMode.Swiss, false), TournamentJson.Options));
+            new CreateTournamentRequest("Open", null, 3, 2), TournamentJson.Options));
         async Task<PlayerRegistered> Register(string name) => await Read<PlayerRegistered>(await http.PostAsJsonAsync(
             $"/api/tournaments/{t.Code}/players", new RegistrationRequest(name, "MAISEL", new List<CabalExport> { cabalA, cabalB }), TournamentJson.Options));
         var ana = await Register("Ana");

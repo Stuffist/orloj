@@ -60,6 +60,13 @@ public static class TournamentEndpoints
                 if (result.Item1) stats.Update(t, DateTimeOffset.UtcNow);
                 return result;
             }));
+        // Standings hidden from the players or not, at any time.
+        write.MapPut("standings", (string code, StandingsRequest body, HttpContext ctx, TournamentStore store) =>
+            Organizer(code, ctx, store, t =>
+            {
+                t.HideStandings = body.Hidden;
+                return (true, Results.NoContent());
+            }));
         // Count the tournament in the statistics or not, at any time (and in its zone).
         write.MapPut("stats", async (string code, StatsRequest body, HttpContext ctx, TournamentStore store, StatsArchive stats,
             TournamentZoneSync zone) =>
@@ -85,7 +92,7 @@ public static class TournamentEndpoints
 
     private static async Task<IResult> Create(CreateTournamentRequest body, TournamentStore store, ZoneStore zones)
     {
-        var problems = TournamentRules.CheckSettings(body.Name, body.RoundCount, body.CabalsPerPlayer).ToList();
+        var problems = TournamentRules.CheckSettings(body.Name, body.AutoRounds ? 1 : body.RoundCount, body.CabalsPerPlayer).ToList();
         if (TournamentRules.CheckPassword(NullIfEmpty(body.Password)) is { } bad) problems.Add(bad);
         // Zone: an existing zone, not closed (its results will be copied there).
         Zone? zone = null;
@@ -102,10 +109,11 @@ public static class TournamentEndpoints
         {
             t.Name = body.Name.Trim();
             t.Date = body.Date;
-            t.RoundCount = body.RoundCount;
+            t.AutoRounds = body.AutoRounds;
+            t.RoundCount = body.AutoRounds ? 1 : body.RoundCount;      // auto: fixed at the start
             t.CabalsPerPlayer = body.CabalsPerPlayer;
-            t.Pairing = body.Pairing;
-            t.AvoidSameAlignment = body.Pairing == PairingMode.Swiss && body.AvoidSameAlignment;
+            t.Format = Enum.IsDefined(body.Format) ? body.Format : EventFormat.Tournament;
+            t.HideStandings = body.HideStandings;
             t.ExcludeFromStats = body.ExcludeFromStats;
             t.Zone = zone?.Code;
             t.ZoneName = zone?.Name;
@@ -241,19 +249,19 @@ public static class TournamentEndpoints
         {
             if (TournamentRules.CanPair(t) is { } problem) return (false, Problems(new[] { problem }, 409));
             // Seed drawn every time: undoing then pairing again gives a new draw.
-            var outcome = TournamentRules.PairNext(t, cat.AlignmentOf, RandomNumberGenerator.GetInt32(int.MaxValue));
-            return (true, Results.Json(new PairingSummary(outcome.Round.Number, outcome.Rematches, outcome.SameAlignment),
+            var outcome = TournamentRules.PairNext(t, RandomNumberGenerator.GetInt32(int.MaxValue));
+            return (true, Results.Json(new PairingSummary(outcome.Round.Number, outcome.Rematches, outcome.Mirrors),
                 TournamentJson.Options, statusCode: 201));
         });
 
     // ---- Helpers ----
 
     private static TournamentView View(Tournament t, bool organizer, Player? me) => new(
-        t.Code, t.Name, t.Date, t.RoundCount, t.CabalsPerPlayer, t.Pairing, t.AvoidSameAlignment, t.Phase,
+        t.Code, t.Name, t.Date, TournamentRules.PlannedRounds(t), t.CabalsPerPlayer, t.Phase,
         t.Players.Select(p => new PlayerView(p.Id, p.Name, p.Faction, p.Dropped,
             t.Phase != TournamentPhase.Registration || organizer || p == me ? p.Cabals : null)).ToList(),
-        t.Rounds, Standings.Compute(t), organizer, me?.Id, t.OrganizerPasswordHash.Length > 0, t.ExcludeFromStats, t.Scenarios,
-        t.Zone, t.ZoneName);
+        t.Rounds, t.HideStandings && !organizer ? Array.Empty<Standing>() : Standings.Compute(t), organizer, me?.Id, t.OrganizerPasswordHash.Length > 0, t.ExcludeFromStats, t.Scenarios,
+        t.Zone, t.ZoneName, t.Format, t.AutoRounds, t.HideStandings);
 
     // Token of the admin link, or of a session opened with the password.
     private static bool IsOrganizer(HttpContext ctx, Tournament t)

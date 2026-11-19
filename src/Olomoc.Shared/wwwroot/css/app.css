@@ -818,9 +818,6 @@ body {
 .panel.tn-danger h3 { color: var(--rust-soft); }
 
 .tn-faction { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; color: var(--muted); }
-.tn-alignment { font-size: .66rem; text-transform: uppercase; letter-spacing: .5px; border-radius: 999px; padding: 0 .4rem; border: 1px solid; }
-.tn-alignment.light { color: #e2c46b; border-color: #8a7536; }
-.tn-alignment.dark { color: #9fb0c8; border-color: #4d5b70; }
 .tn-player-name { font-weight: 700; }
 
 .tn-picker { display: flex; flex-direction: column; gap: .5rem; padding: .7rem .8rem; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; }
@@ -1191,16 +1188,15 @@ body {
 .zn-map.tiny .zn-hex-emblem .emblem { width: calc(5cqw * var(--s)); height: calc(5cqw * var(--s)); }
 .zn-map.tiny .zn-hex-none { font-size: calc(3cqw * var(--s)); }
 /* Colors, slightly translucent (the plan shows through a little): open (green), upcoming (hatched
-   grey), closed under the Light (parchment, gold edge, dark ink), under the Darkness (dark brown),
+   grey), closed and dominated by a faction (parchment, gold edge, dark ink),
    without dominance (grey). */
 .zn-hex-cell.open { --edge: #8fcf95; --fill: linear-gradient(180deg, rgba(74, 140, 82, .64), rgba(44, 96, 56, .64)); --state: #d4f5d5; }
 .zn-hex-cell.upcoming {
     --edge: #9aa2a8; --state: #eef1f3;
     --fill: repeating-linear-gradient(135deg, rgba(110, 118, 126, .64) 0 6px, rgba(80, 86, 94, .64) 6px 12px);
 }
-.zn-hex-cell.light {
+.zn-hex-cell.dominated {
     --edge: #e2c46b; --text: #2c2213; --shadow: rgba(255, 245, 220, .5);
     --fill: linear-gradient(180deg, rgba(238, 225, 190, .76), rgba(210, 192, 146, .76));
 }
-.zn-hex-cell.dark { --edge: #8a6644; --text: #f0e3cc; --fill: linear-gradient(180deg, rgba(62, 43, 29, .64), rgba(30, 21, 15, .64)); }
 .zn-hex-cell.none { --edge: #8a8a8a; --fill: linear-gradient(180deg, rgba(112, 112, 112, .64), rgba(80, 80, 80, .64)); }

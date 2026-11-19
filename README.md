@@ -1,7 +1,7 @@
-# Orloj — Cabal builder and tournaments for Olomòc (Blazor WebAssembly)
+# Orloj — Cabal builder and events for Olomòc (Blazor WebAssembly)
 
 A Blazor WebAssembly app: cabal builder and play mode (`/builder/`, the root `/` redirects
-there), tournaments and statistics (`/pairings/`), two-player online games (`/online/`,
+there), events (tournaments and Dystopian Encounters) and statistics (`/pairings/`), two-player online games (`/online/`,
 synchronized by SignalR), optional accounts and a card catalog editor. It is served by an
 ASP.NET Core host (`src/Olomoc.Server`): API, online games hub, SQLite database, emails. The
 card catalog (cogs, equipment, factions, texts) is JSON in the repository
@@ -55,10 +55,10 @@ in `.env`.
 
 A single image (`Dockerfile`, multi-stage): publish with the .NET SDK, then the
 `Olomoc.Server` host on the ASP.NET runtime (Alpine, ≈ 140 MB), HTTP on port 8080, under an
-unprivileged user (`app`, uid 1654). It serves the app (builder `/builder/`, tournaments
+unprivileged user (`app`, uid 1654). It serves the app (builder `/builder/`, events
 `/pairings/`; `_framework` files precompressed with Brotli/gzip), the shared files
 (`/_content/Olomoc.Shared/`) and the API, redirects `/` to `/builder/`, and answers
-`/healthz`. The data (tournaments, statistics, accounts, account cabals) lives in a **SQLite**
+`/healthz`. The data (events, statistics, accounts, account cabals) lives in a **SQLite**
 database, `/data/olomoc.db` in the container, mounted on the `./data` folder next to
 `docker-compose.yml`: kept across `down`/`up`, `--force-recreate` and `--build`. The server
 makes a consistent copy of it every day in `data/backups/` (the last 7 are kept); that is the
@@ -168,6 +168,8 @@ elsewhere.
 | recto / verso                     | `front` / `back`                        |
 | Référentiel de faction            | `FactionReference`                      |
 | Ministère de la Coordination, de l'Intégrité, de l'Effort, du Progrès, de l'Harmonie, de l'Édification, de la Sécurité ; la Frange, l'Axe (Ministères dévoyés) | `COORDINATION`, `INTEGRITY`, `EFFORT`, `PROGRESS`, `HARMONY`, `EDIFICATION`, `SECURITY`, `FRINGE`, `AXIS` |
+| Bloc, zone, affrontement (partie enregistrée seule dans une zone) | Block, `Zone`, `ZoneGame` |
+| événement : tournoi (rondes suisses) ou Rencontre Dystopique (appariements aléatoires) | event: `Tournament` (code, API `/api/tournaments`, storage, `/pairings/`), `EventFormat.Tournament` / `EventFormat.Encounter` |
 
 In the code and comments, the French game terms are written with the English rulebook's words:
 cog, cabal, equipment/boon, Ministry, HP, Darkness, Bile, hunt, rank, card catalog (the French
@@ -244,7 +246,7 @@ other languages fall back on it).
 - **Publication**: only an entry with `"published": true` is published. Without this field (or
   with `false`), it is a draft, served to editors and admins only (marked "draft" in the
   builder), removed for everyone else with its texts and its place in the factions, and refused
-  for tournament registrations. A new entry is therefore a draft until it is published; a PR
+  for event registrations. A new entry is therefore a draft until it is published; a PR
   that adds a card visible to all sets `"published": true`.
 - **Storage**: the repository files stay the base (PRs welcome); the changes made in the editor
   are JSON files in the same format, with only the changed or created entries, in
@@ -490,16 +492,16 @@ Optional: without an account, everything works as before, on the device. `/build
 
 `/builder/control` ("Admin" tab on desktop, link in "My account"):
 - **overview**: accounts (confirmed, editors, admins, new and signed in over 30 days, locked),
-  saved cabals, tournaments by phase, online games, statistics archives, changed catalog
+  saved cabals, events by phase, online games, statistics archives, changed catalog
   entries, database size, last backup, email sending;
 - **accounts** (search by username, editors and admins, or newest; never the email): role,
   temporary password (player without a confirmed email), unlock, sign out everywhere, deletion
   with its cabals (not one's own account, nor an admin);
-- everyone's **tournaments**: new admin link (the old one stops working; for an organizer who
-  lost theirs), include in or exclude from the stats, deletion. A tournament's admin page stays
+- everyone's **events**: new admin link (the old one stops working; for an organizer who
+  lost theirs), include in or exclude from the stats, deletion. An event's admin page stays
   with its organizer;
 - **online games**: list and deletion;
-- **maintenance**: backup now (replaces today's), purges of tournaments and games with the
+- **maintenance**: backup now (replaces today's), purges of events and games with the
   background tasks' rules;
 - **log** of the admins' actions (`AdminActions` table, kept for a year), last 100 shown.
 
@@ -510,17 +512,22 @@ key unused for 90 days: `MAIL_CHECK_TO` (the admin's address) sends a short chec
 days, which keeps it active and shows that sending works. (orloj.top uses Brevo, with the DNS
 records of `orloj.top`.)
 
-## Tournaments
+## Events (tournaments and Dystopian Encounters)
 
-`/pairings/`: the organizer creates a tournament (name, date, number of rounds, 1 or 2 cabals
-per player, pairing mode) and receives a 6-character **code** to give to the players, along
-with an **admin link**. No account: each tournament is a JSON document in the server's
+The **Block** holds **zones**; games are recorded in a zone on their own (see "The Block") or
+through an **event** bound to it. An event is a **tournament** (Swiss rounds) or a **Dystopian
+Encounter** (random pairings every round), chosen at creation (`EventFormat`). In the code, the
+API and the storage, an event is still a `Tournament` (`/api/tournaments`, `/pairings/`).
+
+`/pairings/`: the organizer creates an event (name, date, format, number of rounds, 1 or 2 cabals
+per player, standings hidden or not) and receives a 6-character **code** to give to the players, along
+with an **admin link**. No account: each event is a JSON document in the server's
 database; tokens and password are only kept hashed. The organizer can **delete** their
-tournament (at the bottom of the administration, by typing the code again). Otherwise, a
-tournament is deleted automatically after 90 days without changes, if its date has passed or
-if it has none; a tournament dated today or later **never** is (daily check).
+event (at the bottom of the administration, by typing the code again). Otherwise, an
+event is deleted automatically after 90 days without changes, if its date has passed or
+if it has none; an event dated today or later **never** is (daily check).
 
-- **Administering from several devices** (create the tournament on a PC, run it on a phone on
+- **Administering from several devices** (create the event on a PC, run it on a phone on
   the day), two keys to choose from:
   - the **admin link** (secret token in the address), highlighted right after creation with its
     **QR code**: scan it with the phone, or copy it. It stays in "Share" (QR on demand, so as
@@ -546,17 +553,24 @@ if it has none; a tournament dated today or later **never** is (daily check).
   a phone, lists received in advance), with the same form from the administration, and change
   or withdraw any registration; the token of a player they register is not kept, their device
   stays the organizer's.
-- **Pairings** (`Tournaments/Pairer.cs`), between the active players (drops excluded):
-  - *Swiss rounds*: round 1 at random, then by standings, each one against the closest in
-    points (1 v. 2, 3 v. 4…); option: for equal points, prefer the opposite alignment;
-  - *Light against Darkness*: at random, opposite alignments, the surplus of one side playing
-    among itself.
-  Never a rematch if possible (backtracking search); otherwise it is allowed and reported. Odd
-  number: a bye to the lowest-ranked player who has not had one (larger side in Alignment
-  mode). Alignments (`olomoc-factions.json`): Light — Cabale Dykovienne, Famille Urkaras, Loups
-  de Libus, Réseau Rubin; Darkness — Les Autres, Blockhaus Devet, Ligue de Maisel.
+- **Pairings** (`Tournaments/Pairer.cs`), between the active players (drops excluded): in a
+  *tournament*, true Swiss rounds: at random among the players with the same points (round 1:
+  everyone), from the highest points group down, a player left over meeting the closest points;
+  **no rematch**, mirror matches allowed. In a *Dystopian Encounter*, at random every round,
+  whatever the points, with **no rematch** and **no mirror match** (two players of the same
+  faction). If that is impossible (backtracking search), the mirror match is allowed first, then
+  the rematch, and the organizer is told how many. Odd number: a bye to a player
+  who has not had one, the lowest-ranked (tournament) or drawn at random (Encounter). The
+  factions' alignments (Light / Darkness) are no longer a criterion, anywhere: kept in the card
+  catalog only.
+- **Number of rounds**: chosen, or **Auto** (default): the smallest n with 2ⁿ ≥ players (2: 1
+  round, 3-4: 2, 5-8: 3, 9-16: 4…), following the registrations, then fixed at the start
+  (`TournamentRules.AutoRoundCount`); scenarios planned beyond it are dropped.
+- **Hidden standings** (by default for a Dystopian Encounter, not for a tournament; changed at
+  any time in the administration): the players and the visitors do not get them from the API,
+  the organizer still sees them.
 - **Results and standings** (official round sheet): the organizer enters each table's VP;
-  tournament points 3/1/0 (bye: a 7-0 win, i.e. 3 points, +7), standings by points, then
+  points 3/1/0 (bye: a 7-0 win, i.e. 3 points, +7), standings by points, then
   cumulative VP difference, then VP scored. Players who dropped go to the end of the standings,
   behind all those still in, and are ranked among themselves by the same criteria. The next
   round can be paired when the previous one is complete; the last round can be undone as long
@@ -577,7 +591,7 @@ if it has none; a tournament dated today or later **never** is (daily check).
   Schedule visible on the public page, scenario and decks next to each round's title.
 - **Correcting a pairing**: ⇄ on two players of the current round (tables without a result,
   bye included) swaps them, after confirmation; a rematch created is reported.
-- **Safeguards**: 128 players per tournament, requests of 64 KB at most, 10 tournament creations
+- **Safeguards**: 128 players per event, requests of 64 KB at most, 10 event creations
   per hour, 10 password attempts per quarter of an hour and 120 writes per minute per IP address
   (`RATE_CREATE_PER_HOUR`, `RATE_LOGINS_PER_15_MINUTES`, `RATE_WRITES_PER_MINUTE`).
 
@@ -607,9 +621,9 @@ connection.
   - **player name**: the account's if signed in, otherwise the last one used on the device
     (`olomoc.online.name`), otherwise random ("Joueur 4821"); a guest opening their link is
     named the same way, and can change name in the lobby;
-  - **tournament table**: "Play online" on one's table of the current round (tournament
+  - **event table**: "Play online" on one's table of the current round (event
     started). The game is created on the first call then found again. Each player identifies
-    with their tournament player token and chooses one of their registered cabals, which is
+    with their event player token and chooses one of their registered cabals, which is
     recorded on the table at the start. The table shows an "online" link to follow it;
   - **spectators**: the link without a token follows the game without being able to play.
 - **Guided steps** (`OnlineStep`):
@@ -643,7 +657,7 @@ connection.
   (to another tab of the site) closes the connection: the player is no longer counted as
   present.
 - **Safeguards**: 2,000 games, messages of 32 KB at most, 20 calls per second and per
-  connection, creations limited like tournaments (`RATE_CREATE_PER_HOUR`).
+  connection, creations limited like events (`RATE_CREATE_PER_HOUR`).
 
 Planned next steps: the Block (16″ board, terrain, miniatures, measurements), then the cards
 (Ministries, Artifact, planning revealed simultaneously).
@@ -652,26 +666,24 @@ Planned next steps: the Block (16″ board, terrain, miniatures, measurements), 
 
 `/stats/` ("Statistics" tab, `Pages/StatsPage.razor`), public, with a filter:
 
-- **All** (default, `/api/stats/all`): the finished tournaments and the games of the Block
-  (visible zones) together. A game of a tournament bound to a zone is copied into the
-  zone: it counts through the zone while the tournament is in progress, then through the
-  tournament's archive once it is finished (the archive and the copy share the tournament's
+- **All** (default, `/api/stats/all`): the finished events and the games of the Block
+  (visible zones) together. A game of an event bound to a zone is copied into the
+  zone: it counts through the zone while the event is in progress, then through the
+  event's archive once it is finished (the archive and the copy share the event's
   code), never twice. Factions: registered players and participations; cog choices: registered
   cabals and cabals played.
-- **Tournaments** (`?source=tournaments`, `/api/stats`): the tournaments only, as below.
+- **Events** (`?source=tournaments`, `/api/stats`): the events only, as below.
 - **Block** (`?source=bloc`, `/api/zones/stats`): all the visible zones (see
   below).
 
 `/pairings/stats` and `/bloc/stats` redirect there with the matching filter.
 
-The tournaments counted are the **finished** ones — except those their organizer excludes ("Do
+The events counted are the **finished** ones — except those their organizer excludes ("Do
 not count in the statistics", at creation or at any time in the administration):
 
 - **factions played**: share of the players;
 - **cog choices**, per faction (selector) and per rank: share of the faction's registered
   cabals that contain the cog (both of a player's cabals count);
-- **wins per alignment**: Light against Darkness games only (a game between two factions of the
-  same alignment says nothing about it), once per game;
 - **wins per faction** and **per rank 3 cog** of the cabal played: wins / games, each side of a
   game counting (mirror match: on both sides; byes excluded), with W/D/L and the number of
   games; faded below 10 games;
@@ -679,12 +691,12 @@ not count in the statistics", at creation or at any time in the administration):
   cycle, PoliSec), **scenarios played** (with P1 wins per scenario; custom scenarios grouped,
   without their name), **Artifact and Ministry decks played** (likewise; v3 archives).
 
-At the end of a tournament, an **anonymous archive** (factions, cabals as ids, games; neither
-names nor tokens) is stored in the database ("stats" document with the tournament's code),
-which the tournament purge does not touch: the statistics cover the whole history. They are
+At the end of an event, an **anonymous archive** (factions, cabals as ids, games; neither
+names nor tokens) is stored in the database ("stats" document with the event's code),
+which the event purge does not touch: the statistics cover the whole history. They are
 computed in memory (`Tournaments/Stats/TournamentStats.cs`) and computed again for each archive
-added or removed (`GET /api/stats`). Deleting a tournament, or excluding it, removes its
-archive; at startup, a finished tournament without an archive gets one.
+added or removed (`GET /api/stats`). Deleting an event, or excluding it, removes its
+archive; at startup, a finished event without an archive gets one.
 
 The computation shared with the zones is in `Tournaments/Stats/GameStats.cs` (games in a neutral
 form: a side is one player or a team of two).
@@ -692,7 +704,7 @@ form: a side is one player or a team of two).
 ## The Block (zones)
 
 `/bloc/` ("Block" tab; formerly `/zones/`, which redirects) replaces Occicat's "Rencontres dystopiques" form: games played
-outside tournaments, recorded in **zones** (a club, a convention, a period of the year, online),
+on their own or at an event, recorded in **zones** (a club, a convention, a period of the year, online),
 with their statistics and their **dominance**. **Never a ranking of people**: player names are
 optional, shown in the list of games, never counted.
 
@@ -703,34 +715,33 @@ optional, shown in the list of games, never counted.
   when a manager closes it by hand (reversible). Managers change the settings (not the managers,
   the mode or the visibility) and moderate the games; editors and admins can do everything on
   every zone (logged in the admin panel's log).
-- **Entering a game** ("Record an encounter"): **anyone, without an account**, in an open zone.
-  Duel (1 v 1) or **2 v 2** (a Light team against a Darkness team, VP per team). Every field is
+- **Entering a game** ("Record a game"): **anyone, without an account**, in an open zone.
+  Duel (1 v 1) or **2 v 2** (any factions, VP per team). Every field is
   required (marked with an asterisk) except the names (optional, never counted): the faction and the cabal played of each
   player (from "My cabals", composed or pasted, legality checked; typing a name suggests account
   usernames, `GET /api/accounts/search`, and an account's username offers its public cabals), the VP of each side and
   who played first (each side starts with its VP and P1/P2 buttons: P1 on one side makes the other
   P2), the end of the game, the scenario and both its decks; optional too, a free
-  comment (a notable event, 500 characters at most, shown under the game), and a **photo** when the
+  comment (a notable moment, 500 characters at most, shown under the game), and a **photo** when the
   site allows them (admin panel, "Site settings", off by default: files stored on the server, in
   `DATA_DIR/photos/`, outside the database backup; JPEG/PNG/WebP checked from the first bytes,
   5 MB at most, reduced to 1600 px and re-encoded by the browser, which drops the location;
   chosen in the form of a new game, next to the comment, and sent once the game is recorded, or
   added, replaced or removed from the list by whoever can change the game; deleted with the game or the zone; turned
   off, the photos are hidden, not deleted); all the fields shown at
-  once. Games copied from a tournament keep what it recorded. Checked by `Zones/ZoneRules.cs` in the browser, then again on
-  the server: date within the zone's period and not in the future, alignments of the teams.
+  once. Games copied from an event keep what it recorded. Checked by `Zones/ZoneRules.cs` in the browser, then again on
+  the server: date within the zone's period and not in the future.
 - **Changing or deleting a game**: the device that entered it (entry token in the localStorage,
   `olomoc.zones`), or the author's account on any device, while the zone is open; its managers
   and the admins, at any time. Entries limited per IP address (`RATE_ZONE_ENTRIES_PER_HOUR`,
   60 by default).
-- **Statistics** of each zone, and of all the zones together: the same panels as the tournaments
+- **Statistics** of each zone, and of all the zones together: the same panels as the events
   (`Shared/StatsSections.razor`), each player counting (in 2 v 2, both players of the winning team
   win); factions counted on the participations, cog choices on the cabals played.
 - **Dominance** (`Zones/ZoneDominance.cs`), mode chosen per zone: number of **wins**, **win rate**
-  (at least 10 games) or total **VP**. The leading alignment comes from the Light against
-  Darkness games, then the leading faction of that alignment; a tie at the top: no dominance.
-  Computed live: an open zone is "Dominated by the Light — leading: …", a closed one "Closed under
-  the Light, dominated by …".
+  (at least 10 games for a faction) or total **VP**: the leading **faction**, among all of them;
+  a tie at the top: no dominance. Computed live: an open zone is "Dominated by …", a closed one
+  "Closed, dominated by …".
 - **Map of the zones** (top of `/bloc/`, `Shared/ZoneMap.razor`): a city plan
   (`img/zones/map.jpg`) with one hexagon per zone (hidden ones left out), on the slots of a
   honeycomb laid over its districts (`Zones/ZoneMapLayout.cs`): the first 25 cover the city, the
@@ -741,19 +752,18 @@ optional, shown in the list of games, never counted.
   smaller, never reordered); small ones show only the name and the emblem, tiny ones the emblem
   (the name stays in the tooltip). Slightly translucent.
   Narrow screens scroll the plan. Green: open (with the leading faction's emblem once there is one); hatched: upcoming;
-  pale with a gold edge: closed under the Light; dark brown: closed under the Darkness, with the
-  dominant faction's emblem; grey: closed without dominance (tie, no games). The detailed list
+  pale with a gold edge: closed and dominated, with the dominant faction's emblem; grey: closed without dominance (tie, no games). The detailed list
   stays below.
 - **Logo**: managers and admins can give a zone a logo as a **link** to an image (https only,
   500 characters at most); the server stores the link, never the image. Shown on the map, the
   zone page and the list (`Shared/ZoneLogo.razor`, no Referer sent). The CSP accepts `https:`
   images for that.
 - **My zones** (below the map): zones managed, and zones seen on this device.
-- **Tournaments bound to a zone**: when creating a tournament, an optional zone (not closed). Each
+- **Events bound to a zone**: when creating an event, an optional zone (not closed). Each
   result entered is copied into it as a duel (`Zones/TournamentZone.cs`, `TournamentZoneSync.cs`):
   factions, cabal played, P1, end, scenario, **without the names** (the zone keeps its games after
-  the tournament is purged). A corrected or cleared result, a tournament excluded from the
-  statistics or deleted: the zone follows. These games are changed through the tournament only; a
+  the event is purged). A corrected or cleared result, an event excluded from the
+  statistics or deleted: the zone follows. These games are changed through the event only; a
   closed zone is no longer changed.
 
 Storage: zones are documents (kind `zone`, 500 at most, never purged); games are rows of the
@@ -773,7 +783,7 @@ src/Olomoc.Web/       the site's Blazor WebAssembly app (served at the root): ro
                       layout; brings together the three page libraries below, without
                       reloading from one to another
 src/Olomoc.Builder/   pages of the builder, play mode, account, editor and admin panel (/builder/…)
-src/Olomoc.Pairings/  pages of the tournaments and statistics (/pairings/…), and of the
+src/Olomoc.Pairings/  pages of the events and statistics (/pairings/…), and of the
                       Block (/bloc/…)
 src/Olomoc.Online/    pages of the online games (/online/…)
 src/Olomoc.Server/    ASP.NET Core host: app, shared files, API, online games hub
@@ -806,14 +816,14 @@ tests/Olomoc.Tests/   xUnit
 - `Components/PlayCogCard.razor` — a cog's card in a game (play mode, online games).
 - `Components/CabalPicker.razor`, `CabalSummary.razor`, `LegalityStatus.razor`,
   `Problems.razor`, `FactionBadge.razor`, `ScenarioTag.razor` — choice and summary of a cabal,
-  problems returned by the server (tournaments, online games).
+  problems returned by the server (events, online games).
 - `Components/AppNav.razor` — site menu: tabs under the header (desktop), bar fixed at the
   bottom (phone); builder, play (dot if a game is in progress; online games included),
-  tournaments, statistics, zones, editor (editors and admins), admin panel (admins), account.
+  events, statistics, zones, editor (editors and admins), admin panel (admins), account.
   `Components/HeaderTools.razor` — language choice.
 - `Accounts/AccountApiModels.cs` (rules and exchanges of the accounts API),
   `Accounts/AdminApiModels.cs` (admin panel), `Services/AccountService.cs` (the site's session).
-- `Tournaments/` — tournament (`TournamentModels.cs`), standings (`Standings.cs`), pairings
+- `Tournaments/` — event (`TournamentModels.cs`), standings (`Standings.cs`), pairings
   (`Pairer.cs`), rules of the phases and registrations (`TournamentRules.cs`), exchanges with
   the API (`TournamentApiModels.cs`); statistics (`Stats/`: `GameStats.cs`, `TournamentStats.cs`).
 - `Zones/` — the Block: zone and game (`ZoneModels.cs`), rules (`ZoneRules.cs`),
@@ -839,7 +849,7 @@ tests/Olomoc.Tests/   xUnit
   account, links received by email, personal data.
 
 **`src/Olomoc.Pairings`** (Razor library, `/pairings/…` routes)
-- `Pages/Index.razor` — create a tournament, join one, "My tournaments" (localStorage).
+- `Pages/Index.razor` — create an event, join one, "My events" (localStorage).
 - `Pages/TournamentPage.razor` — public page: registration, round, standings, players.
 - `Pages/Admin.razor`, `Shared/ResultEditor.razor` — administration: closing registrations,
   rounds, VP entry, drops, export, share links.
@@ -866,7 +876,7 @@ tests/Olomoc.Tests/   xUnit
 - `Program.cs` — headers (`Cache-Control: no-cache`, `nosniff`), `/` → `/builder/`, `/healthz`,
   rate and request size limits.
 - `Tournaments/TournamentEndpoints.cs` — `/api/tournaments` API (rights by token);
-  `TournamentStore.cs` (one document per tournament, one lock per tournament),
+  `TournamentStore.cs` (one document per event, one lock per event),
   `StatsArchive.cs`, `ServerCatalog.cs` (server-side card catalog), `TournamentPurge.cs` (90 days
   without changes, date passed or missing).
 - `Accounts/AccountEndpoints.cs` — `/api/account` API (Identity, session cookie) and
@@ -877,7 +887,7 @@ tests/Olomoc.Tests/   xUnit
 - `Zones/ZoneEndpoints.cs` — `/api/zones` API (public reading, entries without an account, rights
   by entry token, account, manager or admin) and `/api/admin/zones`; `ZoneStore.cs` (zones as
   documents, games in the `ZoneGames` table), `ZoneStats.cs` (statistics kept in memory).
-- `Admin/AdminEndpoints.cs` — `/api/admin` API of the admin panel (overview, tournaments, online
+- `Admin/AdminEndpoints.cs` — `/api/admin` API of the admin panel (overview, events, online
   games, backup, purges, log); `AdminAudit.cs` (action log).
 - `CardCatalog/CatalogStore.cs` — served card catalog: repository files + editor changes
   (`DATA_DIR/catalog`), drafts hidden from visitors, export; `CatalogEndpoints.cs` (served
@@ -891,7 +901,7 @@ tests/Olomoc.Tests/   xUnit
   (daily copy, `VACUUM INTO`).
 - `Hosting/DocumentStore.cs` — JSON documents under a public 6-character code (creation, change
   and deletion under lock, purge of inactive ones).
-- `Online/` — creation of games (`OnlineEndpoints.cs`: `/api/online`, tournament table), SignalR
+- `Online/` — creation of games (`OnlineEndpoints.cs`: `/api/online`, event table), SignalR
   hub `/hubs/online` (`OnlineHub.cs`, call limit per connection), storage and purge
   (`OnlineStore.cs`: one document per game, kind `online`), players' presence
   (`OnlinePresence.cs`).
@@ -909,9 +919,9 @@ certificates, routing by host name between Orloj and B5T. Not needed elsewhere; 
 two-line Caddy example is in [Deployment](#generic-any-instance).
 
 **`tests/Olomoc.Tests`** — legality, search, export, save, play mode, language consistency,
-tournaments (standings, pairings, rules), online games (rules, hub), admin panel; references
+events (standings, pairings, rules), online games (rules, hub), admin panel; references
 `Olomoc.Shared` and reads its static files from disk; host started in memory
-(`WebApplicationFactory`) for the site's routes and the APIs (tournaments, accounts, card
+(`WebApplicationFactory`) for the site's routes and the APIs (events, accounts, card
 catalog, admin; temporary data folder, emails written to disk).
 
 ## License

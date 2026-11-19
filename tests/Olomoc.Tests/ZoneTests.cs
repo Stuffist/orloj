@@ -78,11 +78,11 @@ public class ZoneTests
     }
 
     [Fact]
-    public async Task Teams_are_a_Light_team_against_a_Darkness_team()
+    public async Task Teams_of_any_factions()
     {
         Assert.Empty(await Problems(Teams("RUBIN", "LIBUS", "MAISEL", "OTHERS", 5, 3)));
-        Assert.Equal(["teamAlignment"], await Problems(Teams("RUBIN", "MAISEL", "LIBUS", "OTHERS", 5, 3)));
-        Assert.Equal(["teamsOpposed"], await Problems(Teams("RUBIN", "LIBUS", "URKARAS", "DYKOVIAN", 5, 3)));
+        Assert.Empty(await Problems(Teams("RUBIN", "MAISEL", "LIBUS", "OTHERS", 5, 3)));
+        Assert.Empty(await Problems(Teams("RUBIN", "LIBUS", "URKARAS", "DYKOVIAN", 5, 3)));
     }
 
     [Fact]
@@ -253,32 +253,26 @@ public class ZoneTests
 
     // ---- Statistics and dominance ----
 
-    private static async Task<StatsView> Stats(params ZoneGame[] games)
-    {
-        var d = await AppData.GetAsync();
-        return StatsView.OfGames(1, games.Select(g => g.ToStatGame()).ToList(), d.Catalog.AlignmentOf);
-    }
+    private static Task<StatsView> Stats(params ZoneGame[] games) =>
+        Task.FromResult(StatsView.OfGames(1, games.Select(g => g.ToStatGame()).ToList()));
 
     [Fact]
-    public async Task Teams_both_players_count_alignment_once_per_game()
+    public async Task Teams_both_players_count()
     {
         var s = await Stats(Teams("RUBIN", "LIBUS", "MAISEL", "OTHERS", 8, 3));
         var wins = s.FactionWins.ToDictionary(w => w.Key);
         Assert.Equal((1, 1), (wins["RUBIN"].Games, wins["RUBIN"].Wins));
         Assert.Equal((1, 1), (wins["LIBUS"].Games, wins["LIBUS"].Wins));
         Assert.Equal((1, 0, 3), (wins["MAISEL"].Games, wins["MAISEL"].Wins, wins["MAISEL"].Vp));
-        var alignments = s.AlignmentWins.ToDictionary(w => w.Key);
-        Assert.Equal((1, 1, 8), (alignments["LIGHT"].Games, alignments["LIGHT"].Wins, alignments["LIGHT"].Vp));
-        Assert.Equal((1, 0), (alignments["DARK"].Games, alignments["DARK"].Wins));
         Assert.Equal((1, 4, 4), (s.Tournaments, s.Players, s.Factions.Sum(f => f.Count)));
     }
 
     [Fact]
-    public async Task Same_alignment_games_say_nothing_about_alignments()
+    public async Task Mirror_match_counts_on_both_sides()
     {
         var s = await Stats(Duel("RUBIN", "LIBUS", 5, 3), Duel("MAISEL", "MAISEL", 4, 4));
-        Assert.Empty(s.AlignmentWins);
         Assert.Equal(4, s.FactionWins.Sum(w => w.Games));
+        Assert.Equal((2, 2), (s.FactionWins.Single(w => w.Key == "MAISEL").Games, s.FactionWins.Single(w => w.Key == "MAISEL").Draws));
     }
 
     [Fact]
@@ -301,50 +295,43 @@ public class ZoneTests
     [Fact]
     public async Task Dominance_depends_on_the_mode()
     {
-        // Light wins two close games, Darkness one by a wide margin.
+        // Rubin wins two close games, Maisel one by a wide margin.
         var s = await Stats(Duel("RUBIN", "MAISEL", 6, 5), Duel("RUBIN", "OTHERS", 6, 5), Duel("LIBUS", "MAISEL", 0, 20));
-        var d = await AppData.GetAsync();
 
-        var wins = ZoneDominance.Compute(s, DominanceMode.Wins, d.Catalog.AlignmentOf);
-        Assert.Equal((Alignment.LIGHT, "RUBIN", false), (wins.Alignment, wins.Faction, wins.Tie));
+        var wins = ZoneDominance.Compute(s, DominanceMode.Wins);
+        Assert.Equal(("RUBIN", false), (wins.Faction, wins.Tie));
 
-        var vp = ZoneDominance.Compute(s, DominanceMode.VictoryPoints, d.Catalog.AlignmentOf);
-        Assert.Equal((Alignment.DARK, "MAISEL"), (vp.Alignment, vp.Faction));        // 30 VP against 12; Maisel 25, The Others 5
+        var vp = ZoneDominance.Compute(s, DominanceMode.VictoryPoints);
+        Assert.Equal("MAISEL", vp.Faction);                                         // 25 VP against Rubin's 12
 
-        // Win rate: fewer than StatsView.MinGames games, nobody takes part yet.
-        var rate = ZoneDominance.Compute(s, DominanceMode.WinRate, d.Catalog.AlignmentOf);
-        Assert.Null(rate.Alignment);
-        Assert.Equal(3, rate.Games);
-        Assert.True(rate.NeedsMoreGames);                                           // "3 games out of the 10 needed"
+        // Win rate: fewer than StatsView.MinGames games for every faction, nobody takes part yet.
+        var rate = ZoneDominance.Compute(s, DominanceMode.WinRate);
+        Assert.Null(rate.Faction);
+        Assert.Equal((3, 2), (rate.Games, rate.MostPlayed));
+        Assert.True(rate.NeedsMoreGames);                                           // "2 games out of the 10 needed"
         Assert.False(wins.NeedsMoreGames);
     }
 
     [Fact]
-    public async Task Win_rate_dominance_once_there_are_enough_games()
+    public async Task Win_rate_dominance_once_a_faction_has_enough_games()
     {
         var games = Enumerable.Range(0, StatsView.MinGames).Select(i => Duel("RUBIN", "MAISEL", i < 6 ? 5 : 1, 3)).ToArray();
-        var d = await AppData.GetAsync();
-        var dominance = ZoneDominance.Compute(await Stats(games), DominanceMode.WinRate, d.Catalog.AlignmentOf);
-        Assert.Equal((Alignment.LIGHT, "RUBIN"), (dominance.Alignment, dominance.Faction));
+        var dominance = ZoneDominance.Compute(await Stats(games), DominanceMode.WinRate);
+        Assert.Equal("RUBIN", dominance.Faction);
     }
 
     [Fact]
     public async Task Tie_at_the_top_means_no_dominance()
     {
-        var d = await AppData.GetAsync();
-        var s = await Stats(Duel("RUBIN", "MAISEL", 5, 3), Duel("LIBUS", "OTHERS", 1, 3));
-        Assert.Equal(new Dominance(null, null, true, 2), ZoneDominance.Compute(s, DominanceMode.Wins, d.Catalog.AlignmentOf));
-
-        // Alignment leading, its factions tied: no leading faction.
-        var s2 = await Stats(Duel("RUBIN", "MAISEL", 5, 3), Duel("LIBUS", "OTHERS", 5, 3));
-        Assert.Equal(new Dominance(Alignment.LIGHT, null, false, 2), ZoneDominance.Compute(s2, DominanceMode.Wins, d.Catalog.AlignmentOf));
+        var s = await Stats(Duel("RUBIN", "MAISEL", 5, 3), Duel("LIBUS", "OTHERS", 5, 3));
+        Assert.Equal(new Dominance(null, true, 2, DominanceMode.Wins, 1), ZoneDominance.Compute(s, DominanceMode.Wins));
     }
 
     [Fact]
     public void No_games_no_dominance()
     {
-        var s = StatsView.OfGames(1, [], _ => null);
-        Assert.Equal(Dominance.None, ZoneDominance.Compute(s, DominanceMode.Wins, _ => null));
+        var s = StatsView.OfGames(1, []);
+        Assert.Equal(Dominance.None, ZoneDominance.Compute(s, DominanceMode.Wins));
     }
 
     // ---- Tournament bound to a zone ----

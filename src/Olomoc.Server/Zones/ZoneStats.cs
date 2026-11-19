@@ -9,7 +9,7 @@ namespace Olomoc.Server.Zones;
 /// Statistics of each zone, and of all the zones together (hidden zones excluded): computed on
 /// demand, kept in memory, computed again after each change of a zone's games (or of a zone).
 /// </summary>
-public sealed class ZoneStats(ZoneGameStore games, ZoneStore zones, ServerCatalog catalog)
+public sealed class ZoneStats(ZoneGameStore games, ZoneStore zones)
 {
     private readonly ConcurrentDictionary<string, StatsView> _zones = new();
     private StatsView? _all;
@@ -19,9 +19,8 @@ public sealed class ZoneStats(ZoneGameStore games, ZoneStore zones, ServerCatalo
     {
         if (_zones.TryGetValue(code, out var cached)) return cached;
         var version = _version;
-        var cat = await catalog.GetAsync();
         var list = (await games.AllAsync(code)).Select(g => g.Game.ToStatGame()).ToList();
-        var stats = StatsView.OfGames(1, list, cat.AlignmentOf);
+        var stats = StatsView.OfGames(1, list);
         if (version == _version) _zones[code] = stats;
         return stats;
     }
@@ -30,10 +29,9 @@ public sealed class ZoneStats(ZoneGameStore games, ZoneStore zones, ServerCatalo
     {
         if (_all is { } cached) return cached;
         var version = _version;
-        var cat = await catalog.GetAsync();
         var counted = (await zones.ListAsync()).Where(z => !z.Hidden).Select(z => z.Code).ToHashSet();
         var list = (await games.AllWithZoneAsync()).Where(x => counted.Contains(x.Zone)).ToList();
-        var stats = StatsView.OfGames(list.Select(x => x.Zone).Distinct().Count(), list.Select(x => x.Game.Game.ToStatGame()).ToList(), cat.AlignmentOf);
+        var stats = StatsView.OfGames(list.Select(x => x.Zone).Distinct().Count(), list.Select(x => x.Game.Game.ToStatGame()).ToList());
         if (version == _version) _all = stats;
         return stats;
     }
@@ -62,8 +60,7 @@ public sealed class ZoneStats(ZoneGameStore games, ZoneStore zones, ServerCatalo
 
     public async Task<Dominance> DominanceAsync(Zone zone)
     {
-        var cat = await catalog.GetAsync();
-        return ZoneDominance.Compute(await OfZoneAsync(zone.Code), zone.Dominance, cat.AlignmentOf);
+        return ZoneDominance.Compute(await OfZoneAsync(zone.Code), zone.Dominance);
     }
 
     /// <summary>A zone's games (or the zone itself) changed.</summary>

@@ -83,7 +83,7 @@ public sealed class AdminApiTests : IDisposable
 
     private static async Task<TournamentCreated> CreateTournament(HttpClient http, string name = "Open de Lyon") =>
         await Read<TournamentCreated>(await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest(name, new DateOnly(2026, 11, 7), 3, 1, PairingMode.Swiss, false), TournamentJson.Options));
+            new CreateTournamentRequest(name, new DateOnly(2026, 11, 7), 3, 1), TournamentJson.Options));
 
     private static async Task<AdminAction[]> Audit(HttpClient http) => await Read<AdminAction[]>(await http.GetAsync("/api/admin/audit"));
 

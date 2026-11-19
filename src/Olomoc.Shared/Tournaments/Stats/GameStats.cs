@@ -16,7 +16,7 @@ public sealed record StatGame(StatSide A, StatSide B, TableSide? First = null, G
 
 /// <summary>Figures computed on games, whatever their origin.</summary>
 public sealed record GameFigures(
-    IReadOnlyList<WinRate> FactionWins, IReadOnlyList<WinRate> Rank3Wins, IReadOnlyList<WinRate> AlignmentWins,
+    IReadOnlyList<WinRate> FactionWins, IReadOnlyList<WinRate> Rank3Wins,
     WinRate FirstPlayer, IReadOnlyList<Share> Ends, IReadOnlyList<ScenarioStat> Scenarios,
     IReadOnlyList<ScenarioStat> Artifacts, IReadOnlyList<ScenarioStat> Ministries);
 
@@ -25,27 +25,16 @@ public sealed record GameFigures(
 /// <list type="bullet">
 /// <item>wins per faction and per rank 3 cog: each player counts (a mirror match, on both sides; in
 /// 2 v 2, both players of the winning team win);</item>
-/// <item>wins per alignment: Light against Darkness games only, once per game (a game between two
-/// factions of the same alignment says nothing about it);</item>
 /// <item>games where it is recorded: P1 wins, causes of the end, scenarios and decks played.</item>
 /// </list>
 /// </summary>
 public static class GameStats
 {
-    public static GameFigures Compute(IReadOnlyCollection<StatGame> games, Func<string, Alignment?>? alignmentOf = null)
+    public static GameFigures Compute(IReadOnlyCollection<StatGame> games)
     {
         var players = games.SelectMany(g => new[] { (Side: g.A, Other: g.B), (Side: g.B, Other: g.A) })
             .SelectMany(x => x.Side.Players.Select(p => new SideResult(p.Faction, p.Cabal?.FirstOrDefault(s => s.Rank == 3)?.Cog, x.Side.Vp, x.Other.Vp)))
             .ToList();
-
-        var alignments = new List<SideResult>();
-        if (alignmentOf is not null)
-            foreach (var g in games)
-            {
-                if (AlignmentOf(g.A, alignmentOf) is not { } a || AlignmentOf(g.B, alignmentOf) is not { } b || a == b) continue;
-                alignments.Add(new(a.ToString(), null, g.A.Vp, g.B.Vp));
-                alignments.Add(new(b.ToString(), null, g.B.Vp, g.A.Vp));
-            }
 
         var ended = games.Where(g => g.End is not null).ToList();
         var ends = ended.GroupBy(g => g.End!.Value)
@@ -55,18 +44,10 @@ public static class GameStats
         return new GameFigures(
             Rates(players, s => s.Key),
             Rates(players.Where(s => s.Rank3 is not null), s => s.Rank3!),
-            Rates(alignments, s => s.Key),
             FirstRate("J1", games), ends,
             ByKey(games, g => g.Scenario, Agendas.All),
             ByKey(games, g => g.Artifact, Decks.Artifacts),
             ByKey(games, g => g.Ministry, Decks.Ministries));
-    }
-
-    /// <summary>Alignment of a side: that of its players, if they all share a known one.</summary>
-    public static Alignment? AlignmentOf(StatSide side, Func<string, Alignment?> alignmentOf)
-    {
-        var all = side.Players.Select(p => alignmentOf(p.Faction)).Distinct().ToList();
-        return all is [{ } single] ? single : null;
     }
 
     // Games where the key is recorded, grouped by key: most played first, then in the reference order.
@@ -86,7 +67,7 @@ public static class GameStats
         return new WinRate(key, known.Count, known.Count(c => c > 0), known.Count(c => c == 0), known.Count(c => c < 0));
     }
 
-    // Key: faction, or alignment.
+    // Key: faction.
     private sealed record SideResult(string Key, string? Rank3, int For, int Against);
 
     private static IReadOnlyList<WinRate> Rates(IEnumerable<SideResult> sides, Func<SideResult, string> key) =>

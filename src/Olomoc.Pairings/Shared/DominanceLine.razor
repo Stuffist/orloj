@@ -1,17 +1,12 @@
-@* Dominance of a zone: "Dominated by the Light — leading: Rubin Network", "Closed under Darkness,
-   dominated by The Others", a tie, not enough games yet (win rate), or nothing yet. *@
+@* Dominance of a zone: "Dominated by Rubin Network", "Closed, dominated by The Others", a tie, not
+   enough games yet (win rate), or nothing yet. *@
 @inject LocalizationService L
 
-<p class="zn-dominance @(Dominance.Alignment?.ToString().ToLowerInvariant())">
-    @if (Dominance.Alignment is { } alignment)
+<p class="zn-dominance">
+    @if (Dominance.Faction is { } faction)
     {
-        <span class="tn-alignment @alignment.ToString().ToLowerInvariant()">@L.Ui($"pairings.alignment.{alignment}")</span>
-        <span>@L.Ui(Closed ? "zones.dominance.closedUnder" : "zones.dominance.dominatedBy", L.Ui($"zones.alignment.{alignment}"))</span>
-        @if (Dominance.Faction is { } faction)
-        {
-            <span class="zn-dominance-faction">@L.Ui(Closed ? "zones.dominance.faction.closed" : "zones.dominance.faction")</span>
-            <FactionBadge Code="@faction" />
-        }
+        <span>@L.Ui(Closed ? "zones.dominance.closedUnder" : "zones.dominance.dominatedBy")</span>
+        <FactionBadge Code="@faction" />
     }
     else if (Dominance.Tie)
     {
@@ -19,11 +14,11 @@
     }
     else if (Dominance.NeedsMoreGames)
     {
-        <span class="empty">@L.Ui(Closed ? "zones.dominance.needsGames.closed" : "zones.dominance.needsGames", Dominance.Games, StatsView.MinGames)</span>
+        <span class="empty">@L.Ui(Closed ? "zones.dominance.needsGames.closed" : "zones.dominance.needsGames", Dominance.MostPlayed, StatsView.MinGames)</span>
     }
     else if (Dominance.Games > 0)
     {
-        @* Light against Darkness games, but nobody ahead (draws, no VP scored). *@
+        @* Games, but nobody ahead (draws, no VP scored). *@
         <span class="empty">@L.Ui(Closed ? "zones.dominance.none.closed" : "zones.dominance.noWinner")</span>
     }
     else

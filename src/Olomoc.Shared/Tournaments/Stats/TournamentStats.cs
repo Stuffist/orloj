@@ -8,7 +8,7 @@ public sealed record Share(string Key, int Count, int Total)
     public double Percent => Total == 0 ? 0 : 100.0 * Count / Total;
 }
 
-/// <summary>Game results of an item (faction, rank 3 cog, alignment): wins out of games, VP scored.</summary>
+/// <summary>Game results of an item (faction, rank 3 cog): wins out of games, VP scored.</summary>
 public sealed record WinRate(string Key, int Games, int Wins, int Draws, int Losses, int Vp = 0)
 {
     public double Percent => Games == 0 ? 0 : 100.0 * Wins / Games;
@@ -36,7 +36,7 @@ public sealed record FactionPicks(string Faction, int Cabals, IReadOnlyList<Shar
 public sealed record StatsView(
     int Tournaments, int Players, int Games,
     IReadOnlyList<Share> Factions, IReadOnlyList<FactionPicks> Picks,
-    IReadOnlyList<WinRate> FactionWins, IReadOnlyList<WinRate> Rank3Wins, IReadOnlyList<WinRate> AlignmentWins,
+    IReadOnlyList<WinRate> FactionWins, IReadOnlyList<WinRate> Rank3Wins,
     WinRate FirstPlayer, IReadOnlyList<Share> Ends, IReadOnlyList<ScenarioStat> Scenarios,
     IReadOnlyList<ScenarioStat> Artifacts, IReadOnlyList<ScenarioStat> Ministries, int Zones = 0)
 {
@@ -49,7 +49,7 @@ public sealed record StatsView(
     /// Statistics of games played outside a tournament (zones): factions and cog choices counted
     /// on the participations and on the cabals played.
     /// </summary>
-    public static StatsView OfGames(int zones, IReadOnlyCollection<StatGame> games, Func<string, Alignment?>? alignmentOf)
+    public static StatsView OfGames(int zones, IReadOnlyCollection<StatGame> games)
     {
         var players = games.SelectMany(g => g.A.Players.Concat(g.B.Players)).ToList();
         var factions = players.GroupBy(p => p.Faction)
@@ -58,9 +58,9 @@ public sealed record StatsView(
         var picks = players.Where(p => p.Cabal is not null).GroupBy(p => p.Faction)
             .Select(g => PicksOf(g.Key, g.Select(p => p.Cabal!).ToList()))
             .OrderByDescending(p => p.Cabals).ThenBy(p => p.Faction).ToList();
-        var f = GameStats.Compute(games, alignmentOf);
+        var f = GameStats.Compute(games);
         return new StatsView(zones, players.Count, games.Count, factions, picks,
-            f.FactionWins, f.Rank3Wins, f.AlignmentWins, f.FirstPlayer, f.Ends, f.Scenarios, f.Artifacts, f.Ministries);
+            f.FactionWins, f.Rank3Wins, f.FirstPlayer, f.Ends, f.Scenarios, f.Artifacts, f.Ministries);
     }
 
     /// <summary>
@@ -69,8 +69,7 @@ public sealed record StatsView(
     /// cabals played, the figures of the games on all of them. The caller leaves out the zone games
     /// copied from an archived tournament (counted once, in the tournament).
     /// </summary>
-    public static StatsView Combine(IReadOnlyCollection<ArchivedTournament> tournaments, IReadOnlyCollection<StatGame> zoneGames, int zones,
-        Func<string, Alignment?>? alignmentOf)
+    public static StatsView Combine(IReadOnlyCollection<ArchivedTournament> tournaments, IReadOnlyCollection<StatGame> zoneGames, int zones)
     {
         var registered = tournaments.SelectMany(t => t.Players).ToList();
         var participations = zoneGames.SelectMany(g => g.A.Players.Concat(g.B.Players)).ToList();
@@ -84,9 +83,9 @@ public sealed record StatsView(
             .Select(g => PicksOf(g.Key, g.Select(c => c.Cabal).ToList()))
             .OrderByDescending(p => p.Cabals).ThenBy(p => p.Faction).ToList();
         var games = TournamentStats.Games(tournaments).Concat(zoneGames).ToList();
-        var f = GameStats.Compute(games, alignmentOf);
+        var f = GameStats.Compute(games);
         return new StatsView(tournaments.Count, factionsPlayed.Count, games.Count, factions, picks,
-            f.FactionWins, f.Rank3Wins, f.AlignmentWins, f.FirstPlayer, f.Ends, f.Scenarios, f.Artifacts, f.Ministries, zones);
+            f.FactionWins, f.Rank3Wins, f.FirstPlayer, f.Ends, f.Scenarios, f.Artifacts, f.Ministries, zones);
     }
 
     /// <summary>Share of the cabals that contain each cog.</summary>
@@ -104,13 +103,12 @@ public sealed record StatsView(
 /// <item>cog choices: for each faction, share of the registered cabals that contain the cog (both
 /// of a player's cabals count);</item>
 /// <item>the figures of the games (<see cref="GameStats"/>): wins per faction, per rank 3 cog of the
-/// cabal played when it is known, per alignment (with <paramref name="alignmentOf"/>); P1, ends,
-/// scenarios, decks.</item>
+/// cabal played when it is known; P1, ends, scenarios, decks.</item>
 /// </list>
 /// </summary>
 public static class TournamentStats
 {
-    public static StatsView Compute(IEnumerable<ArchivedTournament> tournaments, Func<string, Alignment?>? alignmentOf = null)
+    public static StatsView Compute(IEnumerable<ArchivedTournament> tournaments)
     {
         var list = tournaments.ToList();
         var players = list.SelectMany(t => t.Players).ToList();
@@ -124,12 +122,12 @@ public static class TournamentStats
             .OrderByDescending(p => p.Cabals).ThenBy(p => p.Faction).ToList();
 
         var games = Games(list);
-        var f = GameStats.Compute(games, alignmentOf);
+        var f = GameStats.Compute(games);
 
         return new StatsView(
             list.Count, players.Count, games.Count,
             factions, picks,
-            f.FactionWins, f.Rank3Wins, f.AlignmentWins,
+            f.FactionWins, f.Rank3Wins,
             f.FirstPlayer, f.Ends, f.Scenarios, f.Artifacts, f.Ministries);
     }
 

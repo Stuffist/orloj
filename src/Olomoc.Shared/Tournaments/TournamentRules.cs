@@ -86,14 +86,34 @@ public static class TournamentRules
             yield return new Problem("cabalIllegal", null, index, issue);
     }
 
+    /// <summary>Automatic number of rounds: the smallest n with 2^n ≥ players (at least 1).</summary>
+    public static int AutoRoundCount(int players)
+    {
+        var n = 1;
+        while (1 << n < players && n < MaxRounds) n++;
+        return n;
+    }
+
+    /// <summary>Planned rounds: automatic while registrations are open (active players so far), then fixed.</summary>
+    public static int PlannedRounds(Tournament t) =>
+        t.AutoRounds && t.Phase == TournamentPhase.Registration ? AutoRoundCount(t.ActivePlayers.Count()) : t.RoundCount;
+
     public static Problem? CanEditRegistrations(Tournament t) =>
         t.Phase == TournamentPhase.Registration ? null : Problem.Of("registrationClosed");
 
-    /// <summary>Closes the registrations and reveals the lists.</summary>
+    /// <summary>
+    /// Closes the registrations and reveals the lists; automatic number of rounds: fixed now (the
+    /// scenarios planned beyond it are dropped).
+    /// </summary>
     public static Problem? Start(Tournament t)
     {
         if (t.Phase != TournamentPhase.Registration) return Problem.Of("alreadyStarted");
         if (t.Players.Count(p => !p.Dropped) < 2) return Problem.Of("notEnoughPlayers");
+        if (t.AutoRounds)
+        {
+            t.RoundCount = AutoRoundCount(t.ActivePlayers.Count());
+            if (t.Scenarios.Count > t.RoundCount) t.Scenarios = t.Scenarios.Take(t.RoundCount).ToList();
+        }
         t.Phase = TournamentPhase.Started;
         return null;
     }
@@ -109,10 +129,10 @@ public static class TournamentRules
     }
 
     /// <summary>Pairs and adds the next round; <see cref="CanPair"/> must have allowed it.</summary>
-    public static PairingOutcome PairNext(Tournament t, Func<string, Alignment?> alignmentOf, int seed)
+    public static PairingOutcome PairNext(Tournament t, int seed)
     {
         if (CanPair(t) is { } problem) throw new InvalidOperationException(problem.Key);
-        var outcome = Pairer.Pair(t, alignmentOf, seed);
+        var outcome = Pairer.Pair(t, seed);
         t.Rounds.Add(outcome.Round);
         return outcome;
     }
@@ -167,7 +187,7 @@ public static class TournamentRules
     {
         if (t.Phase == TournamentPhase.Finished) return Problem.Of("finished");
         scenarios ??= Array.Empty<Scenario?>();
-        if (scenarios.Count > t.RoundCount) return Problem.Of("scenarioCount", t.RoundCount.ToString());
+        if (scenarios.Count > PlannedRounds(t)) return Problem.Of("scenarioCount", PlannedRounds(t).ToString());
         var cleaned = new List<Scenario?>();
         foreach (var s in scenarios)
         {

@@ -113,7 +113,7 @@
                                     <select id="zn-faction-@index" class="emblem-select" value="@player.Faction" required
                                             @onchange="e => SetFaction(index, e.Value?.ToString())">
                                         <option value="">@L.Ui("common.choose")</option>
-                                        @foreach (var f in FactionsFor(s, index))
+                                        @foreach (var f in Catalog.AllFactions.OrderBy(f => L.FactionName(f.Code).Text))
                                         {
                                             <option value="@f.Code"><Emblem Faction="@f.Code" />@L.FactionName(f.Code)</option>
                                         }
@@ -343,19 +343,6 @@
         for (var i = 0; i < 4; i++) _players[i] = rows[i];
         _problems = null;
     }
-
-    // In 2 v 2: the factions of the alignment chosen in the team, opposed to the other team's.
-    private IEnumerable<Faction> FactionsFor(TableSide side, int index)
-    {
-        var all = Catalog.AllFactions.OrderBy(f => L.FactionName(f.Code).Text);
-        if (_format != GameFormat.Teams) return all;
-        var mate = Catalog.AlignmentOf(_players[side == TableSide.A ? 1 - index : 5 - index].Faction);
-        var other = TeamAlignment(side == TableSide.A ? TableSide.B : TableSide.A);
-        return all.Where(f => (mate is null || f.Alignment == mate) && (other is null || f.Alignment != other) || f.Code == _players[index].Faction);
-    }
-
-    private Alignment? TeamAlignment(TableSide side) =>
-        Enumerable.Range(0, PerSide).Select(k => Catalog.AlignmentOf(_players[Slot(side, k)].Faction)).FirstOrDefault(a => a is not null);
 
     private void SetFaction(int index, string? faction)
     {

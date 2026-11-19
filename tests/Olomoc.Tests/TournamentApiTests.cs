@@ -60,7 +60,7 @@ public sealed class TournamentApiTests : IDisposable
     private static async Task<TournamentCreated> Create(HttpClient http, string name = "Open de Lyon", int cabals = 2)
     {
         var response = await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest(name, new DateOnly(2026, 11, 7), 3, cabals, PairingMode.Swiss, true), TournamentJson.Options);
+            new CreateTournamentRequest(name, new DateOnly(2026, 11, 7), 3, cabals), TournamentJson.Options);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         return await Read<TournamentCreated>(response);
     }
@@ -252,7 +252,7 @@ public sealed class TournamentApiTests : IDisposable
     {
         var http = Server();
         var created = await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Avec mot de passe", null, 3, 2, PairingMode.Swiss, false, "secret-du-club"), TournamentJson.Options);
+            new CreateTournamentRequest("Avec mot de passe", null, 3, 2, "secret-du-club"), TournamentJson.Options);
         var t = await Read<TournamentCreated>(created);
         var url = $"/api/tournaments/{t.Code}";
         Assert.True((await View(http, t.Code)).HasPassword);
@@ -292,10 +292,49 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Event_format_kept_tournament_by_default()
+    {
+        var http = Server();
+        var tournament = await Create(http);
+        Assert.Equal(EventFormat.Tournament, (await View(http, tournament.Code)).Format);
+        var encounter = await Read<TournamentCreated>(await http.PostAsJsonAsync("/api/tournaments",
+            new CreateTournamentRequest("Rencontre du mardi", null, 3, 2, Format: EventFormat.Encounter), TournamentJson.Options));
+        Assert.Equal(EventFormat.Encounter, (await View(http, encounter.Code)).Format);
+    }
+
+    [Fact]
+    public async Task Automatic_rounds_and_hidden_standings()
+    {
+        var http = Server();
+        var (a, b) = await MaiselCabals();
+        var t = await Read<TournamentCreated>(await http.PostAsJsonAsync("/api/tournaments",
+            new CreateTournamentRequest("Rencontre", null, 0, 2, Format: EventFormat.Encounter, AutoRounds: true, HideStandings: true),
+            TournamentJson.Options));
+        var ana = await Register(http, t.Code, "Ana", a, b);
+        await Register(http, t.Code, "Bo", a, b);
+        await Register(http, t.Code, "Cy", a, b);
+        var view = await View(http, t.Code);
+        Assert.Equal((true, 2, true), (view.AutoRounds, view.RoundCount, view.StandingsHidden));    // 3 players: 2 rounds
+
+        var url = $"/api/tournaments/{t.Code}";
+        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/start", organizer: t.OrganizerToken))).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken))).StatusCode);
+
+        // Standings: for the organizer only, until they show them.
+        Assert.Empty((await View(http, t.Code)).Standings);
+        Assert.Empty((await View(http, t.Code, player: ana.PlayerToken)).Standings);
+        Assert.Equal(3, (await View(http, t.Code, organizer: t.OrganizerToken)).Standings.Count);
+        Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/standings", new StandingsRequest(false)))).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/standings", new StandingsRequest(false), organizer: t.OrganizerToken))).StatusCode);
+        var shown = await View(http, t.Code);
+        Assert.Equal((false, 3), (shown.StandingsHidden, shown.Standings.Count));
+    }
+
+    [Fact]
     public async Task Password_too_short_refused_at_creation()
     {
         var response = await Server().PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Open", null, 3, 2, PairingMode.Swiss, false, "1234"), TournamentJson.Options);
+            new CreateTournamentRequest("Open", null, 3, 2, "1234"), TournamentJson.Options);
         Assert.Equal("password", Assert.Single((await Read<ProblemList>(response)).Problems).Key);
     }
 
@@ -304,7 +343,7 @@ public sealed class TournamentApiTests : IDisposable
     {
         var http = Server();
         var t = await Read<TournamentCreated>(await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Open", null, 3, 2, PairingMode.Swiss, false, "secret-du-club"), TournamentJson.Options));
+            new CreateTournamentRequest("Open", null, 3, 2, "secret-du-club"), TournamentJson.Options));
         var statuses = new List<HttpStatusCode>();
         for (var i = 0; i < 11; i++)
             statuses.Add((await http.PostAsJsonAsync($"/api/tournaments/{t.Code}/organizer/login", new PasswordRequest("devine" + i), TournamentJson.Options)).StatusCode);
@@ -316,7 +355,7 @@ public sealed class TournamentApiTests : IDisposable
     {
         var (a, b) = await MaiselCabals();
         var created = await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Stats", null, 1, 2, PairingMode.Swiss, false, null, exclude), TournamentJson.Options);
+            new CreateTournamentRequest("Stats", null, 1, 2, null, exclude), TournamentJson.Options);
         var t = await Read<TournamentCreated>(created);
         var url = $"/api/tournaments/{t.Code}";
         await Register(http, t.Code, "Ana", a, b);
@@ -467,7 +506,7 @@ public sealed class TournamentApiTests : IDisposable
     public async Task Invalid_settings_refused()
     {
         var response = await Server().PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest(" ", null, 0, 2, PairingMode.Alignment, false), TournamentJson.Options);
+            new CreateTournamentRequest(" ", null, 0, 2), TournamentJson.Options);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(new[] { "tournamentName", "roundCount" }, (await Read<ProblemList>(response)).Problems.Select(p => p.Key));
     }
@@ -479,7 +518,7 @@ public sealed class TournamentApiTests : IDisposable
         await Create(http);
         await Create(http);
         var third = await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Trop", null, 3, 2, PairingMode.Swiss, false), TournamentJson.Options);
+            new CreateTournamentRequest("Trop", null, 3, 2), TournamentJson.Options);
         Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
     }
 

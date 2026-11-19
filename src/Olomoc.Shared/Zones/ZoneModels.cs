@@ -5,8 +5,8 @@ using Olomoc.Tournaments.Stats;
 namespace Olomoc.Zones;
 
 // The Block: games played outside tournaments, recorded in zones (a club, an event, a
-// period of the year, online). Each zone has its statistics and its dominance (Light or Darkness,
-// and the leading faction of that alignment). Never a ranking of people: player names are optional,
+// period of the year, online). Each zone has its statistics and its dominance (the leading
+// faction). Never a ranking of people: player names are optional,
 // shown in the list of games, never counted.
 
 /// <summary>Kind of zone: for the display only.</summary>
@@ -15,7 +15,7 @@ public enum ZoneKind { Club, Event, Period, Online }
 /// <summary>How the dominance of a zone is decided: number of wins, win rate, VP scored.</summary>
 public enum DominanceMode { Wins, WinRate, VictoryPoints }
 
-/// <summary>Duel (1 v 1), or two teams of two players of the same alignment, Light against Darkness.</summary>
+/// <summary>Duel (1 v 1), or two teams of two players (2 v 2).</summary>
 public enum GameFormat { Duel, Teams }
 
 /// <summary>Upcoming (before its start date), open (games accepted), closed (by hand, or end date passed).</summary>

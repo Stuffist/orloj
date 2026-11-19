@@ -2,12 +2,16 @@ using Olomoc.Models;
 
 namespace Olomoc.Tournaments;
 
-// Tournament as stored by the server (one JSON document per tournament, in the database).
-// Players are referred to by their Id; secrets (tokens) are only kept as hashes.
-// Official round sheet: one faction and two cabals per player, tournament points 0/1/3,
-// cumulative VP difference.
+// Event (a tournament or a Dystopian Encounter) as stored by the server (one JSON document per
+// event, in the database; "Tournament" in the code, the API and the storage). Players are referred
+// to by their Id; secrets (tokens) are only kept as hashes. Official round sheet: one faction and
+// two cabals per player, tournament points 0/1/3, cumulative VP difference.
 
-public enum PairingMode { Swiss, Alignment }
+/// <summary>
+/// Format of an event: a <b>tournament</b> (Swiss rounds) or a <b>Dystopian Encounter</b> (random
+/// pairings every round); both without rematch nor mirror match (see <see cref="Pairer"/>).
+/// </summary>
+public enum EventFormat { Tournament, Encounter }
 
 /// <summary>Registrations open → tournament started (registrations closed, lists revealed) → finished.</summary>
 public enum TournamentPhase { Registration, Started, Finished }
@@ -20,10 +24,13 @@ public sealed class Tournament : IStoredDocument
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";
     public DateOnly? Date { get; set; }
-    public int RoundCount { get; set; } = 3;            // planned rounds
+    public int RoundCount { get; set; } = 3;            // planned rounds (auto: fixed at the start)
+    /// <summary>Number of rounds deduced from the players (see <see cref="TournamentRules.AutoRoundCount"/>).</summary>
+    public bool AutoRounds { get; set; }
     public int CabalsPerPlayer { get; set; } = 2;
-    public PairingMode Pairing { get; set; } = PairingMode.Swiss;
-    public bool AvoidSameAlignment { get; set; }        // Swiss round: prefer opposite alignments
+    public EventFormat Format { get; set; } = EventFormat.Tournament;
+    /// <summary>Standings hidden from the players and the visitors (the organizer still sees them).</summary>
+    public bool HideStandings { get; set; }
     public bool ExcludeFromStats { get; set; }          // test tournament: outside the statistics
     /// <summary>
     /// Zone of the Block the tournament counts for (code, chosen at creation; name kept
