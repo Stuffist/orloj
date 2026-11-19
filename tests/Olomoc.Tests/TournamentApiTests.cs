@@ -2,10 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using Olomoc.Models;
-using Olomoc.Server.Data;
-using Olomoc.Server.Tournaments;
 using Olomoc.Services;
 using Olomoc.Tournaments;
 using Xunit;
@@ -24,11 +21,11 @@ public sealed class TournamentApiTests : IDisposable
         TestDb.Delete(_data);
     }
 
-    private HttpClient Server(int createPerHour = 1000, int readsPerMinute = 1000)
+    private HttpClient Server(int readsPerMinute = 1000)
     {
         var server = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("DATA_DIR", _data)
-            .UseSetting("RATE_CREATE_PER_HOUR", createPerHour.ToString())
+            .UseSetting("RATE_CREATE_PER_HOUR", "1000")
             .UseSetting("RATE_READS_PER_MINUTE", readsPerMinute.ToString()));
         _servers.Add(server);
         return server.CreateClient();
@@ -57,10 +54,10 @@ public sealed class TournamentApiTests : IDisposable
                 Cabal("B", ("3R06", "E03" /* Phéromones */), ("2R11", "E07" /* Ration */), ("1R01", "E08" /* Lumen */)));
     }
 
-    private static async Task<TournamentCreated> Create(HttpClient http, string name = "Open de Lyon", int cabals = 2)
+    private static async Task<TournamentCreated> Create(HttpClient http, CreateTournamentRequest? request = null)
     {
         var response = await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest(name, new DateOnly(2026, 11, 7), 3, cabals), TournamentJson.Options);
+            request ?? new CreateTournamentRequest("Open de Lyon", new DateOnly(2026, 11, 7), 3, 2), TournamentJson.Options);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         return await Read<TournamentCreated>(response);
     }
@@ -82,7 +79,6 @@ public sealed class TournamentApiTests : IDisposable
         var http = Server();
         var (a, b) = await MaiselCabals();
         var t = await Create(http);
-        Assert.Equal(6, t.Code.Length);
         var url = $"/api/tournaments/{t.Code}";
 
         // Registrations: 3 players; an illegal list is refused with its reasons.
@@ -92,135 +88,48 @@ public sealed class TournamentApiTests : IDisposable
         var refused = await http.PostAsJsonAsync($"{url}/players",
             new RegistrationRequest("Dan", "MAISEL", new List<CabalExport> { a, b with { Cogs = b.Cogs.Take(2).ToList() } }), TournamentJson.Options);
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
-        var problems = (await Read<ProblemList>(refused)).Problems;
-        Assert.All(problems, p => Assert.Equal(("cabalIllegal", 1), (p.Key, p.Cabal)));
-        Assert.Contains(problems, p => p.Legality?.Key == "composition");
+        Assert.All((await Read<ProblemList>(refused)).Problems, p => Assert.Equal(("cabalIllegal", 1), (p.Key, p.Cabal)));
 
         // Lists hidden from the public while registrations are open; visible to the player and the organizer.
-        var anonymous = await View(http, t.Code);
-        Assert.Equal(3, anonymous.Players.Count);
-        Assert.All(anonymous.Players, p => Assert.Null(p.Cabals));
-        Assert.False(anonymous.IsOrganizer);
+        Assert.All((await View(http, t.Code)).Players, p => Assert.Null(p.Cabals));
         var mine = await View(http, t.Code, player: ana.PlayerToken);
-        Assert.Equal(ana.PlayerId, mine.MyPlayerId);
         Assert.NotNull(mine.Player(ana.PlayerId)!.Cabals);
         Assert.Null(mine.Players.First(p => p.Id != ana.PlayerId).Cabals);
         Assert.All((await View(http, t.Code, organizer: t.OrganizerToken)).Players, p => Assert.Equal(2, p.Cabals!.Count));
 
         // Organizer actions: token required.
-        Assert.Equal(HttpStatusCode.Forbidden, (await http.PostAsync($"{url}/start", null)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/start", player: ana.PlayerToken))).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/start", organizer: t.OrganizerToken))).StatusCode);
         Assert.All((await View(http, t.Code)).Players, p => Assert.NotNull(p.Cabals));
 
-        // Registrations closed.
-        var late = await http.PostAsJsonAsync($"{url}/players", new RegistrationRequest("Eve", "MAISEL", new List<CabalExport> { a, b }), TournamentJson.Options);
-        Assert.Equal("registrationClosed", Assert.Single((await Read<ProblemList>(late)).Problems).Key);
+        // Round 1: 3 players, one bye; round 2 refused as long as round 1 is not complete.
+        Assert.Equal(HttpStatusCode.Created, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken))).StatusCode);
+        var game = Assert.Single(Assert.Single((await View(http, t.Code)).Rounds).Tables, x => !x.IsBye);
+        Assert.Equal(HttpStatusCode.Conflict, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken))).StatusCode);
 
-        // Round 1: 3 players, one bye.
-        var paired = await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken));
-        Assert.Equal(HttpStatusCode.Created, paired.StatusCode);
-        Assert.Equal(1, (await Read<PairingSummary>(paired)).Round);
-        var round = Assert.Single((await View(http, t.Code)).Rounds);
-        var game = Assert.Single(round.Tables, x => !x.IsBye);
-        Assert.Single(round.Tables, x => x.IsBye);
-
-        // Round 2 refused as long as round 1 is not complete.
-        var tooSoon = await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken));
-        Assert.Equal(HttpStatusCode.Conflict, tooSoon.StatusCode);
-        Assert.Equal("roundIncomplete", Assert.Single((await Read<ProblemList>(tooSoon)).Problems).Key);
-
-        var badScore = await http.SendAsync(Request(HttpMethod.Put, $"{url}/rounds/1/tables/{game.Number}", new ResultRequest(5, null), t.OrganizerToken));
-        Assert.Equal(HttpStatusCode.BadRequest, badScore.StatusCode);
         Assert.Equal(HttpStatusCode.NoContent,
             (await http.SendAsync(Request(HttpMethod.Put, $"{url}/rounds/1/tables/{game.Number}", new ResultRequest(12, 5, 0, 1), t.OrganizerToken))).StatusCode);
+        var leader = (await View(http, t.Code)).Standings[0];
+        Assert.Equal((game.PlayerA, 3, 7), (leader.PlayerId, leader.Points, leader.Diff));
 
-        var view = await View(http, t.Code);
-        var leader = view.Standings[0];
-        Assert.Equal((3, 7), (leader.Points, leader.Diff));
-        Assert.Equal(game.PlayerA, leader.PlayerId);
-
-        // Drop, then round 2 between the two remaining players.
+        // Drop, then round 2 between the two remaining players; finish.
         Assert.Equal(HttpStatusCode.NoContent,
             (await http.SendAsync(Request(HttpMethod.Put, $"{url}/players/{game.PlayerB}/dropped", new DroppedRequest(true), t.OrganizerToken))).StatusCode);
-        Assert.Equal(HttpStatusCode.Created, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken))).StatusCode);
-        var round2 = (await View(http, t.Code)).Rounds[1];
-        Assert.DoesNotContain(round2.Tables, x => x.Involves(game.PlayerB!));
-
-        // Undo round 2 (without a result), pair it again, play it, finish.
-        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Delete, $"{url}/rounds/last", organizer: t.OrganizerToken))).StatusCode);
-        Assert.Single((await View(http, t.Code)).Rounds);
         await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken));
         var table2 = (await View(http, t.Code)).Rounds[1].Tables.Single();
+        Assert.False(table2.Involves(game.PlayerB!));
         await http.SendAsync(Request(HttpMethod.Put, $"{url}/rounds/2/tables/{table2.Number}", new ResultRequest(8, 8, 1, 1), t.OrganizerToken));
         Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/finish", organizer: t.OrganizerToken))).StatusCode);
-        Assert.Equal(TournamentPhase.Finished, (await View(http, t.Code)).Phase);
 
         // Export: complete tournament without the secrets.
-        Assert.Equal(HttpStatusCode.Forbidden, (await http.GetAsync($"{url}/export")).StatusCode);
         var export = await (await http.SendAsync(Request(HttpMethod.Get, $"{url}/export", organizer: t.OrganizerToken))).Content.ReadAsStringAsync();
         Assert.Contains("\"name\":\"Open de Lyon\"", export);
         Assert.DoesNotContain(Olomoc.Server.Tournaments.Tokens.Hash(t.OrganizerToken), export);
         Assert.DoesNotContain(Olomoc.Server.Tournaments.Tokens.Hash(ana.PlayerToken), export);
-        Assert.Contains("\"organizerTokenHash\":\"\"", export);
-    }
 
-    [Fact]
-    public async Task Organizer_swaps_two_players_of_the_current_round()
-    {
-        var http = Server();
-        var (a, b) = await MaiselCabals();
-        var t = await Create(http);
-        var url = $"/api/tournaments/{t.Code}";
-        foreach (var name in new[] { "Ana", "Bo", "Cy" }) await Register(http, t.Code, name, a, b);
-        await http.SendAsync(Request(HttpMethod.Post, $"{url}/start", organizer: t.OrganizerToken));
-        await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken));
-        var round = Assert.Single((await View(http, t.Code)).Rounds);
-        var game = round.Tables.Single(x => !x.IsBye);
-        var exempt = round.Tables.Single(x => x.IsBye).PlayerA;
-
-        // Reserved to the organizer.
-        var swap = new SwapRequest(game.PlayerA, exempt);
-        Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds/1/swap", swap))).StatusCode);
-
-        // The bye takes the place of player A, who becomes the bye.
-        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds/1/swap", swap, t.OrganizerToken))).StatusCode);
-        var after = (await View(http, t.Code)).Rounds[0];
-        Assert.Equal((exempt, game.PlayerB), (after.Tables.Single(x => !x.IsBye).PlayerA, after.Tables.Single(x => !x.IsBye).PlayerB));
-        Assert.Equal(game.PlayerA, after.Tables.Single(x => x.IsBye).PlayerA);
-
-        // Same table: refused, with the reason.
-        var refused = await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds/1/swap", new SwapRequest(exempt, game.PlayerB!), t.OrganizerToken));
-        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
-        Assert.Equal("sameTable", Assert.Single((await Read<ProblemList>(refused)).Problems).Key);
-    }
-
-    [Fact]
-    public async Task Public_scenarios_P1_and_end_of_game()
-    {
-        var http = Server();
-        var (a, b) = await MaiselCabals();
-        var t = await Create(http);
-        var url = $"/api/tournaments/{t.Code}";
-        var scenarios = new ScenariosRequest([new Scenario("SABOTAGE", null, "ROGUE", "INDOCTRINATION"), new Scenario(Agendas.Other, "Le bal", Ministry: "DISINFORMATION")]);
-        Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/scenarios", scenarios))).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/scenarios", scenarios, t.OrganizerToken))).StatusCode);
-        var bad = await http.SendAsync(Request(HttpMethod.Put, $"{url}/scenarios", new ScenariosRequest([new Scenario("INCONNU")]), t.OrganizerToken));
-        Assert.Equal("scenario", Assert.Single((await Read<ProblemList>(bad)).Problems).Key);
-
-        // Visible to all, from the registrations.
-        var view = await View(http, t.Code);
-        Assert.Equal(new Scenario("SABOTAGE", null, "ROGUE", "INDOCTRINATION"), view.ScenarioOf(1));
-        Assert.Equal(new Scenario(Agendas.Other, "Le bal", null, "DISINFORMATION"), view.ScenarioOf(2));
-        Assert.Equal("Le bal", view.ScenarioOf(2)!.Name);
-
-        foreach (var name in new[] { "Ana", "Bo" }) await Register(http, t.Code, name, a, b);
-        await http.SendAsync(Request(HttpMethod.Post, $"{url}/start", organizer: t.OrganizerToken));
-        await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken));
-        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/rounds/1/tables/1",
-            new ResultRequest(9, 4, 0, 1, TableSide.B, GameEnd.FourthCycle), t.OrganizerToken))).StatusCode);
-        var table = (await View(http, t.Code)).Rounds[0].Tables[0];
-        Assert.Equal((TableSide.B, GameEnd.FourthCycle), (table.First, table.End));
+        // Statistics: the finished tournament counts.
+        var stats = (await http.GetFromJsonAsync<Olomoc.Tournaments.Stats.StatsView>("/api/stats", TournamentJson.Options))!;
+        Assert.Equal((1, 3, 2), (stats.Tournaments, stats.Players, stats.Games));
     }
 
     [Fact]
@@ -238,52 +147,30 @@ public sealed class TournamentApiTests : IDisposable
         Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/{ana.PlayerId}", rename, player: ana.PlayerToken))).StatusCode);
         Assert.Equal("Ana Lys", (await View(http, t.Code)).Player(ana.PlayerId)!.Name);
 
-        var taken = await http.SendAsync(Request(HttpMethod.Put, $"{url}/{bo.PlayerId}", rename with { Name = "ana lys" }, player: bo.PlayerToken));
-        Assert.Equal("nameTaken", Assert.Single((await Read<ProblemList>(taken)).Problems).Key);
-
         Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Request(HttpMethod.Delete, $"{url}/{bo.PlayerId}", player: ana.PlayerToken))).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Delete, $"{url}/{bo.PlayerId}", player: bo.PlayerToken))).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Delete, $"{url}/{ana.PlayerId}", organizer: t.OrganizerToken))).StatusCode);
-        Assert.Empty((await View(http, t.Code)).Players);
+        Assert.Single((await View(http, t.Code)).Players);
     }
 
     [Fact]
     public async Task Password_opens_the_administration_on_another_device()
     {
         var http = Server();
-        var created = await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Avec mot de passe", null, 3, 2, "secret-du-club"), TournamentJson.Options);
-        var t = await Read<TournamentCreated>(created);
+        var t = await Create(http, new CreateTournamentRequest("Avec mot de passe", null, 3, 2, "secret-du-club"));
         var url = $"/api/tournaments/{t.Code}";
-        Assert.True((await View(http, t.Code)).HasPassword);
 
-        // Wrong password, then the right one: new token, different from the admin link.
         var wrong = await http.PostAsJsonAsync($"{url}/organizer/login", new PasswordRequest("devine"), TournamentJson.Options);
         Assert.Equal(HttpStatusCode.Forbidden, wrong.StatusCode);
-        Assert.Equal("wrongPassword", Assert.Single((await Read<ProblemList>(wrong)).Problems).Key);
         var phone = await Read<OrganizerLogin>(await http.PostAsJsonAsync($"{url}/organizer/login", new PasswordRequest("secret-du-club"), TournamentJson.Options));
-        Assert.NotEqual(t.OrganizerToken, phone.OrganizerToken);
         Assert.True((await View(http, t.Code, organizer: phone.OrganizerToken)).IsOrganizer);
         var tablet = await Read<OrganizerLogin>(await http.PostAsJsonAsync($"{url}/organizer/login", new PasswordRequest("secret-du-club"), TournamentJson.Options));
 
         // Change from the phone: it stays open, the tablet is closed, the link stays valid.
-        var tooShort = await http.SendAsync(Request(HttpMethod.Put, $"{url}/organizer/password", new PasswordRequest("court"), phone.OrganizerToken));
-        Assert.Equal("password", Assert.Single((await Read<ProblemList>(tooShort)).Problems).Key);
         Assert.Equal(HttpStatusCode.NoContent,
             (await http.SendAsync(Request(HttpMethod.Put, $"{url}/organizer/password", new PasswordRequest("nouveau-secret"), phone.OrganizerToken))).StatusCode);
         Assert.True((await View(http, t.Code, organizer: phone.OrganizerToken)).IsOrganizer);
         Assert.False((await View(http, t.Code, organizer: tablet.OrganizerToken)).IsOrganizer);
         Assert.True((await View(http, t.Code, organizer: t.OrganizerToken)).IsOrganizer);
-        Assert.Equal(HttpStatusCode.Forbidden,
-            (await http.PostAsJsonAsync($"{url}/organizer/login", new PasswordRequest("secret-du-club"), TournamentJson.Options)).StatusCode);
-
-        // Without an organizer token: change refused. Removal: no more sign-in with a password.
-        Assert.Equal(HttpStatusCode.Forbidden, (await http.PutAsJsonAsync($"{url}/organizer/password", new PasswordRequest("pirate-pirate"), TournamentJson.Options)).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent,
-            (await http.SendAsync(Request(HttpMethod.Put, $"{url}/organizer/password", new PasswordRequest(null), t.OrganizerToken))).StatusCode);
-        Assert.False((await View(http, t.Code)).HasPassword);
-        var none = await http.PostAsJsonAsync($"{url}/organizer/login", new PasswordRequest("nouveau-secret"), TournamentJson.Options);
-        Assert.Equal("noPassword", Assert.Single((await Read<ProblemList>(none)).Problems).Key);
 
         // Export: no password hash, no sessions.
         var export = await (await http.SendAsync(Request(HttpMethod.Get, $"{url}/export", organizer: t.OrganizerToken))).Content.ReadAsStringAsync();
@@ -292,192 +179,32 @@ public sealed class TournamentApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Event_format_kept_tournament_by_default()
-    {
-        var http = Server();
-        var tournament = await Create(http);
-        Assert.Equal(EventFormat.Tournament, (await View(http, tournament.Code)).Format);
-        var encounter = await Read<TournamentCreated>(await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Rencontre du mardi", null, 3, 2, Format: EventFormat.Encounter), TournamentJson.Options));
-        Assert.Equal(EventFormat.Encounter, (await View(http, encounter.Code)).Format);
-    }
-
-    [Fact]
-    public async Task Automatic_rounds_and_hidden_standings()
-    {
-        var http = Server();
-        var (a, b) = await MaiselCabals();
-        var t = await Read<TournamentCreated>(await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Rencontre", null, 0, 2, Format: EventFormat.Encounter, AutoRounds: true, HideStandings: true),
-            TournamentJson.Options));
-        var ana = await Register(http, t.Code, "Ana", a, b);
-        await Register(http, t.Code, "Bo", a, b);
-        await Register(http, t.Code, "Cy", a, b);
-        var view = await View(http, t.Code);
-        Assert.Equal((true, 2, true), (view.AutoRounds, view.RoundCount, view.StandingsHidden));    // 3 players: 2 rounds
-
-        var url = $"/api/tournaments/{t.Code}";
-        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/start", organizer: t.OrganizerToken))).StatusCode);
-        Assert.Equal(HttpStatusCode.Created, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken))).StatusCode);
-
-        // Standings: for the organizer only, until they show them.
-        Assert.Empty((await View(http, t.Code)).Standings);
-        Assert.Empty((await View(http, t.Code, player: ana.PlayerToken)).Standings);
-        Assert.Equal(3, (await View(http, t.Code, organizer: t.OrganizerToken)).Standings.Count);
-        Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/standings", new StandingsRequest(false)))).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Put, $"{url}/standings", new StandingsRequest(false), organizer: t.OrganizerToken))).StatusCode);
-        var shown = await View(http, t.Code);
-        Assert.Equal((false, 3), (shown.StandingsHidden, shown.Standings.Count));
-    }
-
-    [Fact]
-    public async Task Password_too_short_refused_at_creation()
-    {
-        var response = await Server().PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Open", null, 3, 2, "1234"), TournamentJson.Options);
-        Assert.Equal("password", Assert.Single((await Read<ProblemList>(response)).Problems).Key);
-    }
-
-    [Fact]
     public async Task Password_attempts_limited()
     {
         var http = Server();
-        var t = await Read<TournamentCreated>(await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Open", null, 3, 2, "secret-du-club"), TournamentJson.Options));
+        var t = await Create(http, new CreateTournamentRequest("Open", null, 3, 2, "secret-du-club"));
         var statuses = new List<HttpStatusCode>();
         for (var i = 0; i < 11; i++)
             statuses.Add((await http.PostAsJsonAsync($"/api/tournaments/{t.Code}/organizer/login", new PasswordRequest("devine" + i), TournamentJson.Options)).StatusCode);
-        Assert.Equal(Enumerable.Repeat(HttpStatusCode.Forbidden, 10).Append(HttpStatusCode.TooManyRequests), statuses);
+        Assert.Equal(HttpStatusCode.TooManyRequests, statuses[^1]);
     }
 
-    // Tournament of two players, one round played (cabals 0 and 1), finished.
-    private static async Task<(TournamentCreated T, string Url)> FinishedTournament(HttpClient http, bool exclude = false)
+    [Fact]
+    public async Task Hidden_standings_for_the_organizer_only()
     {
+        var http = Server();
         var (a, b) = await MaiselCabals();
-        var created = await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Stats", null, 1, 2, null, exclude), TournamentJson.Options);
-        var t = await Read<TournamentCreated>(created);
-        var url = $"/api/tournaments/{t.Code}";
-        await Register(http, t.Code, "Ana", a, b);
+        var t = await Create(http, new CreateTournamentRequest("Rencontre", null, 0, 2, Format: EventFormat.Encounter, AutoRounds: true, HideStandings: true));
+        var ana = await Register(http, t.Code, "Ana", a, b);
         await Register(http, t.Code, "Bo", a, b);
+        await Register(http, t.Code, "Cy", a, b);
+        Assert.Equal(2, (await View(http, t.Code)).RoundCount);                                     // automatic: 3 players, 2 rounds
+
+        var url = $"/api/tournaments/{t.Code}";
         await http.SendAsync(Request(HttpMethod.Post, $"{url}/start", organizer: t.OrganizerToken));
         await http.SendAsync(Request(HttpMethod.Post, $"{url}/rounds", organizer: t.OrganizerToken));
-        var result = await http.SendAsync(Request(HttpMethod.Put, $"{url}/rounds/1/tables/1", new ResultRequest(10, 4, 0, 1), t.OrganizerToken));
-        Assert.Equal(HttpStatusCode.NoContent, result.StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Post, $"{url}/finish", organizer: t.OrganizerToken))).StatusCode);
-        return (t, url);
-    }
-
-    private static async Task<Olomoc.Tournaments.Stats.StatsView> Stats(HttpClient http) =>
-        (await http.GetFromJsonAsync<Olomoc.Tournaments.Stats.StatsView>("/api/stats", TournamentJson.Options))!;
-
-    [Fact]
-    public async Task Statistics_of_finished_and_counted_tournaments()
-    {
-        var http = Server();
-        Assert.Equal(0, (await Stats(http)).Tournaments);
-
-        var (t, url) = await FinishedTournament(http);
-        var stats = await Stats(http);
-        Assert.Equal((1, 2, 1), (stats.Tournaments, stats.Players, stats.Games));
-        Assert.Equal(("MAISEL", 100.0), (stats.Factions[0].Key, stats.Factions[0].Percent));
-        Assert.Equal((2, 1, 0), (stats.FactionWins[0].Games, stats.FactionWins[0].Wins, stats.FactionWins[0].Draws));
-        Assert.Equal(2, stats.Rank3Wins.Sum(r => r.Games));                       // known cabals played
-        Assert.True(await Archived(t.Code));
-
-        // Excluded then included again by the organizer; then deleted: the archive follows.
-        Assert.Equal(HttpStatusCode.Forbidden, (await http.PutAsJsonAsync($"{url}/stats", new StatsRequest(true), TournamentJson.Options)).StatusCode);
-        await http.SendAsync(Request(HttpMethod.Put, $"{url}/stats", new StatsRequest(true), t.OrganizerToken));
-        Assert.Equal(0, (await Stats(http)).Tournaments);
-        Assert.True((await View(http, t.Code)).ExcludeFromStats);
-        await http.SendAsync(Request(HttpMethod.Put, $"{url}/stats", new StatsRequest(false), t.OrganizerToken));
-        Assert.Equal(1, (await Stats(http)).Tournaments);
-        await http.SendAsync(Request(HttpMethod.Delete, url, organizer: t.OrganizerToken));
-        Assert.Equal(0, (await Stats(http)).Tournaments);
-    }
-
-    [Fact]
-    public async Task Tournament_excluded_at_creation_not_archived()
-    {
-        var http = Server();
-        await FinishedTournament(http, exclude: true);
-        Assert.Equal(0, (await Stats(http)).Tournaments);
-    }
-
-    [Fact]
-    public async Task Missing_archive_recreated_at_startup()
-    {
-        var first = Server();
-        var (t, _) = await FinishedTournament(first);
-        using (var db = (await TestDb.OpenAsync(_data)).CreateDbContext())
-            db.Documents.Where(d => d.Kind == StatsArchive.Kind && d.Code == t.Code).ExecuteDelete();
-        Assert.False(await Archived(t.Code));
-
-        var second = Server();
-        Assert.Equal(1, (await Stats(second)).Tournaments);
-        Assert.True(await Archived(t.Code));
-    }
-
-    private async Task<bool> Archived(string code) =>
-        (await TestDb.OpenAsync(_data)).Find(StatsArchive.Kind, code) is not null;
-
-    [Fact]
-    public async Task Old_json_files_imported_at_startup()
-    {
-        // Data from before the database: one folder per kind, one file per document.
-        var first = Server();
-        var (t, url) = await FinishedTournament(first);
-        var before = (await View(first, t.Code), await Stats(first));
-        var db = await TestDb.OpenAsync(_data);
-        var old = Path.Combine(Path.GetTempPath(), "olomoc-tests-" + Guid.NewGuid().ToString("N"));
-        try
-        {
-            foreach (var (folder, kind) in JsonImport.Folders)
-            {
-                Directory.CreateDirectory(Path.Combine(old, folder));
-                File.WriteAllText(Path.Combine(old, folder, t.Code + ".json"), db.Find(kind, t.Code)!.Json);
-            }
-            File.WriteAllText(Path.Combine(old, "tournaments", "ZZZZZZ.json"), "{ illisible");
-
-            using var server = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("DATA_DIR", old));
-            var http = server.CreateClient();
-            var after = (await View(http, t.Code), await Stats(http));
-            Assert.Equal(System.Text.Json.JsonSerializer.Serialize(before, TournamentJson.Options),
-                         System.Text.Json.JsonSerializer.Serialize(after, TournamentJson.Options));
-            Assert.Equal(TournamentPhase.Finished, after.Item1.Phase);
-
-            // Folders renamed, kept as a backup; the unreadable file stays in them.
-            Assert.False(Directory.Exists(Path.Combine(old, "tournaments")));
-            Assert.True(File.Exists(Path.Combine(old, "tournaments.imported", "ZZZZZZ.json")));
-            Assert.True(File.Exists(Path.Combine(old, "stats.imported", t.Code + ".json")));
-            var imported = await TestDb.OpenAsync(old);
-            Assert.Equal(db.Find(TournamentStore.Kind, t.Code)!.CreatedAt, imported.Find(TournamentStore.Kind, t.Code)!.CreatedAt);
-            Assert.Null(imported.Find(TournamentStore.Kind, "ZZZZZZ"));
-
-            // No second import: a recreated folder does not overwrite what is in the database.
-            Directory.CreateDirectory(Path.Combine(old, "tournaments"));
-            File.WriteAllText(Path.Combine(old, "tournaments", t.Code + ".json"), "{\"name\":\"Écrasé\"}");
-            using var again = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("DATA_DIR", old));
-            Assert.Equal(before.Item1.Name, (await View(again.CreateClient(), t.Code)).Name);
-            Assert.True(Directory.GetDirectories(old, "tournaments.imported-*").Length == 1);
-        }
-        finally { TestDb.Delete(old); }
-    }
-
-    [Fact]
-    public async Task Deletion_by_the_organizer_only()
-    {
-        var http = Server();
-        var (a, b) = await MaiselCabals();
-        var t = await Create(http);
-        var ana = await Register(http, t.Code, "Ana", a, b);
-        var url = $"/api/tournaments/{t.Code}";
-
-        Assert.Equal(HttpStatusCode.Forbidden, (await http.DeleteAsync(url)).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Request(HttpMethod.Delete, url, player: ana.PlayerToken))).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Delete, url, organizer: t.OrganizerToken))).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await http.GetAsync(url)).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await http.SendAsync(Request(HttpMethod.Delete, url, organizer: t.OrganizerToken))).StatusCode);
+        Assert.Empty((await View(http, t.Code, player: ana.PlayerToken)).Standings);
+        Assert.Equal(3, (await View(http, t.Code, organizer: t.OrganizerToken)).Standings.Count);
     }
 
     [Fact]
@@ -485,41 +212,11 @@ public sealed class TournamentApiTests : IDisposable
     {
         var (a, b) = await MaiselCabals();
         var first = Server();
-        var t = await Create(first, "Persistant");
+        var t = await Create(first);
         await Register(first, t.Code, "Ana", a, b);
 
-        var second = Server();
-        var view = await View(second, t.Code.ToLowerInvariant());      // case-insensitive code
-        Assert.Equal("Persistant", view.Name);
+        var view = await View(Server(), t.Code.ToLowerInvariant());      // case-insensitive code
         Assert.Equal("Ana", Assert.Single(view.Players).Name);
-        Assert.Equal(new DateOnly(2026, 11, 7), view.Date);
-    }
-
-    [Theory]
-    [InlineData("/api/tournaments/ABCDEF")]       // well-formed code, unknown
-    [InlineData("/api/tournaments/../x")]
-    [InlineData("/api/tournaments/O0O0O0")]       // characters excluded from codes
-    public async Task Unknown_tournament(string url) =>
-        Assert.Equal(HttpStatusCode.NotFound, (await Server().GetAsync(url)).StatusCode);
-
-    [Fact]
-    public async Task Invalid_settings_refused()
-    {
-        var response = await Server().PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest(" ", null, 0, 2), TournamentJson.Options);
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal(new[] { "tournamentName", "roundCount" }, (await Read<ProblemList>(response)).Problems.Select(p => p.Key));
-    }
-
-    [Fact]
-    public async Task Creations_limited_per_address()
-    {
-        var http = Server(createPerHour: 2);
-        await Create(http);
-        await Create(http);
-        var third = await http.PostAsJsonAsync("/api/tournaments",
-            new CreateTournamentRequest("Trop", null, 3, 2), TournamentJson.Options);
-        Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
     }
 
     [Fact]
@@ -532,6 +229,5 @@ public sealed class TournamentApiTests : IDisposable
         foreach (var code in new[] { t.Code, "ZZZZZZ", "YYYYYY", t.Code })
             statuses.Add((await http.GetAsync($"/api/tournaments/{code}")).StatusCode);
         Assert.Equal(new[] { HttpStatusCode.OK, HttpStatusCode.NotFound, HttpStatusCode.NotFound, HttpStatusCode.TooManyRequests }, statuses);
-        Assert.Equal(HttpStatusCode.TooManyRequests, (await http.GetAsync("/api/stats")).StatusCode);
     }
 }

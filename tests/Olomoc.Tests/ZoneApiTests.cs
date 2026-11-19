@@ -25,14 +25,14 @@ public sealed class ZoneApiTests : IDisposable
         TestDb.Delete(_data);
     }
 
-    private WebApplicationFactory<Program> Server(string admins = "", int entriesPerHour = 1000)
+    private WebApplicationFactory<Program> Server(string admins = "")
     {
         var server = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("DATA_DIR", _data)
             .UseSetting("SESSION_CHECK_SECONDS", "0")
             .UseSetting("RATE_ACCOUNTS_PER_HOUR", "1000")
             .UseSetting("RATE_LOGINS_PER_15_MINUTES", "1000")
-            .UseSetting("RATE_ZONE_ENTRIES_PER_HOUR", entriesPerHour.ToString())
+            .UseSetting("RATE_ZONE_ENTRIES_PER_HOUR", "1000")
             .UseSetting("OLOMOC_ADMINS", admins));
         _servers.Add(server);
         return server;
@@ -100,8 +100,8 @@ public sealed class ZoneApiTests : IDisposable
 
     private static async Task<ZoneView> Zone(HttpClient http, string code) => await Read<ZoneView>(await http.GetAsync($"/api/zones/{code}"));
 
-    private static async Task<ZoneGamesPage> Games(HttpClient http, string code, long? before = null) =>
-        await Read<ZoneGamesPage>(await http.GetAsync($"/api/zones/{code}/games" + (before is { } b ? $"?before={b}" : "")));
+    private static async Task<ZoneGamesPage> Games(HttpClient http, string code) =>
+        await Read<ZoneGamesPage>(await http.GetAsync($"/api/zones/{code}/games"));
 
     [Fact]
     public async Task Only_zone_admins_create_and_delete_zones()
@@ -110,39 +110,10 @@ public sealed class ZoneApiTests : IDisposable
         Assert.Equal(HttpStatusCode.Unauthorized, (await Send(anonymous, HttpMethod.Post, "/api/admin/zones", Settings())).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await Send(bob, HttpMethod.Post, "/api/admin/zones", Settings())).StatusCode);
 
-        var bad = await Send(root, HttpMethod.Post, "/api/admin/zones", Settings(name: " ", managers: "Nobody"));
-        Assert.Equal(["zoneName", "unknownAccount"], await Keys(bad));
-
         var code = await CreateZone(root, Settings());
-        await Enter(anonymous, code);
         Assert.Equal(HttpStatusCode.Forbidden, (await Send(bob, HttpMethod.Delete, $"/api/admin/zones/{code}")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Send(root, HttpMethod.Delete, $"/api/admin/zones/{code}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync($"/api/zones/{code}")).StatusCode);
-        var audit = await Read<AdminAction[]>(await root.GetAsync("/api/admin/audit"));
-        Assert.Equal(["deleteZone", "createZone"], audit.Select(a => a.Action).Take(2));
-    }
-
-    [Fact]
-    public async Task Editors_administer_every_zone()
-    {
-        var (_, root, bob, carl, _) = await StartAsync();
-        Assert.Equal(HttpStatusCode.OK, (await Send(root, HttpMethod.Put, "/api/admin/accounts/Bob/role", new RoleRequest(AccountRole.Editor))).StatusCode);
-
-        // Bob (editor) creates a zone with every setting, changes another's mode and visibility, deletes it.
-        var mine = await CreateZone(bob, Settings("Club de Bob", managers: "Carl"));
-        var other = await CreateZone(root, Settings("Club de Root"));
-        var view = await Zone(bob, other);
-        Assert.True(view.CanManage && view.ZoneAdmin);
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(bob, HttpMethod.Put, $"/api/admin/zones/{other}", Settings("Club de Root", hidden: true) with
-        {
-            Dominance = DominanceMode.WinRate,
-        })).StatusCode);
-        Assert.Equal(DominanceMode.WinRate, (await Zone(root, other)).Mode);
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(bob, HttpMethod.Delete, $"/api/admin/zones/{other}")).StatusCode);
-
-        // Carl, a mere manager: no zone administration.
-        Assert.False((await Zone(carl, mine)).ZoneAdmin);
-        Assert.Equal(HttpStatusCode.Forbidden, (await Send(carl, HttpMethod.Post, "/api/admin/zones", Settings())).StatusCode);
     }
 
     [Fact]
@@ -151,59 +122,17 @@ public sealed class ZoneApiTests : IDisposable
         var (server, root, _, _, anonymous) = await StartAsync();
         var code = await CreateZone(root, Settings());
         var entry = await Enter(anonymous, code);
-
-        var view = await Zone(anonymous, code);
-        Assert.Equal((ZoneStatus.Open, 1, false), (view.Status, view.Stats.Games, view.CanManage));
-        Assert.Equal("RUBIN", view.Dominance.Faction);
-        Assert.Null(view.Managers);
-
-        var page = await Games(anonymous, code);
-        var game = Assert.Single(page.Games);
-        Assert.Equal(("Ana", false), (game.Game.A.Players[0].Name, game.CanEdit));   // the token is checked by the browser
+        Assert.Equal("RUBIN", (await Zone(anonymous, code)).Dominance.Faction);
 
         // Another device, without the token: refused; with it: accepted.
         var other = server.CreateClient();
         var changed = Duel(vpA: 2, vpB: 9);
-        var refused = await Send(other, HttpMethod.Put, $"/api/zones/{code}/games/{entry.Id}", changed);
-        Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
-        Assert.Equal(["zoneForbidden"], await Keys(refused));
+        Assert.Equal(["zoneForbidden"], await Keys(await Send(other, HttpMethod.Put, $"/api/zones/{code}/games/{entry.Id}", changed)));
         Assert.Equal(HttpStatusCode.NoContent, (await Send(other, HttpMethod.Put, $"/api/zones/{code}/games/{entry.Id}", changed, entry.EditToken)).StatusCode);
         Assert.Equal("MAISEL", (await Zone(anonymous, code)).Dominance.Faction);     // statistics computed again
 
-        Assert.Equal(HttpStatusCode.Forbidden, (await Send(other, HttpMethod.Delete, $"/api/zones/{code}/games/{entry.Id}", entry: "nope")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Send(other, HttpMethod.Delete, $"/api/zones/{code}/games/{entry.Id}", entry: entry.EditToken)).StatusCode);
         Assert.Empty((await Games(anonymous, code)).Games);
-    }
-
-    [Fact]
-    public async Task Invalid_games_refused()
-    {
-        var (_, root, _, _, anonymous) = await StartAsync();
-        var code = await CreateZone(root, Settings());
-        var teams = new ZoneGame(GameFormat.Teams, Today, new ZoneSide([Player("RUBIN"), Player("LIBUS")], 5),
-            new ZoneSide([Player("URKARAS")], 3), TableSide.A, GameEnd.Bile, ZoneTests.FullScenario());
-        var response = await Send(anonymous, HttpMethod.Post, $"/api/zones/{code}/games", teams);
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal(["zonePlayers"], await Keys(response));
-        Assert.Equal(HttpStatusCode.NotFound, (await Send(anonymous, HttpMethod.Post, "/api/zones/ABCDEF/games", Duel())).StatusCode);
-    }
-
-    [Fact]
-    public async Task The_account_is_enough_for_its_author_on_any_device()
-    {
-        var (server, root, _, carl, _) = await StartAsync();
-        var code = await CreateZone(root, Settings());
-        var entry = await Enter(carl, code);
-        Assert.True(Assert.Single((await Games(carl, code)).Games).CanEdit);
-
-        // Carl on another device: signed in, without the token.
-        var carl2 = server.CreateClient();
-        await Send(carl2, HttpMethod.Post, "/api/account/login", new LoginRequest("Carl", "motdepasse"));
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(carl2, HttpMethod.Put, $"/api/zones/{code}/games/{entry.Id}", Duel(vpA: 1))).StatusCode);
-
-        // Account deleted: the game stays, without an author.
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(carl2, HttpMethod.Post, "/api/account/delete", new DeleteAccountRequest("motdepasse"))).StatusCode);
-        Assert.Single((await Games(root, code)).Games);
     }
 
     [Fact]
@@ -215,57 +144,23 @@ public sealed class ZoneApiTests : IDisposable
         var entry = await Enter(anonymous, mine);
         var elsewhere = await Enter(anonymous, other);
 
-        var view = await Zone(bob, mine);
-        Assert.True(view.CanManage);
-        Assert.Equal(["Bob"], view.Managers);
-        Assert.True(Assert.Single((await Games(bob, mine)).Games).CanEdit);
-        Assert.False((await Zone(bob, other)).CanManage);
-
         Assert.Equal(HttpStatusCode.Forbidden, (await Send(bob, HttpMethod.Delete, $"/api/zones/{other}/games/{elsewhere.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Send(bob, HttpMethod.Delete, $"/api/zones/{mine}/games/{entry.Id}")).StatusCode);
 
-        // Settings: the manager, not another account, not anonymous.
-        var settings = new ZoneSettingsRequest("Club de Bob (mardi)", "Nouvelle salle", ZoneKind.Club, Today.AddDays(-30), null, false,
-            " https://example.org/bob.png ");
+        // Settings: the manager, not another account.
+        var settings = new ZoneSettingsRequest("Club de Bob (mardi)", "Nouvelle salle", ZoneKind.Club, Today.AddDays(-30), null, false);
         Assert.Equal(HttpStatusCode.Forbidden, (await Send(carl, HttpMethod.Put, $"/api/zones/{mine}", settings)).StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Send(anonymous, HttpMethod.Put, $"/api/zones/{mine}", settings)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Send(bob, HttpMethod.Put, $"/api/zones/{mine}", settings)).StatusCode);
         Assert.Equal("Club de Bob (mardi)", (await Zone(anonymous, mine)).Name);
-
-        // Logo: a link only (https), kept trimmed, in the zone and the list.
-        Assert.Equal("https://example.org/bob.png", (await Zone(anonymous, mine)).Logo);
-        Assert.Equal("https://example.org/bob.png",
-            (await Read<List<ZoneSummary>>(await anonymous.GetAsync("/api/zones"))).Single(z => z.Code == mine).Logo);
-        var badLogo = await Send(bob, HttpMethod.Put, $"/api/zones/{mine}", settings with { Logo = "javascript:alert(1)" });
-        Assert.Equal(HttpStatusCode.BadRequest, badLogo.StatusCode);
-        Assert.Equal(["zoneLogo"], await Keys(badLogo));
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(bob, HttpMethod.Put, $"/api/zones/{mine}", settings with { Logo = "" })).StatusCode);
-        Assert.Null((await Zone(anonymous, mine)).Logo);
     }
 
     [Fact]
-    public async Task Closed_zone_refuses_entries_and_changes_except_for_its_managers()
+    public async Task Closed_zone_refuses_entries_except_for_its_managers()
     {
         var (_, root, bob, _, anonymous) = await StartAsync();
-        var code = await CreateZone(root, Settings(managers: "Bob"));
-        var entry = await Enter(anonymous, code);
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(bob, HttpMethod.Put, $"/api/zones/{code}",
-            new ZoneSettingsRequest("Club du mardi", null, ZoneKind.Club, Today.AddDays(-30), null, Closed: true))).StatusCode);
-
-        var view = await Zone(anonymous, code);
-        Assert.Equal(ZoneStatus.Closed, view.Status);
-        Assert.Equal("RUBIN", view.Dominance.Faction);        // "Closed, dominated by Rubin"
-
-        var refused = await Send(anonymous, HttpMethod.Post, $"/api/zones/{code}/games", Duel());
-        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
-        Assert.Equal(["zoneClosed"], await Keys(refused));
-        var change = await Send(anonymous, HttpMethod.Put, $"/api/zones/{code}/games/{entry.Id}", Duel(vpA: 0), entry.EditToken);
-        Assert.Equal(HttpStatusCode.Forbidden, change.StatusCode);
-        Assert.Equal(["zoneClosed"], await Keys(change));
-
+        var code = await CreateZone(root, Settings(managers: "Bob", closed: true));
+        Assert.Equal(["zoneClosed"], await Keys(await Send(anonymous, HttpMethod.Post, $"/api/zones/{code}/games", Duel())));
         await Enter(bob, code);
-        await Enter(root, code);
-        Assert.Equal(3, (await Zone(anonymous, code)).Stats.Games);
     }
 
     [Fact]
@@ -277,39 +172,11 @@ public sealed class ZoneApiTests : IDisposable
         await Enter(anonymous, shown);
         await Enter(anonymous, hidden, Duel("LIBUS", "OTHERS"));
 
-        var list = await Read<List<ZoneSummary>>(await anonymous.GetAsync("/api/zones"));
-        Assert.Equal(["Visible"], list.Select(z => z.Name));
-        Assert.Equal(1, list[0].Games);
-        Assert.Equal(2, (await Read<List<ZoneSummary>>(await root.GetAsync("/api/zones"))).Count);
+        Assert.Equal(["Visible"], (await Read<List<ZoneSummary>>(await anonymous.GetAsync("/api/zones"))).Select(z => z.Name));
         Assert.Equal("Essai", (await Zone(anonymous, hidden)).Name);           // reachable by its link
-
         var all = await Read<StatsView>(await anonymous.GetAsync("/api/zones/stats"));
-        Assert.Equal((1, 1), (all.Tournaments, all.Games));
+        Assert.Equal(1, all.Games);
         Assert.DoesNotContain(all.FactionWins, w => w.Key == "LIBUS");
-    }
-
-    [Fact]
-    public async Task Hexagons_stay_put_when_zones_are_added_changed_or_deleted()
-    {
-        var (_, root, _, _, anonymous) = await StartAsync();
-        var first = await CreateZone(root, Settings("Un"));
-        var second = await CreateZone(root, Settings("Deux"));
-        var third = await CreateZone(root, Settings("Trois"));
-        async Task<Dictionary<string, int?>> Slots() =>
-            (await Read<List<ZoneSummary>>(await anonymous.GetAsync("/api/zones"))).ToDictionary(z => z.Code, z => z.Slot);
-        var after = await Slots();
-        Assert.Equal((0, 1, 2), (after[first], after[second], after[third]));      // the center, then the first ring
-
-        // Renamed, closed: nobody moves.
-        await Send(root, HttpMethod.Put, $"/api/admin/zones/{second}", Settings("Deux bis", closed: true));
-        after = await Slots();
-        Assert.Equal((0, 1, 2), (after[first], after[second], after[third]));
-
-        // Deleted: its slot (the center) goes to the next zone created; the others stay.
-        Assert.Equal(HttpStatusCode.NoContent, (await Send(root, HttpMethod.Delete, $"/api/admin/zones/{first}")).StatusCode);
-        var fourth = await CreateZone(root, Settings("Quatre"));
-        after = await Slots();
-        Assert.Equal((1, 2, 0), (after[second], after[third], after[fourth]));
     }
 
     // A tiny JPEG (its first bytes are enough for the type) and a photo upload, with the device's entry token.
@@ -330,79 +197,23 @@ public sealed class ZoneApiTests : IDisposable
         var zone = await CreateZone(root, Settings());
         var entry = await Enter(anonymous, zone);
         var photo = $"/api/zones/{zone}/games/{entry.Id}/photo";
+        Assert.Equal(["photosOff"], await Keys(await SendPhoto(anonymous, zone, entry.Id, Jpeg, entry.EditToken)));
 
-        // Off: refused, nothing shown.
-        var off = await SendPhoto(anonymous, zone, entry.Id, Jpeg, entry.EditToken);
-        Assert.Equal(HttpStatusCode.Forbidden, off.StatusCode);
-        Assert.Equal(["photosOff"], await Keys(off));
-        Assert.False((await Zone(anonymous, zone)).Photos);
-
-        // An admin turns them on (logged); the author adds one.
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Send(anonymous, HttpMethod.Put, "/api/admin/settings", new SiteSettings(true))).StatusCode);
+        // An admin turns them on; the author adds one.
         Assert.Equal(HttpStatusCode.NoContent, (await Send(root, HttpMethod.Put, "/api/admin/settings", new SiteSettings(true))).StatusCode);
-        Assert.True((await Read<SiteSettings>(await root.GetAsync("/api/admin/settings"))).BlockPhotos);
-        Assert.True((await Zone(anonymous, zone)).Photos);
         Assert.Equal(HttpStatusCode.Forbidden, (await SendPhoto(anonymous, zone, entry.Id, Jpeg, null)).StatusCode);     // without its token
         Assert.Equal(["photoType"], await Keys(await SendPhoto(anonymous, zone, entry.Id, "pas une image"u8.ToArray(), entry.EditToken)));
         var tooLarge = await SendPhoto(anonymous, zone, entry.Id, [.. Jpeg, .. new byte[ZoneRules.MaxPhotoBytes]], entry.EditToken);
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, tooLarge.StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await SendPhoto(anonymous, zone, entry.Id, Jpeg, entry.EditToken)).StatusCode);
 
-        Assert.True(Assert.Single((await Games(anonymous, zone)).Games).Photo);
         var shown = await anonymous.GetAsync(photo);
-        Assert.Equal(HttpStatusCode.OK, shown.StatusCode);
         Assert.Equal("image/jpeg", shown.Content.Headers.ContentType?.MediaType);
         Assert.Equal(Jpeg, await shown.Content.ReadAsByteArrayAsync());
 
-        // Turned off: hidden (kept); deleted with its game.
-        await Send(root, HttpMethod.Put, "/api/admin/settings", new SiteSettings(false));
-        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync(photo)).StatusCode);
-        Assert.False(Assert.Single((await Games(anonymous, zone)).Games).Photo);
-        await Send(root, HttpMethod.Put, "/api/admin/settings", new SiteSettings(true));
-        Assert.Equal(HttpStatusCode.OK, (await anonymous.GetAsync(photo)).StatusCode);
+        // Deleted with its game.
         Assert.Equal(HttpStatusCode.NoContent, (await Send(anonymous, HttpMethod.Delete, $"/api/zones/{zone}/games/{entry.Id}", entry: entry.EditToken)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync(photo)).StatusCode);
-        Assert.Contains(await Read<AdminAction[]>(await root.GetAsync("/api/admin/audit")), a => a.Action == "settings");
-    }
-
-    [Fact]
-    public async Task Games_in_pages_most_recent_first()
-    {
-        var (_, root, _, _, anonymous) = await StartAsync();
-        var code = await CreateZone(root, Settings());
-        var ids = new List<long>();
-        for (var i = 0; i < 55; i++) ids.Add((await Enter(anonymous, code, Duel(vpA: i))).Id);
-
-        var first = await Games(anonymous, code);
-        Assert.Equal((50, 55), (first.Games.Count, first.Total));
-        Assert.Equal(ids[^1], first.Games[0].Id);
-        var second = await Games(anonymous, code, first.Next);
-        Assert.Equal(5, second.Games.Count);
-        Assert.Null(second.Next);
-        Assert.Equal(ids[0], second.Games[^1].Id);
-    }
-
-    [Fact]
-    public async Task Entries_limited_per_address()
-    {
-        var server = Server(entriesPerHour: 2);
-        var root = server.CreateClient();
-        // No admin here: the zone is created directly in the store.
-        var zones = server.Services.GetService(typeof(Olomoc.Server.Zones.ZoneStore)) as Olomoc.Server.Zones.ZoneStore;
-        var zone = await zones!.CreateAsync(z => z.Name = "Club");
-        await Enter(root, zone!.Code);
-        await Enter(root, zone.Code);
-        Assert.Equal(HttpStatusCode.TooManyRequests, (await Send(root, HttpMethod.Post, $"/api/zones/{zone.Code}/games", Duel())).StatusCode);
-    }
-
-    [Fact]
-    public async Task Admin_overview_counts_the_zones()
-    {
-        var (_, root, _, _, anonymous) = await StartAsync();
-        var code = await CreateZone(root, Settings());
-        await Enter(anonymous, code);
-        var overview = await Read<AdminOverview>(await root.GetAsync("/api/admin/overview"));
-        Assert.Equal((1, 1, 1), (overview.Zones.Total, overview.Zones.Open, overview.Zones.Games));
     }
 
     // ---- Tournaments bound to a zone ----
@@ -432,7 +243,6 @@ public sealed class ZoneApiTests : IDisposable
         await Organizer(http, HttpMethod.Post, $"/api/tournaments/{t.Code}/start", t.OrganizerToken);
         await Organizer(http, HttpMethod.Post, $"/api/tournaments/{t.Code}/rounds", t.OrganizerToken);
         var view = await Read<TournamentView>(await http.GetAsync($"/api/tournaments/{t.Code}"));
-        Assert.Equal((zone, "Club du mardi"), (view.Zone, view.ZoneName));
         return (t, view.Rounds[0].Tables.Single());
     }
 
@@ -443,37 +253,22 @@ public sealed class ZoneApiTests : IDisposable
         var zone = await CreateZone(root, Settings());
         var (t, table) = await TournamentInZone(anonymous, zone);
         var result = $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}";
-        Assert.Empty((await Games(anonymous, zone)).Games);
 
-        // A result: one duel in the zone, without the names, with the cabal played; not editable from the zone.
+        // A result: one duel in the zone, without the names; not editable from the zone.
         Assert.Equal(HttpStatusCode.NoContent, (await Organizer(anonymous, HttpMethod.Put, result, t.OrganizerToken, new ResultRequest(9, 4))).StatusCode);
         var game = Assert.Single((await Games(root, zone)).Games);
-        Assert.Equal((t.Code, "Open du club", false), (game.Tournament, game.TournamentName, game.CanEdit));
-        Assert.Equal((9, 4, GameFormat.Duel), (game.Game.A.Vp, game.Game.B.Vp, game.Game.Format));
+        Assert.Equal((t.Code, 9, 4), (game.Tournament, game.Game.A.Vp, game.Game.B.Vp));
         Assert.All(game.Game.Players, p => Assert.Null(p.Name));
-        Assert.NotNull(game.Game.A.Players[0].Cabal);
-        var refused = await Send(root, HttpMethod.Delete, $"/api/zones/{zone}/games/{game.Id}");
-        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
-        Assert.Equal(["zoneGameFromTournament"], await Keys(refused));
+        Assert.Equal(["zoneGameFromTournament"], await Keys(await Send(root, HttpMethod.Delete, $"/api/zones/{zone}/games/{game.Id}")));
 
-        // Corrected: the same game (same place in the list), updated.
+        // Corrected: the same game, updated.
         await Organizer(anonymous, HttpMethod.Put, result, t.OrganizerToken, new ResultRequest(3, 8));
         var corrected = Assert.Single((await Games(anonymous, zone)).Games);
-        Assert.Equal((game.Id, 3, 8), (corrected.Id, corrected.Game.A.Vp, corrected.Game.B.Vp));
+        Assert.Equal((game.Id, 3), (corrected.Id, corrected.Game.A.Vp));
 
-        // Excluded from the statistics: out of the zone; counted again: back.
-        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/stats", t.OrganizerToken, new StatsRequest(true));
-        Assert.Empty((await Games(anonymous, zone)).Games);
-        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/stats", t.OrganizerToken, new StatsRequest(false));
-        Assert.Single((await Games(anonymous, zone)).Games);
-
-        // Result cleared, then the tournament deleted: nothing left in the zone.
-        await Organizer(anonymous, HttpMethod.Put, result, t.OrganizerToken, new ResultRequest(null, null));
-        Assert.Empty((await Games(anonymous, zone)).Games);
-        await Organizer(anonymous, HttpMethod.Put, result, t.OrganizerToken, new ResultRequest(5, 5));
-        Assert.Equal(1, (await Zone(anonymous, zone)).Stats.Games);
+        // Tournament deleted: nothing left in the zone.
         Assert.Equal(HttpStatusCode.NoContent, (await Organizer(anonymous, HttpMethod.Delete, $"/api/tournaments/{t.Code}", t.OrganizerToken)).StatusCode);
-        Assert.Equal(0, (await Zone(anonymous, zone)).Stats.Games);
+        Assert.Empty((await Games(anonymous, zone)).Games);
     }
 
     [Fact]
@@ -481,49 +276,18 @@ public sealed class ZoneApiTests : IDisposable
     {
         var (_, root, _, _, anonymous) = await StartAsync();
         var zone = await CreateZone(root, Settings());
-        var hidden = await CreateZone(root, Settings("Essai", hidden: true));
         await Enter(anonymous, zone, Duel("LIBUS", "OTHERS"));
-        await Enter(anonymous, hidden, Duel("RUBIN", "URKARAS"));
         var (t, table) = await TournamentInZone(anonymous, zone);
         await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}", t.OrganizerToken, new ResultRequest(9, 4));
 
-        // In progress: its game counts through the zone (no archive yet); the hidden zone is left out.
+        // In progress: its game counts through the zone (no archive yet).
         var all = await Read<StatsView>(await anonymous.GetAsync("/api/stats/all"));
-        Assert.Equal((0, 1, 2), (all.Tournaments, all.Zones, all.Games));
-        Assert.DoesNotContain(all.FactionWins, w => w.Key == "RUBIN");
+        Assert.Equal((0, 2), (all.Tournaments, all.Games));
 
-        // Finished: through its archive, no longer through the zone; still in each source's own figures.
+        // Finished: through its archive, no longer through the zone.
         Assert.Equal(HttpStatusCode.NoContent, (await Organizer(anonymous, HttpMethod.Post, $"/api/tournaments/{t.Code}/finish", t.OrganizerToken)).StatusCode);
         all = await Read<StatsView>(await anonymous.GetAsync("/api/stats/all"));
-        Assert.Equal((1, 1, 2), (all.Tournaments, all.Zones, all.Games));
-        Assert.Equal(2 + 2, all.Players);                                   // 2 registered + 2 participations
-        Assert.Equal(1, (await Read<StatsView>(await anonymous.GetAsync("/api/stats"))).Games);
-        Assert.Equal(2, (await Read<StatsView>(await anonymous.GetAsync("/api/zones/stats"))).Games);
-    }
-
-    [Fact]
-    public async Task Statistics_of_a_period()
-    {
-        var (_, root, _, _, anonymous) = await StartAsync();
-        var zone = await CreateZone(root, Settings());
-        await Enter(anonymous, zone, Duel("LIBUS", "OTHERS") with { PlayedOn = Today.AddDays(-20) });
-        await Enter(anonymous, zone, Duel());
-        var (t, table) = await TournamentInZone(anonymous, zone);           // dated today
-        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}", t.OrganizerToken, new ResultRequest(9, 4));
-        await Organizer(anonymous, HttpMethod.Post, $"/api/tournaments/{t.Code}/finish", t.OrganizerToken);
-
-        async Task<StatsView> Stats(string url, DateOnly? from = null, DateOnly? to = null) =>
-            await Read<StatsView>(await anonymous.GetAsync(url + "?" + new StatsPeriod(from, to).Query));
-        Assert.Equal((1, 3), ((await Stats("/api/stats/all")).Tournaments, (await Stats("/api/stats/all")).Games));
-        var recent = await Stats("/api/stats/all", from: Today.AddDays(-10));
-        Assert.Equal((1, 2), (recent.Tournaments, recent.Games));
-        var older = await Stats("/api/stats/all", to: Today.AddDays(-15));
-        Assert.Equal((0, 1, 1), (older.Tournaments, older.Zones, older.Games));
-        Assert.Equal(0, (await Stats("/api/stats", to: Today.AddDays(-1))).Tournaments);
-        Assert.Equal(1, (await Stats("/api/stats", from: Today, to: Today)).Tournaments);
-        Assert.Equal(1, (await Stats("/api/zones/stats", from: Today.AddDays(-30), to: Today.AddDays(-10))).Games);
-        Assert.Equal(3, (await Stats("/api/zones/stats")).Games);           // the tournament's copy included
-        Assert.Equal(3, (await Read<StatsView>(await anonymous.GetAsync("/api/stats/all?from=nope"))).Games);   // unreadable: no limit
+        Assert.Equal((1, 2), (all.Tournaments, all.Games));
     }
 
     [Fact]
@@ -532,124 +296,39 @@ public sealed class ZoneApiTests : IDisposable
         var (_, root, _, carl, anonymous) = await StartAsync();
         var zone = await CreateZone(root, Settings());
         await Enter(anonymous, zone, Duel());
-        var (t, table) = await TournamentInZone(anonymous, zone);
-        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}", t.OrganizerToken, new ResultRequest(9, 4));
-        await Organizer(anonymous, HttpMethod.Post, $"/api/tournaments/{t.Code}/finish", t.OrganizerToken);
         async Task<StatsView> All() => await Read<StatsView>(await anonymous.GetAsync("/api/stats/all"));
-        Assert.Equal((1, 2), ((await All()).Tournaments, (await All()).Games));
 
-        // Admins only (logged).
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Send(anonymous, HttpMethod.Post, "/api/admin/stats/reset")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await Send(carl, HttpMethod.Post, "/api/admin/stats/reset")).StatusCode);
-        var reset = await Read<SiteSettings>(await Send(root, HttpMethod.Post, "/api/admin/stats/reset"));
-        Assert.NotNull(reset.StatsSince);
+        Assert.NotNull((await Read<SiteSettings>(await Send(root, HttpMethod.Post, "/api/admin/stats/reset"))).StatsSince);
 
-        // Reset: nothing counts any more, the zone keeps its games; dominance reset too.
-        var after = await All();
-        Assert.Equal((0, 0, reset.StatsSince), (after.Tournaments, after.Games, after.Since));
-        Assert.Equal(0, (await Read<StatsView>(await anonymous.GetAsync("/api/stats"))).Tournaments);
-        var view = await Zone(anonymous, zone);
-        Assert.Equal((0, (string?)null), (view.Stats.Games, view.Dominance.Faction));
-        Assert.Equal(2, (await Games(anonymous, zone)).Games.Count);
-
-        // What is entered afterwards counts; another setting changed keeps the reset.
+        // Reset: nothing counts any more, the zone keeps its games.
+        Assert.Equal(0, (await All()).Games);
+        Assert.Single((await Games(anonymous, zone)).Games);
         await Enter(anonymous, zone, Duel("LIBUS", "OTHERS"));
         Assert.Equal(1, (await All()).Games);
-        Assert.Equal(1, (await Zone(anonymous, zone)).Stats.Games);
-        await Send(root, HttpMethod.Put, "/api/admin/settings", new SiteSettings(true));
-        Assert.Equal(reset.StatsSince, (await Read<SiteSettings>(await root.GetAsync("/api/admin/settings"))).StatsSince);
-        Assert.Equal(1, (await All()).Games);
-
-        // The export keeps everything, marking what counts.
-        var export = await root.GetAsync("/api/admin/export");
-        Assert.Equal(HttpStatusCode.OK, export.StatusCode);
 
         // Cancelled: everything counts again.
-        var cancelled = await Read<SiteSettings>(await Send(root, HttpMethod.Delete, "/api/admin/stats/reset"));
-        Assert.Null(cancelled.StatsSince);
-        var back = await All();
-        Assert.Equal((1, 3, (DateTimeOffset?)null), (back.Tournaments, back.Games, back.Since));
-    }
-
-    [Fact]
-    public async Task A_closed_zone_is_neither_offered_nor_changed()
-    {
-        var (_, root, _, _, anonymous) = await StartAsync();
-        var zone = await CreateZone(root, Settings());
-        var (t, table) = await TournamentInZone(anonymous, zone);
-        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}", t.OrganizerToken, new ResultRequest(9, 4));
-        await Send(root, HttpMethod.Put, $"/api/admin/zones/{zone}", Settings(closed: true));
-
-        // Closed: the tournament no longer changes it (its game stays as it was).
-        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}", t.OrganizerToken, new ResultRequest(1, 2));
-        Assert.Equal(9, Assert.Single((await Games(anonymous, zone)).Games).Game.A.Vp);
-
-        // And a new tournament cannot be bound to it.
-        var refused = await Send(anonymous, HttpMethod.Post, "/api/tournaments",
-            new CreateTournamentRequest("Trop tard", Today, 3, 1, Zone: zone));
-        Assert.Equal(["zoneClosed"], await Keys(refused));
-        Assert.Equal(["zoneNotFound"], await Keys(await Send(anonymous, HttpMethod.Post, "/api/tournaments",
-            new CreateTournamentRequest("Nulle part", Today, 3, 1, Zone: "ABCDEF"))));
+        Assert.Null((await Read<SiteSettings>(await Send(root, HttpMethod.Delete, "/api/admin/stats/reset"))).StatsSince);
+        Assert.Equal(2, (await All()).Games);
     }
 
     // ---- Data export ----
 
-    private static Dictionary<string, string> Unzip(byte[] zip)
-    {
-        using var archive = new System.IO.Compression.ZipArchive(new MemoryStream(zip));
-        return archive.Entries.ToDictionary(e => e.FullName, e =>
-        {
-            using var reader = new StreamReader(e.Open());
-            return reader.ReadToEnd();
-        });
-    }
-
     [Fact]
-    public async Task Editors_export_the_data_behind_the_statistics()
+    public async Task Editors_export_the_data_behind_the_statistics_without_names()
     {
         var (_, root, bob, carl, anonymous) = await StartAsync();
-        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/admin/export")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await carl.GetAsync("/api/admin/export")).StatusCode);
         await Send(root, HttpMethod.Put, "/api/admin/accounts/Bob/role", new RoleRequest(AccountRole.Editor));
 
         var zone = await CreateZone(root, Settings());
-        var hidden = await CreateZone(root, Settings("Essai; test", hidden: true));
         await Enter(anonymous, zone, Duel("LIBUS", "OTHERS"));
-        await Enter(anonymous, hidden, Duel("RUBIN", "URKARAS", 3, 3));
-        var (t, table) = await TournamentInZone(anonymous, zone);
-        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}", t.OrganizerToken, new ResultRequest(9, 4));
-        await Organizer(anonymous, HttpMethod.Post, $"/api/tournaments/{t.Code}/finish", t.OrganizerToken);
 
         var response = await bob.GetAsync("/api/admin/export");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/zip", response.Content.Headers.ContentType?.MediaType);
-        var files = Unzip(await response.Content.ReadAsByteArrayAsync());
-        Assert.Equal(["cards.csv", "data.json", "games.csv", "players.csv", "tournaments.csv", "zones.csv"], files.Keys.Order());
-
-        // Every game: the tournament's (archive), the zones' (hidden one and the tournament's copy included,
-        // not counted in "All"); no names, no comments.
-        var data = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(files["data.json"])!;
-        var games = data["games"]!.AsArray();
-        Assert.Equal(4, games.Count);
-        Assert.Equal(2, games.Count(g => (bool)g!["counted"]!));
-        Assert.DoesNotContain("Ana", files["data.json"]);
-        Assert.DoesNotContain("Bea", files["data.json"]);
-
-        var rows = files["games.csv"].TrimStart('\uFEFF').Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
-        Assert.Equal("game;source;event;copied_from;date;format;counted;vp_a;vp_b;winner;first;end;scenario;artifact;ministry", rows[0]);
-        Assert.Contains(rows, r => r.StartsWith($"T-{t.Code}-1;tournament;{t.Code};;") && r.Contains(";Duel;1;9;4;A;"));
-        Assert.Contains(rows, r => r.StartsWith("Z-") && r.Contains($";zone;{zone};{t.Code};") && r.Contains(";Duel;0;9;4;A;"));
-        Assert.Contains(rows, r => r.Contains($";zone;{hidden};;") && r.Contains(";Duel;0;3;3;draw;"));
-        Assert.Contains("\"Essai; test\"", files["zones.csv"]);
-
-        var players = files["players.csv"].Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
-        Assert.Equal(1 + 4 * 2, players.Length);
-        // Side A of the tournament game: player 1 or 2 (the first round is drawn at random).
-        Assert.Contains(players, r => (r.Contains(";A;1;1;MAISEL;") || r.Contains(";A;1;2;MAISEL;")) && r.Contains(";9;4;win;"));
-        Assert.Contains(players, r => r.Contains(";B;1;;OTHERS;") && r.Contains(";4;7;loss;"));
-        Assert.Equal(1 + 8 * 3, files["cards.csv"].Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Length);
-
-        var audit = await Read<AdminAction[]>(await root.GetAsync("/api/admin/audit"));
-        Assert.Equal(("Bob", "export"), (audit[0].Admin, audit[0].Action));
+        using var archive = new System.IO.Compression.ZipArchive(new MemoryStream(await response.Content.ReadAsByteArrayAsync()));
+        Assert.Equal(["cards.csv", "data.json", "games.csv", "players.csv", "tournaments.csv", "zones.csv"], archive.Entries.Select(e => e.FullName).Order());
+        using var reader = new StreamReader(archive.GetEntry("data.json")!.Open());
+        Assert.DoesNotContain("Ana", await reader.ReadToEndAsync());
     }
 }

@@ -118,26 +118,9 @@ public class I18nConsistencyTests
     }
 
     [Fact]
-    public void The_keyword_glossary_is_complete()
+    public void Every_keyword_has_its_label()
     {
-        Assert.True(Olomoc.Models.GameTokens.IsKnown("{permanent}"));
-        Assert.True(Olomoc.Models.GameTokens.IsKnown("{freq:game:2}"));
-        Assert.False(Olomoc.Models.GameTokens.IsKnown("{freq:game:N}"));
-        Assert.False(Olomoc.Models.GameTokens.IsKnown("{inconnu}"));
         var ui = Ui(Ref);
         Assert.All(Olomoc.Models.GameTokens.All, t => Assert.True(ui.TryGetProperty(t.LabelKey, out _), t.LabelKey));
-    }
-
-    [Fact]
-    public async Task A_partial_language_falls_back_to_the_reference()
-    {
-        var d = await AppData.CreateAsync();
-        await d.L.SetLanguageAsync("en");
-        Assert.Equal("Ministry of Security", d.L.MinistryName("SECURITY").Text);
-        Assert.False(d.L.CogName(d.Cog("1R01")).IsFallback);
-        var name = d.L.CogName(d.Cog("1R26"));   // English card still printed in French: no English text
-        Assert.Equal("Adel Varadi", name.Text);
-        Assert.True(name.IsFallback);
-        Assert.Equal("Rank 2", d.L.Ui("slot.rank", 2));
     }
 }

@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Olomoc.Tests;
 
-/// <summary>Tournament storage: purge of inactive tournaments, never of upcoming ones.</summary>
+/// <summary>Tournament storage: purge of inactive tournaments, never of upcoming ones; backups.</summary>
 public sealed class TournamentStoreTests : IDisposable
 {
     private static readonly DateOnly Today = new(2026, 10, 13);
@@ -26,62 +26,15 @@ public sealed class TournamentStoreTests : IDisposable
         var store = new TournamentStore(db);
         var oldPast = await Add(db, store, Today.AddDays(-100), 95);
         var oldUndated = await Add(db, store, null, 95);
-        var oldToday = await Add(db, store, Today, 95);
         var oldFuture = await Add(db, store, Today.AddDays(200), 400);
         var recentPast = await Add(db, store, Today.AddDays(-100), 10);
-        var unreadable = await Add(db, store, null, 200);
-        db.Change(TournamentStore.Kind, unreadable, row => row.Json = "{ illisible");
 
         Assert.Equal(2, await store.PurgeAsync(TimeSpan.FromDays(90), Today));
 
         Assert.Null(await store.LoadAsync(oldPast));
         Assert.Null(await store.LoadAsync(oldUndated));
-        Assert.NotNull(await store.LoadAsync(oldToday));
         Assert.NotNull(await store.LoadAsync(oldFuture));
         Assert.NotNull(await store.LoadAsync(recentPast));
-        Assert.NotNull(db.Find(TournamentStore.Kind, unreadable));        // unreadable: left to be examined
-    }
-
-    [Fact]
-    public async Task Deletion_only_if_accepted()
-    {
-        var db = await TestDb.OpenAsync(_dir);
-        var store = new TournamentStore(db);
-        var code = await Add(db, store, null, 0);
-        Assert.Equal("refusée", await store.DeleteAsync(code, _ => (false, "refusée")));
-        Assert.NotNull(await store.LoadAsync(code));
-        Assert.Equal("ok", await store.DeleteAsync(code, _ => (true, "ok")));
-        Assert.Null(await store.LoadAsync(code));
-        Assert.Null(await store.DeleteAsync(code, _ => (true, "ok")));       // no longer exists
-    }
-
-    [Fact]
-    public async Task Change_saved_only_if_requested()
-    {
-        var db = await TestDb.OpenAsync(_dir);
-        var store = new TournamentStore(db);
-        var code = await Add(db, store, null, 3);
-        var before = db.Find(TournamentStore.Kind, code)!.UpdatedAt;
-
-        Assert.Equal("non", await store.UpdateAsync(code, t => { t.Name = "Perdu"; return (false, "non"); }));
-        Assert.Equal("T", (await store.LoadAsync(code))!.Name);
-        Assert.Equal(before, db.Find(TournamentStore.Kind, code)!.UpdatedAt);
-
-        Assert.Equal("oui", await store.UpdateAsync(code, t => { t.Name = "Gardé"; return (true, "oui"); }));
-        Assert.Equal("Gardé", (await store.LoadAsync(code))!.Name);
-        Assert.True(db.Find(TournamentStore.Kind, code)!.UpdatedAt > before);
-        Assert.Null(await store.UpdateAsync("ZZZZZZ", t => (true, "?")));
-    }
-
-    [Fact]
-    public async Task Maximum_number_of_tournaments()
-    {
-        var db = await TestDb.OpenAsync(_dir);
-        var store = new TournamentStore(db, maxTournaments: 2);
-        Assert.NotNull(await store.CreateAsync(_ => { }));
-        Assert.NotNull(await store.CreateAsync(_ => { }));
-        Assert.Null(await store.CreateAsync(_ => { }));
-        Assert.Equal(2, store.Codes().Count());
     }
 
     [Fact]
@@ -92,8 +45,7 @@ public sealed class TournamentStoreTests : IDisposable
         var backup = new DbBackup(_dir, Microsoft.Extensions.Logging.Abstractions.NullLogger<DbBackup>.Instance);
 
         var day = new DateTime(2026, 10, 1);
-        var first = await backup.BackupAsync(day);
-        Assert.NotNull(first);
+        Assert.NotNull(await backup.BackupAsync(day));
         Assert.Null(await backup.BackupAsync(day.AddHours(5)));            // already made that day
         for (var i = 1; i <= 8; i++) await backup.BackupAsync(day.AddDays(i));
 

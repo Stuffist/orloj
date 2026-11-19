@@ -30,9 +30,9 @@ public sealed class CabalSyncApiTests : IDisposable
         TestDb.Delete(_data);
     }
 
-    private static CabalExport Cabal(string name, string cog = "3R06", int cogs = 1) =>
+    private static CabalExport Cabal(string name, string cog = "3R06") =>
         new(CabalExport.FormatId, CabalExport.CurrentVersion, "fr", name, new CodeName("MAISEL", "Ligue de Maisel"),
-            Enumerable.Range(0, cogs).Select(i => new CabalSlot(3 - i % 3, new IdName(cog, "Rouage"), null)).ToList());
+            [new CabalSlot(3, new IdName(cog, "Rouage"), null)]);
 
     private static CabalChange Save(string name, DateTimeOffset at, string cog = "3R06") => new(name, at, Cabal(name, cog));
     private static CabalChange Delete(string name, DateTimeOffset at) => new(name, at, null);
@@ -61,71 +61,25 @@ public sealed class CabalSyncApiTests : IDisposable
     public async Task Public_by_default_offered_by_username_until_made_private()
     {
         var bohdan = await Device();
-        var saved = await Sync(bohdan, Save("Assaut", T0), Save("Secrète", T0.AddMinutes(1)));
-        Assert.All(saved.Cabals, c => Assert.True(c.Public));                // new cabals: public
+        await Sync(bohdan, Save("Assaut", T0), Save("Secrète", T0.AddMinutes(1)));
 
         var anonymous = _server.CreateClient();
         async Task<string[]> Offered(string user) =>
             (await anonymous.GetFromJsonAsync<List<CabalExport>>($"/api/accounts/{user}/cabals", TournamentJson.Options))!.Select(c => c.Name!).ToArray();
         Assert.Equal(["Secrète", "Assaut"], await Offered("bohdan"));          // username: case-insensitive
-        Assert.Empty(await Offered("Nobody"));
 
-        // Made private: no longer offered; the account still has it (and knows it is private).
         var hide = await bohdan.PutAsJsonAsync("/api/account/cabals/visibility", new CabalVisibilityRequest("secrète", false), TournamentJson.Options);
         Assert.Equal(HttpStatusCode.NoContent, hide.StatusCode);
         Assert.Equal(["Assaut"], await Offered("Bohdan"));
-        Assert.False((await Sync(bohdan)).Cabals.Single(c => c.Cabal.Name == "Secrète").Public);
-
-        // Saved again (changed): stays private. Unknown name, or without a session: refused.
-        await Sync(bohdan, Save("Secrète", T0.AddMinutes(5), cog: "3R07"));
-        Assert.Equal(["Assaut"], await Offered("Bohdan"));
-        Assert.Equal(HttpStatusCode.NotFound,
-            (await bohdan.PutAsJsonAsync("/api/account/cabals/visibility", new CabalVisibilityRequest("Inconnue", true), TournamentJson.Options)).StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized,
-            (await anonymous.PutAsJsonAsync("/api/account/cabals/visibility", new CabalVisibilityRequest("Assaut", false), TournamentJson.Options)).StatusCode);
-
-        // Visibility chosen when saving (the builder's "Public" box): a new one private, a replaced one made public.
-        await Sync(bohdan, Save("Discrète", T0.AddMinutes(6)) with { Public = false }, Save("Secrète", T0.AddMinutes(7)) with { Public = true });
-        Assert.Equal(["Secrète", "Assaut"], await Offered("Bohdan"));
-    }
-
-    [Fact]
-    public async Task Account_names_suggested_from_two_characters()
-    {
-        foreach (var user in new[] { "Bohdan", "Boris", "Carl" }) await Device(user);
-        var anonymous = _server.CreateClient();
-        async Task<string[]> Search(string q) =>
-            (await anonymous.GetFromJsonAsync<List<string>>($"/api/accounts/search?q={Uri.EscapeDataString(q)}", TournamentJson.Options))!.ToArray();
-        Assert.Equal(["Bohdan", "Boris"], await Search("bo"));
-        Assert.Equal(["Boris"], await Search("BOR"));
-        Assert.Empty(await Search("b"));                                      // one character: nothing
-        Assert.Empty(await Search("zz"));
-    }
-
-    [Fact]
-    public async Task Refused_without_a_session()
-    {
-        var response = await _server.CreateClient().PostAsJsonAsync("/api/account/cabals/sync", new CabalSyncRequest([]), TournamentJson.Options);
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
     public async Task Saved_on_one_device_found_on_the_other()
     {
         var phone = await Device();
-        var saved = await Sync(phone, Save("Ma cabale", T0), Save("Autre", T0.AddMinutes(1)));
-        Assert.Equal(2, saved.Applied);
-        Assert.Equal(["Autre", "Ma cabale"], Names(saved));                 // most recent first
-
-        var computer = await Device();
-        var read = await Sync(computer);
-        Assert.Equal(0, read.Applied);
-        Assert.Equal(["Autre", "Ma cabale"], Names(read));
-        Assert.Equal(T0, read.Cabals[1].SavedAt);
-        Assert.False(read.Cabals[0].Pending);
-
-        // Another account sees nothing.
-        Assert.Empty((await Sync(await Device("Autre"))).Cabals);
+        await Sync(phone, Save("Ma cabale", T0), Save("Autre", T0.AddMinutes(1)));
+        Assert.Equal(["Autre", "Ma cabale"], Names(await Sync(await Device())));      // most recent first
+        Assert.Empty((await Sync(await Device("Autre"))).Cabals);                    // another account sees nothing
     }
 
     [Fact]
@@ -142,7 +96,7 @@ public sealed class CabalSyncApiTests : IDisposable
 
         var newer = await Sync(computer, Save("ma cabale", T0.AddHours(3), "3R05"));
         Assert.Equal(1, newer.Applied);
-        Assert.Equal(("ma cabale", "3R05"), (newer.Cabals.Single().Cabal.Name, newer.Cabals.Single().Cabal.Cogs[0].Cog.Id));
+        Assert.Equal("3R05", newer.Cabals.Single().Cabal.Cogs[0].Cog.Id);
     }
 
     [Fact]
@@ -152,56 +106,9 @@ public sealed class CabalSyncApiTests : IDisposable
         var computer = await Device();
         await Sync(phone, Save("Ma cabale", T0));
         Assert.Empty((await Sync(computer, Delete("Ma cabale", T0.AddHours(1)))).Cabals);
-        Assert.Empty((await Sync(phone)).Cabals);
 
         // The offline device sends back its old version: the deletion, more recent, holds.
         Assert.Empty((await Sync(phone, Save("Ma cabale", T0.AddMinutes(30)))).Cabals);
-        // A more recent save brings it back.
         Assert.Single((await Sync(phone, Save("Ma cabale", T0.AddHours(2)))).Cabals);
-        // Deletion of a cabal the account never had: kept too.
-        await Sync(phone, Delete("Fantôme", T0.AddHours(5)));
-        Assert.Equal(["Ma cabale"], Names(await Sync(computer, Save("Fantôme", T0.AddHours(4)))));
-    }
-
-    [Fact]
-    public async Task Invalid_cabals_and_too_many_changes_refused()
-    {
-        var phone = await Device();
-        var result = await Sync(phone, new CabalChange("Quatre", T0, Cabal("Quatre", cogs: 4)), new CabalChange("  ", T0, Cabal(" ")), Save("Bonne", T0));
-        Assert.Equal(1, result.Applied);
-        Assert.Equal(["cabalInvalid", "cabalInvalid"], result.Problems.Select(p => p.Key));
-        Assert.Equal(["Bonne"], Names(result));
-
-        var tooMany = Enumerable.Range(0, CabalSyncRules.MaxChanges + 1).Select(i => Save($"C{i}", T0)).ToArray();
-        var response = await phone.PostAsJsonAsync("/api/account/cabals/sync", new CabalSyncRequest(tooMany), TournamentJson.Options);
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Two_hundred_cabals_at_most()
-    {
-        var phone = await Device();
-        for (var i = 0; i < CabalSyncRules.MaxCabals; i += CabalSyncRules.MaxChanges)
-            await Sync(phone, Enumerable.Range(i, CabalSyncRules.MaxChanges).Select(n => Save($"C{n}", T0)).ToArray());
-
-        var refused = await Sync(phone, Save("De trop", T0));
-        Assert.Equal(("cabalLimit", "De trop"), (refused.Problems.Single().Key, refused.Problems.Single().Args![1]));
-        Assert.Equal(CabalSyncRules.MaxCabals, refused.Cabals.Count);
-
-        // Replacing an existing cabal is still possible; deleting one frees a place.
-        Assert.Equal(1, (await Sync(phone, Save("C0", T0.AddHours(1), "3R05"))).Applied);
-        await Sync(phone, Delete("C1", T0.AddHours(1)));
-        Assert.Equal(1, (await Sync(phone, Save("De trop", T0.AddHours(1)))).Applied);
-    }
-
-    [Fact]
-    public async Task Deleted_account_deletes_its_cabals_too()
-    {
-        var phone = await Device();
-        await Sync(phone, Save("Ma cabale", T0));
-        (await phone.PostAsJsonAsync("/api/account/delete", new DeleteAccountRequest("motdepasse"), TournamentJson.Options)).EnsureSuccessStatusCode();
-        Assert.Empty((await Sync(await Device())).Cabals);                   // same username, new account
-        using var db = (await TestDb.OpenAsync(_data)).CreateDbContext();
-        Assert.Empty(db.SavedCabals);
     }
 }

@@ -26,13 +26,6 @@ public sealed class TestDb : IDbContextFactory<OlomocDb>
 
     public OlomocDb CreateDbContext() => new(_options);
 
-    /// <summary>Stored document (kind, code), or null.</summary>
-    public StoredDocumentRow? Find(string kind, string code)
-    {
-        using var db = CreateDbContext();
-        return db.Documents.AsNoTracking().FirstOrDefault(d => d.Kind == kind && d.Code == code);
-    }
-
     /// <summary>Changes a document directly (dates, unreadable content…).</summary>
     public void Change(string kind, string code, Action<StoredDocumentRow> change)
     {

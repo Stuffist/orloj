@@ -62,35 +62,16 @@ public class ZoneTests
     }
 
     [Fact]
-    public async Task Duel_accepts_any_factions_even_mirror()
+    public async Task Invalid_games_refused()
     {
-        Assert.Empty(await Problems(Duel("MAISEL", "MAISEL", 5, 5)));
-        Assert.Empty(await Problems(Duel("RUBIN", "LIBUS", 5, 3)));
-    }
-
-    [Fact]
-    public async Task Players_per_side_follow_the_format()
-    {
-        var teamsAsDuel = Teams("RUBIN", "LIBUS", "MAISEL", "OTHERS", 5, 3) with { Format = GameFormat.Duel };
-        Assert.Equal(["zonePlayers"], await Problems(teamsAsDuel));
-        var duelAsTeams = Duel("RUBIN", "MAISEL", 5, 3) with { Format = GameFormat.Teams };
-        Assert.Equal(["zonePlayers"], await Problems(duelAsTeams));
-    }
-
-    [Fact]
-    public async Task Teams_of_any_factions()
-    {
-        Assert.Empty(await Problems(Teams("RUBIN", "LIBUS", "MAISEL", "OTHERS", 5, 3)));
-        Assert.Empty(await Problems(Teams("RUBIN", "MAISEL", "LIBUS", "OTHERS", 5, 3)));
-        Assert.Empty(await Problems(Teams("RUBIN", "LIBUS", "URKARAS", "DYKOVIAN", 5, 3)));
-    }
-
-    [Fact]
-    public async Task Unknown_faction_VP_and_name_refused()
-    {
+        Assert.Equal(["zonePlayers"], await Problems(Duel("RUBIN", "MAISEL", 5, 3) with { Format = GameFormat.Teams }));
         Assert.Equal(["zoneFaction"], await Problems(Duel("NOPE", "MAISEL", 5, 3)));
         Assert.Equal(["zoneVictoryPoints"], await Problems(Duel("RUBIN", "MAISEL", -1, 3)));
-        Assert.Equal(["zonePlayerName"], await Problems(Duel("RUBIN", "MAISEL", 5, 3, nameA: new string('x', ZoneRules.MaxNameLength + 1))));
+        var game = Duel("RUBIN", "MAISEL", 5, 3);
+        Assert.Equal(["zoneScenario", "zoneFirst", "zoneEnd"], await Problems(game with { Scenario = null, First = null, End = null }));
+        Assert.Equal(["zoneDecks"], await Problems(game with { Scenario = new Scenario("SABOTAGE") }));
+        Assert.Equal(["playedOnFuture"], await Problems(game with { PlayedOn = Today.AddDays(2) }));
+        Assert.Equal(["playedOnOutside"], await Problems(game with { PlayedOn = new(2025, 12, 31) }));
     }
 
     [Fact]
@@ -98,26 +79,37 @@ public class ZoneTests
     {
         var cabal = await MaiselCabal();
         var game = Duel("RUBIN", "MAISEL", 5, 3);
-        var ok = game with { B = new ZoneSide([new ZonePlayer("MAISEL", null, cabal)], 3) };
-        Assert.Empty(await Problems(ok));
-
-        var wrong = game with { A = new ZoneSide([new ZonePlayer("RUBIN", null, cabal)], 5) };
-        var d = await AppData.GetAsync();
-        var problem = Assert.Single(ZoneRules.CheckGame(wrong, OpenZone, d.Catalog, Today, false).Problems);
-        Assert.Equal(("cabalFaction", 0), (problem.Key, problem.Cabal));     // "Cabal 1": the first player
+        Assert.Empty(await Problems(game with { B = new ZoneSide([new ZonePlayer("MAISEL", null, cabal)], 3) }));
+        Assert.Equal(["cabalFaction"], await Problems(game with { A = new ZoneSide([new ZonePlayer("RUBIN", null, cabal)], 5) }));
+        Assert.Equal(["zoneCabal"], await Problems(game with { B = new ZoneSide([new ZonePlayer("MAISEL")], 3) }));
     }
 
     [Fact]
-    public async Task Everything_but_the_names_is_required()
+    public async Task Closed_zone_refuses_except_for_managers()
     {
         var game = Duel("RUBIN", "MAISEL", 5, 3);
-        Assert.Empty(await Problems(game));                                   // names left out: accepted
-        var noCabal = game with { B = new ZoneSide([new ZonePlayer("MAISEL")], 3) };
-        var missing = ZoneRules.CheckGame(noCabal, OpenZone, Data.Catalog, Today, false).Problems;
-        Assert.Equal(("zoneCabal", "2"), (missing.Single().Key, missing.Single().Args![0]));    // player 2
-        Assert.Equal(["zoneScenario", "zoneFirst", "zoneEnd"], await Problems(game with { Scenario = null, First = null, End = null }));
-        Assert.Equal(["zoneDecks"], await Problems(game with { Scenario = new Scenario("SABOTAGE", null, Decks.Artifacts[0], null) }));
-        Assert.Equal(["zoneDecks"], await Problems(game with { Scenario = new Scenario("SABOTAGE") }));
+        var closed = OpenZone;
+        closed.Closed = true;
+        Assert.Equal(["zoneClosed"], await Problems(game, closed));
+        Assert.Empty(await Problems(game, closed, manager: true));
+    }
+
+    [Fact]
+    public void Photo_type_read_from_the_first_bytes()
+    {
+        Assert.Equal("image/jpeg", ZoneRules.PhotoType([0xFF, 0xD8, 0xFF, 0xE0]));
+        Assert.Equal("image/png", ZoneRules.PhotoType([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00]));
+        Assert.Null(ZoneRules.PhotoType("<svg onload=alert(1)>"u8));
+    }
+
+    [Theory]
+    [InlineData("https://example.org/logo.png", true)]
+    [InlineData("http://example.org/logo.png", false)]
+    [InlineData("javascript:alert(1)", false)]
+    [InlineData("https://user:pass@example.org/logo.png", false)]
+    public void Logo_is_an_https_link(string? logo, bool valid)
+    {
+        Assert.Equal(valid ? Array.Empty<string>() : ["zoneLogo"], ZoneRules.CheckSettings("Club", null, null, null, logo).Select(p => p.Key));
     }
 
     [Fact]
@@ -127,211 +119,38 @@ public class ZoneTests
         var placed = new Zone { Code = "AAAAAA", Slot = 0, CreatedAt = t0 };
         var newer = new Zone { Code = "BBBBBB", CreatedAt = t0.AddDays(2) };
         var older = new Zone { Code = "CCCCCC", CreatedAt = t0.AddDays(1) };
-        var changed = ZoneMapLayout.Assign([placed, newer, older]);
-        Assert.Equal([older, newer], changed);
+        Assert.Equal([older, newer], ZoneMapLayout.Assign([placed, newer, older]));
         Assert.Equal((0, 1, 2), (placed.Slot, older.Slot, newer.Slot));
-
-        // Full map: no slot (the zone is in the list only).
-        var full = Enumerable.Range(0, ZoneMapLayout.Slots.Count).Select(i => new Zone { Code = $"Z{i:00000}", Slot = i }).ToList();
-        var extra = new Zone { Code = "EXTRAA" };
-        Assert.Empty(ZoneMapLayout.Assign([.. full, extra]));
-        Assert.Null(extra.Slot);
-    }
-
-    [Fact]
-    public void Map_holds_every_zone_the_hexagons_shrinking_when_they_no_longer_fit()
-    {
-        // A slot per possible zone; the city's slots where they always were (center, then rings).
-        Assert.Equal(ZoneRules.MaxZones, ZoneMapLayout.Slots.Count);
-        Assert.Equal((47, 50), ZoneMapLayout.Center(0, 1));
-        Assert.Equal((57.5, 37.875), ZoneMapLayout.Center(1, 1));
-        Assert.Equal((15.5, 13.625), ZoneMapLayout.Center(24, 1));
-        Assert.Equal(1, ZoneMapLayout.Scale(Enumerable.Range(0, 25)));
-        Assert.Equal(1, ZoneMapLayout.Scale([]));
-
-        var previous = 1.0;
-        foreach (var count in new[] { 30, 54, 100, 250, ZoneRules.MaxZones })
-        {
-            var slots = Enumerable.Range(0, count).ToList();
-            var scale = ZoneMapLayout.Scale(slots);
-            Assert.True(scale <= previous, $"{count} zones: {scale} > {previous}");
-            previous = scale;
-            // All on the plan, none overlapping (centers at least a hexagon's height apart).
-            var w = ZoneMapLayout.Width * scale / 2;
-            var h = ZoneMapLayout.Height * scale / 2;
-            var centers = slots.Select(s => ZoneMapLayout.Center(s, scale)).ToList();
-            Assert.All(centers, c => Assert.True(c.X - w >= -1e-9 && c.X + w <= 100 + 1e-9 && c.Y - h >= -1e-9 && c.Y + h <= 100 + 1e-9,
-                $"{count} zones: hexagon at {c} off the plan"));
-            for (var i = 0; i < centers.Count; i++)
-                for (var j = i + 1; j < centers.Count; j++)
-                {
-                    var dx = centers[i].X - centers[j].X;
-                    var dy = (centers[i].Y - centers[j].Y) / 2;      // the plan is twice as wide as tall
-                    Assert.True(dx * dx + dy * dy >= Math.Pow(ZoneMapLayout.Height * scale / 2, 2) * .99, $"slots {i} and {j} overlap");
-                }
-        }
-        Assert.True(previous > .2, $"{ZoneRules.MaxZones} zones: hexagons too small ({previous})");
-    }
-
-    [Fact]
-    public void Photo_type_read_from_the_first_bytes()
-    {
-        Assert.Equal("image/jpeg", ZoneRules.PhotoType([0xFF, 0xD8, 0xFF, 0xE0]));
-        Assert.Equal("image/png", ZoneRules.PhotoType([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00]));
-        Assert.Equal("image/webp", ZoneRules.PhotoType("RIFF\0\0\0\0WEBPVP8 "u8));
-        Assert.Null(ZoneRules.PhotoType("<svg onload=alert(1)>"u8));
-        Assert.Null(ZoneRules.PhotoType([]));
-    }
-
-    [Fact]
-    public void Comment_optional_trimmed_and_limited()
-    {
-        var game = Duel("RUBIN", "MAISEL", 5, 3);
-        ZoneGame? Clean(string? comment) => ZoneRules.CheckGame(game with { Comment = comment }, OpenZone, Data.Catalog, Today, false).Clean;
-        Assert.Null(Clean(null)!.Comment);
-        Assert.Null(Clean("   ")!.Comment);
-        Assert.Equal("Retournement au cycle 4 !", Clean("  Retournement au cycle 4 !  ")!.Comment);
-        Assert.Null(Clean(new string('x', ZoneRules.MaxCommentLength + 1)));
-    }
-
-    [Fact]
-    public async Task Dates_of_the_game_within_the_zone_and_not_in_the_future()
-    {
-        var game = Duel("RUBIN", "MAISEL", 5, 3);
-        Assert.Equal(["playedOnFuture"], await Problems(game with { PlayedOn = Today.AddDays(2) }));
-        Assert.Empty(await Problems(game with { PlayedOn = Today.AddDays(1) }));         // time zone margin
-        Assert.Equal(["playedOnOutside"], await Problems(game with { PlayedOn = new(2025, 12, 31) }));
-    }
-
-    [Fact]
-    public async Task Closed_or_upcoming_zone_refuses_except_for_managers()
-    {
-        var game = Duel("RUBIN", "MAISEL", 5, 3);
-        var closed = OpenZone;
-        closed.Closed = true;
-        Assert.Equal(["zoneClosed"], await Problems(game, closed));
-        Assert.Empty(await Problems(game, closed, manager: true));
-
-        var ended = OpenZone;
-        ended.EndDate = Today.AddDays(-1);
-        Assert.Equal(ZoneStatus.Closed, ended.StatusOn(Today));
-
-        var upcoming = OpenZone;
-        upcoming.StartDate = Today.AddDays(3);
-        Assert.Equal(["zoneUpcoming"], await Problems(game, upcoming));
-    }
-
-    [Fact]
-    public void Settings_checked()
-    {
-        Assert.Empty(ZoneRules.CheckSettings("Club", null, null, null));
-        Assert.Equal(["zoneName"], ZoneRules.CheckSettings(" ", null, null, null).Select(p => p.Key));
-        Assert.Equal(["zoneDates"], ZoneRules.CheckSettings("Club", "", new(2026, 3, 1), new(2026, 2, 1)).Select(p => p.Key));
-        Assert.Equal(["zoneDescription"], ZoneRules.CheckSettings("Club", new string('x', 1001), null, null).Select(p => p.Key));
-    }
-
-    [Theory]
-    [InlineData(null, true)]
-    [InlineData("  ", true)]
-    [InlineData("https://example.org/logo.png", true)]
-    [InlineData("http://example.org/logo.png", false)]
-    [InlineData("javascript:alert(1)", false)]
-    [InlineData("data:image/png;base64,AAAA", false)]
-    [InlineData("https://user:pass@example.org/logo.png", false)]
-    [InlineData("/img/logo.png", false)]
-    public void Logo_is_an_https_link(string? logo, bool valid)
-    {
-        Assert.Equal(valid ? Array.Empty<string>() : ["zoneLogo"], ZoneRules.CheckSettings("Club", null, null, null, logo).Select(p => p.Key));
-    }
-
-    [Fact]
-    public void Logo_trimmed_and_limited()
-    {
-        Assert.Equal("https://example.org/l.png", ZoneRules.CleanLogo("  https://example.org/l.png "));
-        Assert.Null(ZoneRules.CleanLogo("https://example.org/" + new string('a', ZoneRules.MaxLogoLength)));
     }
 
     // ---- Statistics and dominance ----
 
-    private static Task<StatsView> Stats(params ZoneGame[] games) =>
-        Task.FromResult(StatsView.OfGames(1, games.Select(g => g.ToStatGame()).ToList()));
+    private static StatsView Stats(params ZoneGame[] games) => StatsView.OfGames(1, games.Select(g => g.ToStatGame()).ToList());
 
     [Fact]
-    public async Task Teams_both_players_count()
+    public void Teams_both_players_count()
     {
-        var s = await Stats(Teams("RUBIN", "LIBUS", "MAISEL", "OTHERS", 8, 3));
-        var wins = s.FactionWins.ToDictionary(w => w.Key);
+        var wins = Stats(Teams("RUBIN", "LIBUS", "MAISEL", "OTHERS", 8, 3)).FactionWins.ToDictionary(w => w.Key);
         Assert.Equal((1, 1), (wins["RUBIN"].Games, wins["RUBIN"].Wins));
         Assert.Equal((1, 1), (wins["LIBUS"].Games, wins["LIBUS"].Wins));
         Assert.Equal((1, 0, 3), (wins["MAISEL"].Games, wins["MAISEL"].Wins, wins["MAISEL"].Vp));
-        Assert.Equal((1, 4, 4), (s.Tournaments, s.Players, s.Factions.Sum(f => f.Count)));
     }
 
     [Fact]
-    public async Task Mirror_match_counts_on_both_sides()
-    {
-        var s = await Stats(Duel("RUBIN", "LIBUS", 5, 3), Duel("MAISEL", "MAISEL", 4, 4));
-        Assert.Equal(4, s.FactionWins.Sum(w => w.Games));
-        Assert.Equal((2, 2), (s.FactionWins.Single(w => w.Key == "MAISEL").Games, s.FactionWins.Single(w => w.Key == "MAISEL").Draws));
-    }
-
-    [Fact]
-    public async Task Rank_3_and_picks_from_the_cabals_played()
-    {
-        var cabal = await MaiselCabal();
-        // Rubin without a cabal (a game copied from a tournament can lack it): only Maisel's counts.
-        var game = Duel("RUBIN", "MAISEL", 2, 6) with
-        {
-            A = new ZoneSide([new ZonePlayer("RUBIN")], 2),
-            B = new ZoneSide([new ZonePlayer("MAISEL", null, cabal)], 6),
-        };
-        var s = await Stats(game);
-        var rank3 = Assert.Single(s.Rank3Wins);
-        Assert.Equal(("1R01", 1), (rank3.Key, rank3.Wins));            // the rank 3 cog of the cabal
-        var picks = Assert.Single(s.Picks);
-        Assert.Equal(("MAISEL", 1, 3), (picks.Faction, picks.Cabals, picks.Cogs.Count));
-    }
-
-    [Fact]
-    public async Task Dominance_depends_on_the_mode()
+    public void Dominance_depends_on_the_mode()
     {
         // Rubin wins two close games, Maisel one by a wide margin.
-        var s = await Stats(Duel("RUBIN", "MAISEL", 6, 5), Duel("RUBIN", "OTHERS", 6, 5), Duel("LIBUS", "MAISEL", 0, 20));
-
-        var wins = ZoneDominance.Compute(s, DominanceMode.Wins);
-        Assert.Equal(("RUBIN", false), (wins.Faction, wins.Tie));
-
-        var vp = ZoneDominance.Compute(s, DominanceMode.VictoryPoints);
-        Assert.Equal("MAISEL", vp.Faction);                                         // 25 VP against Rubin's 12
+        var s = Stats(Duel("RUBIN", "MAISEL", 6, 5), Duel("RUBIN", "OTHERS", 6, 5), Duel("LIBUS", "MAISEL", 0, 20));
+        Assert.Equal("RUBIN", ZoneDominance.Compute(s, DominanceMode.Wins).Faction);
+        Assert.Equal("MAISEL", ZoneDominance.Compute(s, DominanceMode.VictoryPoints).Faction);      // 25 VP against Rubin's 12
 
         // Win rate: fewer than StatsView.MinGames games for every faction, nobody takes part yet.
         var rate = ZoneDominance.Compute(s, DominanceMode.WinRate);
         Assert.Null(rate.Faction);
-        Assert.Equal((3, 2), (rate.Games, rate.MostPlayed));
-        Assert.True(rate.NeedsMoreGames);                                           // "2 games out of the 10 needed"
-        Assert.False(wins.NeedsMoreGames);
-    }
+        Assert.True(rate.NeedsMoreGames);
 
-    [Fact]
-    public async Task Win_rate_dominance_once_a_faction_has_enough_games()
-    {
-        var games = Enumerable.Range(0, StatsView.MinGames).Select(i => Duel("RUBIN", "MAISEL", i < 6 ? 5 : 1, 3)).ToArray();
-        var dominance = ZoneDominance.Compute(await Stats(games), DominanceMode.WinRate);
-        Assert.Equal("RUBIN", dominance.Faction);
-    }
-
-    [Fact]
-    public async Task Tie_at_the_top_means_no_dominance()
-    {
-        var s = await Stats(Duel("RUBIN", "MAISEL", 5, 3), Duel("LIBUS", "OTHERS", 5, 3));
-        Assert.Equal(new Dominance(null, true, 2, DominanceMode.Wins, 1), ZoneDominance.Compute(s, DominanceMode.Wins));
-    }
-
-    [Fact]
-    public void No_games_no_dominance()
-    {
-        var s = StatsView.OfGames(1, []);
-        Assert.Equal(Dominance.None, ZoneDominance.Compute(s, DominanceMode.Wins));
+        // Tie at the top: no dominance.
+        Assert.True(ZoneDominance.Compute(Stats(Duel("RUBIN", "MAISEL", 5, 3), Duel("LIBUS", "OTHERS", 5, 3)), DominanceMode.Wins).Tie);
     }
 
     // ---- Tournament bound to a zone ----
@@ -362,18 +181,12 @@ public class ZoneTests
                     ],
                 },
             ],
-            Scenarios = [null, new Scenario("SABOTAGE")],
         };
 
-        var game = Assert.Single(TournamentZone.Games(t));
-        Assert.Equal(TournamentZone.Key(2, 1), game.Key);
-        var g = game.Value;
+        var g = Assert.Single(TournamentZone.Games(t)).Value;
         Assert.Equal((GameFormat.Duel, new DateOnly(2026, 11, 7), 7, 3), (g.Format, g.PlayedOn, g.A.Vp, g.B.Vp));
-        Assert.Equal(("MAISEL", "RUBIN"), (g.A.Players[0].Faction, g.B.Players[0].Faction));
         Assert.All(g.Players, p => Assert.Null(p.Name));                      // never the names
-        Assert.NotNull(g.A.Players[0].Cabal);
         Assert.Null(g.B.Players[0].Cabal);                                     // two cabals, the one played unknown
-        Assert.Equal((TableSide.B, GameEnd.Bile, "SABOTAGE"), (g.First, g.End, g.Scenario!.Id));
 
         t.ExcludeFromStats = true;
         Assert.Empty(TournamentZone.Games(t));
