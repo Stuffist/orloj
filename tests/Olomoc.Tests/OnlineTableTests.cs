@@ -308,6 +308,10 @@ public class OnlineTableTests
         Assert.All(m.Boards, b => Assert.Equal(TableManifest.BoardSize, b.Size));
         Assert.All(m.Terrain, t => Assert.True(t.Width > 0 && t.Height > 0, t.Id));
         Assert.Equal(["move", "push"], (m.Templates ?? []).Select(t => t.Id));
+        // The sizes of the rules: a 16″ mat, 30 mm objectives, a 25 mm push template.
+        Assert.Equal(16 * TableManifest.MmPerInch, TableManifest.BoardSize, 6);
+        Assert.All(m.Markers.Where(x => x.Id.StartsWith("objective")), x => Assert.Equal(30, x.Size));
+        Assert.Equal((25.0, 25.0), (m.Template("push")!.Length, m.Template("push")!.Width));
         Assert.All(m.Templates!, t => Assert.True(t.Length >= t.Width && t.Width > 0, t.Id));
     }
 

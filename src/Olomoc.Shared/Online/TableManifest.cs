@@ -2,9 +2,9 @@ namespace Olomoc.Online;
 
 // What can be put on the table of an online game (data/olomoc-table.json, written by
 // tools/VassalImport from Occicat's Vassal module): boards, terrain, markers, and the token of each
-// cog and equipment/boon, the movement templates. Sizes and positions in millimetres, on a board of BoardSize × BoardSize.
+// cog and equipment/boon, the movement templates. Sizes and positions in millimetres, on a board of BoardSize × BoardSize (16″).
 
-/// <summary>A board (the 40 cm game mat): image, side in mm.</summary>
+/// <summary>A board (the 16″ game mat): image, side in mm.</summary>
 public sealed record TableBoard(string Id, string Image, double Size);
 
 /// <summary>
@@ -35,8 +35,8 @@ public sealed record TableManifest(int Version, string Source, IReadOnlyList<Tab
     public const string File = "data/olomoc-table.json";
     /// <summary>Folder of the images, under the shared static files.</summary>
     public const string Images = "img/table/";
-    /// <summary>Side of the game mat, in mm (40 cm).</summary>
-    public const double BoardSize = 400;
+    /// <summary>Side of the game mat, in mm (16″).</summary>
+    public const double BoardSize = 406.4;
     public const double MmPerInch = 25.4;
     /// <summary>Base of a cog without one in the catalog or the module.</summary>
     public const int DefaultBase = 30;

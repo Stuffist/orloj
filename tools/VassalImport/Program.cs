@@ -9,10 +9,11 @@ using System.Xml.Linq;
 using Olomoc.Online;
 
 // Imports the table's assets from Occicat's Vassal module (a ZIP: buildFile.xml and images/):
-// the 40 cm game mats, the terrain of the "Décors" palette, the markers, the token of each cog
+// the 16″ game mats, the terrain of the "Décors" palette, the markers, the token of each cog
 // and equipment/boon (matched to the card catalog by its French name). Images are copied as they
 // are into src/Olomoc.Shared/wwwroot/img/table/ (emptied first), the manifest written to
-// data/olomoc-table.json. In the module, 1.2 px = 1 mm (a 40 cm mat is 480 px, a 30 mm base 36 px).
+// data/olomoc-table.json. In the module, 30 px = 1″ (a 16″ mat is 480 px, a 30 mm base about 35 px).
+// Sizes fixed by the rules, not taken from the images: bases of the objectives 30 mm, push template 25 mm.
 
 if (args.Length is < 1 or > 2)
 {
@@ -27,7 +28,8 @@ if (root is null)
 }
 var web = Path.Combine(root, "src", "Olomoc.Shared", "wwwroot");
 var output = Path.Combine(web, TableManifest.Images.TrimEnd('/'));
-const double PxPerMm = 1.2;
+const double PxPerMm = 30 / TableManifest.MmPerInch;
+const double ObjectiveBase = 30, PushTemplate = 25;
 
 using var module = ZipFile.OpenRead(args[0]);
 var build = XDocument.Parse(Read(module, "buildFile.xml"));
@@ -47,7 +49,7 @@ foreach (var (id, image) in new[] { ("mez", "Tapis-Bloc.png"), ("karst", "Tapis-
 {
     if (Copy(image, "boards", id) is not { } path) continue;
     var (w, _) = Size(image);
-    boards.Add(new TableBoard(id, path, Math.Round(w / PxPerMm)));
+    boards.Add(new TableBoard(id, path, Mm(w)));
 }
 
 // ---- Terrain: pieces with a "Terrain N" prototype ----
@@ -74,7 +76,7 @@ foreach (var (id, image) in new[] { ("objective-p1", "pion_objectif_J1.png"), ("
 {
     if (Copy(image, "markers", id) is not { } path) continue;
     var (w, h) = Size(image);
-    markers.Add(new TableMarker(id, path, Mm(Math.Max(w, h))));
+    markers.Add(new TableMarker(id, path, id.StartsWith("objective") ? ObjectiveBase : Mm(Math.Max(w, h))));
 }
 
 // ---- Movement templates: the ruler of a normal move (stadium), the push one (disc) ----
@@ -83,7 +85,8 @@ foreach (var (id, image) in new[] { ("move", "reglette2024.png"), ("push", "pous
 {
     if (Copy(image, "templates", id) is not { } path) continue;
     var (w, h) = Size(image);
-    templates.Add(new TableTemplate(id, path, Mm(Math.Max(w, h)), Mm(Math.Min(w, h))));
+    templates.Add(id == "push" ? new TableTemplate(id, path, PushTemplate, PushTemplate)
+        : new TableTemplate(id, path, Mm(Math.Max(w, h)), Mm(Math.Min(w, h))));
 }
 
 // ---- Tokens: "Player: <name>" prototypes (base: 30Rims, 40Rims, 50Rims), matched to the catalog ----

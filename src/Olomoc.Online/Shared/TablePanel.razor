@@ -42,7 +42,7 @@ else
 
         <div class="tb-layout">
             <div class="tb-stage">
-                <svg @ref="_svg" class="tb-board @(_placing is not null || _ruler ? "tb-aim" : null)" viewBox="-30 -30 460 460"
+                <svg @ref="_svg" class="tb-board @(_placing is not null || _ruler ? "tb-aim" : null)" viewBox="@Outside"
                      xmlns="http://www.w3.org/2000/svg" role="img" aria-label="@L.Ui("online.table.title")">
                     <defs>
                         <clipPath id="tb-round" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5" /></clipPath>
@@ -50,7 +50,7 @@ else
                             <path d="M @Inch 0 L 0 0 0 @Inch" fill="none" stroke="rgba(255,255,255,.25)" stroke-width=".4" />
                         </pattern>
                     </defs>
-                    <rect x="-30" y="-30" width="460" height="460" class="tb-outside" />
+                    <rect x="@Num(-TableRules.Margin)" y="@Num(-TableRules.Margin)" width="@Num(Span)" height="@Num(Span)" class="tb-outside" />
                     @if (board is not null)
                     {
                         <image href="@Src(board.Image)" x="0" y="0" width="@TableManifest.BoardSize" height="@TableManifest.BoardSize" preserveAspectRatio="none" />
@@ -410,6 +410,9 @@ else
     [Parameter] public RenderFragment? HeadContent { get; set; }
 
     private const double Inch = TableManifest.MmPerInch;
+    // The mat and the margin around it (where pieces may stick out): the whole view.
+    private const double Span = TableManifest.BoardSize + 2 * TableRules.Margin;
+    private static readonly string Outside = $"{Num(-TableRules.Margin)} {Num(-TableRules.Margin)} {Num(Span)} {Num(Span)}";
 
     private ElementReference _svg;
     private DotNetObjectReference<TablePanel>? _self;
