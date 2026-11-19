@@ -19,34 +19,34 @@
 }
 else
 {
-    <nav class="zn-tabs" aria-label="@L.Ui("stats.filter.label")">
-        @Filter(null, "stats.filter.all")
-        @Filter("tournaments", "stats.filter.tournaments")
-        @Filter("bloc", "stats.filter.zones")
-    </nav>
-
-    @* Period: dates typed, or a shortcut; in the address (shareable). *@
-    <section class="panel stats-period" aria-label="@L.Ui("stats.period.label")">
-        <div class="tn-fields">
-            <div class="field">
-                <label for="stats-from">@L.Ui("stats.period.from")</label>
-                <input id="stats-from" type="date" value="@Iso(Period.From)" max="@Iso(Period.To)"
+    @* One row: the games counted, then the period (dates typed, or a shortcut; in the address,
+       shareable). Narrow screens: wrapped. *@
+    <div class="stats-filters">
+        <nav class="zn-tabs" aria-label="@L.Ui("stats.filter.label")">
+            @Filter(null, "stats.filter.all")
+            @Filter("tournaments", "stats.filter.tournaments")
+            @Filter("bloc", "stats.filter.zones")
+        </nav>
+        <div class="stats-period" role="group" aria-label="@L.Ui("stats.period.label")">
+            <label class="stats-date">
+                <span>@L.Ui("stats.period.from")</span>
+                <input type="date" value="@Iso(Period.From)" max="@Iso(Period.To)"
                        @onchange="e => Go(Current, Period with { From = StatsPeriod.Parse(e.Value?.ToString()) })" />
-            </div>
-            <div class="field">
-                <label for="stats-to">@L.Ui("stats.period.to")</label>
-                <input id="stats-to" type="date" value="@Iso(Period.To)" min="@Iso(Period.From)"
+            </label>
+            <label class="stats-date">
+                <span>@L.Ui("stats.period.to")</span>
+                <input type="date" value="@Iso(Period.To)" min="@Iso(Period.From)"
                        @onchange="e => Go(Current, Period with { To = StatsPeriod.Parse(e.Value?.ToString()) })" />
+            </label>
+            <div class="stats-shortcuts" role="group" aria-label="@L.Ui("stats.period.shortcuts")">
+                @foreach (var (key, period) in Shortcuts)
+                {
+                    var current = period == Period;
+                    <a class="btn small @(current ? "primary" : null)" href="@Url(Current, period)" aria-current="@(current ? "true" : null)">@L.Ui(key)</a>
+                }
             </div>
         </div>
-        <div class="stats-shortcuts" role="group" aria-label="@L.Ui("stats.period.shortcuts")">
-            @foreach (var (key, period) in Shortcuts)
-            {
-                var current = period == Period;
-                <a class="btn small @(current ? "primary" : null)" href="@Url(Current, period)" aria-current="@(current ? "true" : null)">@L.Ui(key)</a>
-            }
-        </div>
-    </section>
+    </div>
 
     @if (_stats is not { } s)
     {
