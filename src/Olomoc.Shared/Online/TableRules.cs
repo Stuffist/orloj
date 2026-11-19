@@ -57,6 +57,10 @@ public static class TableRules
         id is null ? null : new[] { seat, 1 - seat }.Where(s => s >= 0 && s < g.Seats.Count)
             .Cast<int?>().FirstOrDefault(s => (g.Seats[s!.Value].State?.Cogs ?? []).Any(x => x.EquipmentId == id || x.ExtraEquipmentId == id));
 
+    private static int? CogOwner(OnlineGame g, int seat, string? id) =>
+        id is null ? null : new[] { seat, 1 - seat }.Where(s => s >= 0 && s < g.Seats.Count)
+            .Cast<int?>().FirstOrDefault(s => (g.Seats[s!.Value].State?.Cogs ?? []).Any(x => x.CogId == id));
+
     private static Problem? Add(OnlineGame g, OnlineTable table, int seat, OnlineCommand c, TableManifest? manifest, DateTimeOffset now)
     {
         if (table.Pieces.Count >= MaxPieces) return Problem.Of("onlineTableFull", MaxPieces.ToString());
@@ -67,13 +71,16 @@ public static class TableRules
             PieceKind.Template => manifest?.Template(c.Text) is not null,
             // An equipment/boon token: one of the cards of a cabal (it belongs to that side).
             PieceKind.Equipment => OwnerOf(g, seat, c.Text) is not null,
-            _ => false,                     // cogs: created with the table
+            // A copy of a cog's token: a cog of either cabal (the cogs themselves come with the table).
+            PieceKind.Cog => CogOwner(g, seat, c.Text) is not null,
+            _ => false,
         };
         if (!known) return Problem.Of("onlineTablePiece");
         if (Position(c) is { } bad) return bad;
         var piece = new TablePiece
         {
-            Id = table.NextId++, Kind = c.Piece!.Value, Ref = c.Text!, Seat = c.Piece == PieceKind.Equipment ? OwnerOf(g, seat, c.Text) : null,
+            Id = table.NextId++, Kind = c.Piece!.Value, Ref = c.Text!, Seat = c.Piece switch { PieceKind.Equipment => OwnerOf(g, seat, c.Text), PieceKind.Cog => CogOwner(g, seat, c.Text), _ => null },
+            Copy = c.Piece == PieceKind.Cog,
             X = c.X, Y = c.Y, Rotation = Normal(c.Rotation ?? 0),
             Magnet = c.Piece == PieceKind.Template,         // movement templates: magnetic by default
         };
@@ -91,7 +98,7 @@ public static class TableRules
         if (c.X is { } x && c.Y is { } y) (piece.X, piece.Y) = (x, y);
         else if (c.Rotation is null)            // nothing but "off the board": a cog back to its tray
         {
-            if (piece.Kind != PieceKind.Cog) return Problem.Of("onlineTablePosition");
+            if (piece.Kind != PieceKind.Cog || piece.Copy) return Problem.Of("onlineTablePosition");
             (piece.X, piece.Y) = (null, null);
         }
         if (c.Rotation is { } r) piece.Rotation = Normal(r);
@@ -119,7 +126,7 @@ public static class TableRules
     private static Problem? Remove(OnlineGame g, OnlineTable table, int seat, int? id, DateTimeOffset now)
     {
         if (Find(table, id) is not { } piece) return Problem.Of("onlineTablePiece");
-        if (piece.Kind == PieceKind.Cog) return Problem.Of("onlineTableCog");
+        if (piece.Kind == PieceKind.Cog && !piece.Copy) return Problem.Of("onlineTableCog");
         table.Pieces.Remove(piece);
         if (piece.Kind == PieceKind.Terrain) OnlineRules.Log(g, seat, now, "tableRemove", piece.Ref);
         return null;

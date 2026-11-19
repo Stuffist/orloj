@@ -689,8 +689,8 @@ connection.
   - **Keyboard** (outside the text fields), on the selected piece: arrows move it by 0.1″ (Shift:
     1″; sent once the keys stop for a moment), Ctrl+arrows turn terrain and templates by 5° (Shift:
     15°), 1 to 9 toggle its ranges (0 removes them), Ctrl+C then Ctrl+V paste a copy half an inch
-    away (each paste further; the copy gets selected; a cog exists once and is not copied), Ctrl+X
-    or Delete remove it (a cog: back off the mat). Without a selected piece, the browser keeps its keys.
+    away (each paste further; the copy gets selected; a cog's token too: its copy is removed like a
+    token), Ctrl+X or Delete remove it (a cog of the cabal: back off the mat). Without a selected piece, the browser keeps its keys.
   - **Ruler** (for the viewer only): distance in inches; as soon as a miniature is involved (start or
     end), from the edge of its base (between two: edge to edge), while dragging too. **Ranges**, as on Vassal:
     keys 1 to 9 of the top row (or the buttons) toggle a circle of that many inches around the selected

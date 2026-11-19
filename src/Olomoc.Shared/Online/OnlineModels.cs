@@ -87,6 +87,11 @@ public sealed class TablePiece
     /// comes to touch it too (the gestures do it, in the browser).
     /// </summary>
     public bool Magnet { get; set; }
+    /// <summary>
+    /// A copy of a cog's token (Ctrl+C / Ctrl+V: handy to mark a place, a former position…): removed like
+    /// any token. The cog of the cabal itself is never removed, only put back off the mat.
+    /// </summary>
+    public bool Copy { get; set; }
 
     public bool OnBoard => X is not null && Y is not null;
 }

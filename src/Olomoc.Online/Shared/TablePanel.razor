@@ -209,7 +209,7 @@ else
                                 <button class="btn small" type="button" title="@L.Ui("online.table.rotateLeft")" @onclick="() => RotateAsync(s, -15)">⟲</button>
                                 <button class="btn small" type="button" title="@L.Ui("online.table.rotateRight")" @onclick="() => RotateAsync(s, 15)">⟳</button>
                             }
-                            @if (s.Kind == PieceKind.Cog)
+                            @if (s.Kind == PieceKind.Cog && !s.Copy)
                             {
                                 <button class="btn small" type="button" @onclick="() => OffBoardAsync(s)">@L.Ui("online.table.offBoard")</button>
                             }
@@ -239,7 +239,7 @@ else
                     var mine = seat == View.Me;
                     <h3 class="@SeatClass(seat)">@(mine ? L.Ui("online.table.myCabal") : L.Ui("online.table.cabalOf", View.Seats[seat].Name))</h3>
                     <ul class="tb-roster">
-                        @foreach (var p in table.Pieces.Where(p => p.Kind == PieceKind.Cog && p.Seat == seat).OrderByDescending(p => CogStateOf(p)?.Rank ?? 0))
+                        @foreach (var p in table.Pieces.Where(p => p.Kind == PieceKind.Cog && p.Seat == seat && !p.Copy).OrderByDescending(p => CogStateOf(p)?.Rank ?? 0))
                         {
                             var piece = p;
                             var cog = CogStateOf(p);
@@ -606,6 +606,9 @@ else
         return Send(new(OnlineCommandType.MovePiece, PieceId: p.Id));
     }
 
+    // Off the table: a cog of the cabal goes back off the mat, any other piece (a cog's copy too) is removed.
+    private Task TakeAwayAsync(TablePiece p) => p.Kind == PieceKind.Cog && !p.Copy ? OffBoardAsync(p) : RemoveAsync(p);
+
     private Task RemoveAsync(TablePiece p)
     {
         _selected = null;
@@ -632,8 +635,8 @@ else
     }
 
     // ---- Keyboard (js/table.js, outside the text fields) ----
-    // Ctrl+C / Ctrl+V: copy and paste the selected piece (not a cog: it exists once), next to it;
-    // Ctrl+X: cut; Delete or Backspace: remove (a cog: off the mat); arrows: move by 0.1″ (Shift: 1″);
+    // Ctrl+C / Ctrl+V: copy and paste the selected piece next to it (a cog too: a copy of its token);
+    // Ctrl+X: cut; Delete or Backspace: remove (a cog of the cabal: off the mat); arrows: move by 0.1″ (Shift: 1″);
     // Ctrl+arrows: turn by 5° (Shift: 15°), terrain and templates.
 
     private sealed record Copied(PieceKind Kind, string Ref, int Rotation, double X, double Y);
@@ -652,16 +655,10 @@ else
         switch (key)
         {
             case "c" or "x" when ctrl && selected is not null:
-                if (selected.Kind == PieceKind.Cog)
-                {
-                    _notice = "online.table.copy.cog";
-                    if (key == "x" && Movable(selected)) await OffBoardAsync(selected);
-                    break;
-                }
                 var (x, y, r) = At(selected);
                 _copied = new Copied(selected.Kind, selected.Ref, r, x, y);
                 _notice = "online.table.copied";
-                if (key == "x" && Movable(selected)) await RemoveAsync(selected);
+                if (key == "x" && Movable(selected)) await TakeAwayAsync(selected);
                 break;
             case "v" when ctrl && _copied is { } c && Playing && View.Me is not null:
                 // Next to the copied piece (each paste a step further), inside the mat.
@@ -672,7 +669,7 @@ else
                 await Send(new(OnlineCommandType.AddPiece, c.Ref, Piece: c.Kind, X: Math.Round(px, 1), Y: Math.Round(py, 1), Rotation: c.Rotation));
                 break;
             case "Delete" or "Backspace" when selected is not null && Movable(selected):
-                await (selected.Kind == PieceKind.Cog ? OffBoardAsync(selected) : RemoveAsync(selected));
+                await TakeAwayAsync(selected);
                 break;
             case "ArrowLeft" or "ArrowRight" or "ArrowUp" or "ArrowDown" when selected is not null && Movable(selected) && Shown(selected):
                 var (sx, sy, sr) = At(selected);

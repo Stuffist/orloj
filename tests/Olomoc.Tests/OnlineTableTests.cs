@@ -114,7 +114,14 @@ public class OnlineTableTests
 
         Ok(Do(g, 1, new(OnlineCommandType.AddPiece, "objective", Piece: PieceKind.Marker, X: 10, Y: 10), d));
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "nothing", Piece: PieceKind.Terrain, X: 10, Y: 10), d)));
-        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "3R06", Piece: PieceKind.Cog, X: 10, Y: 10), d)));
+        // A copy of a cog's token (Ctrl+C / Ctrl+V): a cog of either cabal, removed like a token; never off the mat.
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "1R03", Piece: PieceKind.Cog, X: 10, Y: 10), d)));
+        Ok(Do(g, 1, new(OnlineCommandType.AddPiece, "2R08", Piece: PieceKind.Cog, X: 10, Y: 10), d));
+        var copy = g.Table.Pieces.Single(p => p.Kind == PieceKind.Cog && p.Copy);
+        Assert.Equal(("2R08", 0), (copy.Ref, copy.Seat));                         // Ana's cog
+        Assert.Equal("onlineTablePosition", Key(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: copy.Id), d)));
+        Ok(Do(g, 0, new(OnlineCommandType.RemovePiece, PieceId: copy.Id), d));
+        Assert.Equal(6, g.Table.Pieces.Count(p => p.Kind == PieceKind.Cog));
 
         // Equipment: a card of either cabal (Carapace: Ana's, Ration: Bo's), put down by either player, of its side.
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "E01", Piece: PieceKind.Equipment, X: 10, Y: 10), d)));
