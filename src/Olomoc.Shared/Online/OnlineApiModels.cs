@@ -22,14 +22,15 @@ public enum OnlineCommandType
     RollInitiative,                          // player numbers
     ChooseAgenda, DrawAgenda,                // agenda
     UpdateState, Undo, SetEndCycle,          // cycles
-    SetBoard, AddPiece, MovePiece, RemovePiece, SetAuras, SetMagnet,   // table (from the initiative on)
+    SetBoard, AddPiece, MovePiece, RemovePiece, SetAuras, SetMagnet, SetLock, SetClaim,   // table (from the initiative on)
     ConfirmResult,                           // end of the game
 }
 
 /// <summary>
-/// A player's command. Text: name, agenda, board, ref of a new piece; Flag: ready, end of cycle, magnet; State
+/// A player's command. Text: name, agenda, board, ref of a new piece; Flag: ready, end of cycle, magnet, lock, claim; State
 /// and BasedOn: new state of their side and the revision it starts from; Note: report for the log.
-/// Table: Piece (kind of a new piece), Side (the side a new cog or equipment token belongs to), PieceId,
+/// Table: Piece (kind of a new piece), Side (the side a new cog or equipment token belongs to, the side
+/// claiming an objective), PieceId,
 /// X and Y (mm), Rotation.
 // Auras: ranges shown around a piece (inches, 1 to 9; empty: none). Vp: victory points of each seat, for the result.
 /// </summary>

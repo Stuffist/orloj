@@ -65,7 +65,7 @@ else
                     {
                         if (Files.Manifest.TerrainOf(p.Ref) is not { } t) continue;
                         var (x, y, r) = At(p);
-                        <g class="tb-piece @(p.Id == _selected ? "selected" : null)" data-piece="@p.Id" data-movable="@(Movable(p) ? "" : null)"
+                        <g class="tb-piece @(p.Id == _selected ? "selected" : null) @(p.Locked ? "locked" : null)" data-piece="@p.Id" data-movable="@(Free(p) ? "" : null)"
                            data-at="@Num(x) @Num(y)" data-rotate="@r" transform="translate(@Num(x) @Num(y)) rotate(@r)">
                             <title>@Name(p)</title>
                             <image href="@Src(t.Image)" x="@Num(-t.Width / 2)" y="@Num(-t.Height / 2)" width="@Num(t.Width)" height="@Num(t.Height)" preserveAspectRatio="none" />
@@ -115,6 +115,22 @@ else
                             {
                                 <g><text class="tb-initials" text-anchor="middle" dominant-baseline="central">@Initials(Name(p))</text></g>
                             }
+                            @if (p.Kind == PieceKind.Marker && p.Claims.Count > 0)
+                            {
+                                @* Taken by a side: its color; by both: split diagonally. *@
+                                var a = radius / Math.Sqrt(2);
+                                <g class="tb-claims" pointer-events="none">
+                                    @if (p.Claims.Count == 1)
+                                    {
+                                        <circle r="@Num(radius)" class="tb-claim @SeatClass(p.Claims[0])" />
+                                    }
+                                    else
+                                    {
+                                        <path d="M @Num(-a) @Num(a) A @Num(radius) @Num(radius) 0 0 1 @Num(a) @Num(-a) Z" class="tb-claim @SeatClass(p.Claims[0])" />
+                                        <path d="M @Num(a) @Num(-a) A @Num(radius) @Num(radius) 0 0 1 @Num(-a) @Num(a) Z" class="tb-claim @SeatClass(p.Claims[1])" />
+                                    }
+                                </g>
+                            }
                             @if (p.Kind != PieceKind.Marker)
                             {
                                 <circle r="@Num(radius)" class="tb-ring" />
@@ -132,7 +148,7 @@ else
 
                     @* Handles of the selected movement template or terrain, one at each end: above the bases,
                        which never hide them (js/table.js turns the piece and them together). *@
-                    @if (SelectedPiece(table) is { } turned && Shown(turned) && Movable(turned) && HalfLength(turned) is { } end)
+                    @if (SelectedPiece(table) is { } turned && Shown(turned) && Free(turned) && HalfLength(turned) is { } end)
                     {
                         var (x, y, r) = At(turned);
                         <g class="tb-handles" data-handles-for="@turned.Id" transform="translate(@Num(x) @Num(y)) rotate(@r)">
@@ -201,17 +217,37 @@ else
                         }
                         @if (Movable(s))
                         {
+                            @if (s.Kind == PieceKind.Marker)
+                            {
+                                @for (var i = 0; i < View.Seats.Count; i++)
+                                {
+                                    var claimSide = i;
+                                    var claimed = s.Claims.Contains(i);
+                                    <button class="btn small tb-claim-toggle @SeatClass(i) @(claimed ? "on" : null)" type="button" aria-pressed="@claimed"
+                                            title="@L.Ui("online.table.claim.title", View.Seats[i].Name)"
+                                            @onclick="() => Send(new(OnlineCommandType.SetClaim, PieceId: s.Id, Side: claimSide, Flag: !claimed))">● @View.Seats[i].Name</button>
+                                }
+                            }
+                            @if (s.Kind == PieceKind.Terrain)
+                            {
+                                <button class="btn small @(s.Locked ? "primary" : null)" type="button" aria-pressed="@s.Locked"
+                                        title="@L.Ui(s.Locked ? "online.table.unlock" : "online.table.lock")"
+                                        @onclick="() => Send(new(OnlineCommandType.SetLock, PieceId: s.Id, Flag: !s.Locked))">@(s.Locked ? "🔒" : "🔓")</button>
+                            }
                             @if (s.Kind == PieceKind.Template)
                             {
                                 <button class="btn small @(s.Magnet ? "primary" : null)" type="button" aria-pressed="@s.Magnet" title="@L.Ui("online.table.magnet.title")"
                                         @onclick="() => Send(new(OnlineCommandType.SetMagnet, PieceId: s.Id, Flag: !s.Magnet))">🧲 @L.Ui("online.table.magnet")</button>
                             }
-                            @if (!HasBase(s))
+                            @if (Free(s))
                             {
-                                <button class="btn small" type="button" title="@L.Ui("online.table.rotateLeft")" @onclick="() => RotateAsync(s, -15)">⟲</button>
-                                <button class="btn small" type="button" title="@L.Ui("online.table.rotateRight")" @onclick="() => RotateAsync(s, 15)">⟳</button>
+                                @if (!HasBase(s))
+                                {
+                                    <button class="btn small" type="button" title="@L.Ui("online.table.rotateLeft")" @onclick="() => RotateAsync(s, -15)">⟲</button>
+                                    <button class="btn small" type="button" title="@L.Ui("online.table.rotateRight")" @onclick="() => RotateAsync(s, 15)">⟳</button>
+                                }
+                                <button class="btn small" type="button" @onclick="() => RemoveAsync(s)">@L.Ui("online.table.remove")</button>
                             }
-                            <button class="btn small" type="button" @onclick="() => RemoveAsync(s)">@L.Ui("online.table.remove")</button>
                         }
                     }
                     else
@@ -309,7 +345,7 @@ else
                     <details class="tb-palette">
                         <summary>@L.Ui("online.table.markers")</summary>
                         <div class="tb-items tb-thumbs">
-                            @foreach (var mk in Files.Manifest.Markers)
+                            @foreach (var mk in Files.Manifest.Markers.Where(m => m.Id == ObjectiveMarker))
                             {
                                 var (mid, mlabel) = (mk.Id, L.Ui($"online.table.marker.{mk.Id}"));
                                 <button class="tb-item @(_placing?.Ref == mk.Id ? "on" : null)" type="button"
@@ -419,6 +455,12 @@ else
 
     // Either player moves any piece (as on Vassal); a spectator none.
     private bool Movable(TablePiece p) => Playing && View.Me is not null;
+
+    // Movable and not locked (terrain locked by its padlock: neither moved nor removed).
+    private bool Free(TablePiece p) => Movable(p) && !p.Locked;
+
+    /// <summary>The only marker offered: the objective (taken by a side: its color).</summary>
+    private const string ObjectiveMarker = "objective";
 
     private double Radius(TablePiece p) => p.Kind switch
     {
@@ -667,7 +709,7 @@ else
                 var (x, y, r) = At(selected);
                 _copied = new Copied(selected.Kind, selected.Ref, r, x, y, selected.Seat);
                 _notice = "online.table.copied";
-                if (key == "x" && Movable(selected)) await RemoveAsync(selected);
+                if (key == "x" && Free(selected)) await RemoveAsync(selected);
                 break;
             case "v" when ctrl && _copied is { } c && Playing && View.Me is not null:
                 // Next to the copied piece (each paste a step further), inside the mat.
@@ -677,10 +719,10 @@ else
                 _pasted = (c.Ref, View.Table?.Pieces.Max(p => p.Id) ?? 0);
                 await Send(new(OnlineCommandType.AddPiece, c.Ref, Piece: c.Kind, X: Math.Round(px, 1), Y: Math.Round(py, 1), Rotation: c.Rotation, Side: c.Side));
                 break;
-            case "Delete" or "Backspace" when selected is not null && Movable(selected):
+            case "Delete" or "Backspace" when selected is not null && Free(selected):
                 await RemoveAsync(selected);
                 break;
-            case "ArrowLeft" or "ArrowRight" or "ArrowUp" or "ArrowDown" when selected is not null && Movable(selected) && Shown(selected):
+            case "ArrowLeft" or "ArrowRight" or "ArrowUp" or "ArrowDown" when selected is not null && Free(selected) && Shown(selected):
                 var (sx, sy, sr) = At(selected);
                 if (ctrl)
                 {

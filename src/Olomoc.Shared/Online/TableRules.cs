@@ -35,6 +35,8 @@ public static class TableRules
             OnlineCommandType.RemovePiece => Remove(g, table, seat, c.PieceId, now),
             OnlineCommandType.SetAuras => SetAuras(table, c.PieceId, c.Auras),
             OnlineCommandType.SetMagnet => SetMagnet(table, c.PieceId, c.Flag == true),
+            OnlineCommandType.SetLock => SetLock(table, c.PieceId, c.Flag == true),
+            OnlineCommandType.SetClaim => SetClaim(g, table, c.PieceId, c.Side, c.Flag == true),
             _ => Problem.Of("onlineCommand"),
         };
     }
@@ -87,6 +89,7 @@ public static class TableRules
     private static Problem? Move(OnlineTable table, int seat, OnlineCommand c)
     {
         if (Find(table, c.PieceId) is not { } piece) return Problem.Of("onlineTablePiece");
+        if (piece.Locked) return Problem.Of("onlineTableLocked");
         if (Position(c) is { } bad) return bad;
         if (c.X is { } x && c.Y is { } y) (piece.X, piece.Y) = (x, y);
         else if (c.Rotation is null) return Problem.Of("onlineTablePosition");
@@ -112,9 +115,29 @@ public static class TableRules
         return null;
     }
 
+    // Terrain locked in place or not (either player).
+    private static Problem? SetLock(OnlineTable table, int? id, bool on)
+    {
+        if (Find(table, id) is not { Kind: PieceKind.Terrain } piece) return Problem.Of("onlineTablePiece");
+        piece.Locked = on;
+        return null;
+    }
+
+    // A marker taken by a side or not (either player sets it, for either side).
+    private static Problem? SetClaim(OnlineGame g, OnlineTable table, int? id, int? side, bool on)
+    {
+        if (Find(table, id) is not { Kind: PieceKind.Marker } piece || side is not { } s || s < 0 || s >= g.Seats.Count)
+            return Problem.Of("onlineTablePiece");
+        piece.Claims.Remove(s);
+        if (on) piece.Claims.Add(s);
+        piece.Claims.Sort();
+        return null;
+    }
+
     private static Problem? Remove(OnlineGame g, OnlineTable table, int seat, int? id, DateTimeOffset now)
     {
         if (Find(table, id) is not { } piece) return Problem.Of("onlineTablePiece");
+        if (piece.Locked) return Problem.Of("onlineTableLocked");
         table.Pieces.Remove(piece);
         if (piece.Kind == PieceKind.Terrain) OnlineRules.Log(g, seat, now, "tableRemove", piece.Ref);
         return null;

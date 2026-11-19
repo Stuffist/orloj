@@ -1217,5 +1217,9 @@
   "online.table.turn": "Drag to turn",
   "online.table.magnet": "Magnetic",
   "online.table.magnet.title": "Magnetic: dropped near a base, the template comes to touch it; a base dropped near it comes to touch it (seen by both players).",
-  "online.table.copied": "Copied: Ctrl+V to paste it next to it."
+  "online.table.copied": "Copied: Ctrl+V to paste it next to it.",
+  "online.table.lock": "Lock this terrain: no more moving it by accident",
+  "online.table.unlock": "Unlock this terrain to move it",
+  "online.table.claim.title": "Objective taken by {0}: mark or unmark",
+  "pairings.problem.onlineTableLocked": "This terrain is locked: open its padlock to move or remove it."
 }

@@ -145,6 +145,35 @@ public class OnlineTableTests
     }
 
     [Fact]
+    public async Task Terrain_locked_in_place_and_objectives_taken_by_a_side()
+    {
+        var (d, g) = await InCycle();
+        Ok(Do(g, 0, new(OnlineCommandType.AddPiece, Manifest.Value.Terrain[0].Id, Piece: PieceKind.Terrain, X: 100, Y: 100), d));
+        var terrain = g.Table!.Pieces.Last();
+        Ok(Do(g, 1, new(OnlineCommandType.SetLock, PieceId: terrain.Id, Flag: true), d));
+        Assert.True(terrain.Locked);
+        Assert.Equal("onlineTableLocked", Key(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: terrain.Id, X: 10, Y: 10), d)));
+        Assert.Equal("onlineTableLocked", Key(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: terrain.Id, Rotation: 15), d)));
+        Assert.Equal("onlineTableLocked", Key(Do(g, 0, new(OnlineCommandType.RemovePiece, PieceId: terrain.Id), d)));
+        Ok(Do(g, 0, new(OnlineCommandType.SetLock, PieceId: terrain.Id, Flag: false), d));
+        Ok(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: terrain.Id, X: 10, Y: 10), d));
+
+        // An objective: taken by one side, then both (either player sets it), then given back.
+        Ok(Do(g, 0, new(OnlineCommandType.AddPiece, "objective", Piece: PieceKind.Marker, X: 200, Y: 200), d));
+        var objective = g.Table.Pieces.Last();
+        Ok(Do(g, 0, new(OnlineCommandType.SetClaim, PieceId: objective.Id, Side: 1, Flag: true), d));
+        Ok(Do(g, 1, new(OnlineCommandType.SetClaim, PieceId: objective.Id, Side: 0, Flag: true), d));
+        Ok(Do(g, 1, new(OnlineCommandType.SetClaim, PieceId: objective.Id, Side: 0, Flag: true), d));
+        Assert.Equal([0, 1], objective.Claims);
+        Ok(Do(g, 0, new(OnlineCommandType.SetClaim, PieceId: objective.Id, Side: 1, Flag: false), d));
+        Assert.Equal([0], OnlineRules.View(g, null, new HashSet<int>()).Table!.Pieces.Last().Claims);
+
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetClaim, PieceId: objective.Id, Side: 2, Flag: true), d)));
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetClaim, PieceId: terrain.Id, Side: 0, Flag: true), d)));
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetLock, PieceId: objective.Id, Flag: true), d)));
+    }
+
+    [Fact]
     public async Task Ranges_around_a_piece_set_by_either_player_and_seen_by_everyone()
     {
         var (d, g) = await InCycle();

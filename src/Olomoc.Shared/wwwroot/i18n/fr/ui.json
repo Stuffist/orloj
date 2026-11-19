@@ -1217,5 +1217,9 @@
   "online.table.turn": "Glissez pour tourner",
   "online.table.magnet": "Aimantée",
   "online.table.magnet.title": "Aimantée : lâchée près d’un socle, la réglette vient le toucher ; un socle lâché près d’elle vient la toucher (vu par les deux joueurs).",
-  "online.table.copied": "Copié : Ctrl+V pour coller à côté."
+  "online.table.copied": "Copié : Ctrl+V pour coller à côté.",
+  "online.table.lock": "Verrouiller ce décor : il ne se déplace plus par accident",
+  "online.table.unlock": "Déverrouiller ce décor pour le déplacer",
+  "online.table.claim.title": "Objectif pris par {0} : marquer ou démarquer",
+  "pairings.problem.onlineTableLocked": "Ce décor est verrouillé : ouvrez son cadenas pour le déplacer ou le retirer."
 }
