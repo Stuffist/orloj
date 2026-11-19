@@ -455,7 +455,7 @@ else
 
     private string EquipmentName(string id) => Catalog.EquipmentById(id) is { } e ? L.EquipmentName(e).Text : id;
 
-    // State badges of a cog: out of action, otherwise stunned and its Darkness (sane: nothing), and off the mat.
+    // State badges of a cog: out of action, otherwise stunned and its Darkness (sane, tainted, corrupted), and off the mat.
     private static IEnumerable<(string Key, string Css)> States(CogState? cog, bool placed)
     {
         if (cog?.OutOfAction == true)
@@ -464,6 +464,7 @@ else
             yield break;
         }
         if (cog?.Stunned == true) yield return ("play.stunned", "stunned");
+        if (cog?.Status == DarknessStatus.Sane) yield return ("play.status.sane", "sane");
         if (cog?.Status == DarknessStatus.Tainted) yield return ("play.status.tainted", "tainted");
         if (cog?.Status == DarknessStatus.Corrupted) yield return ("play.status.corrupted", "corrupted");
         if (!placed) yield return ("online.table.offBoard", "offboard");

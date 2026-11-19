@@ -1127,6 +1127,7 @@ body {
 .tb-hp small { color: var(--muted); font-weight: 400; }
 .tb-cog-badges { display: flex; flex-wrap: wrap; gap: .2rem; }
 .tb-cog-badges .status-badge { font-size: .6rem; padding: 0 .35rem; letter-spacing: .3px; }
+.tb-cog-badges .status-badge.sane { border-color: var(--ok); color: var(--ok); }
 .status-badge.stunned { border-color: #c9a227; color: #e3c35a; }
 .status-badge.offboard { border-style: dashed; }
 .tb-cog-gear {

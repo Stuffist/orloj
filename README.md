@@ -676,7 +676,7 @@ connection.
     A cog out of action on its sheet is faded. Bases have no orientation (no rotation); terrain
     turns by 15°.
   - **Both cabals**, always listed next to the mat: each cog with its HP left, action tokens, Darkness
-    and state (out of action, stunned, tainted or corrupted, off the mat), read from its side's sheet,
+    and state (out of action, otherwise sane, tainted or corrupted, stunned, off the mat), read from its side's sheet,
     and its cards below (one's own: a click puts their token down). A click on a cog shows it on the
     mat, or puts it down there if it is not on it yet.
   - **Movement templates** (from the module: the ruler of a normal move, a stadium, and the push one,
