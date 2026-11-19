@@ -181,6 +181,14 @@ window.olomocTable = {
         window.olomocTable._tables.delete(id);
     },
 
+    // The table panel in full screen, or back (Esc too).
+    async fullscreen(el) {
+        try {
+            if (document.fullscreenElement) await document.exitFullscreen();
+            else await el.requestFullscreen();
+        } catch { /* refused by the browser: nothing */ }
+    },
+
     setRuler(id, on) {
         const t = window.olomocTable._tables.get(id);
         if (t) t.ruler = on;

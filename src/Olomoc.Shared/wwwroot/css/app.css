@@ -1164,6 +1164,17 @@ body {
 .tb-cog-gear:not(:disabled):hover, .tb-cog-gear.on { color: #f5d76e; }
 .tb-palette summary { cursor: pointer; font-size: .85rem; font-weight: 600; margin-top: .4rem; }
 .tb-detached { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+/* Full screen (the panel alone): the mat as large as the height allows, the list scrolling beside it */
+.tb-panel:fullscreen {
+    width: 100vw; height: 100vh; margin: 0; border: 0; border-radius: 0; padding: .6rem .8rem;
+    display: flex; flex-direction: column; overflow: hidden; background: var(--bg);
+}
+.tb-panel:fullscreen .tb-head { margin-bottom: .4rem; }
+.tb-panel:fullscreen .tb-layout { flex: 1; min-height: 0; grid-template-columns: minmax(0, 1fr) 18rem; }
+.tb-panel:fullscreen .tb-stage { display: flex; flex-direction: column; align-items: center; min-height: 0; }
+.tb-panel:fullscreen .tb-board { width: min(100%, calc(100vh - 6.5rem)); max-height: none; }
+.tb-panel:fullscreen .tb-status { align-self: stretch; }
+.tb-panel:fullscreen .tb-tray { max-height: calc(100vh - 4.5rem); overflow-y: auto; padding-right: .2rem; }
 @media (max-width: 760px) {
     .tb-layout { grid-template-columns: 1fr; }
 }

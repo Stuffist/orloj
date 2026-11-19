@@ -16,7 +16,7 @@
 else
 {
     var board = Files.Manifest.Board(table.Board) ?? Files.Manifest.Boards.FirstOrDefault();
-    <section class="panel tb-panel">
+    <section class="panel tb-panel" @ref="_panel">
         <div class="tb-head">
             <h2>@L.Ui("online.table.title")</h2>
             <div class="tb-tools">
@@ -36,6 +36,7 @@ else
                 <button class="btn small" type="button" title="@L.Ui("online.table.zoomIn")" @onclick="() => ZoomAsync(0.8)">+</button>
                 <button class="btn small" type="button" title="@L.Ui("online.table.zoomOut")" @onclick="() => ZoomAsync(1.25)">−</button>
                 <button class="btn small" type="button" title="@L.Ui("online.table.fit")" @onclick="() => ZoomAsync(0)">⤢</button>
+                <button class="btn small" type="button" title="@L.Ui("online.table.fullscreen.title")" @onclick="FullscreenAsync">⛶ @L.Ui("online.table.fullscreen")</button>
                 @HeadContent
             </div>
         </div>
@@ -416,7 +417,7 @@ else
     private const double Span = TableManifest.BoardSize + 2 * TableRules.Margin;
     private static readonly string Outside = $"{Num(-TableRules.Margin)} {Num(-TableRules.Margin)} {Num(Span)} {Num(Span)}";
 
-    private ElementReference _svg;
+    private ElementReference _svg, _panel;
     private DotNetObjectReference<TablePanel>? _self;
     private string? _js;
     private bool _ruler, _grid;
@@ -694,6 +695,13 @@ else
     private async Task SetRulerAsync()
     {
         if (_js is not null) await JS.InvokeVoidAsync("olomocTable.setRuler", _js, _ruler);
+    }
+
+    // The mat and the cabals' list alone on the screen (browser full screen; Esc leaves it).
+    private async Task FullscreenAsync()
+    {
+        await JS.InvokeVoidAsync("olomocTable.fullscreen", _panel);
+        await ZoomAsync(0);
     }
 
     private async Task ZoomAsync(double factor)

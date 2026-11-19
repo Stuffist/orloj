@@ -1221,5 +1221,7 @@
   "online.table.lock": "Lock: no more moving it by accident",
   "online.table.unlock": "Unlock to move it",
   "online.table.claim.title": "Objective taken by {0}: mark or unmark",
-  "pairings.problem.onlineTableLocked": "This piece is locked: open its padlock to move or remove it."
+  "pairings.problem.onlineTableLocked": "This piece is locked: open its padlock to move or remove it.",
+  "online.table.fullscreen": "Full screen",
+  "online.table.fullscreen.title": "The mat and the cabals’ list alone on the screen, as large as possible (Esc to leave)"
 }

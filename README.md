@@ -703,6 +703,8 @@ connection.
     keys 1 to 9 of the top row (or the buttons) toggle a circle of that many inches around the selected
     piece, from the edge of its base, 0 removes them; kept by the server, seen by both players and the
     spectators (either player, any piece but terrain). 1″ grid on demand.
+  - **Full screen** ("⛶" in its header): the table panel alone on the screen (browser full screen,
+    Esc leaves it), the mat as large as the height allows, the cabals' list scrolling beside it.
   - **Detachable** like the builder's equipment catalog: `/online/g/{code}/table?window=true`
     (`Pages/OnlineTable.razor`), for another screen. Unlike the opponent's side window, it can be
     played: it joins with the seat's token kept on the device, on its own connection.
