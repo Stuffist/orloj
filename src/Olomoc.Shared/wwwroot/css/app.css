@@ -1074,9 +1074,10 @@ body {
 .tb-magnet { fill: none; stroke: #7fd4ff; stroke-width: 1.2; pointer-events: none; filter: drop-shadow(0 0 1.5px #7fd4ff); }
 .tb-handle-arm { stroke: #f5d76e; stroke-width: .6; pointer-events: none; }
 .tb-handle { fill: #f5d76e; stroke: #0d1013; stroke-width: .6; cursor: grab; }
-.tb-auras circle { fill: none; stroke: rgba(245, 215, 110, .7); stroke-width: .6; stroke-dasharray: 2 2; }
-.tb-auras.tb-seat-0 circle { stroke: rgba(217, 103, 58, .85); }
-.tb-auras.tb-seat-1 circle { stroke: rgba(79, 159, 214, .85); }
+/* Ranges: dotted line on a light tint (nested ranges add up: darker towards the piece). */
+.tb-auras circle { fill: rgba(245, 215, 110, .07); stroke: rgba(245, 215, 110, .7); stroke-width: .6; stroke-dasharray: 2 2; }
+.tb-auras.tb-seat-0 circle { fill: rgba(217, 103, 58, .08); stroke: rgba(217, 103, 58, .85); }
+.tb-auras.tb-seat-1 circle { fill: rgba(79, 159, 214, .08); stroke: rgba(79, 159, 214, .85); }
 .tb-aura-keys { display: inline-flex; flex-wrap: wrap; gap: .15rem; }
 .tb-aura-keys .btn.small { min-width: 1.7rem; padding: .1rem .35rem; }
 .tb-auras text, .tb-ruler text { fill: #f5d76e; font-size: 6px; paint-order: stroke; stroke: #0d1013; stroke-width: 1.5px; }
