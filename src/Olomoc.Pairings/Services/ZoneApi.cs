@@ -17,7 +17,8 @@ public sealed class ZoneApi(HttpClient http)
 
     public Task<ApiResult<List<ZoneSummary>>> ListAsync() => SendAsync<List<ZoneSummary>>(HttpMethod.Get, Root, null);
 
-    public Task<ApiResult<StatsView>> AllStatsAsync() => SendAsync<StatsView>(HttpMethod.Get, $"{Root}/stats", null);
+    public Task<ApiResult<StatsView>> AllStatsAsync(StatsPeriod? period = null) =>
+        SendAsync<StatsView>(HttpMethod.Get, $"{Root}/stats" + TournamentApi.Query(period), null);
 
     public Task<ApiResult<ZoneView>> GetAsync(string code) => SendAsync<ZoneView>(HttpMethod.Get, $"{Root}/{Esc(code)}", null);
 

@@ -5,10 +5,12 @@
 @inject TournamentApi Tournaments
 @inject ZoneApi Zones
 @inject AccountService Accounts
+@inject NavigationManager Nav
 
 @* Statistics of Olomòc (/stats/): everything by default, the finished tournaments and the
    games of the Block together (a zone game copied from an archived tournament counted once);
-   filters: tournaments only (?source=tournaments), the Block only (?source=bloc). The panels
+   filters: tournaments only (?source=tournaments), the Block only (?source=bloc); and a period
+   (?from=&to=, both optional, with shortcuts: last 12 months, this year, last year). The panels
    themselves: StatsSections. *@
 
 @if (!_ready)
@@ -23,6 +25,29 @@ else
         @Filter("bloc", "stats.filter.zones")
     </nav>
 
+    @* Period: dates typed, or a shortcut; in the address (shareable). *@
+    <section class="panel stats-period" aria-label="@L.Ui("stats.period.label")">
+        <div class="tn-fields">
+            <div class="field">
+                <label for="stats-from">@L.Ui("stats.period.from")</label>
+                <input id="stats-from" type="date" value="@Iso(Period.From)" max="@Iso(Period.To)"
+                       @onchange="e => Go(Current, Period with { From = StatsPeriod.Parse(e.Value?.ToString()) })" />
+            </div>
+            <div class="field">
+                <label for="stats-to">@L.Ui("stats.period.to")</label>
+                <input id="stats-to" type="date" value="@Iso(Period.To)" min="@Iso(Period.From)"
+                       @onchange="e => Go(Current, Period with { To = StatsPeriod.Parse(e.Value?.ToString()) })" />
+            </div>
+        </div>
+        <div class="stats-shortcuts" role="group" aria-label="@L.Ui("stats.period.shortcuts")">
+            @foreach (var (key, period) in Shortcuts)
+            {
+                var current = period == Period;
+                <a class="btn small @(current ? "primary" : null)" href="@Url(Current, period)" aria-current="@(current ? "true" : null)">@L.Ui(key)</a>
+            }
+        </div>
+    </section>
+
     @if (_stats is not { } s)
     {
         <section class="panel"><Problems Items="_problems" /></section>
@@ -34,18 +59,18 @@ else
             {
                 case "tournaments":
                     <h2>@L.Ui("pairings.stats.title")</h2>
-                    <p class="tn-meta">@L.Ui("pairings.stats.totals", s.Tournaments, s.Players, s.Games)</p>
+                    <p class="tn-meta">@L.Ui("pairings.stats.totals", s.Tournaments, s.Players, s.Games)@PeriodText</p>
                     <p class="hint">@L.Ui("pairings.stats.method", StatsView.MinGames)</p>
                     break;
                 case "bloc":
                     <h2>@L.Ui("zones.stats.all")</h2>
-                    <p class="tn-meta">@L.Ui("zones.stats.totals", s.Tournaments, s.Games)</p>
+                    <p class="tn-meta">@L.Ui("zones.stats.totals", s.Tournaments, s.Games)@PeriodText</p>
                     <p class="hint">@L.Ui("zones.stats.method", StatsView.MinGames)</p>
                     <div class="tn-actions"><a class="btn small" href="bloc/">@L.Ui("zones.home")</a></div>
                     break;
                 default:
                     <h2>@L.Ui("stats.all.title")</h2>
-                    <p class="tn-meta">@L.Ui("stats.all.totals", s.Tournaments, s.Zones, s.Games)</p>
+                    <p class="tn-meta">@L.Ui("stats.all.totals", s.Tournaments, s.Zones, s.Games)@PeriodText</p>
                     <p class="hint">@L.Ui("stats.all.method", StatsView.MinGames)</p>
                     break;
             }
@@ -73,10 +98,16 @@ else
     /// <summary>"tournaments", "bloc" (the zones of the Block), or nothing: everything.</summary>
     [SupplyParameterFromQuery] public string? Source { get; set; }
 
+    /// <summary>Period (yyyy-MM-dd, both optional).</summary>
+    [SupplyParameterFromQuery] public string? From { get; set; }
+    [SupplyParameterFromQuery] public string? To { get; set; }
+
+    private StatsPeriod Period => new(StatsPeriod.Parse(From), StatsPeriod.Parse(To));
+
     private bool _ready;
     private StatsView? _stats;
     private IReadOnlyList<Problem>? _problems;
-    private string? _loaded;            // filter of _stats
+    private (string?, StatsPeriod)? _loaded;            // filter and period of _stats
     private int _request;               // a slower answer for a previous filter is ignored
 
     private string? Current => Source is "tournaments" or "bloc" ? Source : null;
@@ -90,19 +121,20 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_ready && _loaded == Current) return;
+        var wanted = (Current, Period);
+        if (_ready && _loaded == wanted) return;
         var request = ++_request;
-        var filter = Current;
+        var (filter, period) = wanted;
         var result = filter switch
         {
-            "tournaments" => await Tournaments.GetStatsAsync(),
-            "bloc" => await Zones.AllStatsAsync(),
-            _ => await Tournaments.GetAllStatsAsync(),
+            "tournaments" => await Tournaments.GetStatsAsync(period),
+            "bloc" => await Zones.AllStatsAsync(period),
+            _ => await Tournaments.GetAllStatsAsync(period),
         };
         if (request != _request) return;
         _stats = result.Value;
         _problems = result.Problems;
-        _loaded = filter;
+        _loaded = wanted;
         _ready = true;
     }
 
@@ -122,10 +154,37 @@ else
         _ => s.Games == 0 && s.Tournaments == 0 ? "stats.empty" : null,
     };
 
+    // A filter of the games: the period kept.
     private RenderFragment Filter(string? source, string key) => __builder =>
     {
         var current = Current == source;
-        <a class="btn @(current ? "primary" : null)" href="@(source is null ? "stats/" : $"stats/?source={source}")"
+        <a class="btn @(current ? "primary" : null)" href="@Url(source, Period)"
            aria-current="@(current ? "page" : null)">@L.Ui(key)</a>
     };
+
+    private static string Url(string? source, StatsPeriod period)
+    {
+        var query = string.Join("&", new[] { source is null ? null : $"source={source}", period.Query is { Length: > 0 } q ? q : null }.OfType<string>());
+        return query.Length == 0 ? "stats/" : $"stats/?{query}";
+    }
+
+    private void Go(string? source, StatsPeriod period) => Nav.NavigateTo(Url(source, period));
+
+    private static string? Iso(DateOnly? day) => day?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+
+    // " · from … to …" after the totals; nothing for everything.
+    private string PeriodText => Period.IsAll ? "" : " · " + L.Period(Period.From, Period.To);
+
+    // Shortcuts: everything, the last 12 months, this year, last year.
+    private static IEnumerable<(string Key, StatsPeriod Period)> Shortcuts
+    {
+        get
+        {
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            yield return ("stats.period.all", StatsPeriod.All);
+            yield return ("stats.period.last12", new(today.AddYears(-1).AddDays(1), today));
+            yield return ("stats.period.thisYear", new(new DateOnly(today.Year, 1, 1), new DateOnly(today.Year, 12, 31)));
+            yield return ("stats.period.lastYear", new(new DateOnly(today.Year - 1, 1, 1), new DateOnly(today.Year - 1, 12, 31)));
+        }
+    }
 }

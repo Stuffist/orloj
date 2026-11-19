@@ -70,12 +70,15 @@ public sealed class TournamentApi(HttpClient http)
         SendAsync<bool>(HttpMethod.Put, $"{Root}/{code}/standings", new StandingsRequest(hidden), organizer);
 
     /// <summary>Statistics of the finished and counted tournaments.</summary>
-    public Task<ApiResult<Olomoc.Tournaments.Stats.StatsView>> GetStatsAsync() =>
-        SendAsync<Olomoc.Tournaments.Stats.StatsView>(HttpMethod.Get, "/api/stats", null);
+    public Task<ApiResult<Olomoc.Tournaments.Stats.StatsView>> GetStatsAsync(Olomoc.Tournaments.Stats.StatsPeriod? period = null) =>
+        SendAsync<Olomoc.Tournaments.Stats.StatsView>(HttpMethod.Get, "/api/stats" + Query(period), null);
 
     /// <summary>Statistics of everything: the tournaments and the Block together.</summary>
-    public Task<ApiResult<Olomoc.Tournaments.Stats.StatsView>> GetAllStatsAsync() =>
-        SendAsync<Olomoc.Tournaments.Stats.StatsView>(HttpMethod.Get, "/api/stats/all", null);
+    public Task<ApiResult<Olomoc.Tournaments.Stats.StatsView>> GetAllStatsAsync(Olomoc.Tournaments.Stats.StatsPeriod? period = null) =>
+        SendAsync<Olomoc.Tournaments.Stats.StatsView>(HttpMethod.Get, "/api/stats/all" + Query(period), null);
+
+    /// <summary>"?from=…&amp;to=…" of a period, empty for everything.</summary>
+    public static string Query(Olomoc.Tournaments.Stats.StatsPeriod? period) => period?.Query is { Length: > 0 } q ? "?" + q : "";
 
     public Task<ApiResult<bool>> FinishAsync(string code, string organizer) =>
         SendAsync<bool>(HttpMethod.Post, $"{Root}/{code}/finish", null, organizer);

@@ -67,6 +67,11 @@ public sealed class AdminApi(HttpClient http)
 
     public Task<AccountResult<bool>> SetSettingsAsync(SiteSettings settings) => SendAsync<bool>(HttpMethod.Put, "settings", settings);
 
+    /// <summary>Reset of all the statistics (only what is recorded afterwards counts); cancelled: everything counts again.</summary>
+    public Task<AccountResult<SiteSettings>> ResetStatsAsync() => SendAsync<SiteSettings>(HttpMethod.Post, "stats/reset", null);
+
+    public Task<AccountResult<SiteSettings>> CancelStatsResetAsync() => SendAsync<SiteSettings>(HttpMethod.Delete, "stats/reset", null);
+
     private static string Name(string userName) => Uri.EscapeDataString(userName.Trim());
 
     private async Task<AccountResult<T>> SendAsync<T>(HttpMethod method, string path, object? body)

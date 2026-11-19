@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Olomoc.Server.Zones;
 using Olomoc.Tournaments;
+using Olomoc.Tournaments.Stats;
 using Olomoc.Zones;
 
 namespace Olomoc.Server.Tournaments;
@@ -81,12 +82,18 @@ public static class TournamentEndpoints
             return result;
         });
 
-        app.MapGet("/api/stats", async (StatsArchive stats) => Results.Json(await stats.StatsAsync(), TournamentJson.Options))
+        // ?from=&to= (yyyy-MM-dd, both optional): the period (StatsPeriod).
+        app.MapGet("/api/stats", async (StatsArchive stats, string? from, string? to) =>
+                Results.Json(await stats.StatsAsync(Period(from, to)), TournamentJson.Options))
             .RequireRateLimiting(ReadPolicy);
         // Everything: the tournaments and the Block together (/stats/).
-        app.MapGet("/api/stats/all", async (AllStats stats) => Results.Json(await stats.GetAsync(), TournamentJson.Options))
+        app.MapGet("/api/stats/all", async (AllStats stats, string? from, string? to) =>
+                Results.Json(await stats.GetAsync(Period(from, to)), TournamentJson.Options))
             .RequireRateLimiting(ReadPolicy);
     }
+
+    /// <summary>Period of the statistics from the query (a date that does not read: no limit).</summary>
+    public static StatsPeriod Period(string? from, string? to) => new(StatsPeriod.Parse(from), StatsPeriod.Parse(to));
 
     // ---- Creation and reading ----
 

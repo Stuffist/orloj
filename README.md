@@ -502,6 +502,9 @@ Optional: without an account, everything works as before, on the device. `/build
   lost theirs), include in or exclude from the stats, deletion. An event's admin page stays
   with its organizer;
 - **online games**: list and deletion;
+- **statistics**: "Export the data" (the editors' export, see "Data export") next to
+  "Reset ALL stats", which asks to confirm that the current data was exported (a box to tick),
+  then resets every statistic (see "Reset of the statistics"); cancellable;
 - **maintenance**: backup now (replaces today's), purges of events and games with the
   background tasks' rules;
 - **log** of the admins' actions (`AdminActions` table, kept for a year), last 100 shown.
@@ -679,6 +682,12 @@ Planned next steps: the Block (16″ board, terrain, miniatures, measurements), 
 
 `/pairings/stats` and `/bloc/stats` redirect there with the matching filter.
 
+A **period** narrows any of them (`?from=&to=`, `yyyy-MM-dd`, both optional and included; the same
+query on the three APIs, `Tournaments/Stats/StatsPeriod.cs`): two date fields and shortcuts (all
+dates, last 12 months, this year, last year), kept when the filter changes, in the address
+(shareable). An event counts on its date (otherwise the day it finished), a zone game on the day it
+was played. Computed on demand (the figures without a period stay in memory).
+
 The events counted are the **finished** ones — except those their organizer excludes ("Do
 not count in the statistics", at creation or at any time in the administration):
 
@@ -702,6 +711,16 @@ archive; at startup, a finished event without an archive gets one.
 The computation shared with the zones is in `Tournaments/Stats/GameStats.cs` (games in a neutral
 form: a side is one player or a team of two).
 
+### Reset of the statistics (admins)
+
+"Reset ALL stats" in the admin panel (`POST /api/admin/stats/reset`, logged): from that moment,
+only what is recorded afterwards counts, everywhere: events finished afterwards, zone games
+entered afterwards (`/stats/`, each zone's statistics and **dominance**). **Nothing is deleted**:
+the archives and the zones' games stay (the zones list them), the export keeps everything (its
+`counted` column follows the reset), and "Cancel the reset" (`DELETE /api/admin/stats/reset`)
+makes everything count again. The moment is kept in the site settings (`DATA_DIR/settings.json`,
+`StatsSince`, outside the database backup); the statistics pages say "Statistics reset on …".
+
 ### Data export (editors and admins)
 
 On `/stats/`, editors and admins get an "Export the data" button (`GET /api/admin/export`,
@@ -718,8 +737,8 @@ included, anonymous like the archives (no player names, no comments, no tokens):
 Ids: `T-{event}-{n}` for an event's game, `Z-{id}` for a zone's. Card ids are the catalog's, with
 their names in the reference language. An event's players are numbered (registration order);
 a zone's are not followed from one game to the next. The `counted` column marks the games counted
-in "All": a zone game copied from an archived event (`copied_from`) is counted in the event, and
-hidden zones never count.
+in "All": a zone game copied from an archived event (`copied_from`) is counted in the event,
+hidden zones never count, and after a reset of the statistics only what was recorded afterwards.
 
 ## The Block (zones)
 

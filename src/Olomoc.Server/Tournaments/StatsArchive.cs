@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Olomoc.Server.Data;
+using Olomoc.Server.Hosting;
 using Olomoc.Tournaments;
 using Olomoc.Tournaments.Stats;
 
@@ -9,10 +10,12 @@ namespace Olomoc.Server.Tournaments;
 /// <summary>
 /// Anonymous archives of the finished and counted tournaments, one per tournament ("stats"
 /// documents of the database, under the tournament's code), outside the tournament purge: the
-/// statistics cover the whole history. The figures are computed once, kept in memory, and
-/// computed again after each archive added or removed.
+/// statistics cover the whole history. After a reset of the statistics (<see cref="StatsReset"/>),
+/// only the tournaments finished afterwards count (the archives stay, for the export). The figures
+/// are computed once, kept in memory, and computed again after each archive added or removed (or a
+/// reset); those of a period (<see cref="StatsPeriod"/>) on demand.
 /// </summary>
-public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory)
+public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory, SiteSettingsStore settings)
 {
     public const string Kind = "stats";
 
@@ -55,22 +58,48 @@ public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory)
         return db.Documents.Any(d => d.Kind == Kind && d.Code == code);
     }
 
-    /// <summary>Statistics of the archived tournaments.</summary>
-    public Task<StatsView> StatsAsync()
+    /// <summary>Statistics of the archived tournaments that count (since the reset; in the period).</summary>
+    public Task<StatsView> StatsAsync(StatsPeriod? period = null)
     {
         lock (_lock)
         {
-            return Task.FromResult(_stats ??= TournamentStats.Compute(LoadArchives().Tournaments));
+            var counted = LoadCounted();
+            if (period is { IsAll: false } p)
+                return Task.FromResult(TournamentStats.Compute(counted.Tournaments.Where(p.Contains)) with { Since = counted.Since });
+            return Task.FromResult(_stats ??= TournamentStats.Compute(counted.Tournaments) with { Since = counted.Since });
         }
     }
 
     /// <summary>
-    /// The archives and the codes of their tournaments (for the statistics of everything: a zone game
-    /// copied from an archived tournament is not counted twice). The same object until a change.
+    /// All the archives and the codes of their tournaments (the export). The same object until a change.
     /// </summary>
     public Archives CurrentArchives()
     {
         lock (_lock) return LoadArchives();
+    }
+
+    /// <summary>
+    /// The archives that count (finished since the reset), and the codes of all the archived
+    /// tournaments (for the statistics of everything: a zone game copied from an archived tournament
+    /// is not counted twice). The same object until a change.
+    /// </summary>
+    public Counted CountedArchives()
+    {
+        lock (_lock) return LoadCounted();
+    }
+
+    public sealed record Counted(IReadOnlyList<ArchivedTournament> Tournaments, IReadOnlySet<string> Codes, DateTimeOffset? Since);
+
+    private Counted? _counted;
+
+    // Under the lock. Reset (or cancelled) since the last time: computed again.
+    private Counted LoadCounted()
+    {
+        var since = settings.Current.StatsSince;
+        if (_counted is { } cached && cached.Since == since) return cached;
+        var all = LoadArchives();
+        _stats = null;
+        return _counted = new Counted(all.Tournaments.Where(t => StatsReset.Counts(t.FinishedAt, since)).ToList(), all.Codes, since);
     }
 
     public sealed record Archives(IReadOnlyList<ArchivedTournament> Tournaments, IReadOnlySet<string> Codes);
@@ -82,6 +111,7 @@ public sealed class StatsArchive(IDbContextFactory<OlomocDb> factory)
     {
         _stats = null;
         _archives = null;
+        _counted = null;
     }
 
     // Under the lock.

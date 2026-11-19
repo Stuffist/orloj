@@ -49,9 +49,25 @@ public static class AdminEndpoints
         read.MapGet("settings", (SiteSettingsStore settings) => Results.Json(settings.Current, TournamentJson.Options));
         write.MapPut("settings", async (SiteSettings body, SiteSettingsStore settings, AdminAudit audit, HttpContext ctx) =>
         {
-            settings.Set(body);
+            settings.Set(body with { StatsSince = settings.Current.StatsSince });     // the reset has its own route
             await audit.LogAsync(AdminName(ctx), "settings", "photos", body.BlockPhotos ? "on" : "off");
             return Results.NoContent();
+        });
+        // Reset of all the statistics (StatsReset): from now on, only what is recorded afterwards
+        // counts; nothing deleted (the export keeps everything). Cancelled: everything counts again.
+        write.MapPost("stats/reset", async (SiteSettingsStore settings, AdminAudit audit, HttpContext ctx) =>
+        {
+            var now = DateTimeOffset.UtcNow;
+            settings.Set(settings.Current with { StatsSince = now });
+            await audit.LogAsync(AdminName(ctx), "statsReset", "stats", null);
+            return Results.Json(settings.Current, TournamentJson.Options);
+        });
+        write.MapDelete("stats/reset", async (SiteSettingsStore settings, AdminAudit audit, HttpContext ctx) =>
+        {
+            var since = settings.Current.StatsSince;
+            settings.Set(settings.Current with { StatsSince = null });
+            await audit.LogAsync(AdminName(ctx), "statsResetCancel", "stats", since?.ToString("yyyy-MM-dd HH:mm 'UTC'"));
+            return Results.Json(settings.Current, TournamentJson.Options);
         });
     }
 

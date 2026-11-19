@@ -9,7 +9,8 @@
 @inject LocalizationService L
 
 @* Admin panel (admins): database figures, everyone's accounts, tournaments and online games,
-   site settings (photos of the Block), maintenance (backup, purges), log of the admins' actions. *@
+   site settings (photos of the Block), statistics (export, reset), maintenance (backup, purges),
+   log of the admins' actions. *@
 
 @if (!L.Loaded || !Accounts.Loaded)
 {
@@ -78,6 +79,43 @@ else
         }
     </section>
 
+    @* Statistics: the export of the data (the editors'), and the reset of all the statistics: only
+       what is recorded afterwards counts (nothing deleted, cancellable). Confirmed after the export. *@
+    <section class="panel">
+        <h3>@L.Ui("control.stats.title")</h3>
+        <p class="hint">@L.Ui("control.stats.help")</p>
+        @if (_settings?.StatsSince is { } since)
+        {
+            <p class="account-msg ok">@L.Ui("control.stats.since", AdminUi.Date(since))</p>
+        }
+        <div class="control-row-actions">
+            <a class="btn" href="api/admin/export" download>@L.Ui("stats.export")</a>
+            <button class="btn danger" disabled="@(_busy || _confirmReset)" @onclick="() => _confirmReset = true">@L.Ui("control.stats.reset")</button>
+            @if (_settings?.StatsSince is not null)
+            {
+                <button class="btn" disabled="@_busy" @onclick="CancelResetAsync">@L.Ui("control.stats.cancel")</button>
+            }
+        </div>
+        @if (_confirmReset)
+        {
+            <div class="control-confirm" role="group" aria-labelledby="stats-reset-question">
+                <p id="stats-reset-question"><strong>@L.Ui("control.stats.confirm")</strong></p>
+                <label class="check">
+                    <input type="checkbox" checked="@_exported" @onchange="e => _exported = e.Value is true" />
+                    @L.Ui("control.stats.exported")
+                </label>
+                <div class="control-row-actions">
+                    <button class="btn danger" disabled="@(_busy || !_exported)" @onclick="ResetAsync">@L.Ui("control.stats.resetConfirm")</button>
+                    <button class="btn" disabled="@_busy" @onclick="CloseReset">@L.Ui("pairings.cancel")</button>
+                </div>
+            </div>
+        }
+        @if (_statsMessage is { } done)
+        {
+            <p class="account-msg @(done.Ok ? "ok" : "error")" role="@(done.Ok ? "status" : "alert")">@done.Text</p>
+        }
+    </section>
+
     <section class="panel">
         <h3>@L.Ui("control.maintenance.title")</h3>
         <p class="hint">@L.Ui("control.maintenance.help")</p>
@@ -135,6 +173,8 @@ else
     private (string Text, bool Ok)? _maintenance;
     private SiteSettings? _settings;
     private (string Text, bool Ok)? _settingsMessage;
+    private bool _confirmReset, _exported;
+    private (string Text, bool Ok)? _statsMessage;
     private bool _loaded;
 
     protected override async Task OnInitializedAsync()
@@ -184,6 +224,40 @@ else
             _settingsMessage = result.Ok
                 ? (L.Ui(on ? "control.settings.photos.on" : "control.settings.photos.off"), true)
                 : (L.Describe(result.Problems), false);
+        }
+        finally { _busy = false; }
+        await RefreshAsync();
+    }
+
+    private void CloseReset()
+    {
+        _confirmReset = false;
+        _exported = false;
+    }
+
+    private async Task ResetAsync()
+    {
+        if (!_exported) return;
+        _busy = true;
+        try
+        {
+            var result = await Api.ResetStatsAsync();
+            if (result.Value is { } settings) _settings = settings;
+            _statsMessage = result.Value is not null ? (L.Ui("control.stats.resetDone"), true) : (L.Describe(result.Problems), false);
+            if (result.Value is not null) CloseReset();
+        }
+        finally { _busy = false; }
+        await RefreshAsync();
+    }
+
+    private async Task CancelResetAsync()
+    {
+        _busy = true;
+        try
+        {
+            var result = await Api.CancelStatsResetAsync();
+            if (result.Value is { } settings) _settings = settings;
+            _statsMessage = result.Value is not null ? (L.Ui("control.stats.cancelled"), true) : (L.Describe(result.Problems), false);
         }
         finally { _busy = false; }
         await RefreshAsync();

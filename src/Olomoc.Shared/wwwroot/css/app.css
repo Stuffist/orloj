@@ -644,6 +644,12 @@ body {
 .control-account-head .account-badge { margin-left: .4rem; }
 .control-accounts .control-meta { margin: 0; font-size: .8rem; }
 .control-row-actions { display: flex; flex-wrap: wrap; gap: .35rem; }
+/* Confirmation of the reset of the statistics (after the export) */
+.control-confirm {
+    display: flex; flex-direction: column; gap: .5rem; margin-top: .7rem; padding: .7rem .8rem;
+    border: 1px solid var(--rust); border-radius: 8px; background: var(--panel-2);
+}
+.control-confirm p { margin: 0; }
 .control-filter { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .8rem; }
 .control-filter input[type=search] {
     flex: 1; min-width: 10rem; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
@@ -1066,6 +1072,12 @@ body {
     border: 1px solid var(--line); border-radius: 6px; padding: .5rem .6rem; font: inherit; font-size: .9rem;
 }
 .zn-format { flex: 1 1 18rem; }
+/* Statistics: period (dates and shortcuts), reset notice */
+.stats-period { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .6rem 1.2rem; }
+.stats-period .tn-fields { margin: 0; }
+.stats-period .field { min-width: 0; flex: 0 1 11rem; }
+.stats-shortcuts { display: flex; flex-wrap: wrap; gap: .35rem; }
+.stats-since { margin: 0 0 .6rem; }
 .zn-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
 .zn-side { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: .7rem; }
 .zn-side legend { font-size: .72rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); padding: 0 .3rem; }

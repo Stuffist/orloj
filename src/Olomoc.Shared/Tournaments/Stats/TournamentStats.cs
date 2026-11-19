@@ -31,14 +31,15 @@ public sealed record FactionPicks(string Faction, int Cabals, IReadOnlyList<Shar
 /// <see cref="Players"/> registered), of zones (<see cref="Tournaments"/> = number of zones,
 /// <see cref="Players"/> = participations in the games), or of both together
 /// (<see cref="Combine"/>: <see cref="Tournaments"/> archives and <see cref="Zones"/> zones,
-/// <see cref="Players"/> = registered + participations).
+/// <see cref="Players"/> = registered + participations). <see cref="Since"/>: the statistics were
+/// reset at that moment (<see cref="StatsReset"/>), only what was recorded afterwards counts.
 /// </summary>
 public sealed record StatsView(
     int Tournaments, int Players, int Games,
     IReadOnlyList<Share> Factions, IReadOnlyList<FactionPicks> Picks,
     IReadOnlyList<WinRate> FactionWins, IReadOnlyList<WinRate> Rank3Wins,
     WinRate FirstPlayer, IReadOnlyList<Share> Ends, IReadOnlyList<ScenarioStat> Scenarios,
-    IReadOnlyList<ScenarioStat> Artifacts, IReadOnlyList<ScenarioStat> Ministries, int Zones = 0)
+    IReadOnlyList<ScenarioStat> Artifacts, IReadOnlyList<ScenarioStat> Ministries, int Zones = 0, DateTimeOffset? Since = null)
 {
     /// <summary>Below this, a win rate is not very meaningful (shown, but flagged).</summary>
     public const int MinGames = 10;

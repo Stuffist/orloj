@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Olomoc.Accounts;
 using Olomoc.Server.Accounts;
+using Olomoc.Server.Hosting;
 using Olomoc.Server.Tournaments;
 using Olomoc.Server.Zones;
 using Olomoc.Services;
@@ -32,7 +33,8 @@ public sealed record ExportSide(int Vp, IReadOnlyList<ExportPlayer> Players);
 /// A game: id ("T-{code}-{n}" for a tournament, "Z-{id}" for a zone), source ("tournament" or
 /// "zone"), its tournament or zone, the tournament a zone game was copied from, the date, whether
 /// it counts in the statistics of everything (/stats/: a zone game copied from an archived
-/// tournament counts once, in the tournament; hidden zones never count), both sides, and if recorded:
+/// tournament counts once, in the tournament; hidden zones never count; after a reset of the
+/// statistics, only what was recorded afterwards), both sides, and if recorded:
 /// P1, cause of the end, scenario and decks.
 /// </summary>
 public sealed record ExportGame(string Id, string Source, string Event, string? CopiedFrom, DateOnly? Date, GameFormat Format,
@@ -58,10 +60,10 @@ public static class DataExport
     }
 
     private static async Task<IResult> Download(HttpContext ctx, StatsArchive archive, ZoneStore zones, ZoneGameStore games,
-        ServerCatalog catalog, AdminAudit audit)
+        ServerCatalog catalog, AdminAudit audit, SiteSettingsStore settings)
     {
         var data = Build(DateTimeOffset.UtcNow, archive.CurrentArchives(), await zones.ListAsync(), await games.AllWithZoneAsync(),
-            await catalog.GetAsync());
+            await catalog.GetAsync(), settings.Current.StatsSince);
         await audit.LogAsync(AdminEndpoints.AdminName(ctx), "export", "data", $"{data.Games.Count}");
         ctx.Response.Headers.CacheControl = "no-store";
         return Results.File(Zip(data), "application/zip", $"olomoc-data-{data.ExportedAt:yyyy-MM-dd}.zip");
@@ -70,7 +72,7 @@ public static class DataExport
     // ---- Data ----
 
     public static ExportData Build(DateTimeOffset now, StatsArchive.Archives archives, IReadOnlyList<Zone> zones,
-        IReadOnlyList<(string Zone, StoredZoneGame Game)> zoneGames, CatalogService catalog)
+        IReadOnlyList<(string Zone, StoredZoneGame Game)> zoneGames, CatalogService catalog, DateTimeOffset? since = null)
     {
         var names = new Names(catalog);
         var list = new List<ExportGame>();
@@ -85,8 +87,9 @@ public static class DataExport
                 var cards = p is not null && cabal is { } c && c >= 0 && c < p.Cabals.Count ? names.Cards(p.Cabals[c]) : null;
                 return new(vp, [new ExportPlayer(number + 1, p?.Faction ?? "", names.Faction(p?.Faction), cards)]);
             }
+            var counts = StatsReset.Counts(t.FinishedAt, since);
             list.AddRange(t.Games.Select((g, i) => new ExportGame($"T-{t.Code}-{i + 1}", "tournament", t.Code, null, date, GameFormat.Duel,
-                true, Side(g.A, g.CabalA, g.VpA), Side(g.B, g.CabalB, g.VpB), g.First, g.End, g.Scenario, g.Artifact, g.Ministry)));
+                counts, Side(g.A, g.CabalA, g.VpA), Side(g.B, g.CabalB, g.VpB), g.First, g.End, g.Scenario, g.Artifact, g.Ministry)));
         }
 
         var counted = zones.Where(z => !z.Hidden).Select(z => z.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -95,7 +98,8 @@ public static class DataExport
             var g = stored.Game;
             ExportSide Side(ZoneSide s) => new(s.Vp, s.Players.Select(p => new ExportPlayer(null, p.Faction, names.Faction(p.Faction),
                 p.Cabal is { } c ? names.Cards(c.Cogs.Select(x => new ArchivedSlot(x.Rank, x.Cog.Id, x.Equipment?.Id))) : null)).ToList());
-            var inAll = counted.Contains(zone) && (stored.TournamentCode is not { } code || !archives.Codes.Contains(code));
+            var inAll = counted.Contains(zone) && (stored.TournamentCode is not { } code || !archives.Codes.Contains(code))
+                && StatsReset.Counts(stored.CreatedAt, since);
             list.Add(new ExportGame($"Z-{stored.Id}", "zone", zone, stored.TournamentCode, g.PlayedOn, g.Format, inAll,
                 Side(g.A), Side(g.B), g.First, g.End, g.Scenario?.Id, g.Scenario?.Artifact, g.Scenario?.Ministry));
         }

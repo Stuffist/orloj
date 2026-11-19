@@ -502,6 +502,76 @@ public sealed class ZoneApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Statistics_of_a_period()
+    {
+        var (_, root, _, _, anonymous) = await StartAsync();
+        var zone = await CreateZone(root, Settings());
+        await Enter(anonymous, zone, Duel("LIBUS", "OTHERS") with { PlayedOn = Today.AddDays(-20) });
+        await Enter(anonymous, zone, Duel());
+        var (t, table) = await TournamentInZone(anonymous, zone);           // dated today
+        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}", t.OrganizerToken, new ResultRequest(9, 4));
+        await Organizer(anonymous, HttpMethod.Post, $"/api/tournaments/{t.Code}/finish", t.OrganizerToken);
+
+        async Task<StatsView> Stats(string url, DateOnly? from = null, DateOnly? to = null) =>
+            await Read<StatsView>(await anonymous.GetAsync(url + "?" + new StatsPeriod(from, to).Query));
+        Assert.Equal((1, 3), ((await Stats("/api/stats/all")).Tournaments, (await Stats("/api/stats/all")).Games));
+        var recent = await Stats("/api/stats/all", from: Today.AddDays(-10));
+        Assert.Equal((1, 2), (recent.Tournaments, recent.Games));
+        var older = await Stats("/api/stats/all", to: Today.AddDays(-15));
+        Assert.Equal((0, 1, 1), (older.Tournaments, older.Zones, older.Games));
+        Assert.Equal(0, (await Stats("/api/stats", to: Today.AddDays(-1))).Tournaments);
+        Assert.Equal(1, (await Stats("/api/stats", from: Today, to: Today)).Tournaments);
+        Assert.Equal(1, (await Stats("/api/zones/stats", from: Today.AddDays(-30), to: Today.AddDays(-10))).Games);
+        Assert.Equal(3, (await Stats("/api/zones/stats")).Games);           // the tournament's copy included
+        Assert.Equal(3, (await Read<StatsView>(await anonymous.GetAsync("/api/stats/all?from=nope"))).Games);   // unreadable: no limit
+    }
+
+    [Fact]
+    public async Task Statistics_reset_by_an_admin_count_only_what_comes_after_until_cancelled()
+    {
+        var (_, root, _, carl, anonymous) = await StartAsync();
+        var zone = await CreateZone(root, Settings());
+        await Enter(anonymous, zone, Duel());
+        var (t, table) = await TournamentInZone(anonymous, zone);
+        await Organizer(anonymous, HttpMethod.Put, $"/api/tournaments/{t.Code}/rounds/1/tables/{table.Number}", t.OrganizerToken, new ResultRequest(9, 4));
+        await Organizer(anonymous, HttpMethod.Post, $"/api/tournaments/{t.Code}/finish", t.OrganizerToken);
+        async Task<StatsView> All() => await Read<StatsView>(await anonymous.GetAsync("/api/stats/all"));
+        Assert.Equal((1, 2), ((await All()).Tournaments, (await All()).Games));
+
+        // Admins only (logged).
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Send(anonymous, HttpMethod.Post, "/api/admin/stats/reset")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Send(carl, HttpMethod.Post, "/api/admin/stats/reset")).StatusCode);
+        var reset = await Read<SiteSettings>(await Send(root, HttpMethod.Post, "/api/admin/stats/reset"));
+        Assert.NotNull(reset.StatsSince);
+
+        // Reset: nothing counts any more, the zone keeps its games; dominance reset too.
+        var after = await All();
+        Assert.Equal((0, 0, reset.StatsSince), (after.Tournaments, after.Games, after.Since));
+        Assert.Equal(0, (await Read<StatsView>(await anonymous.GetAsync("/api/stats"))).Tournaments);
+        var view = await Zone(anonymous, zone);
+        Assert.Equal((0, (string?)null), (view.Stats.Games, view.Dominance.Faction));
+        Assert.Equal(2, (await Games(anonymous, zone)).Games.Count);
+
+        // What is entered afterwards counts; another setting changed keeps the reset.
+        await Enter(anonymous, zone, Duel("LIBUS", "OTHERS"));
+        Assert.Equal(1, (await All()).Games);
+        Assert.Equal(1, (await Zone(anonymous, zone)).Stats.Games);
+        await Send(root, HttpMethod.Put, "/api/admin/settings", new SiteSettings(true));
+        Assert.Equal(reset.StatsSince, (await Read<SiteSettings>(await root.GetAsync("/api/admin/settings"))).StatsSince);
+        Assert.Equal(1, (await All()).Games);
+
+        // The export keeps everything, marking what counts.
+        var export = await root.GetAsync("/api/admin/export");
+        Assert.Equal(HttpStatusCode.OK, export.StatusCode);
+
+        // Cancelled: everything counts again.
+        var cancelled = await Read<SiteSettings>(await Send(root, HttpMethod.Delete, "/api/admin/stats/reset"));
+        Assert.Null(cancelled.StatsSince);
+        var back = await All();
+        Assert.Equal((1, 3, (DateTimeOffset?)null), (back.Tournaments, back.Games, back.Since));
+    }
+
+    [Fact]
     public async Task A_closed_zone_is_neither_offered_nor_changed()
     {
         var (_, root, _, _, anonymous) = await StartAsync();

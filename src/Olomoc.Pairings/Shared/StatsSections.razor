@@ -4,6 +4,12 @@
 @inject LocalizationService L
 @inject CatalogService Catalog
 
+@* Statistics reset by an admin: only what was recorded afterwards counts. *@
+@if (Stats.Since is { } since)
+{
+    <p class="hint stats-since">@L.Ui("stats.since", ZoneText.Date(DateOnly.FromDateTime(since.LocalDateTime)))</p>
+}
+
 <section class="panel">
     <h3>@L.Ui("pairings.stats.factions")</h3>
     @foreach (var f in Stats.Factions)

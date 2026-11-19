@@ -27,7 +27,8 @@ public static class ZoneEndpoints
         var api = app.MapGroup("/api/zones");
         var read = api.MapGroup("").RequireRateLimiting(TournamentEndpoints.ReadPolicy);
         read.MapGet("", List);
-        read.MapGet("stats", async (ZoneStats stats) => Results.Json(await stats.AllAsync(), TournamentJson.Options));
+        read.MapGet("stats", async (ZoneStats stats, string? from, string? to) =>
+            Results.Json(await stats.AllAsync(TournamentEndpoints.Period(from, to)), TournamentJson.Options));
         read.MapGet("{code}", Get);
         read.MapGet("{code}/games", Games);
         read.MapGet("{code}/games/{id:long}/photo", GetPhoto);
