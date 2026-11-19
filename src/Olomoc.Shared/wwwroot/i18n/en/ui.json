@@ -1206,7 +1206,6 @@
   "zones.game.online": "Online game",
   "pairings.problem.onlineTablePiece": "This piece does not exist (anymore) on the table.",
   "pairings.problem.onlineTableFull": "The table is full ({0} pieces at most).",
-  "pairings.problem.onlineTableNotYours": "Only its player moves this piece.",
   "pairings.problem.onlineTablePosition": "Position off the mat.",
   "pairings.problem.onlineTableCog": "A cog is not removed: put it back off the mat.",
   "pairings.problem.onlineTableAura": "A range is 1 to {0} inches.",

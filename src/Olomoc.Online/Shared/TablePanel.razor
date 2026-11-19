@@ -281,7 +281,7 @@ else
                                 @foreach (var id in new[] { cog?.EquipmentId, cog?.ExtraEquipmentId }.OfType<string>())
                                 {
                                     var (eid, elabel) = (id, EquipmentName(id));
-                                    var canPlace = mine && Playing;
+                                    var canPlace = Playing && View.Me is not null;
                                     <button class="tb-cog-gear @(_placing?.Kind == PieceKind.Equipment && _placing.Ref == id ? "on" : null)" type="button"
                                             disabled="@(!canPlace)" title="@(canPlace ? L.Ui("online.table.equipment.place", elabel) : elabel)"
                                             @onclick="() => StartPlacing(new(PieceKind.Equipment, eid, null, elabel))">
@@ -414,7 +414,8 @@ else
     // A piece with a round base: cogs, equipment tokens, markers (ranges, measures, magnets).
     private static bool HasBase(TablePiece p) => p.Kind is PieceKind.Cog or PieceKind.Equipment or PieceKind.Marker;
 
-    private bool Movable(TablePiece p) => Playing && View.Me is { } me && (p.Seat is null || p.Seat == me);
+    // Either player moves any piece (as on Vassal); a spectator none.
+    private bool Movable(TablePiece p) => Playing && View.Me is not null;
 
     private double Radius(TablePiece p) => p.Kind switch
     {

@@ -72,7 +72,7 @@ public class OnlineTableTests
     }
 
     [Fact]
-    public async Task A_player_moves_their_cogs_only()
+    public async Task Either_player_moves_any_cog()
     {
         var (d, g) = await InCycle();
         var mine = Cog(g, 0, "2R08");
@@ -84,7 +84,8 @@ public class OnlineTableTests
         // Rotation alone keeps the place; nothing: back off the board.
         Ok(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: mine.Id, Rotation: -30), d));
         Assert.Equal((50.0, 120.5, 330), (mine.X, mine.Y, mine.Rotation));
-        Assert.Equal("onlineTableNotYours", Key(Do(g, 1, new(OnlineCommandType.MovePiece, PieceId: mine.Id, X: 10, Y: 10), d)));
+        Ok(Do(g, 1, new(OnlineCommandType.MovePiece, PieceId: mine.Id, X: 10, Y: 10), d));      // the opponent too, as on Vassal
+        Assert.Equal((10.0, 10.0), (mine.X, mine.Y));
         Assert.Equal("onlineTableCog", Key(Do(g, 0, new(OnlineCommandType.RemovePiece, PieceId: mine.Id), d)));
         Ok(Do(g, 0, new(OnlineCommandType.MovePiece, PieceId: mine.Id), d));
         Assert.False(mine.OnBoard);
@@ -97,7 +98,7 @@ public class OnlineTableTests
     }
 
     [Fact]
-    public async Task Terrain_and_markers_by_either_player_equipment_tokens_by_their_owner()
+    public async Task Terrain_markers_and_equipment_tokens_by_either_player()
     {
         var (d, g) = await InCycle();
         var cuve = Manifest.Value.Terrain.First(t => t.Type == "cuve").Id;
@@ -115,12 +116,12 @@ public class OnlineTableTests
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "nothing", Piece: PieceKind.Terrain, X: 10, Y: 10), d)));
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "3R06", Piece: PieceKind.Cog, X: 10, Y: 10), d)));
 
-        // Equipment: one of the player's own cards (Carapace for Ana, Ration for Bo), moved by them only.
-        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "E07", Piece: PieceKind.Equipment, X: 10, Y: 10), d)));
-        Ok(Do(g, 0, new(OnlineCommandType.AddPiece, "D01", Piece: PieceKind.Equipment, X: 30, Y: 30), d));
+        // Equipment: a card of either cabal (Carapace: Ana's, Ration: Bo's), put down by either player, of its side.
+        Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.AddPiece, "E01", Piece: PieceKind.Equipment, X: 10, Y: 10), d)));
+        Ok(Do(g, 0, new(OnlineCommandType.AddPiece, "E07", Piece: PieceKind.Equipment, X: 30, Y: 30), d));
         var token = g.Table.Pieces.Single(p => p.Kind == PieceKind.Equipment);
-        Assert.Equal(0, token.Seat);
-        Assert.Equal("onlineTableNotYours", Key(Do(g, 1, new(OnlineCommandType.RemovePiece, PieceId: token.Id), d)));
+        Assert.Equal(1, token.Seat);
+        Ok(Do(g, 0, new(OnlineCommandType.RemovePiece, PieceId: token.Id), d));
 
         // Board: one of the manifest's.
         Ok(Do(g, 1, new(OnlineCommandType.SetBoard, "karst"), d));

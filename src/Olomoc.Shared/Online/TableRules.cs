@@ -4,9 +4,9 @@ namespace Olomoc.Online;
 
 /// <summary>
 /// The table of an online game, played freely as on Vassal: the server keeps and relays the
-/// positions, it does not check movements. It only checks who moves what (a player's cogs and
-/// equipment tokens: that player; terrain, markers and movement templates: either player), that the piece exists, and
-/// that it stays around the board. From the initiative (cabals known) to the end of the game.
+/// positions, it does not check movements, nor who moves what: either player moves any piece (a
+/// spectator none). It only checks that the piece exists and that it stays around the board. Seat:
+/// the side a cog or an equipment token belongs to (its color). From the initiative (cabals known) to the end of the game.
 /// </summary>
 public static class TableRules
 {
@@ -52,6 +52,11 @@ public static class TableRules
         return null;
     }
 
+    // The side whose cabal carries the card: the player's own first (both may carry it).
+    private static int? OwnerOf(OnlineGame g, int seat, string? id) =>
+        id is null ? null : new[] { seat, 1 - seat }.Where(s => s >= 0 && s < g.Seats.Count)
+            .Cast<int?>().FirstOrDefault(s => (g.Seats[s!.Value].State?.Cogs ?? []).Any(x => x.EquipmentId == id || x.ExtraEquipmentId == id));
+
     private static Problem? Add(OnlineGame g, OnlineTable table, int seat, OnlineCommand c, TableManifest? manifest, DateTimeOffset now)
     {
         if (table.Pieces.Count >= MaxPieces) return Problem.Of("onlineTableFull", MaxPieces.ToString());
@@ -60,15 +65,15 @@ public static class TableRules
             PieceKind.Terrain => manifest?.TerrainOf(c.Text) is not null,
             PieceKind.Marker => manifest?.Marker(c.Text) is not null,
             PieceKind.Template => manifest?.Template(c.Text) is not null,
-            // An equipment/boon token: one of the player's own cards.
-            PieceKind.Equipment => c.Text is { } id && (g.Seats[seat].State?.Cogs ?? []).Any(x => x.EquipmentId == id || x.ExtraEquipmentId == id),
+            // An equipment/boon token: one of the cards of a cabal (it belongs to that side).
+            PieceKind.Equipment => OwnerOf(g, seat, c.Text) is not null,
             _ => false,                     // cogs: created with the table
         };
         if (!known) return Problem.Of("onlineTablePiece");
         if (Position(c) is { } bad) return bad;
         var piece = new TablePiece
         {
-            Id = table.NextId++, Kind = c.Piece!.Value, Ref = c.Text!, Seat = c.Piece == PieceKind.Equipment ? seat : null,
+            Id = table.NextId++, Kind = c.Piece!.Value, Ref = c.Text!, Seat = c.Piece == PieceKind.Equipment ? OwnerOf(g, seat, c.Text) : null,
             X = c.X, Y = c.Y, Rotation = Normal(c.Rotation ?? 0),
             Magnet = c.Piece == PieceKind.Template,         // movement templates: magnetic by default
         };
@@ -82,7 +87,6 @@ public static class TableRules
     private static Problem? Move(OnlineTable table, int seat, OnlineCommand c)
     {
         if (Find(table, c.PieceId) is not { } piece) return Problem.Of("onlineTablePiece");
-        if (piece.Seat is { } owner && owner != seat) return Problem.Of("onlineTableNotYours");
         if (Position(c) is { } bad) return bad;
         if (c.X is { } x && c.Y is { } y) (piece.X, piece.Y) = (x, y);
         else if (c.Rotation is null)            // nothing but "off the board": a cog back to its tray
@@ -116,7 +120,6 @@ public static class TableRules
     {
         if (Find(table, id) is not { } piece) return Problem.Of("onlineTablePiece");
         if (piece.Kind == PieceKind.Cog) return Problem.Of("onlineTableCog");
-        if (piece.Seat is { } owner && owner != seat) return Problem.Of("onlineTableNotYours");
         table.Pieces.Remove(piece);
         if (piece.Kind == PieceKind.Terrain) OnlineRules.Log(g, seat, now, "tableRemove", piece.Ref);
         return null;

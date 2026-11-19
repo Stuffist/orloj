@@ -1206,7 +1206,6 @@
   "zones.game.online": "Partie en ligne",
   "pairings.problem.onlineTablePiece": "Cette pièce n’existe pas (ou plus) sur la table.",
   "pairings.problem.onlineTableFull": "La table est pleine ({0} pièces au plus).",
-  "pairings.problem.onlineTableNotYours": "Seul son joueur déplace cette pièce.",
   "pairings.problem.onlineTablePosition": "Position hors du tapis.",
   "pairings.problem.onlineTableCog": "Un rouage ne se retire pas : remettez-le hors du tapis.",
   "pairings.problem.onlineTableAura": "Une portée va de 1 à {0} pouces.",

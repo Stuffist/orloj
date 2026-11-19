@@ -667,8 +667,8 @@ connection.
   freely as on Vassal: the server keeps and relays the positions, it does not check the movements.
   - Created when both players are ready: each side's cogs, off the mat (their tray). Mat chosen
     among those of the manifest (default "Bloc (Mez)").
-  - A player moves **their** cogs and their equipment/boon tokens (one of their own cards); terrain
-    and markers are put down, moved, rotated and removed by either player; spectators watch. Only
+  - **Either player moves any piece**, as on Vassal: both sides' cogs, the equipment/boon tokens (a
+    card of either cabal, colored by its side), terrain, markers and templates; spectators watch. Only
     checks: the piece exists, the position stays around the mat (3 cm), 80 pieces at most. The last
     move wins, piece by piece; no log line per move (terrain put down or removed: logged).
   - Gestures in `js/table.js` (SVG in mm): drag a piece (the server hears of the drop only), zoom
