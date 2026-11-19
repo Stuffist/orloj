@@ -1157,7 +1157,7 @@
   "online.table.rotateRight": "Tourner à droite (15°)",
   "online.table.offBoard": "Hors du tapis",
   "online.table.remove": "Retirer",
-  "online.table.help": "Glissez vos figurines, les décors et les marqueurs ; cliquez sur une pièce pour la sélectionner (rotation ; portées : touches 1 à 9, 0 les enlève), sur un élément de la réserve puis sur le tapis pour le poser. Molette : zoom ; glisser le fond : déplacer la vue.",
+  "online.table.help": "Glissez vos figurines, les décors et les marqueurs ; cliquez sur un élément de la réserve puis sur le tapis pour le poser. Une pièce sélectionnée (clic) : flèches pour l’ajuster de 0,1″ (Maj : 1″), Ctrl+flèches pour la tourner, 1 à 9 pour ses portées (0 les enlève), Ctrl+C puis Ctrl+V pour la copier, Ctrl+X ou Suppr pour la retirer. Molette : zoom ; glisser le fond : déplacer la vue.",
   "online.table.help.watch": "Molette : zoom ; glisser le fond : déplacer la vue.",
   "online.table.myCabal": "Ma cabale",
   "online.table.cabalOf": "Cabale de {0}",
@@ -1217,5 +1217,7 @@
   "online.table.template.push": "Réglette de poussée",
   "online.table.template.turn": "Glissez pour tourner la réglette",
   "online.table.magnet": "Aimantée",
-  "online.table.magnet.title": "Aimantée : lâchée près d’un socle, la réglette vient le toucher ; un socle lâché près d’elle vient la toucher (vu par les deux joueurs)."
+  "online.table.magnet.title": "Aimantée : lâchée près d’un socle, la réglette vient le toucher ; un socle lâché près d’elle vient la toucher (vu par les deux joueurs).",
+  "online.table.copied": "Copié : Ctrl+V pour coller à côté.",
+  "online.table.copy.cog": "Un rouage n’existe qu’une fois : il ne se copie pas (Ctrl+X ou Suppr le remet hors du tapis)."
 }

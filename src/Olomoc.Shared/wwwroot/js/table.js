@@ -9,7 +9,8 @@
 // - press on the board: Clicked(x, y) (placing a piece, deselecting); with the ruler, the distance
 //   from the press to the pointer is drawn until the next press;
 // - drag on the board (no ruler): pan; wheel or zoom(): zoom. The viewBox belongs to this script;
-// - keys 0 to 9 (top row): AuraKey(n), the ranges of the selected piece.
+// - keys 0 to 9 (top row): AuraKey(n), the ranges of the selected piece; Ctrl+C/X/V, Delete,
+//   arrows (Ctrl: turn): Key(name, ctrl, shift).
 window.olomocTable = {
     _tables: new Map(),
 
@@ -140,13 +141,25 @@ window.olomocTable = {
         svg.addEventListener("wheel", t.wheel, { passive: false });
         // Keys 0 to 9 of the top row (whatever the layout: AZERTY gives &é"… without Shift), outside the
         // text fields: ranges of the selected piece.
+        // Then Ctrl+C, X, V (copy, cut, paste), Delete and Backspace, arrows (Ctrl: turn): Key(name, ctrl,
+        // shift). The browser's own action (scroll, copy) is kept when no piece is selected.
         t.key = e => {
-            if (e.ctrlKey || e.metaKey || e.altKey) return;
-            const m = /^Digit([0-9])$/.exec(e.code);
             const el = document.activeElement;
-            if (!m || (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)))) return;
+            if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+            const ctrl = e.ctrlKey || e.metaKey;
+            const selected = !!svg.querySelector(".tb-piece.selected");
+            const digit = /^Digit([0-9])$/.exec(e.code);
+            if (digit && !ctrl && !e.altKey) {
+                e.preventDefault();
+                dotnet.invokeMethodAsync("AuraKey", +digit[1]);
+                return;
+            }
+            if (e.altKey) return;
+            const letter = ctrl && /^[cxv]$/i.exec(e.key);
+            const name = letter ? letter[0].toLowerCase() : /^(Delete|Backspace|Arrow(Left|Right|Up|Down))$/.test(e.key) ? e.key : null;
+            if (!name || (!selected && name !== "v") || (name === "v" && !ctrl)) return;
             e.preventDefault();
-            dotnet.invokeMethodAsync("AuraKey", +m[1]);
+            dotnet.invokeMethodAsync("Key", name, ctrl, e.shiftKey);
         };
         document.addEventListener("keydown", t.key);
         apply();

@@ -1157,7 +1157,7 @@
   "online.table.rotateRight": "Rotate right (15°)",
   "online.table.offBoard": "Off the mat",
   "online.table.remove": "Remove",
-  "online.table.help": "Drag your miniatures, the terrain and the markers; click on a piece to select it (rotation, ranges: keys 1 to 9, 0 removes them), on an item of the reserve then on the mat to put it down. Wheel: zoom; drag the background: move the view.",
+  "online.table.help": "Drag your miniatures, the terrain and the markers; click on an item of the reserve then on the mat to put it down. A selected piece (click): arrows to adjust it by 0.1″ (Shift: 1″), Ctrl+arrows to turn it, 1 to 9 for its ranges (0 removes them), Ctrl+C then Ctrl+V to copy it, Ctrl+X or Delete to remove it. Wheel: zoom; drag the background: move the view.",
   "online.table.help.watch": "Wheel: zoom; drag the background: move the view.",
   "online.table.myCabal": "My cabal",
   "online.table.cabalOf": "{0}’s cabal",
@@ -1217,5 +1217,7 @@
   "online.table.template.push": "Push template",
   "online.table.template.turn": "Drag to turn the template",
   "online.table.magnet": "Magnetic",
-  "online.table.magnet.title": "Magnetic: dropped near a base, the template comes to touch it; a base dropped near it comes to touch it (seen by both players)."
+  "online.table.magnet.title": "Magnetic: dropped near a base, the template comes to touch it; a base dropped near it comes to touch it (seen by both players).",
+  "online.table.copied": "Copied: Ctrl+V to paste it next to it.",
+  "online.table.copy.cog": "A cog exists once: it is not copied (Ctrl+X or Delete puts it back off the mat)."
 }

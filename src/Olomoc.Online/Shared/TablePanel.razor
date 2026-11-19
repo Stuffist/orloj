@@ -224,6 +224,10 @@ else
                         @L.Ui(Playing && View.Me is not null ? "online.table.help" : "online.table.help.watch")
                     }
                 </p>
+                @if (_notice is { } notice)
+                {
+                    <p class="hint tb-notice">@L.Ui(notice)</p>
+                }
             </div>
 
             <aside class="tb-tray">
@@ -378,9 +382,15 @@ else
     {
         if (View.Revision == _revision) return;
         _revision = View.Revision;
-        _local.Clear();
+        // Positions being nudged with the keyboard stay until they are sent.
+        foreach (var key in _local.Keys.Where(k => !_nudged.Contains(k)).ToList()) _local.Remove(key);
         _localAuras.Clear();
         if (_selected is { } id && View.Table?.Pieces.Any(p => p.Id == id) != true) _selected = null;
+        if (_pasted is { } pasted && View.Table?.Pieces.LastOrDefault(p => p.Id > pasted.After && p.Ref == pasted.Ref) is { } copy)
+        {
+            _selected = copy.Id;
+            _pasted = null;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -617,6 +627,87 @@ else
         _localAuras[p.Id] = auras.Order().ToList();
         StateHasChanged();
         return Send(new(OnlineCommandType.SetAuras, PieceId: p.Id, Auras: _localAuras[p.Id]));
+    }
+
+    // ---- Keyboard (js/table.js, outside the text fields) ----
+    // Ctrl+C / Ctrl+V: copy and paste the selected piece (not a cog: it exists once), next to it;
+    // Ctrl+X: cut; Delete or Backspace: remove (a cog: off the mat); arrows: move by 0.1″ (Shift: 1″);
+    // Ctrl+arrows: turn by 5° (Shift: 15°), terrain and templates.
+
+    private sealed record Copied(PieceKind Kind, string Ref, int Rotation, double X, double Y);
+
+    private Copied? _copied;
+    private (string Ref, int After)? _pasted;      // the pasted piece gets selected when it arrives
+    private string? _notice;                    // key "online.table.*" shown in the status line
+    private readonly HashSet<int> _nudged = new();
+    private CancellationTokenSource? _nudge;
+
+    [JSInvokable]
+    public async Task Key(string key, bool ctrl, bool shift)
+    {
+        _notice = null;
+        var selected = View.Table?.Pieces.FirstOrDefault(p => p.Id == _selected);
+        switch (key)
+        {
+            case "c" or "x" when ctrl && selected is not null:
+                if (selected.Kind == PieceKind.Cog)
+                {
+                    _notice = "online.table.copy.cog";
+                    if (key == "x" && Movable(selected)) await OffBoardAsync(selected);
+                    break;
+                }
+                var (x, y, r) = At(selected);
+                _copied = new Copied(selected.Kind, selected.Ref, r, x, y);
+                _notice = "online.table.copied";
+                if (key == "x" && Movable(selected)) await RemoveAsync(selected);
+                break;
+            case "v" when ctrl && _copied is { } c && Playing && View.Me is not null:
+                // Next to the copied piece (each paste a step further), inside the mat.
+                var step = TableManifest.MmPerInch / 2;
+                var (px, py) = (Math.Clamp(c.X + step, 0, TableManifest.BoardSize), Math.Clamp(c.Y + step, 0, TableManifest.BoardSize));
+                _copied = c with { X = px, Y = py };
+                _pasted = (c.Ref, View.Table?.Pieces.Max(p => p.Id) ?? 0);
+                await Send(new(OnlineCommandType.AddPiece, c.Ref, Piece: c.Kind, X: Math.Round(px, 1), Y: Math.Round(py, 1), Rotation: c.Rotation));
+                break;
+            case "Delete" or "Backspace" when selected is not null && Movable(selected):
+                await (selected.Kind == PieceKind.Cog ? OffBoardAsync(selected) : RemoveAsync(selected));
+                break;
+            case "ArrowLeft" or "ArrowRight" or "ArrowUp" or "ArrowDown" when selected is not null && Movable(selected) && Shown(selected):
+                var (sx, sy, sr) = At(selected);
+                if (ctrl)
+                {
+                    if (HasBase(selected) || key is "ArrowUp" or "ArrowDown") break;
+                    var degrees = (shift ? 15 : 5) * (key == "ArrowLeft" ? -1 : 1);
+                    Nudge(selected, sx, sy, ((sr + degrees) % 360 + 360) % 360);
+                    break;
+                }
+                var move = shift ? TableManifest.MmPerInch : TableManifest.MmPerInch / 10;
+                var (dx, dy) = key switch { "ArrowLeft" => (-move, 0.0), "ArrowRight" => (move, 0.0), "ArrowUp" => (0.0, -move), _ => (0.0, move) };
+                var limit = (Min: -TableRules.Margin, Max: TableManifest.BoardSize + TableRules.Margin);
+                Nudge(selected, Math.Clamp(sx + dx, limit.Min, limit.Max), Math.Clamp(sy + dy, limit.Min, limit.Max), sr);
+                break;
+        }
+        StateHasChanged();
+    }
+
+    // Shown at once; sent once the keys stop for a moment (a key held repeats faster than the server
+    // accepts calls).
+    private void Nudge(TablePiece p, double x, double y, int rotation)
+    {
+        _local[p.Id] = (Math.Round(x, 1), Math.Round(y, 1), rotation);
+        _nudged.Add(p.Id);
+        _nudge?.Cancel();
+        var cancel = _nudge = new CancellationTokenSource();
+        _ = Task.Delay(250, cancel.Token).ContinueWith(async _ =>
+        {
+            var pending = _nudged.Where(_local.ContainsKey).Select(id => (Id: id, At: _local[id])).ToList();
+            _nudged.Clear();
+            await InvokeAsync(async () =>
+            {
+                foreach (var (id, at) in pending)
+                    await Send(new(OnlineCommandType.MovePiece, PieceId: id, X: at.X, Y: at.Y, Rotation: at.R));
+            });
+        }, cancel.Token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
     }
 
     /// <summary>Key 0 to 9 of the top row (js/table.js), outside the text fields: on the selected piece.</summary>
