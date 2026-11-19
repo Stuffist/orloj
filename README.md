@@ -682,7 +682,7 @@ connection.
     the card is linked to all of them. A click on the card selects them in turn (the others outlined),
     or puts one down if there is none; "＋" puts one more. Selecting a token lights its card.
   - **Padlock** of the terrain and the objectives (shared): locked, the piece is neither moved, turned
-    nor removed (server-side too) until unlocked; a locked piece shows its padlock.
+    nor removed (server-side too) until unlocked; its padlock shows when it is selected.
   - **Objectives**: the palette offers only the objective marker (yellow ring); a toggle per player
     marks it as taken by that side (its color; both: split diagonally), to track who took what.
   - These toggles (padlock, colors) are **on the selected piece itself**, to its right, like the

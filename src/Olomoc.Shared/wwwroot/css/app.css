@@ -1129,7 +1129,6 @@ body {
 .tb-control.tb-seat-1 circle { fill: rgba(79, 159, 214, .22); stroke: #4f9fd6; }
 .tb-control.tb-seat-1.on circle { fill: #4f9fd6; stroke: #fff; }
 .tb-control:hover circle { stroke-width: 1; }
-.tb-controls.idle { pointer-events: none; opacity: .75; }
 .tb-claim.tb-seat-0 { fill: rgba(217, 103, 58, .62); }
 .tb-claim.tb-seat-1 { fill: rgba(79, 159, 214, .62); }
 .tb-claim-toggle.tb-seat-0.on { background: var(--rust-soft); border-color: var(--rust-soft); color: #fff; }

@@ -164,14 +164,13 @@ else
                     }
 
                     @* Controls on the piece itself, to its right (upright whatever its rotation): padlock of the
-                       terrain and objectives, colors of the objectives. On the selected piece; elsewhere, a locked
-                       piece only shows its padlock. js/table.js leaves [data-control] to these clicks. *@
-                    @foreach (var p in OnBoard(table).Where(p => ControlsAt(p) is not null && (p.Id == _selected && Movable(p) || p.Locked)))
+                       terrain and objectives, colors of the objectives. On the selected piece only (a locked piece
+                       shows nothing more until selected). js/table.js leaves [data-control] to these clicks. *@
+                    @foreach (var p in OnBoard(table).Where(p => p.Id == _selected && Movable(p) && ControlsAt(p) is not null))
                     {
                         var (x, y, _) = At(p);
-                        var active = p.Id == _selected && Movable(p);
-                        var controls = active ? Controls(p) : [new Control("lock", null)];
-                        <g class="tb-controls @(active ? null : "idle")" transform="translate(@Num(x + ControlsAt(p)!.Value) @Num(y - (controls.Count - 1) * 4.5))">
+                        var controls = Controls(p);
+                        <g class="tb-controls" transform="translate(@Num(x + ControlsAt(p)!.Value) @Num(y - (controls.Count - 1) * 4.5))">
                             @for (var i = 0; i < controls.Count; i++)
                             {
                                 var control = controls[i];
