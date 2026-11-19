@@ -92,6 +92,7 @@ else
             break;
         case OnlineStep.Initiative or OnlineStep.Agenda:
             <SetupPanel View="v" Send="SendAsync" />
+            @Table(v)
             break;
         default:
             @if (v.Over)
@@ -109,6 +110,7 @@ else
                     {
                         <p class="hint">@L.Ui("online.over.hunted")</p>
                     }
+                    <ResultBox View="v" Send="SendAsync" />
                 </section>
             }
             @if (v.Mine is { } mine && v.Step == OnlineStep.Cycle)
@@ -130,6 +132,7 @@ else
                     }
                 </section>
             }
+            @Table(v)
             <div class="online-camps">
                 @foreach (var i in CampOrder(v))
                 {
@@ -222,6 +225,35 @@ else
         if (await JS.InvokeAsync<bool>("olomoc.openWindow", $"online/g/{Code}/camp/{seat}?window=true", $"olomoc-camp-{Code}", 760, 900))
             _otherShown = false;
     }
+
+    // Table: in the page, or detached into its own window (another screen), where it can be played too.
+    // Window blocked by the browser: it stays in the page.
+    private bool _tableDetached;
+
+    private async Task DetachTableAsync()
+    {
+        if (await JS.InvokeAsync<bool>("olomoc.openWindow", $"online/g/{Code}/table?window=true", $"olomoc-table-{Code}", 1100, 900))
+            _tableDetached = true;
+    }
+
+    private RenderFragment Table(OnlineView v) => __builder =>
+    {
+        if (_tableDetached)
+        {
+            <section class="panel tb-detached">
+                <span>@L.Ui("online.table.detached")</span>
+                <button class="btn small" type="button" @onclick="() => _tableDetached = false">@L.Ui("online.table.bringBack")</button>
+            </section>
+        }
+        else
+        {
+            <TablePanel View="v" Send="SendAsync">
+                <HeadContent>
+                    <button class="btn small" type="button" title="@L.Ui("online.table.detach.title")" @onclick="DetachTableAsync">@L.Ui("equipment.detach")</button>
+                </HeadContent>
+            </TablePanel>
+        }
+    };
 
     private async Task LeaveAsync()
     {

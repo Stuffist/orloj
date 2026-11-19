@@ -14,6 +14,7 @@ builder.Services.AddScoped<LocalizationService>();
 builder.Services.AddScoped<AccountService>();           // session (cookie)
 builder.Services.AddScoped<ICabalCloud>(sp => sp.GetRequiredService<AccountService>());   // account cabals
 builder.Services.AddScoped<CatalogService>();
+builder.Services.AddScoped<TableAssets>();             // online games: boards, terrain, tokens
 builder.Services.AddScoped<CabalExporter>();
 builder.Services.AddScoped<CabalLibrary>();             // "My cabals"
 builder.Services.AddScoped<GameStore>();                // game in progress (menu, play mode)

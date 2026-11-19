@@ -45,7 +45,11 @@ public sealed class ZoneStore(IDbContextFactory<OlomocDb> db, int maxZones = Zon
 /// copied from (if so).
 /// </summary>
 public sealed record StoredZoneGame(long Id, ZoneGame Game, string? SubmitterId, string EditTokenHash, DateTimeOffset CreatedAt,
-    string? TournamentCode = null);
+    string? TournamentCode = null, string? OnlineCode = null)
+{
+    /// <summary>Copied from a tournament or recorded from an online game: changed only through them.</summary>
+    public bool Copy => TournamentCode is not null || OnlineCode is not null;
+}
 
 /// <summary>Games of the zones (ZoneGames table), most recent first.</summary>
 public sealed class ZoneGameStore(IDbContextFactory<OlomocDb> factory)
@@ -166,6 +170,49 @@ public sealed class ZoneGameStore(IDbContextFactory<OlomocDb> factory)
         return changed;
     }
 
+    /// <summary>
+    /// The result of an online game (<paramref name="code"/>): in <paramref name="zone"/>, and nowhere else
+    /// (the zone receiving online games may have changed); null: removed everywhere. The row already there
+    /// keeps its place in the list. Returns the zones whose games changed.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> SyncOnlineAsync(string code, string? zone, ZoneGame? game)
+    {
+        await using var db = await factory.CreateDbContextAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var rows = await db.ZoneGames.Where(g => g.OnlineCode == code).ToListAsync();
+        var changed = new HashSet<string>();
+        var now = DateTime.UtcNow;
+        var kept = zone is not null && game is not null ? rows.FirstOrDefault(r => r.ZoneCode == zone) : null;
+        foreach (var row in rows.Where(r => r != kept))
+        {
+            db.ZoneGames.Remove(row);
+            changed.Add(row.ZoneCode);
+        }
+        if (zone is not null && game is not null)
+        {
+            var json = Write(game);
+            if (kept is null)
+            {
+                db.ZoneGames.Add(new ZoneGameRow
+                {
+                    ZoneCode = zone, PlayedOn = game.PlayedOn, CreatedAt = now, UpdatedAt = now,
+                    OnlineCode = code, EditTokenHash = "", Json = json,
+                });
+                changed.Add(zone);
+            }
+            else if (kept.Json != json)
+            {
+                kept.Json = json;
+                kept.PlayedOn = game.PlayedOn;
+                kept.UpdatedAt = now;
+                changed.Add(zone);
+            }
+        }
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return changed.ToList();
+    }
+
     public async Task<int> DeleteZoneAsync(string zone)
     {
         await using var db = await factory.CreateDbContextAsync();
@@ -180,7 +227,7 @@ public sealed class ZoneGameStore(IDbContextFactory<OlomocDb> factory)
         {
             return JsonSerializer.Deserialize<ZoneGame>(row.Json, TournamentJson.Options) is { } game
                 ? new StoredZoneGame(row.Id, game, row.SubmitterId, row.EditTokenHash,
-                    new DateTimeOffset(DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc)), row.TournamentCode)
+                    new DateTimeOffset(DateTime.SpecifyKind(row.CreatedAt, DateTimeKind.Utc)), row.TournamentCode, row.OnlineCode)
                 : null;
         }
         catch (JsonException) { return null; }       // unreadable game: ignored, left to be examined

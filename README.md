@@ -204,6 +204,16 @@ The card catalog is **language-neutral**; texts live in per-language packs.
   in the alpha channel) tinted in CSS, like the pictograms: logos in the text color, emblems in
   rust. Extracted from Occicat's PDFs (embedded images; rendered at 600 dpi for the vector logos
   of Dykovia and Maisel).
+- `src/Olomoc.Shared/wwwroot/data/olomoc-table.json` and `img/table/boards|terrain|markers|tokens/` — what can
+  be put on the table of an online game: the 40 cm game mats, the terrain (size, obstructing or
+  not, outline), the markers, and the token of each cog and equipment/boon (catalog id, base
+  diameter). Sizes in mm. Imported from Occicat's Vassal module, with their permission, by
+  `tools/VassalImport` (images copied as they are; in the module, 1.2 px = 1 mm). With a new
+  version of the module:
+  `dotnet run --project tools/VassalImport -- path/to/OLOMOC_2P_V1.x.vmod` (empties `img/table/`,
+  rewrites the manifest, lists the pieces left out: NPCs, proxies, cards without a French
+  version). Names: matched on the French card names and titles ("« Sonar »"), with a few overrides
+  in the tool.
 
 Each file references its schema through `$schema` (validation and autocompletion in the
 editor). The `schemas/` folder also contains minimal examples (`referentiel.example.json`,
@@ -654,7 +664,38 @@ connection.
   an outdated state (the client reloads), or an inconsistent one (other cards, a life line that
   does not follow from the cards, counters out of bounds). It enforces the shared cycle. Undo:
   the last 30 states of one's side, until the end of the cycle.
-- **Log**: arrivals, dice, agenda, card reports, ends of cycle.
+- **Table** (`Shared/TablePanel.razor`, `Online/TableRules.cs`), from the initiative on, played
+  freely as on Vassal: the server keeps and relays the positions, it does not check the movements.
+  - Created when both players are ready: each side's cogs, off the mat (their tray). Mat chosen
+    among those of the manifest (default "Bloc (Mez)").
+  - A player moves **their** cogs and their equipment/boon tokens (one of their own cards); terrain
+    and markers are put down, moved, rotated and removed by either player; spectators watch. Only
+    checks: the piece exists, the position stays around the mat (3 cm), 80 pieces at most. The last
+    move wins, piece by piece; no log line per move (terrain put down or removed: logged).
+  - Gestures in `js/table.js` (SVG in mm): drag a piece (the server hears of the drop only), zoom
+    (wheel, buttons), pan (drag the background); from the tray, a click on the item then on the mat.
+    A cog out of action on its sheet is faded. Rotation by 15°.
+  - **Ruler** (for the viewer only): distance in inches, centre to centre, and base edge to base
+    edge between two miniatures. **Ranges**: circles from 1″ to 8″ around the selected one, from the
+    edge of its base. 1″ grid on demand.
+  - **Detachable** like the builder's equipment catalog: `/online/g/{code}/table?window=true`
+    (`Pages/OnlineTable.razor`), for another screen. Unlike the opponent's side window, it can be
+    played: it joins with the seat's token kept on the device, on its own connection.
+- **Result** (`ConfirmResult`, `Shared/ResultBox.razor`): once the game is over (4th cycle ended,
+  a Bile or the hunt at 3), either player confirms the VP of both sides (read from the sheets,
+  corrected if needed); the end is derived (Bile, otherwise PoliSec, otherwise 4th cycle). Confirming
+  again replaces it. Then (`Online/OnlineResults.cs`):
+  - **free game**: a duel (cabals without their name, VP, P1, end, agenda as the scenario; no
+    names) in the zone of the Block that **receives the online games** (kind Online, a single one,
+    chosen by the editors), so in the Block's statistics, "All", the zone's dominance and the data
+    export (`source = online`). One row per online game (`ZoneGames.OnlineCode`), updated by a new
+    confirmation; not editable from the zone. No open receiving zone: nothing recorded, tried again
+    at the next confirmation or at the purge;
+  - **event game**: VP, P1 and end written on the event's table, only if it has no result yet (the
+    organizer's stays); it then counts through the event's archive, never twice.
+  - A finished game nobody confirmed is recorded from the sheets when the purge deletes it (also
+    the admin panel's purge by hand). An abandoned game (not over) never is.
+- **Log**: arrivals, dice, agenda, card reports, ends of cycle, terrain, result.
 - **Storage**: one document per game in the database (`Documents` table, kind `online`),
   deleted after 7 days without activity. Presence (connected seat) is kept in memory. Automatic
   reconnection: the client joins the game again and reads its view again. Leaving the game page
@@ -663,8 +704,9 @@ connection.
 - **Safeguards**: 2,000 games, messages of 32 KB at most, 20 calls per second and per
   connection, creations limited like events (`RATE_CREATE_PER_HOUR`).
 
-Planned next steps: the Block (16″ board, terrain, miniatures, measurements), then the cards
-(Ministries, Artifact, planning revealed simultaneously).
+Planned next steps: the cards (Ministries, Artifact, planning revealed simultaneously), a ruler
+and a line of sight shared with the opponent (the terrain outlines are in the manifest), dice on
+the table.
 
 ## Statistics
 
@@ -734,7 +776,8 @@ included, anonymous like the archives (no player names, no comments, no tokens):
   player of a game: faction, VP for and against, result, P1, opposing factions, rank 3 cog) and
   `cards.csv` (one row per card of a cabal played, with its result).
 
-Ids: `T-{event}-{n}` for an event's game, `Z-{id}` for a zone's. Card ids are the catalog's, with
+Ids: `T-{event}-{n}` for an event's game, `Z-{id}` for a zone's. `source`: `tournament`, `zone`, or `online`
+(a zone game recorded from an online game, its code in `copied_from`). Card ids are the catalog's, with
 their names in the reference language. An event's players are numbered (registration order);
 a zone's are not followed from one game to the next. The `counted` column marks the games counted
 in "All": a zone game copied from an archived event (`copied_from`) is counted in the event,
@@ -754,6 +797,9 @@ optional, shown in the list of games, never counted.
   when a manager closes it by hand (reversible). Managers change the settings (not the managers,
   the mode or the visibility) and moderate the games; editors and admins can do everything on
   every zone (logged in the admin panel's log).
+- **Online games**: a zone of kind Online can **receive the online games** (editors and admins;
+  one at a time: ticking it on a zone unticks it on the others; changed to another kind, it stops).
+  The results of the free online games are recorded there (see "Online games").
 - **Entering a game** ("Record a game"): **anyone, without an account**, in an open zone.
   Duel (1 v 1) or **2 v 2** (any factions, VP per team). Every field is
   required (marked with an asterisk) except the names (optional, never counted): the faction and the cabal played of each
@@ -972,10 +1018,10 @@ names, texts, illustrations, logos and pictograms belong to Occicat Games; the c
 does not apply to them and grants no right to reuse them. This covers:
 
 - `src/Olomoc.Shared/wwwroot/img/` — card images, faction logos, Ministry emblems, pictograms
-  and stat icons;
+  and stat icons, the table's mats, terrain, markers and tokens (from the Vassal module);
 - `src/Olomoc.Shared/wwwroot/i18n/*/cards.json` — card names and game effects, Ministry and
   faction names;
-- `src/Olomoc.Shared/wwwroot/data/` — card catalog and faction reference;
+- `src/Olomoc.Shared/wwwroot/data/` — card catalog and faction reference, table manifest;
 - the agenda names and the game vocabulary used in `i18n/*/ui.json`.
 
 To reuse this content elsewhere, ask Occicat Games for permission

@@ -1040,6 +1040,69 @@ body {
 .online-over { border-color: var(--rust-soft); }
 .online-score { font-size: 1.1rem; margin: .3rem 0 .6rem; }
 .online-score strong { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.online-result { margin: .4rem 0; }
+.online-result .hint { display: block; }
+.online-result-form { margin: .6rem 0 .2rem; }
+.online-result-vp { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; color: var(--muted); }
+.online-result-vp input { width: 6rem; flex: none; }
+
+/* Table of an online game (TablePanel): SVG in mm, tray on the side (below on narrow screens) */
+.tb-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; margin-bottom: .6rem; }
+.tb-head h2 { margin: 0; }
+.tb-tools { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.tb-tools select {
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: .3rem .45rem; font-size: .85rem;
+}
+.tb-layout { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 1rem; align-items: start; }
+.tb-stage { min-width: 0; }
+.tb-board {
+    display: block; width: 100%; aspect-ratio: 1; max-height: 80vh; background: #0d1013;
+    border: 1px solid var(--line); border-radius: 8px; touch-action: none; user-select: none; cursor: grab;
+}
+.tb-board.tb-aim { cursor: crosshair; }
+.tb-outside { fill: #0d1013; }
+.tb-edge { fill: none; stroke: rgba(255, 255, 255, .35); stroke-width: .6; pointer-events: none; }
+.tb-piece[data-movable] { cursor: move; }
+.tb-select { fill: none; stroke: #f5d76e; stroke-width: 1.2; stroke-dasharray: 3 2; pointer-events: none; }
+.tb-base { fill: #2b3640; }
+.tb-ring { fill: none; stroke-width: 1.6; }
+.tb-front { stroke: none; }
+.tb-seat-0 .tb-ring, .tb-seat-0 .tb-front { stroke: var(--rust-soft); fill: var(--rust-soft); }
+.tb-seat-0 .tb-ring { fill: none; }
+.tb-seat-1 .tb-ring, .tb-seat-1 .tb-front { stroke: #4f9fd6; fill: #4f9fd6; }
+.tb-seat-1 .tb-ring { fill: none; }
+.tb-initials { fill: var(--ink); font-size: 9px; font-weight: 700; pointer-events: none; }
+.tb-out { opacity: .35; filter: grayscale(1); }
+.tb-auras circle { fill: none; stroke: rgba(245, 215, 110, .55); stroke-width: .5; stroke-dasharray: 2 2; }
+.tb-auras text, .tb-ruler text { fill: #f5d76e; font-size: 6px; paint-order: stroke; stroke: #0d1013; stroke-width: 1.5px; }
+.tb-ruler line { stroke: #f5d76e; stroke-width: .8; stroke-dasharray: 4 2; }
+.tb-ruler text { font-size: 9px; font-weight: 700; }
+.tb-status { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .5rem 0 0; }
+.tb-tray { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+.tb-tray h3 { margin: .3rem 0 0; font-size: .85rem; }
+.tb-tray h3.tb-seat-0 { color: var(--rust-soft); }
+.tb-tray h3.tb-seat-1 { color: #4f9fd6; }
+.tb-tray h4 { margin: .4rem 0 0; font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.tb-tray .hint { margin: 0; }
+.tb-items { display: flex; flex-direction: column; gap: .25rem; }
+.tb-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.2rem, 1fr)); gap: .3rem; margin-top: .3rem; }
+.tb-item {
+    display: flex; align-items: center; gap: .4rem; text-align: left; background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px; padding: .25rem .4rem; font-size: .8rem; cursor: pointer; min-width: 0;
+}
+.tb-item img { width: 1.8rem; height: 1.8rem; object-fit: contain; flex: none; }
+.tb-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-item.on { border-color: #f5d76e; box-shadow: inset 0 0 0 1px #f5d76e; }
+.tb-item:disabled { cursor: default; opacity: .7; }
+.tb-thumbs .tb-item { flex-direction: column; padding: .3rem; }
+.tb-thumbs .tb-item img { width: 100%; height: 2.6rem; }
+.tb-thumbs .tb-item span { font-size: .7rem; max-width: 100%; }
+.tb-palette summary { cursor: pointer; font-size: .85rem; font-weight: 600; margin-top: .4rem; }
+.tb-detached { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+@media (max-width: 760px) {
+    .tb-layout { grid-template-columns: 1fr; }
+}
 .online-log summary { cursor: pointer; font-weight: 600; }
 .online-log ol {
     margin: .5rem 0 0; padding-left: 1.4rem; display: flex; flex-direction: column; gap: .2rem;

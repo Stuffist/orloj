@@ -1,0 +1,84 @@
+@page "/online/g/{Code}/table"
+@implements IAsyncDisposable
+@inject LocalizationService L
+@inject CatalogService Catalog
+@inject OnlineConnection Hub
+@inject MyGames Games
+
+@* The table alone: window detached from the game (?window=true, compact header), to play on another
+   screen. Unlike the opponent's side window, it can be played: it joins with the seat's token kept
+   on the device (same site), on its own connection; without one, it is followed as a spectator. *@
+
+@if (!_ready)
+{
+    <p class="loading">@(L.Loaded ? L.Ui("app.loading") : "…")</p>
+}
+else if (_view is not { } v)
+{
+    <p class="export-warning" role="alert">@L.Ui($"online.error.{_error ?? "network"}")</p>
+}
+else
+{
+    <p class="tn-meta online-camp-meta">
+        @L.Ui("online.game.title", v.Code) · @L.Ui($"online.step.{v.Step}")
+        @if (v.Step is OnlineStep.Cycle)
+        {
+            <span> · @L.Ui("online.cycle", Math.Min(v.Cycle, GameSession.Cycles), GameSession.Cycles)</span>
+        }
+        @if (v.Me is null)
+        {
+            <span class="online-badge">@L.Ui("online.spectator")</span>
+        }
+        @if (Hub.Status != Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected)
+        {
+            <span class="export-warning"> · @L.Ui("online.reconnecting")</span>
+        }
+    </p>
+    <Problems Items="_problems" />
+    <TablePanel View="v" Send="SendAsync" />
+}
+
+@code {
+    [Parameter] public string Code { get; set; } = "";
+
+    private bool _ready;
+    private string? _error;
+    private OnlineView? _view;
+    private IReadOnlyList<Problem>? _problems;
+
+    protected override async Task OnInitializedAsync()
+    {
+        L.Changed += OnChanged;
+        await L.EnsureLoadedAsync();
+        await Catalog.EnsureLoadedAsync();
+        await Games.EnsureLoadedAsync();
+        Hub.Changed += OnServerChanged;
+        Hub.StatusChanged += OnChanged;
+        var joined = await Hub.JoinAsync(Code, Games.Get(Code)?.Token);
+        (_view, _error) = (joined.View, joined.Error);
+        _ready = true;
+    }
+
+    private async Task SendAsync(OnlineCommand command)
+    {
+        var result = await Hub.SendAsync(command);
+        _problems = result.Problems;
+        _view = await Hub.GetViewAsync() ?? _view;
+    }
+
+    private Task OnServerChanged() => InvokeAsync(async () =>
+    {
+        _view = await Hub.GetViewAsync() ?? _view;
+        StateHasChanged();
+    });
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public async ValueTask DisposeAsync()
+    {
+        L.Changed -= OnChanged;
+        Hub.Changed -= OnServerChanged;
+        Hub.StatusChanged -= OnChanged;
+        await Hub.LeaveAsync();
+    }
+}

@@ -30,8 +30,9 @@ public sealed record ExportPlayer(int? Number, string Faction, string FactionNam
 public sealed record ExportSide(int Vp, IReadOnlyList<ExportPlayer> Players);
 
 /// <summary>
-/// A game: id ("T-{code}-{n}" for a tournament, "Z-{id}" for a zone), source ("tournament" or
-/// "zone"), its tournament or zone, the tournament a zone game was copied from, the date, whether
+/// A game: id ("T-{code}-{n}" for a tournament, "Z-{id}" for a zone), source ("tournament", "zone", or
+/// "online": a zone game recorded from an online game), its tournament or zone, the tournament a zone
+/// game was copied from (or the online game it was recorded from), the date, whether
 /// it counts in the statistics of everything (/stats/: a zone game copied from an archived
 /// tournament counts once, in the tournament; hidden zones never count; after a reset of the
 /// statistics, only what was recorded afterwards), both sides, and if recorded:
@@ -100,7 +101,7 @@ public static class DataExport
                 p.Cabal is { } c ? names.Cards(c.Cogs.Select(x => new ArchivedSlot(x.Rank, x.Cog.Id, x.Equipment?.Id))) : null)).ToList());
             var inAll = counted.Contains(zone) && (stored.TournamentCode is not { } code || !archives.Codes.Contains(code))
                 && StatsReset.Counts(stored.CreatedAt, since);
-            list.Add(new ExportGame($"Z-{stored.Id}", "zone", zone, stored.TournamentCode, g.PlayedOn, g.Format, inAll,
+            list.Add(new ExportGame($"Z-{stored.Id}", stored.OnlineCode is null ? "zone" : "online", zone, stored.TournamentCode ?? stored.OnlineCode, g.PlayedOn, g.Format, inAll,
                 Side(g.A), Side(g.B), g.First, g.End, g.Scenario?.Id, g.Scenario?.Artifact, g.Scenario?.Ministry));
         }
 

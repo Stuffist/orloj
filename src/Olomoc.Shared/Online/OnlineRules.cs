@@ -1,6 +1,7 @@
 using Olomoc.Models;
 using Olomoc.Services;
 using Olomoc.Tournaments;
+using Olomoc.Zones;
 
 namespace Olomoc.Online;
 
@@ -21,7 +22,8 @@ public static class OnlineRules
     public const int Success = 5;               // success threshold of the D6 (rulebook p.10)
     public const int MaxVictoryPoints = 99;
 
-    public static OnlineResult Apply(OnlineGame g, int seat, OnlineCommand c, CatalogService catalog, Random random, DateTimeOffset now)
+    public static OnlineResult Apply(OnlineGame g, int seat, OnlineCommand c, CatalogService catalog, Random random, DateTimeOffset now,
+        TableManifest? table = null)
     {
         var problems = c.Type switch
         {
@@ -34,6 +36,9 @@ public static class OnlineRules
             OnlineCommandType.UpdateState => One(UpdateState(g, seat, c.State, c.BasedOn, c.Note, catalog, now)),
             OnlineCommandType.Undo => One(Undo(g, seat, now)),
             OnlineCommandType.SetEndCycle => One(SetEndCycle(g, seat, c.Flag == true, now)),
+            OnlineCommandType.SetBoard or OnlineCommandType.AddPiece or OnlineCommandType.MovePiece or OnlineCommandType.RemovePiece
+                => One(TableRules.Apply(g, seat, c, table, now)),
+            OnlineCommandType.ConfirmResult => One(ConfirmResult(g, seat, c.Vp, now)),
             _ => One(Problem.Of("onlineCommand")),
         };
         if (problems.Count > 0) return new(problems);
@@ -111,6 +116,7 @@ public static class OnlineRules
             s.StateRevision++;
         }
         g.Step = OnlineStep.Initiative;
+        g.Table = TableRules.Create(g);
         Log(g, null, now, "start");
     }
 
@@ -265,13 +271,52 @@ public static class OnlineRules
     /// <summary>Game stopped before the end of the 4th cycle: a Bile at 3, or the hunt at 3.</summary>
     public static bool IsOver(OnlineGame g) => g.Seats.Any(IsOver) || Hunt(g) >= GameSession.MaxHunt;
 
+    /// <summary>Cause of the end: a Bile at 3, otherwise the hunt at 3, otherwise the end of the 4th cycle.</summary>
+    public static GameEnd EndOf(OnlineGame g) =>
+        g.Seats.Any(IsOver) ? GameEnd.Bile : Hunt(g) >= GameSession.MaxHunt ? GameEnd.PoliSec : GameEnd.FourthCycle;
+
+    /// <summary>
+    /// Result of the game, once it is over (4th cycle ended, a Bile or the hunt at 3): VP of each seat
+    /// (read from the sheets, corrected if needed). One player is enough; confirming again replaces it
+    /// (the statistics follow).
+    /// </summary>
+    public static Problem? ConfirmResult(OnlineGame g, int seat, IReadOnlyList<int>? vp, DateTimeOffset now)
+    {
+        if (!Ended(g)) return Problem.Of("onlineNotOver");
+        if (vp is not { Count: OnlineGame.SeatCount } || vp.Any(v => v is < 0 or > MaxVictoryPoints))
+            return Problem.Of("victoryPoints", MaxVictoryPoints.ToString());
+        g.Result = new OnlineGameResult(vp.ToList(), EndOf(g), seat, now);
+        g.Step = OnlineStep.Finished;
+        Log(g, seat, now, "result", vp[0].ToString(), vp[1].ToString());
+        return null;
+    }
+
     private static void Remember(Seat s)
     {
         s.Undo.Add(GameSession.ToJson(s.State!));
         if (s.Undo.Count > UndoDepth) s.Undo.RemoveAt(0);
     }
 
-    private static void Log(OnlineGame g, int? seat, DateTimeOffset now, string key, params string[] args)
+    /// <summary>Over: the 4th cycle ended, or a Bile or the hunt at 3 (whether the result is confirmed or not).</summary>
+    public static bool Ended(OnlineGame g) => g.Step == OnlineStep.Finished || g.Step == OnlineStep.Cycle && IsOver(g);
+
+    /// <summary>Result taken from the sheets (VP counters), when nobody confirmed it.</summary>
+    public static OnlineGameResult ResultFromSheets(OnlineGame g, DateTimeOffset now) =>
+        new(g.Seats.Select(s => s.State?.VictoryPoints ?? 0).ToList(), EndOf(g), null, now);
+
+    /// <summary>
+    /// The game as a duel of the Block (seat 0: side A): cabals played (without their name), VP, P1, end,
+    /// agenda; no player names, like a tournament copy. Null if a cabal is missing.
+    /// </summary>
+    public static ZoneGame? ZoneGameOf(OnlineGame g, OnlineGameResult result)
+    {
+        if (g.Seats.Count != OnlineGame.SeatCount || g.Seats.Any(s => s.Cabal?.Faction?.Code is null)) return null;
+        ZoneSide Side(int i) => new([new ZonePlayer(g.Seats[i].Cabal!.Faction!.Code, null, g.Seats[i].Cabal! with { Name = null })], result.Vp[i]);
+        return new ZoneGame(GameFormat.Duel, DateOnly.FromDateTime(result.ConfirmedAt.UtcDateTime), Side(0), Side(1),
+            g.First switch { 0 => TableSide.A, 1 => TableSide.B, _ => null }, result.End, g.Agenda);
+    }
+
+    internal static void Log(OnlineGame g, int? seat, DateTimeOffset now, string key, params string[] args)
     {
         g.Log.Add(new OnlineLogEntry(now, seat, key, args.Length == 0 ? null : args));
         if (g.Log.Count > MaxLog) g.Log.RemoveRange(0, g.Log.Count - MaxLog);
@@ -301,5 +346,7 @@ public static class OnlineRules
                 IsOver(s));
         }).ToList(),
         g.Tournament,
-        g.Log.Skip(Math.Max(0, g.Log.Count - logSize)).ToList());
+        g.Log.Skip(Math.Max(0, g.Log.Count - logSize)).ToList(),
+        g.Table,
+        g.Result);
 }

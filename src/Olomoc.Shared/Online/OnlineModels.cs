@@ -33,6 +33,10 @@ public sealed class OnlineGame : IStoredDocument
     public List<Seat> Seats { get; set; } = new();
     /// <summary>Tournament table the game was opened from.</summary>
     public OnlineTournamentRef? Tournament { get; set; }
+    /// <summary>Board and pieces (null: lobby, or a game stored before the table).</summary>
+    public OnlineTable? Table { get; set; }
+    /// <summary>Result confirmed at the end of the game.</summary>
+    public OnlineGameResult? Result { get; set; }
     public List<OnlineLogEntry> Log { get; set; } = new();
 }
 
@@ -57,6 +61,43 @@ public sealed class Seat
     public List<string> Undo { get; set; } = new();
     public bool EndCycleReady { get; set; }
 }
+
+/// <summary>Kind of a piece of the table: a cog, an equipment/boon token, terrain, a marker.</summary>
+public enum PieceKind { Cog, Equipment, Terrain, Marker }
+
+/// <summary>
+/// A piece of the table. Ref: cog or equipment id (card catalog), terrain or marker id
+/// (<see cref="TableManifest"/>). Seat: owner of a cog or an equipment token (null: terrain and markers,
+/// moved by either player). X and Y: centre, in mm from the top-left corner of the board; both null
+/// for a cog off the board (its tray). Rotation: degrees, clockwise.
+/// </summary>
+public sealed class TablePiece
+{
+    public int Id { get; set; }
+    public PieceKind Kind { get; set; }
+    public string Ref { get; set; } = "";
+    public int? Seat { get; set; }
+    public double? X { get; set; }
+    public double? Y { get; set; }
+    public int Rotation { get; set; }
+
+    public bool OnBoard => X is not null && Y is not null;
+}
+
+/// <summary>The table: board (game mat), pieces. Created when both players are ready (cabals known).</summary>
+public sealed class OnlineTable
+{
+    public string Board { get; set; } = "";
+    public List<TablePiece> Pieces { get; set; } = new();
+    public int NextId { get; set; } = 1;
+}
+
+/// <summary>
+/// Result of the game: VP of each seat, cause of the end; confirmed by a player (ConfirmedBy: their seat),
+/// or taken from the sheets when a finished game nobody confirmed is purged (null). Recorded: copied
+/// into the statistics (zone of the Block receiving online games, or the tournament table).
+/// </summary>
+public sealed record OnlineGameResult(IReadOnlyList<int> Vp, GameEnd End, int? ConfirmedBy, DateTimeOffset ConfirmedAt, bool Recorded = false);
 
 public sealed record OnlineTournamentRef(string Code, int Round, int Table);
 

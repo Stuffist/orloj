@@ -25,7 +25,7 @@ public sealed record ZoneSummary(string Code, string Name, string Description, Z
 /// </summary>
 public sealed record ZoneView(string Code, string Name, string Description, ZoneKind Kind, DateOnly? StartDate, DateOnly? EndDate,
     ZoneStatus Status, DominanceMode Mode, bool Hidden, bool Closed, Dominance Dominance, StatsView Stats,
-    bool CanManage, bool ZoneAdmin, IReadOnlyList<string>? Managers, string? Logo = null, bool Photos = false);
+    bool CanManage, bool ZoneAdmin, IReadOnlyList<string>? Managers, string? Logo = null, bool Photos = false, bool ReceivesOnline = false);
 
 /// <summary>
 /// A recorded game: id, content, date of entry. <see cref="CanEdit"/>: through the account (its
@@ -35,7 +35,7 @@ public sealed record ZoneView(string Code, string Name, string Description, Zone
 /// are allowed).
 /// </summary>
 public sealed record ZoneGameView(long Id, ZoneGame Game, DateTimeOffset CreatedAt, bool CanEdit,
-    string? Tournament = null, string? TournamentName = null, bool Photo = false);
+    string? Tournament = null, string? TournamentName = null, bool Photo = false, bool Online = false);
 
 /// <summary>A page of games, most recent first; <see cref="Next"/>: to ask for the following ones (before=).</summary>
 public sealed record ZoneGamesPage(IReadOnlyList<ZoneGameView> Games, long? Next, int Total);
@@ -49,6 +49,6 @@ public sealed record ZoneSettingsRequest(string Name, string? Description, ZoneK
 
 /// <summary>Creation or change by an admin: the settings, plus the dominance mode, the visibility, the managers (usernames).</summary>
 public sealed record ZoneAdminRequest(string Name, string? Description, ZoneKind Kind, DateOnly? StartDate, DateOnly? EndDate,
-    bool Closed, DominanceMode Dominance, bool Hidden, IReadOnlyList<string>? Managers, string? Logo = null);
+    bool Closed, DominanceMode Dominance, bool Hidden, IReadOnlyList<string>? Managers, string? Logo = null, bool ReceivesOnline = false);
 
 public sealed record ZoneCreated(string Code);

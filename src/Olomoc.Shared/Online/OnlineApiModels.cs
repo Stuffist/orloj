@@ -22,11 +22,15 @@ public enum OnlineCommandType
     RollInitiative,                          // player numbers
     ChooseAgenda, DrawAgenda,                // agenda
     UpdateState, Undo, SetEndCycle,          // cycles
+    SetBoard, AddPiece, MovePiece, RemovePiece,   // table (from the initiative on)
+    ConfirmResult,                           // end of the game
 }
 
 /// <summary>
-/// A player's command. Text: name, agenda; Flag: ready, end of cycle; State and BasedOn: new state
-/// of their side and the revision it starts from; Note: report for the log.
+/// A player's command. Text: name, agenda, board, ref of a new piece; Flag: ready, end of cycle; State
+/// and BasedOn: new state of their side and the revision it starts from; Note: report for the log.
+/// Table: Piece (kind of a new piece), PieceId, X and Y (mm; both null: off the board), Rotation.
+/// Vp: victory points of each seat, for the result.
 /// </summary>
 public sealed record OnlineCommand(
     OnlineCommandType Type,
@@ -35,7 +39,13 @@ public sealed record OnlineCommand(
     bool? Flag = null,
     GameState? State = null,
     int? BasedOn = null,
-    string? Note = null);
+    string? Note = null,
+    PieceKind? Piece = null,
+    int? PieceId = null,
+    double? X = null,
+    double? Y = null,
+    int? Rotation = null,
+    IReadOnlyList<int>? Vp = null);
 
 /// <summary>Answer to Join (hub): the game's view, or the problem that prevents joining it (notFound, forbidden).</summary>
 public sealed record OnlineJoin(OnlineView? View, string? Error = null);
@@ -61,7 +71,9 @@ public sealed record OnlineView(
     int? Me,
     IReadOnlyList<SeatView> Seats,
     OnlineTournamentRef? Tournament,
-    IReadOnlyList<OnlineLogEntry> Log)
+    IReadOnlyList<OnlineLogEntry> Log,
+    OnlineTable? Table = null,           // nothing secret on a table: the same for everyone
+    OnlineGameResult? Result = null)
 {
     public SeatView? Mine => Me is { } i ? Seats[i] : null;
     public SeatView? Other => Me is { } i ? Seats[1 - i] : null;

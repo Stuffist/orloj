@@ -84,7 +84,7 @@ public static class ZoneEndpoints
         }
         return Results.Json(new ZoneView(z.Code, z.Name, z.Description, z.Kind, z.StartDate, z.EndDate, z.StatusOn(Today), z.Dominance,
             z.Hidden, z.Closed, await stats.DominanceAsync(z), await stats.OfZoneAsync(z.Code), manages, access.ZoneAdmin, managers, z.Logo,
-            settings.Current.BlockPhotos),
+            settings.Current.BlockPhotos, z.ReceivesOnline),
             TournamentJson.Options);
     }
 
@@ -102,7 +102,7 @@ public static class ZoneEndpoints
         foreach (var t in page.Select(g => g.TournamentCode).OfType<string>().Distinct())
             names[t] = (await tournaments.LoadAsync(t))?.Name;
         var views = page.Take(count).Select(g => new ZoneGameView(g.Id, g.Game, g.CreatedAt, access.CanEdit(z, g, open, null),
-            g.TournamentCode, g.TournamentCode is { } t ? names[t] : null, photosOn && photos.Find(z.Code, g.Id) is not null)).ToList();
+            g.TournamentCode, g.TournamentCode is { } t ? names[t] : null, photosOn && photos.Find(z.Code, g.Id) is not null, g.OnlineCode is not null)).ToList();
         return Results.Json(new ZoneGamesPage(views, page.Count > count ? views[^1].Id : null, await games.CountAsync(z.Code)),
             TournamentJson.Options);
     }
@@ -130,7 +130,7 @@ public static class ZoneEndpoints
         if (await games.GetAsync(z.Code, id) is not { } stored) return NotFoundGame();
         var access = await Access.OfAsync(ctx, users);
         var open = z.StatusOn(Today) == ZoneStatus.Open;
-        if (stored.TournamentCode is not null) return FromTournament();
+        if (stored.Copy) return FromCopy(stored);
         if (!access.CanEdit(z, stored, open, ctx.Request.Headers[ZoneHeaders.Entry])) return Forbidden(open);
         var (clean, problems) = ZoneRules.CheckGame(body, z, await catalog.GetAsync(), Today, access.Manages(z));
         if (clean is null) return Problems(problems, 400);
@@ -146,7 +146,7 @@ public static class ZoneEndpoints
         if (await games.GetAsync(z.Code, id) is not { } stored) return NotFoundGame();
         var access = await Access.OfAsync(ctx, users);
         var open = z.StatusOn(Today) == ZoneStatus.Open;
-        if (stored.TournamentCode is not null) return FromTournament();
+        if (stored.Copy) return FromCopy(stored);
         if (!access.CanEdit(z, stored, open, ctx.Request.Headers[ZoneHeaders.Entry])) return Forbidden(open);
         if (!await games.DeleteAsync(z.Code, id)) return NotFoundGame();
         photos.Delete(z.Code, id);
@@ -177,7 +177,7 @@ public static class ZoneEndpoints
         if (await games.GetAsync(z.Code, id) is not { } stored) return NotFoundGame();
         var access = await Access.OfAsync(ctx, users);
         var open = z.StatusOn(Today) == ZoneStatus.Open;
-        if (stored.TournamentCode is not null) return FromTournament();
+        if (stored.Copy) return FromCopy(stored);
         if (!access.CanEdit(z, stored, open, ctx.Request.Headers[ZoneHeaders.Entry])) return Forbidden(open);
         if (ctx.Request.ContentLength > ZoneRules.MaxPhotoBytes) return Problems([Problem.Of("photoTooLarge", "5")], 413);
         return await photos.SaveAsync(z.Code, id, ctx.Request.Body, ctx.RequestAborted) is { } problem
@@ -228,6 +228,7 @@ public static class ZoneEndpoints
         var z = await zones.CreateAsync(z => ApplyAdmin(z, body, managers));
         if (z is null) return Problems([Problem.Of("zoneStorageFull")], 503);
         await zones.AssignSlotsAsync();                // its hexagon on the map: the most central free one
+        if (z.ReceivesOnline) await OnlyReceiverAsync(zones, z.Code);
         await audit.LogAsync(AdminEndpoints.AdminName(ctx), "createZone", z.Code, z.Name);
         return Results.Json(new ZoneCreated(z.Code), TournamentJson.Options, statusCode: 201);
     }
@@ -243,6 +244,7 @@ public static class ZoneEndpoints
             return (true, z.Name);
         });
         if (name is null) return NotFound();
+        if (body.ReceivesOnline) await OnlyReceiverAsync(zones, code.ToUpperInvariant());
         stats.Invalidate(code.ToUpperInvariant());
         await audit.LogAsync(AdminEndpoints.AdminName(ctx), "updateZone", code.ToUpperInvariant(), name);
         return Results.NoContent();
@@ -260,6 +262,17 @@ public static class ZoneEndpoints
         stats.Invalidate(code.ToUpperInvariant());
         await audit.LogAsync(AdminEndpoints.AdminName(ctx), "deleteZone", code.ToUpperInvariant(), $"{name} ({removed})");
         return Results.NoContent();
+    }
+
+    // A single zone receives the online games: the others stop.
+    private static async Task OnlyReceiverAsync(ZoneStore zones, string code)
+    {
+        foreach (var other in (await zones.ListAsync()).Where(z => z.ReceivesOnline && z.Code != code))
+            await zones.UpdateAsync(other.Code, z =>
+            {
+                z.ReceivesOnline = false;
+                return (true, z);
+            });
     }
 
     // Settings, and managers found by their username.
@@ -284,6 +297,7 @@ public static class ZoneEndpoints
         z.Name = name.Trim();
         z.Description = description?.Trim() ?? "";
         z.Kind = Enum.IsDefined(kind) ? kind : ZoneKind.Club;
+        if (z.Kind != ZoneKind.Online) z.ReceivesOnline = false;
         z.StartDate = start;
         z.EndDate = end;
         z.Closed = closed;
@@ -296,6 +310,7 @@ public static class ZoneEndpoints
         z.Dominance = body.Dominance;
         z.Hidden = body.Hidden;
         z.ManagerIds = managers;
+        z.ReceivesOnline = body.ReceivesOnline && z.Kind == ZoneKind.Online;
     }
 
     // ---- Rights ----
@@ -320,7 +335,7 @@ public static class ZoneEndpoints
         /// A manager, always; otherwise the author (account or entry token), while the zone is open.
         /// Never a game copied from a tournament: it follows the tournament.
         /// </summary>
-        public bool CanEdit(Zone z, StoredZoneGame g, bool open, string? entryToken) => g.TournamentCode is null &&
+        public bool CanEdit(Zone z, StoredZoneGame g, bool open, string? entryToken) => !g.Copy &&
             (Manages(z) || open && (UserId is not null && g.SubmitterId == UserId || Tokens.Matches(entryToken, g.EditTokenHash)));
     }
 
@@ -328,7 +343,8 @@ public static class ZoneEndpoints
         Results.Json(new ProblemList(problems), TournamentJson.Options, statusCode: status);
 
     private static IResult NotFound() => Problems([Problem.Of("zoneNotFound")], 404);
-    private static IResult FromTournament() => Problems([Problem.Of("zoneGameFromTournament")], 409);
+    private static IResult FromCopy(StoredZoneGame g) =>
+        Problems([Problem.Of(g.OnlineCode is null ? "zoneGameFromTournament" : "zoneGameFromOnline")], 409);
     private static IResult NotFoundGame() => Problems([Problem.Of("zoneGameNotFound")], 404);
     private static IResult Forbidden(bool open) => Problems([Problem.Of(open ? "zoneForbidden" : "zoneClosed")], 403);
 }

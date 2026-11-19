@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.Extensions.FileProviders;
 using Olomoc.Server.CardCatalog;
+using Olomoc.Online;
 using Olomoc.Services;
 
 namespace Olomoc.Server.Tournaments;
@@ -16,6 +17,7 @@ public sealed class ServerCatalog
     private readonly IWebHostEnvironment _environment;
     private readonly CatalogStore _store;
     private Lazy<Task<CatalogService>> _catalog;
+    private readonly Lazy<Task<TableManifest>> _table;
 
     public ServerCatalog(IWebHostEnvironment environment, CatalogStore store)
     {
@@ -23,9 +25,20 @@ public sealed class ServerCatalog
         _store = store;
         _catalog = NewLoader();
         store.Changed += () => _catalog = NewLoader();
+        _table = new(() => LoadTableAsync(environment.WebRootFileProvider, store));
     }
 
     public Task<CatalogService> GetAsync() => _catalog.Value;
+
+    /// <summary>What can be put on the table of an online game (shared static file, does not change).</summary>
+    public Task<TableManifest> GetTableAsync() => _table.Value;
+
+    private static async Task<TableManifest> LoadTableAsync(IFileProvider files, CatalogStore store)
+    {
+        var assets = new TableAssets(new HttpClient(new FileProviderHandler(files, store)) { BaseAddress = new Uri("http://olomoc.local/") });
+        await assets.EnsureLoadedAsync();
+        return assets.Manifest;
+    }
 
     private Lazy<Task<CatalogService>> NewLoader() => new(() => LoadAsync(_environment.WebRootFileProvider, _store));
 

@@ -1,6 +1,7 @@
 @* Game log: arrivals, setup, players' reports, ends of cycle; most recent on top. Texts are
    translated here ("online.log.*" key and arguments). *@
 @inject LocalizationService L
+@inject TableAssets Files
 
 <details class="panel online-log" open="@Open">
     <summary>@L.Ui("online.log.title")</summary>
@@ -21,12 +22,18 @@
 
     private string Who(int? seat) => seat is { } i && i < View.Seats.Count ? View.Seats[i].Name : "";
 
+    private string Terrain(string? id) => Files.Manifest.TerrainOf(id) is { } t
+        ? L.Ui($"online.table.terrain.{t.Type}") + (t.Number is { } n ? $" {n}" : "")
+        : id ?? "";
+
     private string Text(OnlineLogEntry e)
     {
         var args = e.Args ?? Array.Empty<string>();
         object[] values = e.Key switch
         {
             "agenda" => new object[] { Who(e.Seat), L.Ui($"agenda.{args.ElementAtOrDefault(0)}") },
+            "tableBoard" => new object[] { Who(e.Seat), L.Ui($"online.table.board.{args.ElementAtOrDefault(0)}") },
+            "tableAdd" or "tableRemove" => new object[] { Who(e.Seat), Terrain(args.ElementAtOrDefault(0)) },
             _ => new object[] { Who(e.Seat) }.Concat(args).ToArray(),
         };
         return L.Ui($"online.log.{e.Key}", values);
