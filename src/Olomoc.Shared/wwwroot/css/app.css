@@ -1073,15 +1073,19 @@ body {
 }
 .zn-format { flex: 1 1 18rem; }
 /* Statistics: one row (wrapped when narrow): games counted, then the period (dates, shortcuts); reset notice */
-.stats-filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem 1rem; margin: 0 0 1rem; }
-.stats-filters .zn-tabs { margin: 0; }
-.stats-period { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .7rem; }
-.stats-date { display: flex; align-items: center; gap: .35rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.stats-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: 0 0 1rem; }
+.stats-filters .zn-tabs { margin: 0; align-items: center; }
+/* The period: a box right after the filters, everything centered on one line */
+.stats-period {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .9rem;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: .4rem .7rem;
+}
+.stats-date { display: flex; align-items: center; gap: .45rem; margin: 0; font-size: .78rem; line-height: 1; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
 .stats-date input {
     background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px;
     padding: .3rem .45rem; font-size: .85rem;
 }
-.stats-shortcuts { display: flex; flex-wrap: wrap; gap: .3rem; }
+.stats-shortcuts { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
 .stats-shortcuts .btn.small { padding: .2rem .5rem; font-size: .75rem; }
 .stats-since { margin: 0 0 .6rem; }
 .zn-sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
