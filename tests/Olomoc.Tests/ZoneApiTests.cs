@@ -644,7 +644,8 @@ public sealed class ZoneApiTests : IDisposable
 
         var players = files["players.csv"].Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
         Assert.Equal(1 + 4 * 2, players.Length);
-        Assert.Contains(players, r => r.Contains(";A;1;1;MAISEL;") && r.Contains(";9;4;win;"));
+        // Side A of the tournament game: player 1 or 2 (the first round is drawn at random).
+        Assert.Contains(players, r => (r.Contains(";A;1;1;MAISEL;") || r.Contains(";A;1;2;MAISEL;")) && r.Contains(";9;4;win;"));
         Assert.Contains(players, r => r.Contains(";B;1;;OTHERS;") && r.Contains(";4;7;loss;"));
         Assert.Equal(1 + 8 * 3, files["cards.csv"].Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Length);
 
