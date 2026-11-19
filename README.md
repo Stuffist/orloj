@@ -675,6 +675,10 @@ connection.
   - Gestures in `js/table.js` (SVG in mm): drag a piece (the server hears of the drop only), zoom
     (wheel, buttons), pan (drag the background); from the tray, a click on the item then on the mat.
     A cog out of action on its sheet is faded. Rotation by 15°.
+  - **Both cabals**, always listed next to the mat: each cog with its HP left, action tokens, Darkness
+    and state (out of action, stunned, tainted or corrupted, off the mat), read from its side's sheet,
+    and its cards below (one's own: a click puts their token down). A click on a cog shows it on the
+    mat, or puts it down there if it is not on it yet.
   - **Ruler** (for the viewer only): distance in inches, centre to centre, and base edge to base
     edge between two miniatures. **Ranges**: circles from 1″ to 8″ around the selected one, from the
     edge of its base. 1″ grid on demand.

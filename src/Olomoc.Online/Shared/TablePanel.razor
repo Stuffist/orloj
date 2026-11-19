@@ -168,41 +168,70 @@ else
             </div>
 
             <aside class="tb-tray">
+                @* Both cabals, always shown: each cog with what its sheet says (HP left, action tokens,
+                   Darkness, state) and its cards below; a click shows it on the mat, or puts it down
+                   there if it is not on it yet (one's own). *@
                 @foreach (var seat in SeatOrder())
                 {
-                    var waiting = table.Pieces.Where(p => p.Kind == PieceKind.Cog && p.Seat == seat && !p.OnBoard).ToList();
                     var mine = seat == View.Me;
-                    <h3 class="@SeatClass(seat)">@(mine ? L.Ui("online.table.myCogs") : L.Ui("online.table.cogsOf", View.Seats[seat].Name))</h3>
-                    @if (waiting.Count == 0)
-                    {
-                        <p class="hint">@L.Ui("online.table.allPlaced")</p>
-                    }
-                    <div class="tb-items">
-                        @foreach (var p in waiting)
+                    <h3 class="@SeatClass(seat)">@(mine ? L.Ui("online.table.myCabal") : L.Ui("online.table.cabalOf", View.Seats[seat].Name))</h3>
+                    <ul class="tb-roster">
+                        @foreach (var p in table.Pieces.Where(p => p.Kind == PieceKind.Cog && p.Seat == seat).OrderByDescending(p => CogStateOf(p)?.Rank ?? 0))
                         {
                             var piece = p;
-                            <button class="tb-item @(_placing?.PieceId == p.Id ? "on" : null)" type="button" disabled="@(!Movable(p))"
-                                    @onclick="() => StartPlacing(new(PieceKind.Cog, piece.Ref, piece.Id, Name(piece)))">
-                                @if (Image(p) is { } src) { <img src="@src" alt="" /> }
-                                <span>@Name(p)</span>
-                            </button>
-                        }
-                    </div>
-                    @if (mine && Playing && MyEquipment().ToList() is { Count: > 0 } equipment)
-                    {
-                        <h4>@L.Ui("online.table.equipment")</h4>
-                        <div class="tb-items">
-                            @foreach (var (id, label) in equipment)
-                            {
-                                var (eid, elabel) = (id, label);
-                                <button class="tb-item @(_placing?.Ref == id && _placing.Kind == PieceKind.Equipment ? "on" : null)" type="button"
-                                        @onclick="() => StartPlacing(new(PieceKind.Equipment, eid, null, elabel))">
-                                    @if (Files.Manifest.Token(id) is { } tok) { <img src="@Src(tok.Image)" alt="" /> }
-                                    <span>@label</span>
+                            var cog = CogStateOf(p);
+                            var placed = Shown(p);
+                            <li class="tb-cog @SeatClass(seat) @(cog?.OutOfAction == true ? "ooa" : null) @(p.Id == _selected || _placing?.PieceId == p.Id ? "on" : null)">
+                                <button class="tb-cog-main" type="button" disabled="@(!placed && !Movable(p))"
+                                        title="@L.Ui(placed ? "online.table.cog.select" : "online.table.cog.place")" @onclick="() => CogClicked(piece)">
+                                    @if (Image(p) is { } src)
+                                    {
+                                        <img src="@src" alt="" />
+                                    }
+                                    else
+                                    {
+                                        <span class="tb-cog-initials">@Initials(CogName(p))</span>
+                                    }
+                                    <span class="tb-cog-name">@CogName(p)</span>
+                                    @if (cog is not null)
+                                    {
+                                        <span class="tb-cog-rank">@(new string('★', cog.Rank))</span>
+                                    }
                                 </button>
-                            }
-                        </div>
-                    }
+                                @if (cog is not null)
+                                {
+                                    <div class="tb-cog-stats">
+                                        <span class="tb-hp" title="@L.Ui("online.table.hp")">♥ @cog.Remaining<small>/@cog.LifeLine.Count</small></span>
+                                        <span title="@L.Ui("play.actions")"><TokenTrack Token="action" Count="cog.Actions" Max="GameSession.ActionsPerCycle" /></span>
+                                        <span title="@L.Ui("play.darkness")"><TokenTrack Token="darkness" Count="cog.Darkness" Max="GameSession.MaxDarkness" /></span>
+                                    </div>
+                                }
+                                @if (States(cog, placed).ToList() is { Count: > 0 } states)
+                                {
+                                    <div class="tb-cog-badges">
+                                        @foreach (var (key, css) in states)
+                                        {
+                                            <span class="status-badge @css">@L.Ui(key)</span>
+                                        }
+                                    </div>
+                                }
+                                @foreach (var id in new[] { cog?.EquipmentId, cog?.ExtraEquipmentId }.OfType<string>())
+                                {
+                                    var (eid, elabel) = (id, EquipmentName(id));
+                                    var canPlace = mine && Playing;
+                                    <button class="tb-cog-gear @(_placing?.Kind == PieceKind.Equipment && _placing.Ref == id ? "on" : null)" type="button"
+                                            disabled="@(!canPlace)" title="@(canPlace ? L.Ui("online.table.equipment.place", elabel) : elabel)"
+                                            @onclick="() => StartPlacing(new(PieceKind.Equipment, eid, null, elabel))">
+                                        @if (Files.Manifest.Token(id) is { } tok)
+                                        {
+                                            <img src="@Src(tok.Image)" alt="" />
+                                        }
+                                        <span>@elabel</span>
+                                    </button>
+                                }
+                            </li>
+                        }
+                    </ul>
                 }
                 @if (Playing && View.Me is not null)
                 {
@@ -329,10 +358,39 @@ else
     private string TerrainTitle(TableTerrain t) =>
         $"{TerrainName(t)} · {Num(t.Width / Inch, 1)}″ × {Num(t.Height / Inch, 1)}″ · {L.Ui(t.Obstructing ? "online.table.obstructing" : "online.table.notObstructing")}";
 
-    // The player's equipment and boons (with their extra card): tokens they can put down.
-    private IEnumerable<(string Id, string Label)> MyEquipment() =>
-        (View.Mine?.State?.Cogs ?? []).SelectMany(c => new[] { c.EquipmentId, c.ExtraEquipmentId }).OfType<string>().Distinct()
-            .Select(id => (id, Catalog.EquipmentById(id) is { } e ? L.EquipmentName(e).Text : id));
+    // The sheet of a cog of the table (its side's state), null before the start.
+    private CogState? CogStateOf(TablePiece p) => p.Seat is { } seat
+        ? View.Seats.ElementAtOrDefault(seat)?.State?.Cogs.FirstOrDefault(c => c.CogId == p.Ref) : null;
+
+    private string CogName(TablePiece p) => Catalog.CogById(p.Ref) is { } c ? L.CogName(c).Text : p.Ref;
+
+    private string EquipmentName(string id) => Catalog.EquipmentById(id) is { } e ? L.EquipmentName(e).Text : id;
+
+    // State badges of a cog: out of action, otherwise stunned and its Darkness (sane: nothing), and off the mat.
+    private static IEnumerable<(string Key, string Css)> States(CogState? cog, bool placed)
+    {
+        if (cog?.OutOfAction == true)
+        {
+            yield return ("play.status.outOfAction", "outOfAction");
+            yield break;
+        }
+        if (cog?.Stunned == true) yield return ("play.stunned", "stunned");
+        if (cog?.Status == DarknessStatus.Tainted) yield return ("play.status.tainted", "tainted");
+        if (cog?.Status == DarknessStatus.Corrupted) yield return ("play.status.corrupted", "corrupted");
+        if (!placed) yield return ("online.table.offBoard", "offboard");
+    }
+
+    // A cog of the list: shown on the mat (selected), or put down if it is not there yet.
+    private void CogClicked(TablePiece p)
+    {
+        if (Shown(p))
+        {
+            _placing = null;
+            _selected = _selected == p.Id ? null : p.Id;
+            return;
+        }
+        if (Movable(p)) StartPlacing(new(PieceKind.Cog, p.Ref, p.Id, CogName(p)));
+    }
 
     private IEnumerable<int> SeatOrder() => View.Me is { } me ? [me, 1 - me] : [0, 1];
 
