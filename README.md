@@ -673,14 +673,16 @@ connection.
     move wins, piece by piece; no log line per move (terrain put down or removed: logged).
   - Gestures in `js/table.js` (SVG in mm): drag a piece (the server hears of the drop only), zoom
     (wheel, buttons), pan (drag the background); from the tray, a click on the item then on the mat.
-    A cog out of action on its sheet is faded. Rotation by 15°.
+    A cog out of action on its sheet is faded. Bases have no orientation (no rotation); terrain
+    turns by 15°.
   - **Both cabals**, always listed next to the mat: each cog with its HP left, action tokens, Darkness
     and state (out of action, stunned, tainted or corrupted, off the mat), read from its side's sheet,
     and its cards below (one's own: a click puts their token down). A click on a cog shows it on the
     mat, or puts it down there if it is not on it yet.
   - **Movement templates** (from the module: the ruler of a normal move, a stadium, and the push one,
-    a disc), put down, moved and turned by either player; the selected one turns with its handle.
-    **Magnetic** (option of the selected template, shared): dropped near a base (within 8 mm between
+    a disc), put down, moved and turned by either player; the selected one turns with its handles (one
+    at each end, drawn above the bases so that a cog never hides them).
+    **Magnetic** (by default; option of the selected template, shared): dropped near a base (within 8 mm between
     the edges), the template moves without turning until its closest point touches it; a base dropped
     near a magnetic template comes to touch it at that place. Shown while dragging (`js/table.js`:
     a template is a capsule, its contact with a round base is exact). Placement stays free otherwise.

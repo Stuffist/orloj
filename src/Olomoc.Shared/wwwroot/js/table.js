@@ -3,7 +3,7 @@
 // - drag a movable piece ([data-piece][data-movable]): it follows the pointer, then
 //   Dropped(id, x, y, rotation); a press without moving: Selected(id);
 // - movement templates ([data-capsule]: a capsule of length × width): drag the handle of the selected
-//   one ([data-handle]) to rotate it. A magnetic template ([data-magnet]) dropped near a base
+//   one ([data-handle], front or back, in a [data-handles-for] group above the bases) to rotate it. A magnetic template ([data-magnet]) dropped near a base
 //   ([data-radius]) comes to touch it; a base dropped near a magnetic template comes to touch it;
 //   shown while dragging;
 // - press on the board: Clicked(x, y) (placing a piece, deselecting); with the ruler, the distance
@@ -38,10 +38,14 @@ window.olomocTable = {
             if (e.button !== undefined && e.button !== 0) return;
             const p = point(e);
             const handle = !t.ruler && e.target.closest("[data-handle]");
+            const handles = handle && handle.closest("[data-handles-for]");
+            const turned = handles && svg.querySelector(`[data-piece="${handles.getAttribute("data-handles-for")}"]`);
             const piece = e.target.closest("[data-piece]");
-            if (handle && piece) {
-                const [x, y] = T._at(piece);
-                t.turn = { piece, id: +piece.getAttribute("data-piece"), x, y, cx: x, cy: y, rotate: +(piece.getAttribute("data-rotate") || 0) };
+            if (turned) {
+                // The handles are drawn above the bases (never hidden by them), turned with the template.
+                const [x, y] = T._at(turned);
+                t.turn = { piece: turned, handles, id: +turned.getAttribute("data-piece"), x, y, cx: x, cy: y,
+                    back: handle.getAttribute("data-handle") === "back", rotate: +(turned.getAttribute("data-rotate") || 0) };
                 svg.setPointerCapture(e.pointerId);
                 e.preventDefault();
                 return;
@@ -73,9 +77,11 @@ window.olomocTable = {
                 // Rotation around the centre, towards the pointer (the handle is at the front); a magnetic
                 // template stays against the base it touches.
                 const p = point(e), r = t.turn;
-                r.rotate = Math.round(Math.atan2(p.x - r.cx, -(p.y - r.cy)) * 180 / Math.PI);
+                r.rotate = Math.round(Math.atan2(p.x - r.cx, -(p.y - r.cy)) * 180 / Math.PI) + (r.back ? 180 : 0);
                 [r.x, r.y] = T._snapTemplate(t, r.piece, r.cx, r.cy, r.rotate);
-                r.piece.setAttribute("transform", `translate(${r.x} ${r.y}) rotate(${r.rotate})`);
+                const transform = `translate(${r.x} ${r.y}) rotate(${r.rotate})`;
+                r.piece.setAttribute("transform", transform);
+                r.handles.setAttribute("transform", transform);
             } else if (t.drag) {
                 const d = t.drag;
                 if (Math.hypot(e.clientX - d.start.x, e.clientY - d.start.y) > 4) d.moved = true;

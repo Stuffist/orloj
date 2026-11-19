@@ -94,11 +94,6 @@ else
                             @if (p.Id == _selected)
                             {
                                 <rect class="tb-select" x="@Num(-w / 2 - 1)" y="@Num(-l / 2 - 1)" width="@Num(w + 2)" height="@Num(l + 2)" rx="@Num(w / 2 + 1)" />
-                                @if (Movable(p) && l > w)
-                                {
-                                    <line class="tb-handle-arm" x1="0" y1="@Num(-l / 2)" x2="0" y2="@Num(-l / 2 - 7)" />
-                                    <circle class="tb-handle" data-handle="rotate" cx="0" cy="@Num(-l / 2 - 7)" r="3.5"><title>@L.Ui("online.table.template.turn")</title></circle>
-                                }
                             }
                         </g>
                     }
@@ -123,11 +118,28 @@ else
                             @if (p.Kind != PieceKind.Marker)
                             {
                                 <circle r="@Num(radius)" class="tb-ring" />
-                                <path d="M 0 @Num(-radius - 2.5) L -2.5 @Num(-radius + 1) L 2.5 @Num(-radius + 1) Z" class="tb-front" />
                             }
                             @if (p.Id == _selected)
                             {
                                 <circle r="@Num(radius + 1.5)" class="tb-select" />
+                            }
+                        </g>
+                    }
+
+                    @* Handles of the selected movement template, one at each end: above the bases, which never hide
+                       them (js/table.js turns the template and them together). *@
+                    @if (SelectedPiece(table) is { Kind: PieceKind.Template } turned && Shown(turned) && Movable(turned)
+                         && Files.Manifest.Template(turned.Ref) is { } shape && shape.Length > shape.Width)
+                    {
+                        var (x, y, r) = At(turned);
+                        var end = shape.Length / 2;
+                        <g class="tb-handles" data-handles-for="@turned.Id" transform="translate(@Num(x) @Num(y)) rotate(@r)">
+                            @foreach (var (side, sign) in new[] { ("front", -1), ("back", 1) })
+                            {
+                                <g>
+                                    <line class="tb-handle-arm" x1="0" y1="@Num(sign * end)" x2="0" y2="@Num(sign * (end + 7))" />
+                                    <circle class="tb-handle" data-handle="@side" cx="0" cy="@Num(sign * (end + 7))" r="3.5"><title>@L.Ui("online.table.template.turn")</title></circle>
+                                </g>
                             }
                         </g>
                     }
@@ -192,8 +204,11 @@ else
                                 <button class="btn small @(s.Magnet ? "primary" : null)" type="button" aria-pressed="@s.Magnet" title="@L.Ui("online.table.magnet.title")"
                                         @onclick="() => Send(new(OnlineCommandType.SetMagnet, PieceId: s.Id, Flag: !s.Magnet))">🧲 @L.Ui("online.table.magnet")</button>
                             }
-                            <button class="btn small" type="button" title="@L.Ui("online.table.rotateLeft")" @onclick="() => RotateAsync(s, -15)">⟲</button>
-                            <button class="btn small" type="button" title="@L.Ui("online.table.rotateRight")" @onclick="() => RotateAsync(s, 15)">⟳</button>
+                            @if (!HasBase(s))
+                            {
+                                <button class="btn small" type="button" title="@L.Ui("online.table.rotateLeft")" @onclick="() => RotateAsync(s, -15)">⟲</button>
+                                <button class="btn small" type="button" title="@L.Ui("online.table.rotateRight")" @onclick="() => RotateAsync(s, 15)">⟳</button>
+                            }
                             @if (s.Kind == PieceKind.Cog)
                             {
                                 <button class="btn small" type="button" @onclick="() => OffBoardAsync(s)">@L.Ui("online.table.offBoard")</button>

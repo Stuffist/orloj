@@ -154,13 +154,13 @@ public class OnlineTableTests
         var (d, g) = await InCycle();
         Ok(Do(g, 0, new(OnlineCommandType.AddPiece, "move", Piece: PieceKind.Template, X: 100, Y: 100), d));
         var template = g.Table!.Pieces.Single(p => p.Kind == PieceKind.Template);
-        Assert.Equal((null, false), (template.Seat, template.Magnet));
+        Assert.Equal((null, true), (template.Seat, template.Magnet));           // magnetic by default
         Ok(Do(g, 1, new(OnlineCommandType.MovePiece, PieceId: template.Id, X: 120, Y: 90, Rotation: 45), d));
         Assert.Equal((120.0, 90.0, 45), (template.X, template.Y, template.Rotation));
-        Ok(Do(g, 1, new(OnlineCommandType.SetMagnet, PieceId: template.Id, Flag: true), d));
-        Assert.True(OnlineRules.View(g, 0, new HashSet<int>()).Table!.Pieces.Single(p => p.Id == template.Id).Magnet);
-        Ok(Do(g, 0, new(OnlineCommandType.SetMagnet, PieceId: template.Id, Flag: false), d));
-        Assert.False(template.Magnet);
+        Ok(Do(g, 1, new(OnlineCommandType.SetMagnet, PieceId: template.Id, Flag: false), d));
+        Assert.False(OnlineRules.View(g, 0, new HashSet<int>()).Table!.Pieces.Single(p => p.Id == template.Id).Magnet);
+        Ok(Do(g, 0, new(OnlineCommandType.SetMagnet, PieceId: template.Id, Flag: true), d));
+        Assert.True(template.Magnet);
 
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetMagnet, PieceId: Cog(g, 0, "2R08").Id, Flag: true), d)));
         Assert.Equal("onlineTablePiece", Key(Do(g, 0, new(OnlineCommandType.SetAuras, PieceId: template.Id, Auras: [1]), d)));

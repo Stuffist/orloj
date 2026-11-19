@@ -1067,11 +1067,8 @@ body {
 .tb-select { fill: none; stroke: #f5d76e; stroke-width: 1.2; stroke-dasharray: 3 2; pointer-events: none; }
 .tb-base { fill: #2b3640; }
 .tb-ring { fill: none; stroke-width: 1.6; }
-.tb-front { stroke: none; }
-.tb-seat-0 .tb-ring, .tb-seat-0 .tb-front { stroke: var(--rust-soft); fill: var(--rust-soft); }
-.tb-seat-0 .tb-ring { fill: none; }
-.tb-seat-1 .tb-ring, .tb-seat-1 .tb-front { stroke: #4f9fd6; fill: #4f9fd6; }
-.tb-seat-1 .tb-ring { fill: none; }
+.tb-seat-0 .tb-ring { stroke: var(--rust-soft); }
+.tb-seat-1 .tb-ring { stroke: #4f9fd6; }
 .tb-initials { fill: var(--ink); font-size: 9px; font-weight: 700; pointer-events: none; }
 .tb-out { opacity: .35; filter: grayscale(1); }
 .tb-magnet { fill: none; stroke: #7fd4ff; stroke-width: 1.2; pointer-events: none; filter: drop-shadow(0 0 1.5px #7fd4ff); }

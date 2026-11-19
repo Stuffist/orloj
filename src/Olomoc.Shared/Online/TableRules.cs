@@ -70,6 +70,7 @@ public static class TableRules
         {
             Id = table.NextId++, Kind = c.Piece!.Value, Ref = c.Text!, Seat = c.Piece == PieceKind.Equipment ? seat : null,
             X = c.X, Y = c.Y, Rotation = Normal(c.Rotation ?? 0),
+            Magnet = c.Piece == PieceKind.Template,         // movement templates: magnetic by default
         };
         table.Pieces.Add(piece);
         if (piece.Kind == PieceKind.Terrain) OnlineRules.Log(g, seat, now, "tableAdd", piece.Ref);
