@@ -71,7 +71,7 @@ else
                             <image href="@Src(t.Image)" x="@Num(-t.Width / 2)" y="@Num(-t.Height / 2)" width="@Num(t.Width)" height="@Num(t.Height)" preserveAspectRatio="none" />
                             @if (p.Id == _selected)
                             {
-                                <rect class="tb-select" x="@Num(-t.Width / 2)" y="@Num(-t.Height / 2)" width="@Num(t.Width)" height="@Num(t.Height)" />
+                                <rect class="tb-select" x="@Num(-t.Width / 2 + Inset)" y="@Num(-t.Height / 2 + Inset)" width="@Num(t.Width - 2 * Inset)" height="@Num(t.Height - 2 * Inset)" />
                             }
                         </g>
                     }
@@ -89,11 +89,11 @@ else
                             <image href="@Src(t.Image)" x="@Num(-w / 2)" y="@Num(-l / 2)" width="@Num(w)" height="@Num(l)" preserveAspectRatio="none" />
                             @if (p.Magnet)
                             {
-                                <rect class="tb-magnet" x="@Num(-w / 2)" y="@Num(-l / 2)" width="@Num(w)" height="@Num(l)" rx="@Num(w / 2)" />
+                                <rect class="tb-magnet" x="@Num(-w / 2 + Inset)" y="@Num(-l / 2 + Inset)" width="@Num(w - 2 * Inset)" height="@Num(l - 2 * Inset)" rx="@Num(w / 2 - Inset)" />
                             }
                             @if (p.Id == _selected)
                             {
-                                <rect class="tb-select" x="@Num(-w / 2 - 1)" y="@Num(-l / 2 - 1)" width="@Num(w + 2)" height="@Num(l + 2)" rx="@Num(w / 2 + 1)" />
+                                <rect class="tb-select" x="@Num(-w / 2 + Inset)" y="@Num(-l / 2 + Inset)" width="@Num(w - 2 * Inset)" height="@Num(l - 2 * Inset)" rx="@Num(w / 2 - Inset)" />
                             }
                         </g>
                     }
@@ -133,15 +133,15 @@ else
                             }
                             @if (p.Kind != PieceKind.Marker)
                             {
-                                <circle r="@Num(radius)" class="tb-ring" />
+                                <circle r="@Num(radius - RingInset)" class="tb-ring" />
                             }
                             @if (p.Id == _selected)
                             {
-                                <circle r="@Num(radius + 1.5)" class="tb-select" />
+                                <circle r="@Num(radius - Inset)" class="tb-select" />
                             }
                             else if (Sibling(p))
                             {
-                                <circle r="@Num(radius + 1.5)" class="tb-linked" />
+                                <circle r="@Num(radius - Inset)" class="tb-linked" />
                             }
                         </g>
                     }
@@ -410,6 +410,8 @@ else
     [Parameter] public RenderFragment? HeadContent { get; set; }
 
     private const double Inch = TableManifest.MmPerInch;
+    // Outlines drawn inside the pieces (half their stroke), never beyond: contacts stay exact.
+    private const double Inset = 0.6, RingInset = 0.8;
     // The mat and the margin around it (where pieces may stick out): the whole view.
     private const double Span = TableManifest.BoardSize + 2 * TableRules.Margin;
     private static readonly string Outside = $"{Num(-TableRules.Margin)} {Num(-TableRules.Margin)} {Num(Span)} {Num(Span)}";
