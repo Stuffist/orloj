@@ -451,8 +451,8 @@ else
     }
 
     /// <summary>
-    /// Ruler released: the distance in inches, centre to centre; between two pieces with a base, also
-    /// base edge to base edge (the distances of the rules).
+    /// Ruler released: the distance in inches; between two pieces with a base, only base edge to base edge
+    /// (the distance of the rules); from one of them, from the edge of its base and from its centre.
     /// </summary>
     [JSInvokable]
     public Task Measured(int? from, int? to, double x1, double y1, double x2, double y2)
@@ -464,7 +464,7 @@ else
         var centre = Math.Sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
         var label = $"{Num(centre / Inch, 1)}″";
         if (a is not null && b is not null)
-            label = L.Ui("online.table.ruler.edges", Num(Math.Max(0, centre - Radius(a) - Radius(b)) / Inch, 1), label);
+            label = L.Ui("online.table.ruler.edges", Num(Math.Max(0, centre - Radius(a) - Radius(b)) / Inch, 1));
         else if (a is not null || b is not null)
             label = L.Ui("online.table.ruler.edge", Num(Math.Max(0, centre - Radius((a ?? b)!)) / Inch, 1), label);
         _measure = new Measure(x1, y1, x2, y2, label);

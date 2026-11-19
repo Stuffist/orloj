@@ -1143,7 +1143,7 @@
   "online.table.ruler": "Ruler",
   "online.table.ruler.title": "Measure a distance: drag from a point (or a miniature) to another",
   "online.table.ruler.help": "Drag from a point or a miniature to another to measure. Between two miniatures: the distance from base edge to base edge.",
-  "online.table.ruler.edges": "{0}″ edge to edge ({1} centre to centre)",
+  "online.table.ruler.edges": "{0}″ edge to edge",
   "online.table.ruler.edge": "{0}″ from the base edge ({1} from the centre)",
   "online.table.auras": "Ranges",
   "online.table.auras.title": "Circles from 1″ to 8″ around the selected miniature (from the base edge)",

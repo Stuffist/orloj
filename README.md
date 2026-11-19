@@ -679,8 +679,8 @@ connection.
     and state (out of action, stunned, tainted or corrupted, off the mat), read from its side's sheet,
     and its cards below (one's own: a click puts their token down). A click on a cog shows it on the
     mat, or puts it down there if it is not on it yet.
-  - **Ruler** (for the viewer only): distance in inches, centre to centre, and base edge to base
-    edge between two miniatures. **Ranges**: circles from 1″ to 8″ around the selected one, from the
+  - **Ruler** (for the viewer only): distance in inches; between two miniatures, base edge to base
+    edge only. **Ranges**: circles from 1″ to 8″ around the selected one, from the
     edge of its base. 1″ grid on demand.
   - **Detachable** like the builder's equipment catalog: `/online/g/{code}/table?window=true`
     (`Pages/OnlineTable.razor`), for another screen. Unlike the opponent's side window, it can be
