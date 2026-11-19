@@ -37,8 +37,11 @@ window.olomocTable = {
                 return;
             }
             if (t.ruler) {
-                t.measure = { x: p.x, y: p.y, from: piece ? +piece.getAttribute("data-piece") : null };
-                window.olomocTable._ruler(t, p);
+                // From a miniature: from its centre, the distance counted from the edge of its base.
+                const base = piece && piece.hasAttribute("data-radius") ? piece : null;
+                const [cx, cy] = base ? base.getAttribute("data-at").split(" ").map(Number) : [p.x, p.y];
+                t.measure = { x: cx, y: cy, from: piece ? +piece.getAttribute("data-piece") : null, r: base ? +base.getAttribute("data-radius") : 0 };
+                window.olomocTable._ruler(t, p, e);
                 svg.setPointerCapture(e.pointerId);
                 e.preventDefault();
                 return;
@@ -56,7 +59,7 @@ window.olomocTable = {
                 t.drag.x = x; t.drag.y = y;
                 t.drag.piece.setAttribute("transform", `translate(${x} ${y}) rotate(${t.drag.rotate})`);
             } else if (t.measure) {
-                window.olomocTable._ruler(t, point(e));
+                window.olomocTable._ruler(t, point(e), e);
             } else if (t.pan) {
                 const rect = svg.getBoundingClientRect();
                 const k = t.view.w / rect.width;
@@ -138,15 +141,24 @@ window.olomocTable = {
         t.apply();
     },
 
-    // Line from the press to the pointer, with its length in inches (the exact figures: Measured).
-    _ruler(t, p) {
+    // Line from the press to the pointer, with its length in inches (the exact figures: Measured). As soon
+    // as a miniature is involved (start, or under the pointer), from the edge of its base.
+    _ruler(t, p, e) {
         const g = t.svg.querySelector(".tb-ruler-live");
         if (!g || !t.measure) return;
         const line = g.querySelector("line"), text = g.querySelector("text");
         line.setAttribute("x1", t.measure.x); line.setAttribute("y1", t.measure.y);
-        line.setAttribute("x2", p.x); line.setAttribute("y2", p.y);
-        text.setAttribute("x", (t.measure.x + p.x) / 2); text.setAttribute("y", (t.measure.y + p.y) / 2 - 4);
-        text.textContent = `${(Math.hypot(p.x - t.measure.x, p.y - t.measure.y) / 25.4).toFixed(1)}″`;
+        let end = p, r = 0;
+        const target = document.elementsFromPoint(e.clientX, e.clientY).map(el => el.closest && el.closest("[data-radius]")).find(el => el);
+        if (target && +target.getAttribute("data-piece") !== t.measure.from) {
+            const [x, y] = target.getAttribute("data-at").split(" ").map(Number);
+            end = { x, y };
+            r = +target.getAttribute("data-radius");
+        }
+        line.setAttribute("x2", end.x); line.setAttribute("y2", end.y);
+        text.setAttribute("x", (t.measure.x + end.x) / 2); text.setAttribute("y", (t.measure.y + end.y) / 2 - 4);
+        const d = Math.max(0, Math.hypot(end.x - t.measure.x, end.y - t.measure.y) - t.measure.r - r);
+        text.textContent = `${(d / 25.4).toFixed(1)}″`;
         g.style.display = "";
     },
 };

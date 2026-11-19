@@ -83,7 +83,7 @@ else
                         var (x, y, r) = At(p);
                         var radius = Radius(p);
                         <g class="tb-piece tb-token @SeatClass(p) @(Out(p) ? "tb-out" : null) @(p.Id == _selected ? "selected" : null)"
-                           data-piece="@p.Id" data-movable="@(Movable(p) ? "" : null)" data-at="@Num(x) @Num(y)" data-rotate="@r"
+                           data-piece="@p.Id" data-movable="@(Movable(p) ? "" : null)" data-at="@Num(x) @Num(y)" data-rotate="@r" data-radius="@Num(radius)"
                            transform="translate(@Num(x) @Num(y)) rotate(@r)">
                             <title>@Name(p)</title>
                             <circle r="@Num(radius)" class="tb-base" />
@@ -452,7 +452,7 @@ else
 
     /// <summary>
     /// Ruler released: the distance in inches; between two pieces with a base, only base edge to base edge
-    /// (the distance of the rules); from one of them, from the edge of its base and from its centre.
+    /// (the distance of the rules); from or to one of them, from the edge of its base.
     /// </summary>
     [JSInvokable]
     public Task Measured(int? from, int? to, double x1, double y1, double x2, double y2)
@@ -466,7 +466,7 @@ else
         if (a is not null && b is not null)
             label = L.Ui("online.table.ruler.edges", Num(Math.Max(0, centre - Radius(a) - Radius(b)) / Inch, 1));
         else if (a is not null || b is not null)
-            label = L.Ui("online.table.ruler.edge", Num(Math.Max(0, centre - Radius((a ?? b)!)) / Inch, 1), label);
+            label = L.Ui("online.table.ruler.edge", Num(Math.Max(0, centre - Radius((a ?? b)!)) / Inch, 1));
         _measure = new Measure(x1, y1, x2, y2, label);
         StateHasChanged();
         return Task.CompletedTask;
