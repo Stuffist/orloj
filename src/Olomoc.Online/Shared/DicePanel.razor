@@ -2,7 +2,7 @@
 
 @* Shared dice roller (DiceRules): the action, and under it the reaction that answers it (dodge,
    riposte). Rolled by the server, the same for both players, open to both. Successes lit at the
-   chosen threshold, and counted for each threshold (5+ to 2+: the base 5+, lowered by support or a
+   chosen threshold, and counted for each threshold (2+ to 5+: the base 5+, lowered by support or a
    charge). "Reroll": the whole roll again (trying fate; the Darkness token stays on the sheet). *@
 
 <section class="tb-dice" aria-label="@L.Ui("online.dice.title")">
@@ -32,7 +32,7 @@
                     }
                 </div>
                 <div class="tb-dice-thresholds" role="group" aria-label="@L.Ui("online.dice.threshold")">
-                    @for (var t = DiceRules.MaxThreshold; t >= DiceRules.MinThreshold; t--)
+                    @for (var t = DiceRules.MinThreshold; t <= DiceRules.MaxThreshold; t++)
                     {
                         var threshold = t;
                         <button class="tb-threshold @(t == roll.Threshold ? "on" : null)" type="button" disabled="@(!CanRoll)"
