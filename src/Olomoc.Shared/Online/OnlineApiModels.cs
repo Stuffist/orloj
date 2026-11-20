@@ -23,6 +23,7 @@ public enum OnlineCommandType
     ChooseAgenda, DrawAgenda,                // agenda
     UpdateState, Undo, SetEndCycle,          // cycles
     SetBoard, AddPiece, MovePiece, RemovePiece, SetAuras, SetMagnet, SetLock, SetClaim,   // table (from the initiative on)
+    RollDice, RerollDice, SetDiceThreshold,  // shared dice roller (from the initiative on)
     ConfirmResult,                           // end of the game
 }
 
@@ -32,7 +33,8 @@ public enum OnlineCommandType
 /// Table: Piece (kind of a new piece), Side (the side a new cog or equipment token belongs to, the side
 /// claiming an objective), PieceId,
 /// X and Y (mm), Rotation.
-// Auras: ranges shown around a piece (inches, 1 to 9; empty: none). Vp: victory points of each seat, for the result.
+/// Auras: ranges shown around a piece (inches, 1 to 9; empty: none). Vp: victory points of each seat, for the result.
+/// Dice: Text (slot "action" or "reaction"), Count (D6), Threshold (2 to 5).
 /// </summary>
 public sealed record OnlineCommand(
     OnlineCommandType Type,
@@ -49,7 +51,9 @@ public sealed record OnlineCommand(
     int? Rotation = null,
     IReadOnlyList<int>? Vp = null,
     IReadOnlyList<int>? Auras = null,
-    int? Side = null);
+    int? Side = null,
+    int? Count = null,
+    int? Threshold = null);
 
 /// <summary>Answer to Join (hub): the game's view, or the problem that prevents joining it (notFound, forbidden).</summary>
 public sealed record OnlineJoin(OnlineView? View, string? Error = null);
@@ -77,7 +81,8 @@ public sealed record OnlineView(
     OnlineTournamentRef? Tournament,
     IReadOnlyList<OnlineLogEntry> Log,
     OnlineTable? Table = null,           // nothing secret on a table: the same for everyone
-    OnlineGameResult? Result = null)
+    OnlineGameResult? Result = null,
+    IReadOnlyDictionary<string, OnlineDiceRoll>? Dice = null)
 {
     public SeatView? Mine => Me is { } i ? Seats[i] : null;
     public SeatView? Other => Me is { } i ? Seats[1 - i] : null;

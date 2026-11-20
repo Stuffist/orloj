@@ -40,6 +40,8 @@ public static class OnlineRules
                 or OnlineCommandType.SetAuras or OnlineCommandType.SetMagnet
                 or OnlineCommandType.SetLock or OnlineCommandType.SetClaim
                 => One(TableRules.Apply(g, seat, c, table, now)),
+            OnlineCommandType.RollDice or OnlineCommandType.RerollDice or OnlineCommandType.SetDiceThreshold
+                => One(DiceRules.Apply(g, seat, c, random, now)),
             OnlineCommandType.ConfirmResult => One(ConfirmResult(g, seat, c.Vp, now)),
             _ => One(Problem.Of("onlineCommand")),
         };
@@ -350,5 +352,6 @@ public static class OnlineRules
         g.Tournament,
         g.Log.Skip(Math.Max(0, g.Log.Count - logSize)).ToList(),
         g.Table,
-        g.Result);
+        g.Result,
+        g.Dice);
 }

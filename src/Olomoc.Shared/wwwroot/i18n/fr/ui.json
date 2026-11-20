@@ -1223,5 +1223,21 @@
   "online.table.claim.title": "Objectif pris par {0} : marquer ou démarquer",
   "pairings.problem.onlineTableLocked": "Cette pièce est verrouillée : ouvrez son cadenas pour la déplacer ou la retirer.",
   "online.table.fullscreen": "Plein écran",
-  "online.table.fullscreen.title": "Le tapis et la liste des cabales seuls sur l’écran, le plus grand possible (Échap pour revenir)"
+  "online.table.fullscreen.title": "Le tapis et la liste des cabales seuls sur l’écran, le plus grand possible (Échap pour revenir)",
+  "online.dice.title": "Dés",
+  "online.dice.action": "Action",
+  "online.dice.reaction": "Réaction",
+  "online.dice.d6": "{0}D6",
+  "online.dice.roll": "Lancer",
+  "online.dice.threshold": "Seuil de réussite",
+  "online.dice.threshold.title": "Lire le jet à {0}+ (5+ de base, −1 par soutien ou charge), pour les deux joueurs",
+  "online.dice.by": "Lancé par {0}",
+  "online.dice.rerolled": "relancé ×{0}",
+  "online.dice.reroll": "Relancer",
+  "online.dice.reroll.title": "Relancer tout le jet (tenter le destin : le pion de Noirceur est à ajouter sur la fiche)",
+  "online.log.dice": "{0} — {1} : {5}D6 → {2} ({3} réussite(s) à {4}+).",
+  "online.log.diceReroll": "{0} relance — {1} : {2} ({3} réussite(s) à {4}+).",
+  "pairings.problem.onlineDice": "Aucun jet à relancer ou à relire ici.",
+  "pairings.problem.onlineDiceCount": "De 1 à {0} dés.",
+  "pairings.problem.onlineDiceThreshold": "Un seuil va de {0}+ à {1}+."
 }

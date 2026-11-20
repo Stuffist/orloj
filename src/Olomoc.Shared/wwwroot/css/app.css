@@ -1162,6 +1162,27 @@ body {
 .tb-cog-gear:disabled { cursor: default; }
 .tb-cog-gear:not(:disabled):hover, .tb-cog-gear.on { color: #f5d76e; }
 .tb-palette summary { cursor: pointer; font-size: .85rem; font-weight: 600; margin-top: .4rem; }
+/* Shared dice roller (DicePanel): action, then the reaction under it */
+.tb-dice { display: flex; flex-direction: column; gap: .35rem; margin-bottom: .4rem; }
+.tb-dice-box { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: .35rem .45rem; display: flex; flex-direction: column; gap: .3rem; }
+.tb-dice-box.reaction { margin-left: .6rem; border-style: dashed; }
+.tb-dice-head { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.tb-dice-head strong { font-size: .85rem; margin-right: auto; }
+.tb-dice-count { display: inline-flex; align-items: center; gap: .2rem; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.tb-dice-count .step { width: 1.4rem; height: 1.4rem; padding: 0; }
+.tb-dice-faces { display: flex; flex-wrap: wrap; gap: .2rem; }
+.tb-dice-faces .online-die { width: 1.45rem; height: 1.45rem; font-size: .85rem; border-radius: 5px; }
+.tb-dice-thresholds { display: grid; grid-template-columns: repeat(4, 1fr); gap: .2rem; }
+.tb-threshold {
+    background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 5px;
+    padding: .1rem 0; font-size: .72rem; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.tb-threshold strong { color: var(--ink); font-size: .85rem; margin-left: .15rem; }
+.tb-threshold.on { border-color: var(--rust-soft); background: var(--rust); color: #fff; }
+.tb-threshold.on strong { color: #fff; }
+.tb-threshold:disabled { cursor: default; }
+.tb-dice-foot { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.tb-dice-foot .hint { margin: 0; margin-right: auto; font-size: .72rem; }
 .tb-detached { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
 /* Full screen (the panel alone): the mat as large as the height allows, the list scrolling beside it */
 .tb-panel:fullscreen {

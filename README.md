@@ -703,6 +703,13 @@ connection.
     keys 1 to 9 of the top row (or the buttons) toggle a circle of that many inches around the selected
     piece, from the edge of its base, 0 removes them; kept by the server, seen by both players and the
     spectators (either player, any piece but terrain). 1″ grid on demand.
+  - **Dice** (`Online/DiceRules.cs`, `Shared/DicePanel.razor`, at the top of the column next to the
+    mat): two rollers, the **action** and under it the **reaction** that answers it (dodge, riposte),
+    open to both players. 1 to 12 D6 rolled by the server (the same for both, in the log); the
+    successes lit at the chosen threshold and counted for each one (5+ by default, rulebook p.10;
+    4+, 3+, 2+ with support or a charge), the threshold changed by either player for both;
+    "Reroll": the whole roll again (trying fate; the Darkness token is added on the sheet by the
+    player).
   - **Full screen** ("⛶" in its header): the table panel alone on the screen (browser full screen,
     Esc leaves it), the mat as large as the height allows, the cabals' list scrolling beside it.
   - **Detachable** like the builder's equipment catalog: `/online/g/{code}/table?window=true`
@@ -732,8 +739,8 @@ connection.
   connection, creations limited like events (`RATE_CREATE_PER_HOUR`).
 
 Planned next steps: the cards (Ministries, Artifact, planning revealed simultaneously), a ruler
-and a line of sight shared with the opponent (the terrain outlines are in the manifest), dice on
-the table.
+and a line of sight shared with the opponent (the terrain outlines are in the manifest), dice
+linked to the cogs (characteristic, modifiers) and an opposed attack / reaction flow.
 
 ## Statistics
 

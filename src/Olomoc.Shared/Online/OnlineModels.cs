@@ -35,6 +35,8 @@ public sealed class OnlineGame : IStoredDocument
     public OnlineTournamentRef? Tournament { get; set; }
     /// <summary>Board and pieces (null: lobby, or a game stored before the table).</summary>
     public OnlineTable? Table { get; set; }
+    /// <summary>Shared dice roller: the last roll of each slot ("action", "reaction"); null: none yet.</summary>
+    public Dictionary<string, OnlineDiceRoll>? Dice { get; set; }
     /// <summary>Result confirmed at the end of the game.</summary>
     public OnlineGameResult? Result { get; set; }
     public List<OnlineLogEntry> Log { get; set; } = new();
@@ -101,6 +103,19 @@ public sealed class OnlineTable
     public string Board { get; set; } = "";
     public List<TablePiece> Pieces { get; set; } = new();
     public int NextId { get; set; } = 1;
+}
+
+/// <summary>
+/// A roll of the shared dice roller: the faces (D6), the threshold they are read at (2+ to 5+, the
+/// same for both players), who rolled, how many times it was rerolled (whole roll).
+/// </summary>
+public sealed class OnlineDiceRoll
+{
+    public List<int> Faces { get; set; } = new();
+    public int Threshold { get; set; } = 5;
+    public int Seat { get; set; }
+    public int Rerolls { get; set; }
+    public DateTimeOffset At { get; set; }
 }
 
 /// <summary>

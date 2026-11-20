@@ -1223,5 +1223,21 @@
   "online.table.claim.title": "Objective taken by {0}: mark or unmark",
   "pairings.problem.onlineTableLocked": "This piece is locked: open its padlock to move or remove it.",
   "online.table.fullscreen": "Full screen",
-  "online.table.fullscreen.title": "The mat and the cabals’ list alone on the screen, as large as possible (Esc to leave)"
+  "online.table.fullscreen.title": "The mat and the cabals’ list alone on the screen, as large as possible (Esc to leave)",
+  "online.dice.title": "Dice",
+  "online.dice.action": "Action",
+  "online.dice.reaction": "Reaction",
+  "online.dice.d6": "{0}D6",
+  "online.dice.roll": "Roll",
+  "online.dice.threshold": "Success threshold",
+  "online.dice.threshold.title": "Read the roll at {0}+ (5+ by default, −1 per support or charge), for both players",
+  "online.dice.by": "Rolled by {0}",
+  "online.dice.rerolled": "rerolled ×{0}",
+  "online.dice.reroll": "Reroll",
+  "online.dice.reroll.title": "Reroll the whole roll (trying fate: add the Darkness token on the sheet)",
+  "online.log.dice": "{0} — {1}: {5}D6 → {2} ({3} success(es) at {4}+).",
+  "online.log.diceReroll": "{0} rerolls — {1}: {2} ({3} success(es) at {4}+).",
+  "pairings.problem.onlineDice": "No roll to reroll or read here.",
+  "pairings.problem.onlineDiceCount": "1 to {0} dice.",
+  "pairings.problem.onlineDiceThreshold": "A threshold goes from {0}+ to {1}+."
 }
