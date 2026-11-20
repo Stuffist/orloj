@@ -1021,6 +1021,9 @@ body {
     border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); color: var(--muted);
 }
 .online-die.hit { color: #fff; border-color: var(--rust-soft); background: var(--rust); }
+.online-die svg { width: 82%; height: 82%; display: block; }
+.online-die circle { fill: currentColor; }
+.online-die:not(.hit) { color: var(--ink); }
 .online-successes { font-size: .85rem; color: var(--muted); }
 .online-verdict { font-weight: 600; margin: .6rem 0 0; }
 .online-commands { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .8rem; }

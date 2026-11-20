@@ -28,7 +28,7 @@
                 <div class="tb-dice-faces">
                     @foreach (var face in roll.Faces)
                     {
-                        <span class="online-die @(face >= roll.Threshold ? "hit" : null)">@face</span>
+                        <Die Face="face" Hit="@(face >= roll.Threshold)" />
                     }
                 </div>
                 <div class="tb-dice-thresholds" role="group" aria-label="@L.Ui("online.dice.threshold")">

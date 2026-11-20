@@ -18,7 +18,7 @@
                         <span class="online-dice">
                             @foreach (var d in dice)
                             {
-                                <span class="online-die @(d >= OnlineRules.Success ? "hit" : null)">@d</span>
+                                <Die Face="d" Hit="@(d >= OnlineRules.Success)" />
                             }
                         </span>
                         <span class="online-successes">@L.Ui("online.initiative.successes", OnlineRules.Successes(dice))</span>
@@ -49,7 +49,7 @@
                         <span class="online-dice">
                             @foreach (var d in dice)
                             {
-                                <span class="online-die @(d >= OnlineRules.Success ? "hit" : null)">@d</span>
+                                <Die Face="d" Hit="@(d >= OnlineRules.Success)" />
                             }
                         </span>
                         <span class="online-successes">@L.Ui("online.initiative.successes", OnlineRules.Successes(dice))</span>
