@@ -1165,7 +1165,7 @@ body {
 /* Shared dice roller (DicePanel): action, then the reaction under it */
 .tb-dice { display: flex; flex-direction: column; gap: .35rem; margin-bottom: .4rem; }
 .tb-dice-box { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: .35rem .45rem; display: flex; flex-direction: column; gap: .3rem; }
-.tb-dice-box.reaction { margin-left: .6rem; border-style: dashed; }
+.tb-dice-box.reaction { border-style: dashed; }
 .tb-dice-head { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
 .tb-dice-head strong { font-size: .85rem; margin-right: auto; }
 .tb-dice-count { display: inline-flex; align-items: center; gap: .2rem; font-size: .8rem; font-variant-numeric: tabular-nums; }
@@ -1174,10 +1174,11 @@ body {
 .tb-dice-faces .online-die { width: 1.45rem; height: 1.45rem; font-size: .85rem; border-radius: 5px; }
 .tb-dice-thresholds { display: grid; grid-template-columns: repeat(4, 1fr); gap: .2rem; }
 .tb-threshold {
+    display: flex; flex-direction: column; align-items: center; line-height: 1.1;
     background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 5px;
-    padding: .1rem 0; font-size: .72rem; cursor: pointer; font-variant-numeric: tabular-nums;
+    padding: .15rem 0 .2rem; font-size: .66rem; cursor: pointer; font-variant-numeric: tabular-nums;
 }
-.tb-threshold strong { color: var(--ink); font-size: .85rem; margin-left: .15rem; }
+.tb-threshold strong { color: var(--ink); font-size: 1.05rem; }
 .tb-threshold.on { border-color: var(--rust-soft); background: var(--rust); color: #fff; }
 .tb-threshold.on strong { color: #fff; }
 .tb-threshold:disabled { cursor: default; }

@@ -38,7 +38,8 @@
                         <button class="tb-threshold @(t == roll.Threshold ? "on" : null)" type="button" disabled="@(!CanRoll)"
                                 aria-pressed="@(t == roll.Threshold)" title="@L.Ui("online.dice.threshold.title", t)"
                                 @onclick="() => Send(new(OnlineCommandType.SetDiceThreshold, s, Threshold: threshold))">
-                            @(t)+ <strong>@DiceRules.Successes(roll.Faces, t)</strong>
+                            <span>@L.Ui("online.dice.at", t)</span>
+                            <strong>@DiceRules.Successes(roll.Faces, t)</strong>
                         </button>
                     }
                 </div>

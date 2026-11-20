@@ -1239,5 +1239,6 @@
   "online.log.diceReroll": "{0} rerolls — {1}: {2} ({3} success(es) at {4}+).",
   "pairings.problem.onlineDice": "No roll to reroll or read here.",
   "pairings.problem.onlineDiceCount": "1 to {0} dice.",
-  "pairings.problem.onlineDiceThreshold": "A threshold goes from {0}+ to {1}+."
+  "pairings.problem.onlineDiceThreshold": "A threshold goes from {0}+ to {1}+.",
+  "online.dice.at": "at {0}+"
 }
