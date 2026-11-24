@@ -63,7 +63,8 @@ else
         <div class="export-head">
             <h2>@L.Ui("export.title")</h2>
             <span class="legality-badge @(_legality.IsLegal ? "ok" : "ko")" role="status">
-                @(_legality.IsLegal ? null : "⚠ ")@L.Ui(_legality.IsLegal ? "legality.legal" : "legality.illegal")
+                @(_legality.IsLegal ? null : "⚠ ")@L.Ui(!_legality.IsLegal ? "legality.illegal"
+                    : _cogs.Count(c => c is not null) == 2 ? "legality.legalTeams" : "legality.legal")
             </span>
         </div>
         @if (_legality.Issues.Count > 0)
@@ -403,6 +404,15 @@ else
                     <li class="saved-cabal">
                         <div class="saved-head">
                             <span class="cog-name">@cabal.Name</span>
+                            @* Flag: illegal (or cards not found), or a legal 2 v 2 cabal of 2 cogs. *@
+                            @if (!Catalog.IsLegal(cabal))
+                            {
+                                <span class="legality-badge small ko">@L.Ui("library.illegal")</span>
+                            }
+                            else if (cabal.Cogs.Count == 2)
+                            {
+                                <span class="legality-badge small ok">@L.Ui("library.teams")</span>
+                            }
                             <span class="saved-meta">@if (cabal.Faction is { } f) { <span class="emblem-name"><Emblem Faction="@f.Code" />@FactionLabel(f)</span>@(" · ") }@SavedDate(saved.SavedAt)</span>
                         </div>
                         <ul class="saved-slots">

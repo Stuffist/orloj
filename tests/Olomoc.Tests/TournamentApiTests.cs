@@ -86,7 +86,7 @@ public sealed class TournamentApiTests : IDisposable
         await Register(http, t.Code, "Bo", a, b);
         await Register(http, t.Code, "Cy", a, b);
         var refused = await http.PostAsJsonAsync($"{url}/players",
-            new RegistrationRequest("Dan", "MAISEL", new List<CabalExport> { a, b with { Cogs = b.Cogs.Take(2).ToList() } }), TournamentJson.Options);
+            new RegistrationRequest("Dan", "MAISEL", new List<CabalExport> { a, b with { Cogs = b.Cogs.Take(1).ToList() } }), TournamentJson.Options);
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
         Assert.All((await Read<ProblemList>(refused)).Problems, p => Assert.Equal(("cabalIllegal", 1), (p.Key, p.Cabal)));
 

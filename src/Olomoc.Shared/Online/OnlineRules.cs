@@ -85,8 +85,10 @@ public static class OnlineRules
             return new[] { Problem.Of("faction") };
         var resolved = catalog.Resolve(cabal);
         if (resolved.Missing.Count > 0) return new[] { Problem.Of("cabalMissing", string.Join(", ", resolved.Missing)) };
-        return catalog.CheckLegality(faction, resolved.Cogs, resolved.Equipment).Issues
+        var problems = catalog.CheckLegality(faction, resolved.Cogs, resolved.Equipment).Issues
             .Select(issue => new Problem("cabalIllegal", null, null, issue)).ToList();
+        if (TournamentRules.WrongCogCount(resolved.Cogs, 3)) problems.Insert(0, Problem.Of("cabalCogs", "3"));   // duel: 3 cogs
+        return problems;
     }
 
     /// <summary>Ready (name and cabal chosen); when both are, the cabals are revealed and the setup starts.</summary>

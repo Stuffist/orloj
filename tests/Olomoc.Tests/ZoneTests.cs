@@ -85,6 +85,18 @@ public class ZoneTests
     }
 
     [Fact]
+    public async Task Teams_cabals_have_two_cogs()
+    {
+        var full = await MaiselCabal();
+        var two = full with { Cogs = full.Cogs.Where(s => s.Rank != 2).ToList() };     // ranks 3 and 1, equipped
+        ZoneSide Side(CabalExport cabal, int vp) => new([new ZonePlayer("MAISEL", null, cabal), new ZonePlayer("MAISEL", null, cabal)], vp);
+        var teams = new ZoneGame(GameFormat.Teams, Today, Side(two, 5), Side(two, 3), TableSide.A, GameEnd.FourthCycle, FullScenario());
+        Assert.Empty(await Problems(teams));
+        Assert.Equal(["cabalCogs", "cabalCogs"], await Problems(teams with { B = Side(full, 3) }));
+        Assert.Equal(["cabalCogs"], await Problems(Duel("RUBIN", "MAISEL", 5, 3) with { B = new ZoneSide([new ZonePlayer("MAISEL", null, two)], 3) }));
+    }
+
+    [Fact]
     public async Task Closed_zone_refuses_except_for_managers()
     {
         var game = Duel("RUBIN", "MAISEL", 5, 3);

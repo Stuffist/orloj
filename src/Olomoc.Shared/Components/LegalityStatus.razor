@@ -25,12 +25,16 @@ else
     [Parameter, EditorRequired] public CabalExport Cabal { get; set; } = default!;
     /// <summary>The player's faction, if already chosen.</summary>
     [Parameter] public string? Faction { get; set; }
+    /// <summary>Cogs expected (3, or 2 in 2 v 2); null: either legal size.</summary>
+    [Parameter] public int? Cogs { get; set; }
 
-    // Cards not found, then legality problems in the cabal's faction.
+    // Cards not found, then the expected size, then legality problems in the cabal's faction.
     private List<string> Issues()
     {
         var resolved = Catalog.Resolve(Cabal);
         if (resolved.Missing.Count > 0) return new() { L.Ui("pairings.problem.cabalMissing", string.Join(", ", resolved.Missing)) };
-        return Catalog.CheckLegality(resolved.Faction, resolved.Cogs, resolved.Equipment).Issues.Select(L.Describe).ToList();
+        var issues = Catalog.CheckLegality(resolved.Faction, resolved.Cogs, resolved.Equipment).Issues.Select(L.Describe).ToList();
+        if (Cogs is { } n && TournamentRules.WrongCogCount(resolved.Cogs, n)) issues.Insert(0, L.Ui("pairings.problem.cabalCogs", n));
+        return issues;
     }
 }

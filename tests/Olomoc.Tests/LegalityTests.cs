@@ -50,6 +50,21 @@ public class LegalityTests
         AssertLegal(await Check("MAISEL", ("3R06", "E03" /* Phéromones */), ("2R08", "D01" /* Carapace */), ("1R01", "E11" /* Harmonium */)));
 
     [Fact]
+    public async Task Two_equipped_cogs_of_different_ranks_are_legal() =>
+        AssertLegal(await Check("MAISEL", ("3R06", "E03" /* Phéromones */), ("1R01", "E08" /* Lumen */)));
+
+    [Fact]
+    public async Task Two_cogs_need_their_equipment()
+    {
+        var (d, cogs) = await Cogs("3R06", "1R01");
+        AssertIssue(d.Catalog.CheckLegality("MAISEL", cogs, new Equipment?[] { d.Equipment("E03"), null }), "unequipped");
+    }
+
+    [Fact]
+    public async Task One_cog_is_not_a_cabal() =>
+        AssertIssue(await Check("MAISEL", ("3R06", "E03" /* Phéromones */)), "composition");
+
+    [Fact]
     public async Task Without_Harmonium_the_Axis_cog_is_out_of_faction()
     {
         var issue = AssertIssue(await Check("MAISEL", ("3R06", "E03" /* Phéromones */), ("2R08", "D01" /* Carapace */), ("1R01", "E08" /* Lumen */)), "outsideFaction");

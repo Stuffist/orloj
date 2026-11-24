@@ -233,6 +233,7 @@ body {
 }
 .legality-badge.ok { border-color: var(--ok); background: rgba(63, 166, 106, .1); color: var(--ok); }
 .legality-badge.ko { border-color: var(--ko); background: rgba(193, 68, 14, .08); color: var(--rust-soft); }
+.legality-badge.small { padding: 0 .45rem; font-size: .72rem; }   /* on a saved cabal of "My cabals" */
 .legality-issues { margin: 0 0 .8rem; padding-left: 1.1rem; color: var(--muted); font-size: .88rem; }
 .legality-issues li { margin: .15rem 0; }
 

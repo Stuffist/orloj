@@ -85,8 +85,10 @@ public class OnlineRulesTests
     {
         var (d, a, b) = await Cabals();
         var g = NewGame();
-        var illegal = a with { Cogs = a.Cogs.Take(2).ToList() };
+        var illegal = a with { Cogs = a.Cogs.Take(1).ToList() };
         Assert.All(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: illegal), d.Catalog).Problems, p => Assert.Equal("cabalIllegal", p.Key));
+        var teams = a with { Cogs = a.Cogs.Take(2).ToList() };                                     // 2 cogs: 2 v 2 only
+        Assert.Contains(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: teams), d.Catalog).Problems, p => p.Key == "cabalCogs");
 
         // Tournament table: only the registered cabals (same cards) are allowed.
         g.Seats[1].AllowedCabals.Add(a);

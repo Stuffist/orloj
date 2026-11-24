@@ -285,7 +285,10 @@ other languages fall back on it).
 ## Rules applied (rulebook p.32)
 
 - A cabal must consist of 3 cogs: one rank 1, one rank 2 and one rank 3, all belonging to the
-  **same faction**.
+  **same faction**. In **2 v 2**, each player plays only **2 cogs** of different ranks (any two):
+  such a cabal is legal too (2 v 2 games of the Block require it; duels, events and online games
+  require 3). Incomplete or illegal cabals can still be saved, exported and loaded: "My cabals"
+  flags them (⚠ illegal, or 2 v 2).
 - Each cog must be equipped with **one** equipment/boon, affiliated with a Ministry of one of
   the cabal's cogs, or with the faction, or with the equipped cog.
 - **Each cog makes only one equipment/boon of its affiliated Ministry available**: Ministry
@@ -755,7 +758,7 @@ optional, shown in the list of games, never counted.
   the mode or the visibility) and moderate the games; editors and admins can do everything on
   every zone (logged in the admin panel's log).
 - **Entering a game** ("Record a game"): **anyone, without an account**, in an open zone.
-  Duel (1 v 1) or **2 v 2** (any factions, VP per team). Every field is
+  Duel (1 v 1) or **2 v 2** (any factions, VP per team; cabals of 2 cogs in 2 v 2). Every field is
   required (marked with an asterisk) except the names (optional, never counted): the faction and the cabal played of each
   player (from "My cabals", composed or pasted, legality checked; typing a name suggests account
   usernames, `GET /api/accounts/search`, and an account's username offers its public cabals), the VP of each side and

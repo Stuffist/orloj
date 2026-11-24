@@ -29,6 +29,9 @@ public static class ZoneRules
 
     public static int PlayersPerSide(GameFormat format) => format == GameFormat.Teams ? 2 : 1;
 
+    /// <summary>Cogs of each player's cabal: 3 in a duel, 2 in 2 v 2.</summary>
+    public static int CogsPerCabal(GameFormat format) => format == GameFormat.Teams ? 2 : 3;
+
     public static IReadOnlyList<Problem> CheckSettings(string? name, string? description, DateOnly? start, DateOnly? end,
         string? logo = null)
     {
@@ -96,7 +99,7 @@ public static class ZoneRules
                 continue;
             }
             if ((p.Name?.Trim().Length ?? 0) > MaxNameLength) problems.Add(Problem.Of("zonePlayerName", MaxNameLength.ToString()));
-            if (p.Cabal is { } cabal) problems.AddRange(TournamentRules.CheckCabal(catalog, p.Faction, cabal, i));
+            if (p.Cabal is { } cabal) problems.AddRange(TournamentRules.CheckCabal(catalog, p.Faction, cabal, i, CogsPerCabal(game.Format)));
             else problems.Add(Problem.Of("zoneCabal", (i + 1).ToString()));
         }
 

@@ -333,7 +333,9 @@ public class TournamentTests
         var problems = TournamentRules.CheckRegistration(t, d.Catalog, " ana ", "MAISEL", new[] { other, illegal });
         Assert.Contains(problems, p => p.Key == "nameTaken");
         Assert.Contains(problems, p => p is { Key: "cabalFaction", Cabal: 0 });
-        Assert.Contains(problems, p => p is { Key: "cabalIllegal", Cabal: 1, Legality.Key: "composition" });
+        Assert.Contains(problems, p => p is { Key: "cabalCogs", Cabal: 1 });                         // 2 cogs: 2 v 2 only
+        Assert.Contains(TournamentRules.CheckRegistration(t, d.Catalog, "Bo", "MAISEL", new[] { a, b with { Cogs = b.Cogs.Take(1).ToList() } }),
+            p => p is { Key: "cabalIllegal", Cabal: 1, Legality.Key: "composition" });
 
         t.Phase = TournamentPhase.Started;
         Assert.Equal("registrationClosed", Assert.Single(TournamentRules.CheckRegistration(t, d.Catalog, "Bo", "MAISEL", new[] { a, b })).Key);

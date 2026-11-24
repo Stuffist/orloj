@@ -66,10 +66,10 @@ public static class TournamentRules
     }
 
     /// <summary>
-    /// A cabal of the faction, legal with the builder's rules; <paramref name="index"/> numbers the
-    /// problems ("Cabal n").
+    /// A cabal of the faction, legal with the builder's rules, of <paramref name="cogs"/> cogs (3, or 2
+    /// in 2 v 2); <paramref name="index"/> numbers the problems ("Cabal n").
     /// </summary>
-    public static IEnumerable<Problem> CheckCabal(CatalogService catalog, string faction, CabalExport cabal, int index)
+    public static IEnumerable<Problem> CheckCabal(CatalogService catalog, string faction, CabalExport cabal, int index, int cogs = 3)
     {
         if (cabal.Faction?.Code != faction)
         {
@@ -82,9 +82,17 @@ public static class TournamentRules
             yield return new Problem("cabalMissing", new[] { string.Join(", ", resolved.Missing) }, index);
             yield break;
         }
+        if (WrongCogCount(resolved.Cogs, cogs)) yield return new Problem("cabalCogs", new[] { cogs.ToString() }, index);
         foreach (var issue in catalog.CheckLegality(faction, resolved.Cogs, resolved.Equipment).Issues)
             yield return new Problem("cabalIllegal", null, index, issue);
     }
+
+    /// <summary>
+    /// A cabal of 2 or 3 cogs (legal sizes) that has not the <paramref name="expected"/> number: a
+    /// smaller one is already reported by the legality ("composition").
+    /// </summary>
+    public static bool WrongCogCount(IReadOnlyList<Cog?> cogs, int expected) =>
+        cogs.Count(c => c is not null) is var n && n is (2 or 3) && n != expected;
 
     /// <summary>Automatic number of rounds: the smallest n with 2^n ≥ players (at least 1).</summary>
     public static int AutoRoundCount(int players)

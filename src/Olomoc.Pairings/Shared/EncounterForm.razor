@@ -23,7 +23,7 @@
             </label>
             <label>
                 <input type="radio" name="zn-format" checked="@(_format == GameFormat.Teams)" @onchange="() => SetFormat(GameFormat.Teams)" />
-                <span>@L.Ui("zones.format.Teams") — <span class="hint">@L.Ui("zones.format.Teams.help")</span></span>
+                <span>@L.Ui("zones.format.Teams")</span>
             </label>
         </fieldset>
         <div class="field">
@@ -135,7 +135,8 @@
                             </div>
                         </div>
                         <CabalPicker Index="index" Faction="@player.Faction" Value="player.Cabal" ValueChanged="c => SetCabal(index, c)"
-                                     LibraryVersion="_libraryVersion" Title="@L.Ui("zones.form.cabal", index + 1)" Required="true" />
+                                     LibraryVersion="_libraryVersion" Title="@L.Ui("zones.form.cabal", index + 1)" Required="true"
+                                     Cogs="ZoneRules.CogsPerCabal(_format)" />
                         @* The name is an account's: its public cabals (of the faction chosen), one click away. *@
                         @if (player.Account is { } account && player.AccountCabals is { } offered)
                         {

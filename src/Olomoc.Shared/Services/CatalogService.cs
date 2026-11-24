@@ -111,6 +111,13 @@ public sealed class CatalogService
         return new(faction, cogs, equipment, missing);
     }
 
+    /// <summary>A saved or exported cabal: all its cards found, and legal in its faction (3 cogs, or 2 in 2 v 2).</summary>
+    public bool IsLegal(CabalExport cabal)
+    {
+        var resolved = Resolve(cabal);
+        return resolved.Missing.Count == 0 && CheckLegality(resolved.Faction, resolved.Cogs, resolved.Equipment).IsLegal;
+    }
+
     public bool IsMember(Cog cog, string faction) =>
         _membersByFaction.TryGetValue(faction, out var ids) && ids.Contains(cog.Id);
 
@@ -319,9 +326,10 @@ public sealed class CatalogService
         if (faction is null)
             issues.Add(new("noFaction"));
 
-        // Composition: one cog of rank 1, one of rank 2, one of rank 3
-        var ranks = picked.Select(c => c.Rank).OrderBy(r => r).ToList();
-        if (picked.Count != 3 || !ranks.SequenceEqual(new[] { 1, 2, 3 }))
+        // Composition: one cog of rank 1, one of rank 2, one of rank 3; or, in 2 v 2, two cogs of
+        // different ranks.
+        var ranks = picked.Select(c => c.Rank).ToList();
+        if (picked.Count is not (2 or 3) || ranks.Distinct().Count() != ranks.Count)
             issues.Add(new("composition"));
 
         // Recruitment: each out-of-faction cog must be covered by a distinct composition rule
@@ -340,8 +348,9 @@ public sealed class CatalogService
         var dupEquipment = Duplicates(pickedEquipment, _l.ReferenceName, e => e.Id);
         if (dupEquipment.Count > 0) issues.Add(new("duplicateEquipment", new IssueArg(IssueArgKind.Equipment, dupEquipment)));
 
-        // Each cog must be equipped
-        if (picked.Count == 3 && pickedEquipment.Count < 3)
+        // Each cog must be equipped (once the cabal has its 2 or 3 cogs)
+        var equipped = slots.Count(i => i < equipment.Count && equipment[i] is not null);
+        if (picked.Count >= 2 && equipped < picked.Count)
             issues.Add(new("unequipped"));
 
         // Affiliation of each piece of equipment
@@ -373,7 +382,7 @@ public sealed class CatalogService
         if (MinistryOverflow(cogs, equipment))
             issues.Add(new("ministryOverflow"));
 
-        return new LegalityResult(issues.Count == 0 && picked.Count == 3 && pickedEquipment.Count == 3, issues);
+        return new LegalityResult(issues.Count == 0 && picked.Count is (2 or 3) && equipped == picked.Count, issues);
     }
 
     /// <summary>

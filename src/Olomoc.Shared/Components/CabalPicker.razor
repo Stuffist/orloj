@@ -16,7 +16,7 @@
             @for (var i = 0; i < Library.Cabals.Count; i++)
             {
                 var saved = Library.Cabals[i].Cabal;
-                <option value="@i">@saved.Name@(saved.Faction is { } f ? " — " + L.FactionName(f.Code) : "")</option>
+                <option value="@i">@(Catalog.IsLegal(saved) ? null : "⚠ ")@saved.Name@(saved.Faction is { } f ? " — " + L.FactionName(f.Code) : "")</option>
             }
         </select>
         <a class="btn small" href="@ComposeLink" target="_blank" rel="noopener" title="@L.Ui("pairings.register.compose.title")">
@@ -27,7 +27,7 @@
     @if (Value is { } cabal)
     {
         <CabalSummary Cabal="cabal" />
-        <LegalityStatus Cabal="cabal" Faction="@Faction" />
+        <LegalityStatus Cabal="cabal" Faction="@Faction" Cogs="Cogs" />
     }
 </div>
 
@@ -64,7 +64,7 @@
                     </div>
                 }
                 <CabalSummary Cabal="read" />
-                <LegalityStatus Cabal="read" Faction="@Faction" />
+                <LegalityStatus Cabal="read" Faction="@Faction" Cogs="Cogs" />
             }
         }
         <div class="sheet-actions">
@@ -88,6 +88,9 @@
 
     /// <summary>Required (an asterisk after the title).</summary>
     [Parameter] public bool Required { get; set; }
+
+    /// <summary>Cogs expected in the cabal: 3, or 2 in 2 v 2.</summary>
+    [Parameter] public int Cogs { get; set; } = 3;
 
     // Builder in a new tab, on the chosen faction, with a reminder of the tournament (if there is one).
     private string ComposeLink => "/builder/?" + string.Join("&", new[]
