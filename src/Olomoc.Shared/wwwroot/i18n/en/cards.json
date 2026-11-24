@@ -303,6 +303,16 @@
           "gameEffect": "At the start of the first cycle, Medic Ruzicka may be equipped with one additional equipment card affiliated with the Ministry of Integrity."
         }
       ]
+    },
+    "3R30": {
+      "name": "Kalès",
+      "title": "Convoy Scout",
+      "abilities": [
+        {
+          "name": "Controlled Movement",
+          "gameEffect": "Target an allied cog within 4\" that has a Darkness token.\nRemove one Darkness token from it, then push it toward Kalès."
+        }
+      ]
     }
   },
   "equipment": {
@@ -681,6 +691,51 @@
         {
           "name": "Camouflage",
           "gameEffect": "When the equipped cog is targeted by a ranged attack, reduce the attacking cog's {ranged} stat value by 1."
+        }
+      ]
+    },
+    "E35": {
+      "name": "Contraband Rifle",
+      "abilities": [
+        {
+          "name": "Contraband Rifle",
+          "gameEffect": "The equipped cog has a {tech} stat value of 0 and a {ranged} stat value of 5."
+        }
+      ]
+    },
+    "E36": {
+      "name": "Bomb",
+      "abilities": [
+        {
+          "name": "Bomb",
+          "gameEffect": "Target an agenda marker in contact with the equipped cog.\nFrom the next cycle until the end of the game, the equipped cog gains the following ability:\n{active} {darkness} {freq:game:1} Detonate: All cogs within 2\" of the targeted marker suffer 1D3 wounds that ignore protection and become stunned."
+        }
+      ]
+    },
+    "E37": {
+      "name": "“On Our Lives”",
+      "abilities": [
+        {
+          "name": "“On Our Lives”",
+          "gameEffect": "When building your cabal, replace your propaganda card with the “On Our Lives” card. Until the end of the game, this propaganda card is not blocked by opposing Ministries."
+        }
+      ]
+    },
+    "E38": {
+      "name": "Borovice Grenade",
+      "abilities": [
+        {
+          "name": "Borovice Grenade",
+          "gameEffect": "When targeted by a melee attack, the equipped cog may use the Borovice grenade instead of dodging or making a counter attack. If it does, cancel all successes on the attacker's stat roll, then push the attacker."
+        }
+      ]
+    },
+    "E39": {
+      "name": "Construction Barrier",
+      "abilities": [
+        {
+          "name": "Construction Barrier",
+          "gameEffect": "If there is no allied barrier marker (30 mm base) on the Block, place one within 1\" of the equipped cog. This marker is considered a non-blocking terrain feature. All cogs (including the equipped cog) gain the following ability until the end of the game:\n{active} {action} Destroy: Target a barrier marker within 1\" and remove it from the Block."
         }
       ]
     },
