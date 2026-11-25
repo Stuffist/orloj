@@ -1350,5 +1350,6 @@
   "online.offblock.hidden": "Carte planifiée, cachée jusqu’à sa phase",
   "online.offblock.takeBack": "Cliquer pour reprendre la carte",
   "online.offblock.planning.help": "Glissez vos cartes sur vos emplacements (ou cliquez une carte, puis un emplacement) ; cliquez une carte posée pour la reprendre. Un ministère ne va que sur son emplacement. Enregistré au fur et à mesure.",
-  "online.offblock.decks.first": "Le premier joueur choisit les paquets."
+  "online.offblock.decks.first": "Le premier joueur choisit les paquets.",
+  "online.dice.none": "Pas encore lancé."
 }

@@ -1083,8 +1083,10 @@ body {
 .tb-status-side.tb-seat-1 { border-left-color: #4f9fd6; }
 .tb-status-name { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
 .tb-status-name strong { font-size: .95rem; }
-.tb-status-counters { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .9rem; }
-.tb-status-counters .counter { display: inline-flex; align-items: center; gap: .25rem; }
+.tb-status-counters { display: flex; flex-direction: column; align-items: flex-start; gap: .2rem; }
+.tb-status-counters .counter { min-height: 1.5rem; }
+.tb-status-counters .counter { display: inline-flex; flex-direction: row; align-items: center; gap: .3rem; }
+.tb-status-name { min-height: 1.5rem; }
 .tb-status-counters .counter-label { font-size: .7rem; }
 .tb-status-counters .token { width: 1rem; height: 1rem; }
 .tb-status-counters .step { width: 1.4rem; height: 1.4rem; padding: 0; }
@@ -1109,12 +1111,10 @@ body {
 .offblock-card.planned img { width: 5rem; }
 .offblock-card.planned figcaption { max-width: 6.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .offblock-card.spent img { filter: grayscale(1) brightness(.45); }
-/* The opponent's ministries, stacked (a card hovered comes in front) */
-.offblock-stack { display: flex; padding-top: 1.4rem; }
-.offblock-stack .offblock-card { position: relative; transition: transform .15s; }
-.offblock-stack .offblock-card + .offblock-card { margin-left: -3.3rem; }
+/* The opponent's ministries, side by side, staggered (without covering each other) */
+.offblock-stack { display: flex; flex-wrap: wrap; gap: .3rem; padding-top: 1.4rem; }
+.offblock-stack .offblock-card img { width: 5.2rem; }
 .offblock-stack .offblock-card:nth-child(even) { transform: translateY(-1.4rem); }
-.offblock-stack .offblock-card:hover { z-index: 2; transform: translateY(-1.8rem); }
 .offblock-stack-names { list-style: none; margin: .2rem 0 0; padding: 0; font-size: .75rem; color: var(--muted); }
 .offblock-stack-names .spent { text-decoration: line-through; opacity: .6; }
 /* An artefact card, upright as in the module (its logo shows a corner or an edge of the Block) */
@@ -1274,9 +1274,11 @@ body {
 .tb-dice-head strong { font-size: .85rem; margin-right: auto; }
 .tb-dice-count { display: inline-flex; align-items: center; gap: .2rem; font-size: .8rem; font-variant-numeric: tabular-nums; }
 .tb-dice-count .step { width: 1.4rem; height: 1.4rem; padding: 0; }
-.tb-dice-faces { display: flex; flex-wrap: wrap; gap: .2rem; }
+.tb-dice-result { display: flex; align-items: center; gap: .5rem; }
+.tb-dice-faces { display: flex; flex-wrap: wrap; gap: .2rem; flex: 1; min-width: 0; min-height: 1.45rem; }
+.tb-die-empty { opacity: .4; }
 .tb-dice-faces .online-die { width: 1.45rem; height: 1.45rem; font-size: .85rem; border-radius: 5px; }
-.tb-dice-thresholds { display: grid; grid-template-columns: repeat(4, 1fr); gap: .2rem; }
+.tb-dice-thresholds { display: grid; grid-template-columns: repeat(4, 2.3rem); gap: .2rem; flex: none; }
 .tb-threshold {
     display: flex; flex-direction: column; align-items: center; line-height: 1.1;
     background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 5px;
@@ -1286,7 +1288,7 @@ body {
 .tb-threshold.on { border-color: var(--rust-soft); background: var(--rust); color: #fff; }
 .tb-threshold.on strong { color: #fff; }
 .tb-threshold:disabled { cursor: default; }
-.tb-dice-foot { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.tb-dice-foot { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; min-height: 1.7rem; }
 .tb-dice-foot .hint { margin: 0; margin-right: auto; font-size: .72rem; }
 .tb-detached { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
 /* Full screen (the panel alone): the mat as large as the height allows, the list scrolling beside it */

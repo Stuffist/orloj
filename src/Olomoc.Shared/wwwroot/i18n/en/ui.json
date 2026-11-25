@@ -1350,5 +1350,6 @@
   "online.offblock.hidden": "Planned card, hidden until its phase",
   "online.offblock.takeBack": "Click to take the card back",
   "online.offblock.planning.help": "Drag your cards onto your slots (or click a card, then a slot); click a placed card to take it back. A ministry only goes on its slot. Saved as you go.",
-  "online.offblock.decks.first": "The first player chooses the decks."
+  "online.offblock.decks.first": "The first player chooses the decks.",
+  "online.dice.none": "Not rolled yet."
 }

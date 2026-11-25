@@ -689,7 +689,7 @@ connection.
     (`OnlineRules.OnlineAgendas`: its 7 activation cards replacing the ministries are not played).
     **Decks** (`Online/DeckRules.cs`, `Online/CardDecks.cs`: the cards as printed, rank, planning
     constraint, artefact number read on the images of the module V1.9): **ministries** dealt (1 Axe card each,
-    3 random ministries each, the hands known to both: the opponent's stacked, a ministry played or revealed greyed, one's own in the planning's hand; the last one face up: the fallen ministry; dealt again
+    3 random ministries each, the hands known to both: the opponent's staggered side by side, a ministry played or revealed greyed, one's own in the planning's hand; the last one face up: the fallen ministry; dealt again
     on demand); the **Artefact**: a pile (secret order) built at its first « Mécanisme » (Visites: the 3
     Rogue cards on top), « Mécanisme » draws its top card (upright as in the module: its logo shows a corner or an edge of
     the Block; its effect under it and in the hover text; with the priority its number gives; the
@@ -710,7 +710,8 @@ connection.
     rotation, removal); the **opponent on the left** of the mat, the **player on the right** with
     the Décors / Marqueurs / Réglettes palettes under their cabal (a spectator: seat 1 left, seat 2
     right). Above each cabal, the player's **state** (`Shared/SideStatus.razor`): presence, name,
-    P1, Fiel and VP, with their +/- for the player's own side.
+    P1, Fiel and VP (a line each, both frames the same height), on the player's own side the Fiel
+    tokens clickable and the VP with +/-.
   - **Both cabals**, always listed next to the mat: a card per cog with its stats, its life line (HP as pips: standard, reinforced, tainted; marked ones crossed), action tokens,
     Darkness and state (out of action, otherwise sane, tainted or corrupted; stunned; **off the Block**
     when none of its tokens is on the mat), read from its side's sheet, and its cards below (a click
@@ -743,7 +744,8 @@ connection.
     spectators (either player, any piece but terrain). 1″ grid on demand.
   - **Dice** (`Online/DiceRules.cs`, `Shared/DicePanel.razor`, above the mat): two rollers, the **action** and under it the **reaction** that answers it (dodge, riposte),
     open to both players. 1 to 12 D6 rolled by the server (the same for both, in the log); the
-    successes lit at the chosen threshold and counted for each one (5+ by default, rulebook p.10;
+    successes lit at the chosen threshold and counted for each one beside the dice (the frame drawn
+    before the first roll too, so nothing moves; 5+ by default, rulebook p.10;
     4+, 3+, 2+ with support or a charge), the threshold changed by either player for both;
     "Reroll the failures": the dice under the chosen threshold again, the successes kept (trying
     fate; the Darkness token is added on the sheet by the player); a whole new roll is "Roll" again.

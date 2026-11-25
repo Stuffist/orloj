@@ -3,7 +3,7 @@
 @inject MySide Side
 
 @* A player's state next to the mat, above their cabal: presence, name, P1, Fiel and victory points.
-   The player's own side has its +/- (MySide: sent like a change of their sheet); the other is
+   The player's own side has its Fiel tokens clickable and its VP +/- (MySide: sent like a change of their sheet); the other is
    shown as the server knows it. *@
 
 @if (View.Seats.ElementAtOrDefault(Seat) is { } seat)
@@ -29,12 +29,19 @@
                     <span class="counter-label">@L.Ui("play.bile")</span>
                     @if (Editable)
                     {
-                        <button class="step" type="button" disabled="@(state.Bile == 0)" @onclick="() => Side.ChangeAsync(s => s.AdjustBile(-1))" aria-label="@L.Ui("play.bile") −">−</button>
+                        <span class="token-track tb-tokens" role="group" aria-label="@L.Ui("play.bile") @state.Bile / @GameSession.MaxBile">
+                            @for (var k = 1; k <= GameSession.MaxBile; k++)
+                            {
+                                var n = k;
+                                <button class="tb-token-btn" type="button" aria-label="@L.Ui("play.bile") @n" @onclick="() => SetBileAsync(n)">
+                                    <img class="token @(n <= state.Bile ? "on" : "off")" src="@(Olomoc.Assets.Base)img/icons/darkness.png" alt="" />
+                                </button>
+                            }
+                        </span>
                     }
-                    <TokenTrack Token="darkness" Count="state.Bile" Max="GameSession.MaxBile" />
-                    @if (Editable)
+                    else
                     {
-                        <button class="step" type="button" disabled="@(state.Bile >= GameSession.MaxBile)" @onclick="() => Side.ChangeAsync(s => s.AdjustBile(1))" aria-label="@L.Ui("play.bile") +">+</button>
+                        <TokenTrack Token="darkness" Count="state.Bile" Max="GameSession.MaxBile" />
                     }
                 </span>
                 <span class="counter vp" title="@L.Ui("play.vp.title")">
@@ -62,6 +69,9 @@
     // As on the sheet: the player's own side, during the cycles.
     private bool Editable => Mine && View.Step == OnlineStep.Cycle && Side.Session is not null;
     private string SeatClass => $"tb-seat-{Seat}";
+
+    // A click on the n-th Fiel token: n tokens (on the last one lit: one less), like the cogs' tokens.
+    private Task SetBileAsync(int n) => Side.ChangeAsync(s => s.AdjustBile((n == s.State.Bile ? n - 1 : n) - s.State.Bile));
 
     protected override void OnInitialized() => Side.Changed += OnSideChanged;
 

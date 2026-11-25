@@ -24,26 +24,44 @@
                     <button class="btn small primary" type="button" @onclick="() => RollAsync(s)">🎲 @L.Ui("online.dice.roll")</button>
                 }
             </div>
-            @if (roll is not null)
-            {
+            @* The dice and, beside them, the successes per threshold; before the first roll, the same frame
+               (empty dice, thresholds without a count), so that nothing moves when it comes. *@
+            <div class="tb-dice-result">
                 <div class="tb-dice-faces">
-                    @foreach (var face in roll.Faces)
+                    @if (roll is not null)
                     {
-                        <Die Face="face" Hit="@(face >= roll.Threshold)" />
+                        @foreach (var face in roll.Faces)
+                        {
+                            <Die Face="face" Hit="@(face >= roll.Threshold)" />
+                        }
+                    }
+                    else
+                    {
+                        @for (var k = 0; k < Count(s); k++)
+                        {
+                            <span class="online-die tb-die-empty"></span>
+                        }
                     }
                 </div>
                 <div class="tb-dice-thresholds" role="group" aria-label="@L.Ui("online.dice.threshold")">
                     @for (var t = DiceRules.MinThreshold; t <= DiceRules.MaxThreshold; t++)
                     {
                         var threshold = t;
-                        <button class="tb-threshold @(t == roll.Threshold ? "on" : null)" type="button" disabled="@(!CanRoll)"
-                                aria-pressed="@(t == roll.Threshold)" title="@L.Ui("online.dice.threshold.title", t)"
+                        <button class="tb-threshold @(t == roll?.Threshold ? "on" : null)" type="button" disabled="@(!CanRoll || roll is null)"
+                                aria-pressed="@(t == roll?.Threshold)" title="@L.Ui("online.dice.threshold.title", t)"
                                 @onclick="() => Send(new(OnlineCommandType.SetDiceThreshold, s, Threshold: threshold))">
                             <span>@L.Ui("online.dice.at", t)</span>
-                            <strong>@DiceRules.Successes(roll.Faces, t)</strong>
+                            <strong>@(roll is null ? "–" : DiceRules.Successes(roll.Faces, t).ToString())</strong>
                         </button>
                     }
                 </div>
+            </div>
+            @if (roll is null)
+            {
+                <div class="tb-dice-foot"><span class="hint">@L.Ui("online.dice.none")</span></div>
+            }
+            else
+            {
                 <div class="tb-dice-foot">
                     <span class="hint">
                         @L.Ui("online.dice.by", View.Seats.ElementAtOrDefault(roll.Seat)?.Name ?? "")
