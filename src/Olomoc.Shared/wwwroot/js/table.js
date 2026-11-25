@@ -21,7 +21,7 @@ window.olomocTable = {
         const T = window.olomocTable;
         const t = {
             svg, dotnet, ruler: false, drag: null, turn: null, pan: null, measure: null,
-            view: { x: -margin, y: -margin, w: size + 2 * margin, h: size + 2 * margin },
+            size, view: { x: 0, y: 0, w: size, h: size },
             limits: { min: 40, max: size + 2 * margin, from: -margin, to: size + margin },
         };
         const point = e => {
@@ -194,12 +194,12 @@ window.olomocTable = {
         if (t) t.ruler = on;
     },
 
-    // factor < 1: closer; 0: back to the whole board.
+    // factor < 1: closer; 0: back to the whole board, filling the view (the margin around it: zoom out).
     zoom(id, factor) {
         const t = window.olomocTable._tables.get(id);
         if (!t) return;
         if (factor === 0) {
-            t.view = { x: t.limits.from, y: t.limits.from, w: t.limits.max, h: t.limits.max };
+            t.view = { x: 0, y: 0, w: t.size, h: t.size };
             t.apply();
             return;
         }
