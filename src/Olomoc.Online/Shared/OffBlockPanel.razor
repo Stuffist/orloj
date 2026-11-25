@@ -78,8 +78,9 @@
         }
     </div>
 
-    @* Ministries (rulebook p.31): dealt to both players, the hands known to both (a ministry played
-       or revealed greyed); the fallen one face up. *@
+    @* Ministries (rulebook p.31): dealt to both players, the hands known to both: the opponent's
+       stacked (a ministry played or revealed greyed; the player's own are in their hand, under the
+       planning); the fallen one face up. *@
     <div class="offblock-section">
         <h3>@L.Ui("online.offblock.ministries")</h3>
         @if (View.Agenda?.Ministry is null)
@@ -96,22 +97,32 @@
         }
         else
         {
-            @foreach (var seat in SeatsMeFirst)
-            {
-                var cards = decks.Hands.ElementAtOrDefault(seat) is { } hand ? hand.Concat(decks.Played.ElementAtOrDefault(seat) ?? []).ToList() : [];
-                <div class="offblock-group">
-                    <span class="online-label">@(seat == View.Me ? L.Ui("online.offblock.myMinistries") : L.Ui("online.offblock.ministriesOf", View.Seats[seat].Name))</span>
-                    <div class="offblock-row">
-                        @foreach (var id in cards)
-                        {
-                            @Ministry(id, Spent(seat, id))
-                        }
+            <div class="offblock-cards">
+                @foreach (var seat in SeatsMeFirst.Where(s => s != View.Me))
+                {
+                    var s = seat;
+                    var cards = (decks.Hands.ElementAtOrDefault(s) ?? []).Concat(decks.Played.ElementAtOrDefault(s) ?? []).ToList();
+                    <div class="offblock-group">
+                        <span class="online-label">@L.Ui("online.offblock.ministriesOf", View.Seats[s].Name)</span>
+                        <div class="offblock-stack">
+                            @foreach (var id in cards)
+                            {
+                                @Ministry(id, Spent(s, id))
+                            }
+                        </div>
+                        <ul class="offblock-stack-names">
+                            @foreach (var id in cards)
+                            {
+                                <li class="@(Spent(s, id) ? "spent" : null)">@CardName($"min:{id}")</li>
+                            }
+                        </ul>
                     </div>
+                }
+                <div class="offblock-group">
+                    <span class="online-label">@L.Ui("online.offblock.fallen")</span>
+                    @Ministry(fallen, false)
+                    <span class="offblock-stack-names">@CardName($"min:{fallen}")</span>
                 </div>
-            }
-            <div class="offblock-group">
-                <span class="online-label">@L.Ui("online.offblock.fallen")</span>
-                <div class="offblock-row">@Ministry(fallen, false)</div>
             </div>
             @if (CanAct)
             {
@@ -208,13 +219,14 @@
     </div>
     </div>
 
-    @* Planning (rulebook p.33), semi-automatic: each player drags their cards onto their 5 slots, in
+    @* Planning (rulebook p.33), semi-automatic: the player's hand on the left; on the right a row of
+       5 slots per player, the opponent's first; each player drags their cards onto their slots, in
        secret (a ministry on the slot of its constraint), saved as they go; then revealed phase by
        phase for both, with the active player from the ranks (equal: a Mécanisme). *@
     <div class="offblock-section offblock-planning">
-        <h3>@L.Ui("online.offblock.planning")</h3>
         @if (View.Planning is not { } planning || View.Step != OnlineStep.Cycle)
         {
+            <h3>@L.Ui("online.offblock.planning")</h3>
             <p class="hint">@L.Ui("online.offblock.planning.later")</p>
         }
         else
@@ -222,62 +234,99 @@
             var editing = View.Me is not null && planning.Phase == 0;
             var draft = View.Me is not null ? Draft(planning) : [];
             var moving = _dragged ?? _picked;
-            <div class="offblock-board">
-                <span></span>
-                @for (var p = 0; p < PlanningRules.Slots; p++)
-                {
-                    <span class="offblock-board-head">@L.Ui("online.offblock.phaseN", p + 1)</span>
-                }
-                @foreach (var seat in SeatsOpponentFirst)
-                {
-                    var mine = seat == View.Me;
-                    <span class="offblock-board-name">
-                        @View.Seats[seat].Name
-                        <small class="hint">@(planning.Complete.ElementAtOrDefault(seat) ? "✓" : "…")</small>
-                    </span>
-                    @for (var i = 0; i < PlanningRules.Slots; i++)
+            <div class="offblock-plan">
+                <div class="offblock-plan-hand">
+                    <h3>@L.Ui("online.offblock.planning")</h3>
+                    @if (View.Me is not null)
                     {
-                        var slot = i;
-                        var card = mine ? draft[slot] : planning.Revealed.ElementAtOrDefault(seat)?.ElementAtOrDefault(slot);
-                        if (editing && mine)
+                        <div class="offblock-group offblock-hand" @ondragover:preventDefault @ondrop="DropOnHandAsync">
+                            <span class="online-label">@L.Ui("online.offblock.myHand")</span>
+                            @foreach (var row in new[] { planning.MyHand.Where(c => !c.StartsWith("min:")), planning.MyHand.Where(c => c.StartsWith("min:")) })
+                            {
+                                <div class="offblock-row">
+                                    @foreach (var card in row)
+                                    {
+                                        var c = card;
+                                        var placed = draft.Contains(c);
+                                        @if (editing && !placed)
+                                        {
+                                            <div class="offblock-drag @(_picked == c ? "picked" : null)" draggable="true" data-card="@c"
+                                                 @ondragstart="() => (_dragged, _dragFrom) = (c, null)" @ondragend="EndDrag"
+                                                 @onclick="() => _picked = _picked == c ? null : c">@PlannedCard(c)</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="offblock-held @(placed ? "placed" : null)">@PlannedCard(c)</div>
+                                        }
+                                    }
+                                </div>
+                            }
+                            @if (editing)
+                            {
+                                <p class="hint">@L.Ui("online.offblock.planning.help")</p>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="offblock-board">
+                    @foreach (var (seat, index) in SeatsOpponentFirst.Select((s, i) => (s, i)))
+                    {
+                        var mine = seat == View.Me;
+                        <span class="offblock-board-name">
+                            @View.Seats[seat].Name
+                            @if (planning.Complete.ElementAtOrDefault(seat)) { <span class="hint">✓</span> }
+                        </span>
+                        @if (index == 0)
                         {
-                            <div class="offblock-drop @(moving is not null ? (Allowed(moving, slot) ? "allowed" : "refused") : null)"
-                                 @ondragover:preventDefault @ondrop="() => DropAsync(slot)" @onclick="() => SlotClickAsync(slot)"
-                                 title="@(card is null ? L.Ui("online.offblock.slotN", slot + 1) : L.Ui("online.offblock.takeBack"))">
-                                @if (card is not null)
-                                {
-                                    <div class="offblock-drag" draggable="true" data-card="@card"
-                                         @ondragstart="() => (_dragged, _dragFrom) = (card, slot)" @ondragend="EndDrag">@PlannedCard(card)</div>
-                                }
-                                else
-                                {
-                                    <span class="offblock-slot-number">@(slot + 1)</span>
-                                }
-                            </div>
+                            @for (var p = 0; p < PlanningRules.Slots; p++)
+                            {
+                                <span class="offblock-board-head">@L.Ui("online.offblock.phaseN", p + 1)</span>
+                            }
                         }
-                        else if (card is not null)
+                        @for (var i = 0; i < PlanningRules.Slots; i++)
                         {
-                            <div class="offblock-drop @(mine && slot >= planning.Phase ? "unrevealed" : null)">@PlannedCard(card)</div>
-                        }
-                        else
-                        {
-                            <div class="offblock-drop">
-                                @if (planning.Complete.ElementAtOrDefault(seat))
-                                {
-                                    <span class="offblock-back" title="@L.Ui("online.offblock.hidden")">?</span>
-                                }
-                            </div>
+                            var slot = i;
+                            var card = mine ? draft[slot] : planning.Revealed.ElementAtOrDefault(seat)?.ElementAtOrDefault(slot);
+                            if (editing && mine)
+                            {
+                                <div class="offblock-drop @(moving is not null ? (Allowed(moving, slot) ? "allowed" : "refused") : null)"
+                                     @ondragover:preventDefault @ondrop="() => DropAsync(slot)" @onclick="() => SlotClickAsync(slot)"
+                                     title="@(card is null ? L.Ui("online.offblock.slotN", slot + 1) : L.Ui("online.offblock.takeBack"))">
+                                    @if (card is not null)
+                                    {
+                                        <div class="offblock-drag" draggable="true" data-card="@card"
+                                             @ondragstart="() => (_dragged, _dragFrom) = (card, slot)" @ondragend="EndDrag">@PlannedCard(card)</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="offblock-slot-number">@(slot + 1)</span>
+                                    }
+                                </div>
+                            }
+                            else if (card is not null)
+                            {
+                                <div class="offblock-drop @(mine && slot >= planning.Phase ? "unrevealed" : null)">@PlannedCard(card)</div>
+                            }
+                            else
+                            {
+                                <div class="offblock-drop">
+                                    @if (planning.Complete.ElementAtOrDefault(seat))
+                                    {
+                                        <span class="offblock-back" title="@L.Ui("online.offblock.hidden")">?</span>
+                                    }
+                                </div>
+                            }
                         }
                     }
-                }
-                @if (planning.Phase > 0)
-                {
-                    <span></span>
-                    @for (var p = 0; p < PlanningRules.Slots; p++)
+                    @if (planning.Phase > 0)
                     {
-                        <span class="offblock-verdict">@Verdict(planning, p)</span>
+                        @for (var p = 0; p < PlanningRules.Slots; p++)
+                        {
+                            <span class="offblock-verdict">@Verdict(planning, p)</span>
+                        }
                     }
-                }
+                </div>
             </div>
 
             <div class="online-inline">
@@ -290,34 +339,6 @@
                 }
                 <span class="hint">@Readiness(planning)</span>
             </div>
-
-            @if (View.Me is not null)
-            {
-                <div class="offblock-group offblock-hand" @ondragover:preventDefault @ondrop="DropOnHandAsync">
-                    <span class="online-label">@L.Ui("online.offblock.myHand")</span>
-                    <div class="offblock-row">
-                        @foreach (var card in planning.MyHand)
-                        {
-                            var c = card;
-                            var placed = draft.Contains(c);
-                            @if (editing && !placed)
-                            {
-                                <div class="offblock-drag @(_picked == c ? "picked" : null)" draggable="true" data-card="@c"
-                                     @ondragstart="() => (_dragged, _dragFrom) = (c, null)" @ondragend="EndDrag"
-                                     @onclick="() => _picked = _picked == c ? null : c">@PlannedCard(c)</div>
-                            }
-                            else
-                            {
-                                <div class="offblock-held @(placed ? "placed" : null)">@PlannedCard(c)</div>
-                            }
-                        }
-                    </div>
-                    @if (editing)
-                    {
-                        <p class="hint">@L.Ui("online.offblock.planning.help")</p>
-                    }
-                </div>
-            }
         }
     </div>
 </section>
@@ -443,7 +464,7 @@
     private string CardName(string card) => card.Split(':', 2) switch
     {
         ["act", var cog] => Catalog.CogById(cog) is { } c ? L.CogName(c).Text : cog,
-        ["min", var id] => CardDecks.Ministry(id) is { } m ? $"{m.Name} ({(m.Slot is { } s ? L.Ui("online.offblock.slot", s) : L.Ui("online.offblock.anySlot"))})" : id,
+        ["min", var id] => CardDecks.Ministry(id) is { } m ? MinistryName(m) : id,
         ["prop", var n] => L.Ui("online.offblock.propaganda", n),
         _ => card,
     };
@@ -485,15 +506,16 @@
 
     private static string Src(string image) => Olomoc.Assets.Base + image;
 
+    // "Virus (4)": its planning constraint; "Animosité (1-5)": any slot.
+    private static string MinistryName(MinistryCard card) => $"{card.Name} ({(card.Slot is { } s ? s.ToString() : $"1-{PlanningRules.Slots}")})";
+
     // A ministry card; spent: played or revealed (greyed).
     private RenderFragment Ministry(string id, bool spent) => __builder =>
     {
         if (CardDecks.Ministry(id) is not { } card) return;
-        var slot = card.Slot is { } s ? L.Ui("online.offblock.slot", s) : L.Ui("online.offblock.anySlot");
-        var title = spent ? $"{card.Name} · {slot} · {L.Ui("online.offblock.spent")}" : $"{card.Name} · {slot}";
+        var title = spent ? $"{MinistryName(card)} · {L.Ui("online.offblock.spent")}" : MinistryName(card);
         <figure class="offblock-card ministry @(spent ? "spent" : null)" title="@title">
             <img src="@Src(CardDecks.Image(card.Id))" alt="@card.Name" loading="lazy" />
-            <figcaption>@card.Name · @slot</figcaption>
         </figure>
     };
 

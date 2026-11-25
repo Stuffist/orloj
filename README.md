@@ -689,7 +689,7 @@ connection.
     (`OnlineRules.OnlineAgendas`: its 7 activation cards replacing the ministries are not played).
     **Decks** (`Online/DeckRules.cs`, `Online/CardDecks.cs`: the cards as printed, rank, planning
     constraint, artefact number read on the images of the module V1.9): **ministries** dealt (1 Axe card each,
-    3 random ministries each, the hands known to both, a ministry played or revealed greyed; the last one face up: the fallen ministry; dealt again
+    3 random ministries each, the hands known to both: the opponent's stacked, a ministry played or revealed greyed, one's own in the planning's hand; the last one face up: the fallen ministry; dealt again
     on demand); the **Artefact**: a pile (secret order) built at its first « Mécanisme » (Visites: the 3
     Rogue cards on top), « Mécanisme » draws its top card (upright as in the module: its logo shows a corner or an edge of
     the Block; its effect under it and in the hover text; with the priority its number gives; the
@@ -698,7 +698,7 @@ connection.
     **Indra**: her player takes the pile's 3 last cards (secret) and may swap the drawn card for one
     of them. Changing a deck in the scenario starts its cards again.
     **Planning** (`Online/PlanningRules.cs`, semi-automatic, rulebook p.33): each player drags 5
-    cards of their hand onto their slots, in secret, saved as they go (the activation cards of their cogs in play, their propaganda cards: 1 plus 1 per
+    cards of their hand (on the left) onto their slots (a row per player on the right), in secret, saved as they go (the activation cards of their cogs in play, their propaganda cards: 1 plus 1 per
     cog out of action, one of their ministries, on the slot of its planning constraint; checked by
     the server). Once both plannings are complete, « Révéler la phase » shows the next card of each
     (the opponent's still hidden ones as card backs),

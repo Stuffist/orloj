@@ -1105,9 +1105,18 @@ body {
 .offblock-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-start; }
 .offblock-card { margin: 0; display: flex; flex-direction: column; gap: .2rem; font-size: .72rem; color: var(--muted); text-align: center; }
 .offblock-card img { border-radius: 6px; display: block; }
-.offblock-card.ministry img, .offblock-card.planned img { width: 4.6rem; }
-.offblock-card.ministry figcaption, .offblock-card.planned figcaption { max-width: 6rem; overflow-wrap: anywhere; }
-.offblock-card.spent { opacity: .35; filter: grayscale(1); }
+.offblock-card.ministry img { width: 6rem; }
+.offblock-card.planned img { width: 5rem; }
+.offblock-card.planned figcaption { max-width: 6.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.offblock-card.spent img { filter: grayscale(1) brightness(.45); }
+/* The opponent's ministries, stacked (a card hovered comes in front) */
+.offblock-stack { display: flex; padding-top: 1.4rem; }
+.offblock-stack .offblock-card { position: relative; transition: transform .15s; }
+.offblock-stack .offblock-card + .offblock-card { margin-left: -3.3rem; }
+.offblock-stack .offblock-card:nth-child(even) { transform: translateY(-1.4rem); }
+.offblock-stack .offblock-card:hover { z-index: 2; transform: translateY(-1.8rem); }
+.offblock-stack-names { list-style: none; margin: .2rem 0 0; padding: 0; font-size: .75rem; color: var(--muted); }
+.offblock-stack-names .spent { text-decoration: line-through; opacity: .6; }
 /* An artefact card, upright as in the module (its logo shows a corner or an edge of the Block) */
 .offblock-card.artifact img, .offblock-noimage { width: 6rem; }
 .offblock-card.artifact.large img, .offblock-card.large .offblock-noimage { width: 10rem; }
@@ -1119,16 +1128,20 @@ body {
 .offblock-discard summary { cursor: pointer; font-size: .85rem; }
 .offblock-indra { margin-top: .6rem; }
 .offblock-indra-card { display: flex; flex-direction: column; gap: .25rem; align-items: center; }
-/* The planning: a row of 5 slots per player (the opponent's hidden until revealed); the hand under it */
-.offblock-board { display: grid; grid-template-columns: minmax(5rem, auto) repeat(5, minmax(0, 7rem)); gap: .4rem; align-items: center; margin: .4rem 0 .6rem; }
+/* The planning: the hand on the left; a row of 5 slots per player on the right (the opponent's hidden until revealed) */
+.offblock-plan { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 1.5rem; align-items: start; margin-bottom: .6rem; }
+.offblock-plan-hand h3 { margin-top: 0; }
+.offblock-hand .offblock-row + .offblock-row { margin-top: .5rem; }
+.offblock-board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .4rem; align-items: start; }
 .offblock-board-head { font-size: .75rem; color: var(--muted); text-align: center; }
-.offblock-board-name { font-weight: 700; font-size: .85rem; overflow-wrap: anywhere; }
-.offblock-drop { min-height: 8.6rem; border: 1px dashed var(--line); border-radius: 8px; display: grid; place-items: center; padding: .25rem; }
+.offblock-board-name { grid-column: 1 / -1; font-weight: 700; font-size: .9rem; margin-top: .3rem; }
+.offblock-drop { min-height: 9.2rem; border: 1px dashed var(--line); border-radius: 8px; display: grid; place-items: start center; padding: .3rem .25rem; }
+.offblock-drop > .offblock-slot-number { align-self: center; }
 .offblock-drop.allowed { border: 1px solid var(--rust-soft); background: rgba(214, 110, 60, .1); }
 .offblock-drop.refused { opacity: .4; }
 .offblock-drop.unrevealed .offblock-card { opacity: .6; }
 .offblock-slot-number { font-size: 1.4rem; color: var(--muted); }
-.offblock-back { width: 4.6rem; aspect-ratio: 150 / 212; border-radius: 6px; display: grid; place-items: center; font-weight: 700; color: var(--muted);
+.offblock-back { width: 5rem; aspect-ratio: 150 / 212; border-radius: 6px; display: grid; place-items: center; font-weight: 700; color: var(--muted);
     background: repeating-linear-gradient(45deg, #2b3640 0 6px, #232c34 6px 12px); border: 1px solid var(--line); }
 .offblock-verdict { font-weight: 700; color: var(--ink); font-size: .78rem; text-align: center; }
 .offblock-drag { cursor: grab; border-radius: 6px; }
@@ -1136,10 +1149,11 @@ body {
 .offblock-held.placed { opacity: .3; }
 @media (max-width: 1100px) {
     .offblock-top { grid-template-columns: minmax(0, 1fr); }
+    .offblock-plan { grid-template-columns: minmax(0, 1fr); }
     .offblock-top > .offblock-section + .offblock-section { padding-left: 0; border-left: 0; padding-top: .8rem; border-top: 1px solid var(--line); }
 }
 @media (max-width: 760px) {
-    .offblock-board { grid-template-columns: 3.5rem repeat(5, minmax(0, 1fr)); gap: .25rem; }
+    .offblock-board { gap: .25rem; }
     .offblock-card.planned img, .offblock-back { width: 100%; }
     .offblock-drop { min-height: 5rem; }
 }
