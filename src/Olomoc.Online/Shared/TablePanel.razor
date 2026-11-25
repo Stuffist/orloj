@@ -41,7 +41,76 @@ else
             </div>
         </div>
 
-        <div class="tb-layout">
+        @* Above the mat: the dice, and the actions of the selected piece. *@
+        <div class="tb-top">
+            <DicePanel View="View" Send="Send" />
+            <div class="tb-selection">
+                @if (SelectedPiece(table) is { } s)
+                {
+                    <strong>@Name(s)</strong>
+                    @if (CanAura && HasBase(s))
+                    {
+                        <span class="tb-aura-keys" title="@L.Ui("online.table.auras.title")">
+                            @for (var n = 1; n <= TableRules.MaxAura; n++)
+                            {
+                                var inches = n;
+                                var on = AurasOf(s).Contains(n);
+                                <button class="btn small @(on ? "primary" : null)" type="button" aria-pressed="@on" @onclick="() => ToggleAuraAsync(s, inches)">@n</button>
+                            }
+                            <button class="btn small" type="button" title="@L.Ui("online.table.auras.clear")" disabled="@(AurasOf(s).Count == 0)"
+                                    @onclick="() => SetAurasAsync(s, [])">0</button>
+                        </span>
+                    }
+                    @if (Movable(s))
+                    {
+                        @if (s.Kind == PieceKind.Marker)
+                        {
+                            @for (var i = 0; i < View.Seats.Count; i++)
+                            {
+                                var claimSide = i;
+                                var claimed = s.Claims.Contains(i);
+                                <button class="btn small tb-claim-toggle @SeatClass(i) @(claimed ? "on" : null)" type="button" aria-pressed="@claimed"
+                                        title="@L.Ui("online.table.claim.title", View.Seats[i].Name)"
+                                        @onclick="() => Send(new(OnlineCommandType.SetClaim, PieceId: s.Id, Side: claimSide, Flag: !claimed))">● @View.Seats[i].Name</button>
+                            }
+                        }
+                        @if (Lockable(s))
+                        {
+                            <button class="btn small @(s.Locked ? "primary" : null)" type="button" aria-pressed="@s.Locked"
+                                    title="@L.Ui(s.Locked ? "online.table.unlock" : "online.table.lock")"
+                                    @onclick="() => Send(new(OnlineCommandType.SetLock, PieceId: s.Id, Flag: !s.Locked))">@(s.Locked ? "🔒" : "🔓")</button>
+                        }
+                        @if (s.Kind == PieceKind.Template)
+                        {
+                            <button class="btn small @(s.Magnet ? "primary" : null)" type="button" aria-pressed="@s.Magnet" title="@L.Ui("online.table.magnet.title")"
+                                    @onclick="() => Send(new(OnlineCommandType.SetMagnet, PieceId: s.Id, Flag: !s.Magnet))">🧲 @L.Ui("online.table.magnet")</button>
+                        }
+                        @if (Free(s))
+                        {
+                            @if (!HasBase(s))
+                            {
+                                <button class="btn small" type="button" title="@L.Ui("online.table.rotateLeft")" @onclick="() => RotateAsync(s, -15)">⟲</button>
+                                <button class="btn small" type="button" title="@L.Ui("online.table.rotateRight")" @onclick="() => RotateAsync(s, 15)">⟳</button>
+                            }
+                            <button class="btn small" type="button" @onclick="() => RemoveAsync(s)">@L.Ui("online.table.remove")</button>
+                        }
+                    }
+                }
+                else
+                {
+                    <p class="hint">@L.Ui(Playing && View.Me is not null ? "online.table.selection.none" : "online.table.help.watch")</p>
+                }
+            </div>
+        </div>
+
+        @* The opponent on the left, the player on the right with the palettes (a spectator: seat 1 on the
+           left, seat 2 on the right). Each side: its state (Fiel, VP), then its cabal with the stats. *@
+        <div class="tb-main">
+            <aside class="tb-side">
+                <SideStatus View="View" Seat="LeftSeat" />
+                @Roster(table, LeftSeat)
+            </aside>
+
             <div class="tb-stage">
                 <svg @ref="_svg" class="tb-board @(_placing is not null || _ruler ? "tb-aim" : null)" viewBox="@Outside"
                      xmlns="http://www.w3.org/2000/svg" role="img" aria-label="@L.Ui("online.table.title")">
@@ -225,57 +294,6 @@ else
                     {
                         @L.Ui("online.table.ruler.help")
                     }
-                    else if (SelectedPiece(table) is { } s)
-                    {
-                        <strong>@Name(s)</strong>
-                        @if (CanAura && HasBase(s))
-                        {
-                            <span class="tb-aura-keys" title="@L.Ui("online.table.auras.title")">
-                                @for (var n = 1; n <= TableRules.MaxAura; n++)
-                                {
-                                    var inches = n;
-                                    var on = AurasOf(s).Contains(n);
-                                    <button class="btn small @(on ? "primary" : null)" type="button" aria-pressed="@on" @onclick="() => ToggleAuraAsync(s, inches)">@n</button>
-                                }
-                                <button class="btn small" type="button" title="@L.Ui("online.table.auras.clear")" disabled="@(AurasOf(s).Count == 0)"
-                                        @onclick="() => SetAurasAsync(s, [])">0</button>
-                            </span>
-                        }
-                        @if (Movable(s))
-                        {
-                            @if (s.Kind == PieceKind.Marker)
-                            {
-                                @for (var i = 0; i < View.Seats.Count; i++)
-                                {
-                                    var claimSide = i;
-                                    var claimed = s.Claims.Contains(i);
-                                    <button class="btn small tb-claim-toggle @SeatClass(i) @(claimed ? "on" : null)" type="button" aria-pressed="@claimed"
-                                            title="@L.Ui("online.table.claim.title", View.Seats[i].Name)"
-                                            @onclick="() => Send(new(OnlineCommandType.SetClaim, PieceId: s.Id, Side: claimSide, Flag: !claimed))">● @View.Seats[i].Name</button>
-                                }
-                            }
-                            @if (Lockable(s))
-                            {
-                                <button class="btn small @(s.Locked ? "primary" : null)" type="button" aria-pressed="@s.Locked"
-                                        title="@L.Ui(s.Locked ? "online.table.unlock" : "online.table.lock")"
-                                        @onclick="() => Send(new(OnlineCommandType.SetLock, PieceId: s.Id, Flag: !s.Locked))">@(s.Locked ? "🔒" : "🔓")</button>
-                            }
-                            @if (s.Kind == PieceKind.Template)
-                            {
-                                <button class="btn small @(s.Magnet ? "primary" : null)" type="button" aria-pressed="@s.Magnet" title="@L.Ui("online.table.magnet.title")"
-                                        @onclick="() => Send(new(OnlineCommandType.SetMagnet, PieceId: s.Id, Flag: !s.Magnet))">🧲 @L.Ui("online.table.magnet")</button>
-                            }
-                            @if (Free(s))
-                            {
-                                @if (!HasBase(s))
-                                {
-                                    <button class="btn small" type="button" title="@L.Ui("online.table.rotateLeft")" @onclick="() => RotateAsync(s, -15)">⟲</button>
-                                    <button class="btn small" type="button" title="@L.Ui("online.table.rotateRight")" @onclick="() => RotateAsync(s, 15)">⟳</button>
-                                }
-                                <button class="btn small" type="button" @onclick="() => RemoveAsync(s)">@L.Ui("online.table.remove")</button>
-                            }
-                        }
-                    }
                     else
                     {
                         @L.Ui(Playing && View.Me is not null ? "online.table.help" : "online.table.help.watch")
@@ -287,72 +305,9 @@ else
                 }
             </div>
 
-            <aside class="tb-tray">
-                <DicePanel View="View" Send="Send" />
-                @* Both cabals, always shown: each cog with what its sheet says (HP left, action tokens,
-                   Darkness, state) and its cards below; a click shows it on the mat, or puts it down
-                   there if it is not on it yet (one's own). *@
-                @foreach (var seat in SeatOrder())
-                {
-                    var mine = seat == View.Me;
-                    <h3 class="@SeatClass(seat)">@(mine ? L.Ui("online.table.myCabal") : L.Ui("online.table.cabalOf", View.Seats[seat].Name))</h3>
-                    <ul class="tb-roster">
-                        @foreach (var cog in (View.Seats[seat].State?.Cogs ?? []).OrderByDescending(c => c.Rank))
-                        {
-                            var (side, cogId) = (seat, cog.CogId);
-                            var tokens = Tokens(table, seat, cog.CogId);
-                            var placed = tokens.Count > 0;
-                            var linked = Linked(seat, cog.CogId);
-                            var name = CogName(cog.CogId);
-                            <li class="tb-cog @SeatClass(seat) @(cog.OutOfAction ? "ooa" : null) @(linked || _placing is { Kind: PieceKind.Cog } pl && pl.Ref == cog.CogId && pl.Side == seat ? "on" : null)">
-                                <div class="tb-cog-head">
-                                    <button class="tb-cog-main" type="button" disabled="@(!placed && !CanPlace)"
-                                            title="@L.Ui(placed ? "online.table.cog.select" : "online.table.cog.place")" @onclick="() => CogClicked(side, cogId)">
-                                        @if (TokenImage(cog.CogId) is { } src)
-                                        {
-                                            <img src="@src" alt="" />
-                                        }
-                                        else
-                                        {
-                                            <span class="tb-cog-initials">@Initials(name)</span>
-                                        }
-                                        <span class="tb-cog-name">@name</span>
-                                        <span class="tb-cog-rank">@(new string('★', cog.Rank))@(tokens.Count > 1 ? $" ×{tokens.Count}" : "")</span>
-                                    </button>
-                                    @if (placed && CanPlace)
-                                    {
-                                        <button class="tb-cog-add" type="button" title="@L.Ui("online.table.cog.another")"
-                                                @onclick="() => StartPlacing(new(PieceKind.Cog, cogId, null, name, side))">＋</button>
-                                    }
-                                </div>
-                                <div class="tb-cog-stats">
-                                    <span class="tb-hp" title="@L.Ui("online.table.hp")">♥ @cog.Remaining<small>/@cog.LifeLine.Count</small></span>
-                                    <span title="@L.Ui("play.actions")"><TokenTrack Token="action" Count="cog.Actions" Max="GameSession.ActionsPerCycle" /></span>
-                                    <span title="@L.Ui("play.darkness")"><TokenTrack Token="darkness" Count="cog.Darkness" Max="GameSession.MaxDarkness" /></span>
-                                </div>
-                                <div class="tb-cog-badges">
-                                    @foreach (var (key, css) in States(cog, placed))
-                                    {
-                                        <span class="status-badge @css">@L.Ui(key)</span>
-                                    }
-                                </div>
-                                @foreach (var id in new[] { cog.EquipmentId, cog.ExtraEquipmentId }.OfType<string>())
-                                {
-                                    var (eid, elabel) = (id, EquipmentName(id));
-                                    <button class="tb-cog-gear @(_placing?.Kind == PieceKind.Equipment && _placing.Ref == id && _placing.Side == seat ? "on" : null)" type="button"
-                                            disabled="@(!CanPlace)" title="@(CanPlace ? L.Ui("online.table.equipment.place", elabel) : elabel)"
-                                            @onclick="() => StartPlacing(new(PieceKind.Equipment, eid, null, elabel, side))">
-                                        @if (Files.Manifest.Token(id) is { } tok)
-                                        {
-                                            <img src="@Src(tok.Image)" alt="" />
-                                        }
-                                        <span>@elabel</span>
-                                    </button>
-                                }
-                            </li>
-                        }
-                    </ul>
-                }
+            <aside class="tb-side">
+                <SideStatus View="View" Seat="RightSeat" />
+                @Roster(table, RightSeat)
                 @if (Playing && View.Me is not null)
                 {
                     <details class="tb-palette" open="@(table.Pieces.All(p => p.Kind != PieceKind.Terrain))">
@@ -461,6 +416,79 @@ else
         _self ??= DotNetObjectReference.Create(this);
         _js = await JS.InvokeAsync<string>("olomocTable.attach", _svg, _self, TableManifest.BoardSize, TableRules.Margin);
     }
+
+    // ---- Sides of the mat ----
+
+    // The player on the right, the opponent on the left; a spectator: seats 1 and 2.
+    private int RightSeat => View.Me ?? 1;
+    private int LeftSeat => 1 - RightSeat;
+
+    // A cabal next to the mat: each cog with its stats and what its sheet says (HP left, action
+    // tokens, Darkness, state), its cards below; a click shows its tokens on the mat, or puts one down.
+    private RenderFragment Roster(OnlineTable table, int seat) => __builder =>
+    {
+                <ul class="tb-roster">
+                    @foreach (var cog in (View.Seats[seat].State?.Cogs ?? []).OrderByDescending(c => c.Rank))
+                    {
+                        var (side, cogId) = (seat, cog.CogId);
+                        var tokens = Tokens(table, seat, cog.CogId);
+                        var placed = tokens.Count > 0;
+                        var linked = Linked(seat, cog.CogId);
+                        var name = CogName(cog.CogId);
+                        <li class="tb-cog @SeatClass(seat) @(cog.OutOfAction ? "ooa" : null) @(linked || _placing is { Kind: PieceKind.Cog } pl && pl.Ref == cog.CogId && pl.Side == seat ? "on" : null)">
+                            <div class="tb-cog-head">
+                                <button class="tb-cog-main" type="button" disabled="@(!placed && !CanPlace)"
+                                        title="@L.Ui(placed ? "online.table.cog.select" : "online.table.cog.place")" @onclick="() => CogClicked(side, cogId)">
+                                    @if (TokenImage(cog.CogId) is { } src)
+                                    {
+                                        <img src="@src" alt="" />
+                                    }
+                                    else
+                                    {
+                                        <span class="tb-cog-initials">@Initials(name)</span>
+                                    }
+                                    <span class="tb-cog-name">@name</span>
+                                    <span class="tb-cog-rank">@(new string('★', cog.Rank))@(tokens.Count > 1 ? $" ×{tokens.Count}" : "")</span>
+                                </button>
+                                @if (placed && CanPlace)
+                                {
+                                    <button class="tb-cog-add" type="button" title="@L.Ui("online.table.cog.another")"
+                                            @onclick="() => StartPlacing(new(PieceKind.Cog, cogId, null, name, side))">＋</button>
+                                }
+                            </div>
+                            @if (Catalog.CogById(cog.CogId) is { } card)
+                            {
+                                <StatLine Stats="card.Stats" Compact="true" />
+                            }
+                            <div class="tb-cog-stats">
+                                <span class="tb-hp" title="@L.Ui("online.table.hp")">♥ @cog.Remaining<small>/@cog.LifeLine.Count</small></span>
+                                <span title="@L.Ui("play.actions")"><TokenTrack Token="action" Count="cog.Actions" Max="GameSession.ActionsPerCycle" /></span>
+                                <span title="@L.Ui("play.darkness")"><TokenTrack Token="darkness" Count="cog.Darkness" Max="GameSession.MaxDarkness" /></span>
+                            </div>
+                            <div class="tb-cog-badges">
+                                @foreach (var (key, css) in States(cog, placed))
+                                {
+                                    <span class="status-badge @css">@L.Ui(key)</span>
+                                }
+                            </div>
+                            @foreach (var id in new[] { cog.EquipmentId, cog.ExtraEquipmentId }.OfType<string>())
+                            {
+                                var (eid, elabel) = (id, EquipmentName(id));
+                                <button class="tb-cog-gear @(_placing?.Kind == PieceKind.Equipment && _placing.Ref == id && _placing.Side == seat ? "on" : null)" type="button"
+                                        disabled="@(!CanPlace)" title="@(CanPlace ? L.Ui("online.table.equipment.place", elabel) : elabel)"
+                                        @onclick="() => StartPlacing(new(PieceKind.Equipment, eid, null, elabel, side))">
+                                    @if (Files.Manifest.Token(id) is { } tok)
+                                    {
+                                        <img src="@Src(tok.Image)" alt="" />
+                                    }
+                                    <span>@elabel</span>
+                                </button>
+                            }
+                        </li>
+                    }
+                </ul>
+    };
+
 
     // ---- Pieces ----
 

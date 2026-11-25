@@ -62,9 +62,11 @@ public class OnlineDiceTests
         Assert.Equal(Expected(3, 4), action.Faces);
         Assert.Equal(3, action.Threshold);
 
-        // Reroll (trying fate): the same number of dice, new faces, counted; the threshold stays.
+        // Reroll of the failures (trying fate): the successes at 3+ stay, the others are new; counted.
+        var before = action.Faces.ToList();
         Ok(Do(g, 1, new(OnlineCommandType.RerollDice, DiceRules.Action), d, seed: 11));
-        Assert.Equal(Expected(11, 4), action.Faces);
+        var fresh = new Random(11);
+        Assert.Equal(before.Select(f => f >= 3 ? f : fresh.Next(1, 7)), action.Faces);
         Assert.Equal((1, 1, 3), (action.Rerolls, action.Seat, action.Threshold));
         Assert.Equal("diceReroll", g.Log[^1].Key);
 
@@ -76,6 +78,17 @@ public class OnlineDiceTests
         // A new roll starts again: no reroll yet, the slot's threshold kept.
         Ok(Do(g, 0, new(OnlineCommandType.RollDice, DiceRules.Action, Count: 1), d));
         Assert.Equal((1, 0, 3), (g.Dice[DiceRules.Action].Faces.Count, g.Dice[DiceRules.Action].Rerolls, g.Dice[DiceRules.Action].Threshold));
+    }
+
+    [Fact]
+    public async Task Without_failures_a_reroll_changes_nothing()
+    {
+        var (d, g) = await InCycle();
+        Ok(Do(g, 0, new(OnlineCommandType.RollDice, DiceRules.Action, Count: 5, Threshold: 2), d));
+        g.Dice![DiceRules.Action].Faces = [6, 5, 4, 3, 2];
+        Ok(Do(g, 1, new(OnlineCommandType.RerollDice, DiceRules.Action), d));
+        Assert.Equal([6, 5, 4, 3, 2], g.Dice[DiceRules.Action].Faces);
+        Assert.Equal(0, g.Dice[DiceRules.Action].Rerolls);
     }
 
     [Fact]

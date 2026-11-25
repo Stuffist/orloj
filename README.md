@@ -650,9 +650,12 @@ connection.
   - **agenda**: chosen or drawn at random by P1; the draw is offered, to confirm or redraw
     (nothing is sent before "Confirm");
   - **cycles**: each player tracks their side with the play mode cards (`PlayCogCard`, read-only
-    for the opponent's side; it can be hidden, or detached into a separate window for another
-    screen: `Pages/OnlineCamp.razor`, `/online/g/{code}/camp/{seat}?window=true`, followed as a
-    spectator). The end of the cycle applies to both sides once both confirmed it; the game ends
+    for the opponent's side, which can be hidden), in the **Cabales** panel under the table
+    (`Shared/CampsPanel.razor`, with undo and end of the cycle). The panel can be **detached** into its
+    own window (`Pages/OnlineCamps.razor`, `/online/g/{code}/camps?window=true`, another screen):
+    the player's side stays editable there. Every window tracks the player's side the same way
+    (`Services/MySide.cs`: changes sent from the last revision, the server's view taken back when it
+    refuses one). The end of the cycle applies to both sides once both confirmed it; the game ends
     after the 4th cycle, or as soon as a Bile (specific to each player) or the hunt reaches 3.
 - **Shared hunt**: a single level for both players, shown in the game's header. Each side keeps
   its share (its cogs taken out of action, counted automatically, and the tokens added by hand);
@@ -675,7 +678,13 @@ connection.
     (wheel, buttons), pan (drag the background); from the list or the palettes, a click on the item then on the mat.
     A cog out of action on its sheet is faded. Bases have no orientation (no rotation); the selected terrain
     turns with its handles (one at each end, like the movement template), or by 15°.
-  - **Both cabals**, always listed next to the mat: a card per cog with its HP left, action tokens,
+  - **Wide layout** (online games only: the page takes the whole width): above the mat, the two dice
+    rollers and the **actions of the selected piece** (ranges, padlock, objective colors, magnet,
+    rotation, removal); the **opponent on the left** of the mat, the **player on the right** with
+    the Décors / Marqueurs / Réglettes palettes under their cabal (a spectator: seat 1 left, seat 2
+    right). Above each cabal, the player's **state** (`Shared/SideStatus.razor`): presence, name,
+    P1, Fiel and VP, with their +/- for the player's own side.
+  - **Both cabals**, always listed next to the mat: a card per cog with its stats, HP left, action tokens,
     Darkness and state (out of action, otherwise sane, tainted or corrupted; stunned; **off the Block**
     when none of its tokens is on the mat), read from its side's sheet, and its cards below (a click
     puts their token down). A cog is put down as **tokens, as many as wanted** (a copy marks a place):
@@ -703,13 +712,12 @@ connection.
     keys 1 to 9 of the top row (or the buttons) toggle a circle of that many inches around the selected
     piece, from the edge of its base, 0 removes them; kept by the server, seen by both players and the
     spectators (either player, any piece but terrain). 1″ grid on demand.
-  - **Dice** (`Online/DiceRules.cs`, `Shared/DicePanel.razor`, at the top of the column next to the
-    mat): two rollers, the **action** and under it the **reaction** that answers it (dodge, riposte),
+  - **Dice** (`Online/DiceRules.cs`, `Shared/DicePanel.razor`, above the mat): two rollers, the **action** and under it the **reaction** that answers it (dodge, riposte),
     open to both players. 1 to 12 D6 rolled by the server (the same for both, in the log); the
     successes lit at the chosen threshold and counted for each one (5+ by default, rulebook p.10;
     4+, 3+, 2+ with support or a charge), the threshold changed by either player for both;
-    "Reroll": the whole roll again (trying fate; the Darkness token is added on the sheet by the
-    player).
+    "Reroll the failures": the dice under the chosen threshold again, the successes kept (trying
+    fate; the Darkness token is added on the sheet by the player); a whole new roll is "Roll" again.
   - **Full screen** ("⛶" in its header): the table panel alone on the screen (browser full screen,
     Esc leaves it), the mat as large as the height allows, the cabals' list scrolling beside it.
   - **Detachable** like the builder's equipment catalog: `/online/g/{code}/table?window=true`

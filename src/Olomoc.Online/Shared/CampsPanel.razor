@@ -1,0 +1,72 @@
+@implements IDisposable
+@inject LocalizationService L
+@inject MySide Side
+
+@* Both sides of the game under the table: the player's own first, editable (MySide), then the
+   opponent's, read-only (can be hidden); the commands of the cycle (undo, end of the cycle). In the
+   game page, and alone in its detached window (another screen), where the player's side stays
+   editable. *@
+
+<section class="panel online-camps-panel">
+    <div class="online-camps-head">
+        <h2>@L.Ui("online.camps.title")</h2>
+        @if (View.Me is not null)
+        {
+            <button class="btn small" type="button" aria-expanded="@(_otherShown ? "true" : "false")" @onclick="() => _otherShown = !_otherShown">
+                @L.Ui(_otherShown ? "online.camps.hideOther" : "online.camps.showOther")
+            </button>
+        }
+        @HeadContent
+    </div>
+
+    @if (View.Mine is { } mine && View.Step == OnlineStep.Cycle)
+    {
+        <div class="online-commands">
+            <button class="btn" type="button" disabled="@(!mine.CanUndo)" title="@L.Ui("play.undo.title")"
+                    @onclick="() => Send(new(OnlineCommandType.Undo))">↶ @L.Ui("play.undo")</button>
+            @if (!View.Over)
+            {
+                <button class="btn @(mine.EndCycleReady ? null : "primary")" type="button" aria-pressed="@mine.EndCycleReady"
+                        title="@L.Ui("play.endCycle.title")"
+                        @onclick="() => Send(new(OnlineCommandType.SetEndCycle, Flag: !mine.EndCycleReady))">
+                    @(mine.EndCycleReady ? L.Ui("online.endCycle.cancel") : L.Ui(View.Cycle >= GameSession.Cycles ? "play.endGame" : "play.endCycle", View.Cycle))
+                </button>
+                <span class="hint">
+                    @(mine.EndCycleReady ? L.Ui("online.endCycle.waiting", View.Other!.Name)
+                      : View.Other!.EndCycleReady ? L.Ui("online.endCycle.otherReady", View.Other.Name) : null)
+                </span>
+            }
+        </div>
+    }
+
+    <div class="online-camps">
+        @foreach (var i in Order)
+        {
+            var other = View.Me is { } me && me != i;
+            if (other && !_otherShown || SessionOf(i) is not { } session) continue;
+            <CampPanel Seat="View.Seats[i]" Session="session" Editable="@(View.Me == i && View.Step == OnlineStep.Cycle)"
+                       IsFirst="@(View.First == i)" OnChanged="Side.ChangedAsync" />
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public OnlineView View { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<OnlineCommand, Task> Send { get; set; } = default!;
+    /// <summary>More buttons in the header (detach, bring back).</summary>
+    [Parameter] public RenderFragment? HeadContent { get; set; }
+
+    private bool _otherShown = true;
+
+    protected override void OnInitialized() => Side.Changed += OnSideChanged;
+
+    // Their side first, then the other; spectator: in seat order.
+    private IEnumerable<int> Order => View.Me is { } me ? [me, 1 - me] : [0, 1];
+
+    private GameSession? SessionOf(int seat) =>
+        seat == View.Me ? Side.Session : View.Seats[seat].State is { } s ? new GameSession(s) : null;
+
+    private void OnSideChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Side.Changed -= OnSideChanged;
+}

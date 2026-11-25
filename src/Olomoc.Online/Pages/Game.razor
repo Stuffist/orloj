@@ -3,6 +3,7 @@
 @inject LocalizationService L
 @inject CatalogService Catalog
 @inject OnlineConnection Hub
+@inject MySide Side
 @inject MyGames Games
 @inject GameStore Current
 @inject NavigationManager Nav
@@ -53,12 +54,12 @@ else
             @if (v.Step is OnlineStep.Cycle or OnlineStep.Finished)
             {
                 var hunt = SharedHunt(v);
-                var mine = v.Me is not null && _mine is not null && v.Step == OnlineStep.Cycle;
+                var mine = v.Me is not null && Side.Session is not null && v.Step == OnlineStep.Cycle;
                 <div class="play-counters online-hunt">
                     <div class="counter hunt @(hunt >= GameSession.MaxHunt ? "lost" : null)" title="@L.Ui("online.hunt.title")">
                         <span class="counter-label">@L.Ui("play.hunt")</span>
                         <span class="counter-track">
-                            @if (mine) { <button class="step" @onclick="() => AdjustHuntAsync(-1)" disabled="@(_mine!.State.Hunt == 0)" title="@L.Ui("online.hunt.minus")" aria-label="@L.Ui("play.hunt") −">−</button> }
+                            @if (mine) { <button class="step" @onclick="() => AdjustHuntAsync(-1)" disabled="@(Side.Session!.State.Hunt == 0)" title="@L.Ui("online.hunt.minus")" aria-label="@L.Ui("play.hunt") −">−</button> }
                             <TokenTrack Token="hunt" Count="hunt" Max="GameSession.MaxHunt" />
                             @if (mine) { <button class="step" @onclick="() => AdjustHuntAsync(1)" disabled="@(hunt >= GameSession.MaxHunt)" aria-label="@L.Ui("play.hunt") +">+</button> }
                         </span>
@@ -84,6 +85,7 @@ else
     </section>
 
     <Problems Items="_problems" />
+    <Problems Items="Side.Problems" />
 
     @switch (v.Step)
     {
@@ -113,51 +115,8 @@ else
                     <ResultBox View="v" Send="SendAsync" />
                 </section>
             }
-            @if (v.Mine is { } mine && v.Step == OnlineStep.Cycle)
-            {
-                <section class="online-commands">
-                    <button class="btn" type="button" disabled="@(!mine.CanUndo)" title="@L.Ui("play.undo.title")"
-                            @onclick="() => SendAsync(new(OnlineCommandType.Undo))">↶ @L.Ui("play.undo")</button>
-                    @if (!v.Over)
-                    {
-                        <button class="btn @(mine.EndCycleReady ? null : "primary")" type="button" aria-pressed="@mine.EndCycleReady"
-                                title="@L.Ui("play.endCycle.title")"
-                                @onclick="() => SendAsync(new(OnlineCommandType.SetEndCycle, Flag: !mine.EndCycleReady))">
-                            @(mine.EndCycleReady ? L.Ui("online.endCycle.cancel") : L.Ui(v.Cycle >= GameSession.Cycles ? "play.endGame" : "play.endCycle", v.Cycle))
-                        </button>
-                        <span class="hint">
-                            @(mine.EndCycleReady ? L.Ui("online.endCycle.waiting", v.Other!.Name)
-                              : v.Other!.EndCycleReady ? L.Ui("online.endCycle.otherReady", v.Other.Name) : null)
-                        </span>
-                    }
-                </section>
-            }
             @Table(v)
-            <div class="online-camps">
-                @foreach (var i in CampOrder(v))
-                {
-                    var seat = v.Seats[i];
-                    var other = v.Me is { } me && me != i;
-                    if (SessionOf(v, i) is not { } session) continue;
-                    @if (other)
-                    {
-                        @* Opponent's side: to hide, or to detach into a separate window (another screen). *@
-                        var index = i;
-                        <div class="online-other-head">
-                            <h2>@L.Ui("online.other.title", seat.Name)</h2>
-                            <button class="btn small" aria-expanded="@(_otherShown ? "true" : "false")" @onclick="() => _otherShown = !_otherShown">
-                                @L.Ui(_otherShown ? "equipment.hide" : "equipment.show")
-                            </button>
-                            <button class="btn small" title="@L.Ui("online.other.detach.title")" @onclick="() => DetachAsync(index)">@L.Ui("equipment.detach")</button>
-                        </div>
-                    }
-                    @if (!other || _otherShown)
-                    {
-                        <CampPanel Seat="seat" Session="session" Editable="@(v.Me == i && v.Step == OnlineStep.Cycle)"
-                                   IsFirst="@(v.First == i)" OnChanged="ChangedAsync" />
-                    }
-                }
-            </div>
+            @Camps(v)
             break;
     }
 
@@ -173,15 +132,10 @@ else
     private IReadOnlyList<Problem>? _problems;
     private MyGame? _entry;
 
-    // The player's side, tracked locally: each change goes to the server starting from _basedOn.
-    private GameSession? _mine;
-    private int _basedOn;
-    private int _pending;
-    private readonly SemaphoreSlim _sending = new(1, 1);
-
     protected override async Task OnInitializedAsync()
     {
         L.Changed += OnLanguageChanged;
+        Side.Changed += OnSideChanged;
         await L.EnsureLoadedAsync();
         await Catalog.EnsureLoadedAsync();
         await Games.EnsureLoadedAsync();
@@ -216,15 +170,34 @@ else
     // server, and in "My online games" to resume it).
     private bool IsCurrent => string.Equals(Current.OnlineCode, Code, StringComparison.OrdinalIgnoreCase);
 
-    // Opponent's side shown in the page; detached (window open), it collapses there. Window blocked
-    // by the browser: it stays displayed.
-    private bool _otherShown = true;
+    // Both sides under the table: in the page, or detached into their own window (another screen),
+    // where the player's side stays editable. Window blocked by the browser: they stay in the page.
+    private bool _campsDetached;
 
-    private async Task DetachAsync(int seat)
+    private async Task DetachCampsAsync()
     {
-        if (await JS.InvokeAsync<bool>("olomoc.openWindow", $"online/g/{Code}/camp/{seat}?window=true", $"olomoc-camp-{Code}", 760, 900))
-            _otherShown = false;
+        if (await JS.InvokeAsync<bool>("olomoc.openWindow", $"online/g/{Code}/camps?window=true", $"olomoc-camps-{Code}", 1000, 900))
+            _campsDetached = true;
     }
+
+    private RenderFragment Camps(OnlineView v) => __builder =>
+    {
+        if (_campsDetached)
+        {
+            <section class="panel tb-detached">
+                <span>@L.Ui("online.camps.detached")</span>
+                <button class="btn small" type="button" @onclick="() => _campsDetached = false">@L.Ui("online.table.bringBack")</button>
+            </section>
+        }
+        else
+        {
+            <CampsPanel View="v" Send="SendAsync">
+                <HeadContent>
+                    <button class="btn small" type="button" title="@L.Ui("online.camps.detach.title")" @onclick="DetachCampsAsync">@L.Ui("equipment.detach")</button>
+                </HeadContent>
+            </CampsPanel>
+        }
+    };
 
     // Table: in the page, or detached into its own window (another screen), where it can be played too.
     // Window blocked by the browser: it stays in the page.
@@ -232,7 +205,7 @@ else
 
     private async Task DetachTableAsync()
     {
-        if (await JS.InvokeAsync<bool>("olomoc.openWindow", $"online/g/{Code}/table?window=true", $"olomoc-table-{Code}", 1100, 900))
+        if (await JS.InvokeAsync<bool>("olomoc.openWindow", $"online/g/{Code}/table?window=true", $"olomoc-table-{Code}", 1500, 950))
             _tableDetached = true;
     }
 
@@ -275,34 +248,17 @@ else
 
     // Shared hunt: the server's; for a player, with their share up to date (change being sent).
     private int SharedHunt(OnlineView v) =>
-        v.Me is { } me && _mine is not null
-            ? Math.Min(GameSession.MaxHunt, _mine.State.Hunt + (v.Seats[1 - me].State?.Hunt ?? 0))
+        v.Me is { } me && Side.Session is { } mine
+            ? Math.Min(GameSession.MaxHunt, mine.State.Hunt + (v.Seats[1 - me].State?.Hunt ?? 0))
             : v.Hunt;
 
     // Their share of the hunt (tokens added by hand: card effect, scenario…): like a change of their side.
-    private Task AdjustHuntAsync(int delta)
-    {
-        if (_mine is null) return Task.CompletedTask;
-        _mine.AdjustHunt(delta);
-        return ChangedAsync(null);
-    }
-
-    // Their side first, then the other; spectator: in seat order.
-    private static IEnumerable<int> CampOrder(OnlineView v) => v.Me is { } me ? new[] { me, 1 - me } : new[] { 0, 1 };
-
-    private GameSession? SessionOf(OnlineView v, int seat) =>
-        seat == v.Me ? _mine : v.Seats[seat].State is { } s ? new GameSession(s) : null;
+    private Task AdjustHuntAsync(int delta) => Side.ChangeAsync(s => s.AdjustHunt(delta));
 
     private void Apply(OnlineView view, bool force = false)
     {
         _view = view;
-        // State of their side taken back from the server if it changed elsewhere (end of cycle,
-        // undo…), except during an upload: the answer will say which revision to start from.
-        if (view.Mine?.State is { } state && (force || _mine is null || (_pending == 0 && view.Mine.StateRevision != _basedOn)))
-        {
-            _mine = new GameSession(GameSession.FromJson(GameSession.ToJson(state))!);
-            _basedOn = view.Mine.StateRevision;
-        }
+        Side.Apply(view, force);           // the player's side, taken back if it changed elsewhere
     }
 
     private async Task RefreshAsync(bool force = false)
@@ -325,26 +281,6 @@ else
         await RefreshAsync(force: !result.Ok);
     }
 
-    // Change of their side: sent in order, each one from the previous revision.
-    private async Task ChangedAsync(string? note)
-    {
-        if (_mine is null) return;
-        _pending++;
-        await _sending.WaitAsync();
-        try
-        {
-            var result = await Hub.SendAsync(new(OnlineCommandType.UpdateState, State: _mine.State, BasedOn: _basedOn, Note: note));
-            _problems = result.Problems;
-            if (result.Ok) _basedOn = result.StateRevision ?? _basedOn;
-        }
-        finally
-        {
-            _pending--;
-            _sending.Release();
-        }
-        if (_problems.Count > 0) await RefreshAsync(force: true);
-    }
-
     private async Task CopyAsync(string text)
     {
         try { await JS.InvokeVoidAsync("navigator.clipboard.writeText", text); }
@@ -353,9 +289,12 @@ else
 
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
+    private void OnSideChanged() => InvokeAsync(StateHasChanged);
+
     public async ValueTask DisposeAsync()
     {
         L.Changed -= OnLanguageChanged;
+        Side.Changed -= OnSideChanged;
         Hub.Changed -= OnServerChanged;
         Hub.StatusChanged -= OnStatusChanged;
         await Hub.LeaveAsync();

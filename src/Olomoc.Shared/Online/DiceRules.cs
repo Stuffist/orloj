@@ -6,8 +6,9 @@ namespace Olomoc.Online;
 /// Shared dice roller of an online game: two slots, the action and the reaction under it (an attack
 /// and the dodge or riposte answering it, rulebook p.21-22), open to both players. The server rolls
 /// the D6 (fair, the same for both); the faces are read at a threshold (2+ to 5+: 5+ by default,
-/// lowered by support or a charge, rulebook p.10) that either player changes for both. "Reroll": the
-/// whole roll again (trying fate, rulebook p.10; the Darkness token stays on the player's sheet).
+/// lowered by support or a charge, rulebook p.10) that either player changes for both. "Reroll the
+/// failures": the dice under the threshold again (trying fate, rulebook p.10; the Darkness token stays
+/// on the player's sheet); a whole new roll is "Roll" again.
 /// From the initiative to the end of the game, like the table.
 /// </summary>
 public static class DiceRules
@@ -37,7 +38,9 @@ public static class DiceRules
                 return null;
             case OnlineCommandType.RerollDice:
                 if (roll is null) return Problem.Of("onlineDice");
-                roll.Faces = Roll(random, roll.Faces.Count);
+                // The failures only (under the threshold): the successes stay.
+                if (roll.Faces.All(face => face >= roll.Threshold)) return null;
+                roll.Faces = roll.Faces.Select(face => face >= roll.Threshold ? face : random.Next(1, 7)).ToList();
                 roll.Rerolls++;
                 roll.Seat = seat;
                 roll.At = now;

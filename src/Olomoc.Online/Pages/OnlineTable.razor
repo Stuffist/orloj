@@ -4,10 +4,11 @@
 @inject CatalogService Catalog
 @inject OnlineConnection Hub
 @inject MyGames Games
+@inject MySide Side
 
 @* The table alone: window detached from the game (?window=true, compact header), to play on another
-   screen. Unlike the opponent's side window, it can be played: it joins with the seat's token kept
-   on the device (same site), on its own connection; without one, it is followed as a spectator. *@
+   screen. It can be played: it joins with the seat's token kept on the device (same site), on its
+   own connection (the player's Fiel and VP too: MySide); without one, followed as a spectator. *@
 
 @if (!_ready)
 {
@@ -35,6 +36,7 @@ else
         }
     </p>
     <Problems Items="_problems" />
+    <Problems Items="Side.Problems" />
     <TablePanel View="v" Send="SendAsync" />
 }
 
@@ -56,6 +58,7 @@ else
         Hub.StatusChanged += OnChanged;
         var joined = await Hub.JoinAsync(Code, Games.Get(Code)?.Token);
         (_view, _error) = (joined.View, joined.Error);
+        if (_view is not null) Side.Apply(_view, force: true);
         _ready = true;
     }
 
@@ -63,12 +66,20 @@ else
     {
         var result = await Hub.SendAsync(command);
         _problems = result.Problems;
-        _view = await Hub.GetViewAsync() ?? _view;
+        if (await Hub.GetViewAsync() is { } view)
+        {
+            _view = view;
+            Side.Apply(view, force: !result.Ok);
+        }
     }
 
     private Task OnServerChanged() => InvokeAsync(async () =>
     {
-        _view = await Hub.GetViewAsync() ?? _view;
+        if (await Hub.GetViewAsync() is { } view)
+        {
+            _view = view;
+            Side.Apply(view);
+        }
         StateHasChanged();
     });
 

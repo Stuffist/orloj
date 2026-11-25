@@ -1,0 +1,71 @@
+@implements IDisposable
+@inject LocalizationService L
+@inject MySide Side
+
+@* A player's state next to the mat, above their cabal: presence, name, P1, Fiel and victory points.
+   The player's own side has its +/- (MySide: sent like a change of their sheet); the other is
+   shown as the server knows it. *@
+
+@if (View.Seats.ElementAtOrDefault(Seat) is { } seat)
+{
+    var state = Mine ? Side.Session?.State : seat.State;
+    <div class="tb-status-side @SeatClass">
+        <div class="tb-status-name">
+            <span class="online-presence @(seat.Connected ? "on" : null)" title="@L.Ui(seat.Connected ? "online.connected" : "online.disconnected")"></span>
+            <strong>@seat.Name</strong>
+            @if (Mine)
+            {
+                <span class="online-badge">@L.Ui("online.table.you")</span>
+            }
+            @if (View.First == Seat)
+            {
+                <span class="tn-first-mark" title="@L.Ui("pairings.result.first.played")">@L.Ui("pairings.result.first")</span>
+            }
+        </div>
+        @if (state is not null)
+        {
+            <div class="tb-status-counters">
+                <span class="counter bile @(state.Bile >= GameSession.MaxBile ? "lost" : null)" title="@L.Ui("play.bile")">
+                    <span class="counter-label">@L.Ui("play.bile")</span>
+                    @if (Editable)
+                    {
+                        <button class="step" type="button" disabled="@(state.Bile == 0)" @onclick="() => Side.ChangeAsync(s => s.AdjustBile(-1))" aria-label="@L.Ui("play.bile") −">−</button>
+                    }
+                    <TokenTrack Token="darkness" Count="state.Bile" Max="GameSession.MaxBile" />
+                    @if (Editable)
+                    {
+                        <button class="step" type="button" disabled="@(state.Bile >= GameSession.MaxBile)" @onclick="() => Side.ChangeAsync(s => s.AdjustBile(1))" aria-label="@L.Ui("play.bile") +">+</button>
+                    }
+                </span>
+                <span class="counter vp" title="@L.Ui("play.vp.title")">
+                    <span class="counter-label">@L.Ui("play.vp")</span>
+                    @if (Editable)
+                    {
+                        <button class="step" type="button" disabled="@(state.VictoryPoints == 0)" @onclick="() => Side.ChangeAsync(s => s.AdjustVictoryPoints(-1))" aria-label="@L.Ui("play.vp") −">−</button>
+                    }
+                    <span class="counter-value vp-value">@state.VictoryPoints</span>
+                    @if (Editable)
+                    {
+                        <button class="step" type="button" disabled="@(state.VictoryPoints >= OnlineRules.MaxVictoryPoints)" @onclick="() => Side.ChangeAsync(s => s.AdjustVictoryPoints(1))" aria-label="@L.Ui("play.vp") +">+</button>
+                    }
+                </span>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public OnlineView View { get; set; } = default!;
+    [Parameter] public int Seat { get; set; }
+
+    private bool Mine => View.Me == Seat;
+    // As on the sheet: the player's own side, during the cycles.
+    private bool Editable => Mine && View.Step == OnlineStep.Cycle && Side.Session is not null;
+    private string SeatClass => $"tb-seat-{Seat}";
+
+    protected override void OnInitialized() => Side.Changed += OnSideChanged;
+
+    private void OnSideChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Side.Changed -= OnSideChanged;
+}

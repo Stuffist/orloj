@@ -3,7 +3,8 @@
 @* Shared dice roller (DiceRules): the action, and under it the reaction that answers it (dodge,
    riposte). Rolled by the server, the same for both players, open to both. Successes lit at the
    chosen threshold, and counted for each threshold (2+ to 5+: the base 5+, lowered by support or a
-   charge). "Reroll": the whole roll again (trying fate; the Darkness token stays on the sheet). *@
+   charge). "Reroll the failures": the dice under the threshold again (trying fate; the Darkness token
+   stays on the sheet); a whole new roll: "Roll" again. *@
 
 <section class="tb-dice" aria-label="@L.Ui("online.dice.title")">
     @foreach (var slot in DiceRules.Slots)
@@ -53,7 +54,7 @@
                     </span>
                     @if (CanRoll)
                     {
-                        <button class="btn small" type="button" title="@L.Ui("online.dice.reroll.title")"
+                        <button class="btn small" type="button" title="@L.Ui("online.dice.reroll.title")" disabled="@(roll.Faces.All(face => face >= roll.Threshold))"
                                 @onclick="() => Send(new(OnlineCommandType.RerollDice, s))">↻ @L.Ui("online.dice.reroll")</button>
                     }
                 </div>

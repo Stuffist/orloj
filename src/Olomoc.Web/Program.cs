@@ -37,6 +37,7 @@ builder.Services.AddScoped<AccountDirectory>();          // account names and pu
 // Online games.
 builder.Services.AddScoped<OnlineApi>();
 builder.Services.AddScoped<OnlineConnection>();         // SignalR hub, opened on a game's page
+builder.Services.AddScoped<MySide>();                   // the player's side of the online game (each window its own)
 builder.Services.AddScoped<MyGames>();
 builder.Services.AddScoped<OnlineLauncher>();          // lobby opened, which became the current game
 
