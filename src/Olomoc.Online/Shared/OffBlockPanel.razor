@@ -184,26 +184,8 @@
     /// <summary>More buttons in the header (detach, bring back).</summary>
     [Parameter] public RenderFragment? HeadContent { get; set; }
 
-    private string? _variant;
-
     // From the initiative to the end of the game, for the players.
     private bool CanAct => View.Me is not null && View.Step is OnlineStep.Initiative or OnlineStep.Agenda or OnlineStep.Cycle;
-
-    // The decks of the scenario: chosen by P1.
-    private bool CanChooseDecks => CanAct && View.Me is { } me && View.First == me;
-
-    private AgendaVariant Variant(AgendaSetup setup) => setup.Variants.FirstOrDefault(v => v.Id == _variant) ?? setup.Variants[0];
-
-    // "3 × Secret, 4 × Zone de Fiel": what "Placer" puts down.
-    private string Elements(AgendaVariant variant) => string.Join(", ", variant.Elements
-        .GroupBy(e => e.Kind).Select(g => $"{g.Count()} × {L.Ui($"online.agenda.element.{g.Key}")}"));
-
-    private Task SetDecksAsync(string? artifact, string? ministry) =>
-        Send(new(OnlineCommandType.SetDecks, Decks: [Empty(artifact), Empty(ministry)]));
-
-    private Task DrawDecksAsync() => Send(new(OnlineCommandType.SetDecks, Flag: true));
-
-    private static string? Empty(string? id) => string.IsNullOrEmpty(id) ? null : id;
 
     // ---- Planning ----
 
@@ -333,18 +315,7 @@
         </figure>
     };
 
-    // ---- Decks ----
-
-    private readonly HashSet<string> _backs = new();      // hostile profiles shown from the back (instinct)
-
-    private void Flip(string hostile) { if (!_backs.Remove(hostile)) _backs.Add(hostile); }
-
-    // The player's cabal has Indra: her ability (3 last cards of the Artefact).
-    private bool IndraMine => CanAct && View.Mine?.State?.Cogs.Any(c => c.CogId == CardDecks.Indra) == true;
-
-    // Player 1 or 2 (the priority of an artefact card): their name, by the initiative.
-    private string PlayerName(int player) => View.First is { } first && View.Seats.ElementAtOrDefault(player == 1 ? first : 1 - first) is { } s
-        ? s.Name : L.Ui("online.offblock.player", player);
+    // ---- Cards ----
 
     private static string Src(string image) => Olomoc.Assets.Base + image;
 
@@ -361,26 +332,4 @@
         </figure>
     };
 
-    // An artefact card, in the orientation of the module (its logo shows a corner or an edge of the
-    // Block); its effect in the hover text, and under the large one.
-    private RenderFragment Artifact(ArtifactCard card, bool large) => __builder =>
-    {
-        var text = CardDecks.Text(card);
-        var title = text is null ? $"{card.Name} {card.Number}" : $"{card.Name} {card.Number} — {text}";
-        <figure class="offblock-card artifact @(large ? "large" : null)" title="@title">
-            @if (card.Source is not null)
-            {
-                <img src="@Src(CardDecks.Image(card.Id))" alt="@card.Name" loading="lazy" />
-            }
-            else
-            {
-                <div class="offblock-noimage">@card.Name</div>
-            }
-            <figcaption>@card.Name · @(card.Number ?? "?")</figcaption>
-            @if (large && text is not null)
-            {
-                <p class="offblock-text">@text</p>
-            }
-        </figure>
-    };
 }

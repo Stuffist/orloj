@@ -96,8 +96,10 @@ public class OnlinePlanningTests
     }
 
     [Fact]
-    public void Every_artefact_card_has_its_text()
+    public void Every_artefact_and_ministry_card_has_its_text()
     {
+        foreach (var deck in Decks.Ministries)
+            Assert.All(CardDecks.MinistryDeck(deck), id => Assert.False(string.IsNullOrWhiteSpace(CardDecks.Text(CardDecks.Ministry(id)!)), id));
         foreach (var deck in Decks.Artifacts)
             Assert.All(CardDecks.ArtifactDeck(deck), id => Assert.False(string.IsNullOrWhiteSpace(CardDecks.Text(CardDecks.Artifact(id)!)), id));
     }
