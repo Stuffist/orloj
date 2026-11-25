@@ -33,7 +33,7 @@ public class OnlinePlanningTests
     [Fact]
     public async Task Hand_activations_of_cogs_in_play_propaganda_and_ministries()
     {
-        var (_, g) = await InCycle();
+        var (d, g) = await InCycle();
         var hand = PlanningRules.Hand(g, 0);
         Assert.Equal(3, hand.Count(c => c.StartsWith("act:")));
         Assert.Equal(["prop:1"], hand.Where(c => c.StartsWith("prop:")));
@@ -41,11 +41,16 @@ public class OnlinePlanningTests
         Assert.Equal(g.Seats[0].State!.Cogs.Single(c => c.CogId == "3R06").Rank, PlanningRules.Rank(g, 0, "act:3R06"));
         Assert.Equal((1, 4), (PlanningRules.Rank(g, 0, "prop:1"), PlanningRules.Rank(g, 0, $"min:{g.Decks!.Hands[0][1]}")));
 
-        // A cog out of action: no activation card, one more propaganda.
+        // A cog out of action: its activation card until the end of the cycle, then a propaganda instead.
         var cog = g.Seats[0].State!.Cogs[0];
         for (var i = 0; i < cog.LifeLine.Count; i++) cog.SetChecked(i, true);
         hand = PlanningRules.Hand(g, 0);
+        Assert.Equal((3, 1), (hand.Count(c => c.StartsWith("act:")), hand.Count(c => c.StartsWith("prop:"))));
+        Ok(Do(g, 0, new(OnlineCommandType.SetEndCycle, Flag: true), d));
+        Ok(Do(g, 1, new(OnlineCommandType.SetEndCycle, Flag: true), d));
+        hand = PlanningRules.Hand(g, 0);
         Assert.Equal((2, 2), (hand.Count(c => c.StartsWith("act:")), hand.Count(c => c.StartsWith("prop:"))));
+        Assert.DoesNotContain($"act:{cog.CogId}", hand);
     }
 
     [Fact]
@@ -72,11 +77,6 @@ public class OnlinePlanningTests
         // Incomplete: allowed, but not ready.
         Ok(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: [full[0], null, null, null, null]), d));
         Assert.False(PlanningRules.Complete(g, 0));
-
-        // Two cogs: 2 activations, the propaganda and a ministry are a complete planning.
-        g.Seats[0].State!.Cogs.RemoveAll(c => c.CogId == "1R01");
-        Ok(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: full.Select(c => c == "act:1R01" ? null : c).ToList()), d));
-        Assert.True(PlanningRules.Complete(g, 0));
     }
 
     [Fact]

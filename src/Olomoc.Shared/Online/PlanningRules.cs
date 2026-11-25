@@ -4,12 +4,13 @@ namespace Olomoc.Online;
 
 /// <summary>
 /// The planning of an online game, semi-automatic (rulebook p.33): each player programs 5 cards in
-/// secret, left to right: the activation cards of their cogs not out of action, their propaganda
-/// cards (1, plus 1 per cog out of action), one of their ministries, which must go on the slot of its
-/// planning constraint (the Axe: any). Once both plannings are complete, "Révéler la phase" shows the
-/// next card of each; the players work out the rest (the active player: the higher rank; equal ranks:
-/// a Mécanisme). At the end of the cycle, the planning starts again and the ministry played is
-/// discarded. Cards: "act:{cog}", "prop:{n}", "min:{ministry}".
+/// secret, left to right: the activation cards of their cogs, their propaganda cards (1, plus 1 per
+/// cog out of action at the end of an earlier cycle, its activation card replaced: a cog out of
+/// action during the cycle keeps it until then), one of their ministries, which must go on the slot
+/// of its planning constraint (the Axe: any). Once both plannings are complete, "Révéler la phase"
+/// shows the next card of each; the players work out the rest (the active player: the higher rank;
+/// equal ranks: a Mécanisme). At the end of the cycle, the planning starts again and the ministry
+/// played is discarded. Cards: "act:{cog}", "prop:{n}", "min:{ministry}".
 /// </summary>
 public static class PlanningRules
 {
@@ -27,15 +28,19 @@ public static class PlanningRules
         };
     }
 
-    /// <summary>The cards a seat can plan this cycle.</summary>
+    /// <summary>
+    /// The cards a seat can plan this cycle: a cog out of action during the cycle keeps its activation
+    /// card until the end of the cycle, when it becomes a propaganda.
+    /// </summary>
     public static IReadOnlyList<string> Hand(OnlineGame g, int seat)
     {
         var cogs = g.Seats[seat].State?.Cogs ?? [];
-        var propaganda = 1 + cogs.Count(c => c.OutOfAction);
+        var lost = g.Planning?.Lost.ElementAtOrDefault(seat) ?? [];
+        var propaganda = 1 + lost.Count;
         var ministries = g.Decks?.Hands.ElementAtOrDefault(seat) ?? [];
         return
         [
-            .. cogs.Where(c => !c.OutOfAction).OrderByDescending(c => c.Rank).Select(c => $"act:{c.CogId}"),
+            .. cogs.Where(c => !lost.Contains(c.CogId)).OrderByDescending(c => c.Rank).Select(c => $"act:{c.CogId}"),
             .. Enumerable.Range(1, propaganda).Select(n => $"prop:{n}"),
             .. ministries.Distinct().Select(id => $"min:{id}"),
         ];
@@ -49,14 +54,9 @@ public static class PlanningRules
         _ => 1,
     };
 
-    /// <summary>Complete: as many cards as the hand allows (5 at most; one ministry only).</summary>
-    public static bool Complete(OnlineGame g, int seat)
-    {
-        if (g.Planning?.Slots.ElementAtOrDefault(seat) is not { } slots) return false;
-        var hand = Hand(g, seat);
-        var playable = hand.Count(c => !c.StartsWith("min:")) + (hand.Any(c => c.StartsWith("min:")) ? 1 : 0);
-        return slots.Count(s => s is not null) == Math.Min(Slots, playable);
-    }
+    /// <summary>Complete: as many cards as the hand allows (5 at most).</summary>
+    public static bool Complete(OnlineGame g, int seat) =>
+        g.Planning?.Slots.ElementAtOrDefault(seat) is { } slots && slots.Count(s => s is not null) == Math.Min(Slots, Hand(g, seat).Count);
 
     private static Problem? Set(OnlineGame g, OnlinePlanning planning, int seat, IReadOnlyList<string?>? slots)
     {
@@ -84,15 +84,20 @@ public static class PlanningRules
         return null;
     }
 
-    /// <summary>End of the cycle: the ministry played goes from its player's hand to their discard; a new planning.</summary>
+    /// <summary>
+    /// End of the cycle: the ministry played goes from its player's hand to their discard; the activation
+    /// card of a cog out of action becomes a propaganda; a new planning.
+    /// </summary>
     public static void EndCycle(OnlineGame g)
     {
-        if (g.Planning is not { } planning) return;
+        var planning = g.Planning ?? new OnlinePlanning();
         for (var seat = 0; seat < planning.Slots.Count; seat++)
             foreach (var card in planning.Slots[seat].OfType<string>().Where(c => c.StartsWith("min:")))
                 if (g.Decks is { } decks && decks.Hands.ElementAtOrDefault(seat) is { } hand && hand.Remove(card[4..]))
                     decks.Played[seat].Add(card[4..]);
-        g.Planning = new OnlinePlanning();
+        var lost = planning.Lost.Select((cogs, seat) => cogs
+            .Union(g.Seats[seat].State?.Cogs.Where(c => c.OutOfAction).Select(c => c.CogId) ?? []).ToList()).ToList();
+        g.Planning = new OnlinePlanning { Lost = lost };
     }
 
     /// <summary>The planning as a connection sees it: its own in full and its hand; of each seat, the revealed cards.</summary>

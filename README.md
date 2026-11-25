@@ -706,7 +706,9 @@ connection.
     `/online/g/{code}/offblock?window=true`; `Online/PlanningRules.cs`, semi-automatic, rulebook
     p.33): on the left the opponent's ministries, stacked by pairs (their text and planning constraint
     left visible; a ministry played or revealed greyed); then the player's hand (the activation cards
-    of their cogs in play, their propaganda cards: 1 plus 1 per cog out of action, their ministries);
+    of their cogs, their propaganda cards: 1 plus 1 per cog out of action at the end of an earlier
+    cycle, its activation card replaced; a cog out of action during the cycle keeps it until then;
+    their ministries);
     then a row of 5 slots per player. Each player drags their cards onto their slots, in secret, saved
     as they go (one ministry, on the slot of its planning constraint; checked by the server). Once
     both plannings are complete, « Révéler la phase » shows the next card of each (the opponent's

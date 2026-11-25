@@ -146,11 +146,16 @@ public sealed class OnlineDecks
     public List<string> Indra { get; set; } = new();
 }
 
-/// <summary>The planning of the cycle (PlanningRules): each seat's 5 slots (secret until revealed), the phases revealed.</summary>
+/// <summary>
+/// The planning of the cycle (PlanningRules): each seat's 5 slots (secret until revealed), the phases
+/// revealed; each seat's cogs whose activation card became a propaganda (out of action at the end of
+/// an earlier cycle), kept from one cycle to the next.
+/// </summary>
 public sealed class OnlinePlanning
 {
     public List<List<string?>> Slots { get; set; } = [[null, null, null, null, null], [null, null, null, null, null]];
     public int Revealed { get; set; }
+    public List<List<string>> Lost { get; set; } = [[], []];
 }
 
 /// <summary>
