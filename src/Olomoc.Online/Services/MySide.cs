@@ -32,7 +32,16 @@ public sealed class MySide(OnlineConnection hub)
     /// </summary>
     public void Apply(OnlineView view, bool force = false)
     {
-        if (view.Mine?.State is not { } state) return;
+        if (view.Mine?.State is not { } state)
+        {
+            // Back in the lobby (the game restarted): no side until it starts again.
+            if (view.Mine is not null && Session is not null)
+            {
+                Session = null;
+                Changed?.Invoke();
+            }
+            return;
+        }
         if (!force && Session is not null && (_pending > 0 || view.Mine.StateRevision == _basedOn)) return;
         Session = new GameSession(GameSession.FromJson(GameSession.ToJson(state))!);
         _basedOn = view.Mine.StateRevision;

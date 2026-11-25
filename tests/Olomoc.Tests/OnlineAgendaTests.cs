@@ -154,4 +154,58 @@ public class OnlineAgendaTests
         Assert.Contains(drawn.Agenda!.Artifact, Decks.Artifacts);
         Assert.Contains(drawn.Agenda.Ministry, Decks.Ministries);
     }
+
+    [Fact]
+    public async Task Placer_et_distribuer_places_the_scenario_deals_the_ministries_and_builds_the_Artefact()
+    {
+        var (d, g) = await InCycle("LOST_HYPOGEUM");
+        Assert.Equal("onlineDecksNone", Key(Do(g, 1, new(OnlineCommandType.SetUp, "rise"), d)));
+        Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["ROGUE", "DISINFORMATION"]), d));
+        Assert.Equal("onlineNotFirst", Key(Do(g, 0, new(OnlineCommandType.SetUp, "rise"), d)));
+        Assert.Equal("onlineAgendaVariant", Key(Do(g, 1, new(OnlineCommandType.SetUp, "moon"), d)));
+        Assert.Null(g.Decks);                                                  // refused: nothing changed
+
+        Ok(Do(g, 1, new(OnlineCommandType.SetUp, "rise"), d));
+        Assert.Equal(3, g.Table!.Pieces.Count(p => p.Label == "door"));
+        Assert.Equal([4, 4], g.Decks!.Hands.Select(h => h.Count));
+        Assert.NotNull(g.Decks.Fallen);
+        Assert.Equal(("ROGUE", 12), (g.Decks.ArtifactDeck, g.Decks.Pile.Count));
+        Assert.Equal("onlineDealt", Key(Do(g, 1, new(OnlineCommandType.SetUp, "rise"), d)));
+        Assert.Equal("onlineDecksLocked", Key(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["PARASITE", "DISINFORMATION"]), d)));
+
+        // Visites: the Rogue cards on top of the pile, as with a first Mécanisme.
+        var (d2, visits) = await InCycle("VISITS");
+        Ok(Do(visits, 1, new(OnlineCommandType.SetDecks, Decks: ["ROGUE", "INDOCTRINATION"]), d2));
+        Ok(Do(visits, 1, new(OnlineCommandType.SetUp), d2));                    // nothing on the mat
+        Assert.All(visits.Decks!.Pile.Take(3), id => Assert.Equal("ROGUE", CardDecks.Artifact(id)!.Hostile));
+    }
+
+    [Fact]
+    public async Task Restart_goes_back_to_the_lobby_names_and_cabals_kept()
+    {
+        var (d, g) = await InCycle("LOST_HYPOGEUM");
+        Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["ROGUE", "DISINFORMATION"]), d));
+        Ok(Do(g, 1, new(OnlineCommandType.SetUp, "rise"), d));
+        var revision = g.Seats[0].StateRevision;
+
+        Ok(Do(g, 0, new(OnlineCommandType.Restart), d));
+        Assert.Equal((OnlineStep.Lobby, 1, (int?)null, (Scenario?)null), (g.Step, g.Cycle, g.First, g.Agenda));
+        Assert.Equal((null, null, null, null), (g.Table, g.Decks, g.Planning, g.Dice));
+        Assert.All(g.Seats, s => Assert.Equal((false, null, null), (s.Ready, s.Initiative, s.State)));
+        Assert.Equal(["Ana", "Bo"], g.Seats.Select(s => s.Name));
+        Assert.All(g.Seats, s => Assert.NotNull(s.Cabal));
+        Assert.True(g.Seats[0].StateRevision > revision);
+        Assert.Equal("restart", g.Log[^1].Key);
+        Assert.Equal("onlineStep", Key(Do(g, 0, new(OnlineCommandType.Restart), d)));
+
+        // Ready again: the game starts again.
+        Ok(Do(g, 0, new(OnlineCommandType.SetReady, Flag: true), d));
+        Ok(Do(g, 1, new(OnlineCommandType.SetReady, Flag: true), d));
+        Assert.Equal(OnlineStep.Initiative, g.Step);
+        Assert.All(g.Seats, s => Assert.NotNull(s.State));
+
+        // A confirmed result (in the statistics): no restart.
+        g.Result = new([1, 2], GameEnd.FourthCycle, 0, Now);
+        Assert.Equal("onlineRestartResult", Key(Do(g, 0, new(OnlineCommandType.Restart), d)));
+    }
 }

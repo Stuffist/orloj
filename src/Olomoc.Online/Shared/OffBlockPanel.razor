@@ -28,10 +28,6 @@
             }
             else if (View.Decks is not { Fallen: not null } decks)
             {
-                @if (CanAct)
-                {
-                    <button class="btn small primary" type="button" @onclick="() => Send(new(OnlineCommandType.DealMinistries))">🂠 @L.Ui("online.offblock.deal")</button>
-                }
                 <p class="hint">@L.Ui("online.offblock.deal.help")</p>
             }
             else
@@ -55,10 +51,6 @@
                             }
                         </ul>
                     </div>
-                }
-                @if (CanAct)
-                {
-                    <button class="btn small" type="button" @onclick="() => Send(new(OnlineCommandType.DealMinistries, Flag: true))">@L.Ui("online.offblock.dealAgain")</button>
                 }
             }
         </div>

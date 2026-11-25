@@ -32,6 +32,17 @@ public static class DeckRules
         };
     }
 
+    /// <summary>The game set up: its ministries dealt; its decks can no longer change.</summary>
+    public static bool Started(OnlineGame g) => g.Decks?.Fallen is not null;
+
+    /// <summary>« Placer + distribuer » (OnlineRules.SetUp): the ministries dealt, the Artefact pile built (unless a Mécanisme already did); both decks chosen.</summary>
+    internal static void SetUp(OnlineGame g, int seat, Random random, DateTimeOffset now)
+    {
+        var decks = g.Decks ??= new OnlineDecks();
+        Deal(g, decks, seat, false, random, now);
+        Pile(g, decks, random);
+    }
+
     // ---- Ministries ----
 
     private static Problem? Deal(OnlineGame g, OnlineDecks decks, int seat, bool again, Random random, DateTimeOffset now)

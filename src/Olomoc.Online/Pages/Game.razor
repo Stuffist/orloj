@@ -78,6 +78,10 @@ else
                 <code>@WatchLink</code>
                 <button class="btn small" type="button" @onclick="() => CopyAsync(WatchLink)">@L.Ui("online.copy")</button>
             </div>
+            @if (v.Me is not null && v.Step != OnlineStep.Lobby && v.Result is null)
+            {
+                <button class="btn small danger" type="button" title="@L.Ui("online.restart.title")" @onclick="RestartAsync">↺ @L.Ui("online.restart")</button>
+            }
             @if (IsCurrent)
             {
                 <button class="btn small @(v.Over ? "primary" : null)" type="button" title="@L.Ui("online.leave.title")" @onclick="LeaveAsync">@L.Ui("online.leave")</button>
@@ -258,6 +262,13 @@ else
             </TablePanel>
         }
     };
+
+    // Back to the lobby (names and cabals kept), after a confirmation: the setup, the mat, the cards and the sheets are lost.
+    private async Task RestartAsync()
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", L.Ui("online.restart.confirm"))) return;
+        await SendAsync(new(OnlineCommandType.Restart));
+    }
 
     private async Task LeaveAsync()
     {

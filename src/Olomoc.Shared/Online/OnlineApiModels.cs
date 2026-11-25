@@ -28,6 +28,8 @@ public enum OnlineCommandType
     DealMinistries, Mechanism, ReshuffleArtifact, IndraTake, IndraSwap,   // "Hors Bloc": the decks
     SetPlanning, RevealPhase,                // "Hors Bloc": the planning (Decks: the 5 slots)
     ConfirmResult,                           // end of the game
+    SetUp,                                   // the scenario placed, the ministries dealt, the Artefact pile built (P1; Text: variant)
+    Restart,                                 // back to the lobby (names and cabals kept)
 }
 
 /// <summary>

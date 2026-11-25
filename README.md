@@ -657,6 +657,9 @@ connection.
     (`Services/MySide.cs`: changes sent from the last revision, the server's view taken back when it
     refuses one). The end of the cycle applies to both sides once both confirmed it; the game ends
     after the 4th cycle, or as soon as a Bile (specific to each player) or the hunt reaches 3.
+  - **« Recommencer la partie »** (game's header, a player, after a confirmation; `Restart`): back
+    to the lobby, names and cabals kept but nobody ready; the initiative, the scenario, the mat, the
+    cards and the sheets are cleared. Not once a result is confirmed (it is in the statistics).
 - **Shared hunt**: a single level for both players, shown in the game's header. Each side keeps
   its share (its cogs taken out of action, counted automatically, and the tokens added by hand);
   the hunt is their sum (`OnlineRules.Hunt`), 3 at most. This way a player's undo removes their
@@ -679,9 +682,10 @@ connection.
     A cog out of action on its sheet is faded. Bases have no orientation (no rotation); the selected terrain
     turns with its handles (one at each end, like the movement template), or by 15°.
   - **Scenario**, in the game's header next to its code (`Shared/ScenarioBox.razor`): the agenda
-    chosen at the setup, the Artifact and Ministry decks of the game (chosen or drawn by P1; drawn
-    with the scenario when it is drawn), a note on its setup, and **« Placer »**: its elements put
-    down on the mat at the positions of the Recueil des agendas (`Online/AgendaSetups.cs`, inches
+    chosen at the setup, the Artifact and Ministry decks of the game (chosen or « Tirer les decks » by
+    P1; drawn with the scenario when it is drawn), a note on its setup, and then, by P1,
+    **« Placer + distribuer »** (`SetUp`): the ministries dealt, the Artefact pile built, and its
+    elements put down on the mat (none for Visites, Sabotage, Cartographe) at the positions of the Recueil des agendas (`Online/AgendaSetups.cs`, inches
     from the centre; a choice where the agenda leaves one: which median, which diagonal…), as
     ordinary pieces (movable, lockable) with their name and number (doors, accumulators), the
     batteries in their player's color, the zones de Fiel under the secrets of « Seuls dans le noir ».
@@ -690,15 +694,14 @@ connection.
   - **Decks** (`Online/DeckRules.cs`, `Online/CardDecks.cs`: the cards as printed, rank, planning
     constraint, artefact number, and the effects of the ministries and the artefact cards, read on
     the images of the module V1.9, in the hover texts): **ministries** dealt (1 Axe card each, 3
-    random ministries each, the hands known to both; the last one face up: the fallen ministry; dealt
-    again on demand); the **Artefact**, beside the Block (see the wide layout): a pile (secret order)
+    random ministries each, the hands known to both; the last one face up: the fallen ministry); the **Artefact**, beside the Block (see the wide layout): a pile (secret order)
     built at its first « Mécanisme » (Visites: the 3 Rogue cards on top), « Mécanisme » draws its top
     card (upright as in the module: its logo shows a corner or an edge of the Block; with the
     priority its number gives; the previous one to the discard; an empty pile: the discard shuffled
     again), « Remélanger »; the **hostiles' profile cards** (front, back: instinct; bigger when
     hovered) of the deck (and the Gargoyle with its agenda); **Indra**: her player takes the pile's 3
-    last cards (secret) and may swap the drawn card for one of them. Changing a deck in the scenario
-    starts its cards again.
+    last cards (secret) and may swap the drawn card for one of them. **Once the ministries are dealt,
+    the decks no longer change**; before, another Artefact deck starts its pile again.
   - **"Planification" panel** (`Shared/OffBlockPanel.razor`, under the table, detachable:
     `/online/g/{code}/offblock?window=true`; `Online/PlanningRules.cs`, semi-automatic, rulebook
     p.33): on the left the opponent's ministries, stacked by pairs (their text and planning constraint

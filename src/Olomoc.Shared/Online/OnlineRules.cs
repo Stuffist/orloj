@@ -53,6 +53,8 @@ public static class OnlineRules
             OnlineCommandType.DealMinistries or OnlineCommandType.Mechanism or OnlineCommandType.ReshuffleArtifact
                 or OnlineCommandType.IndraTake or OnlineCommandType.IndraSwap => One(DeckRules.Apply(g, seat, c, random, now)),
             OnlineCommandType.SetPlanning or OnlineCommandType.RevealPhase => One(PlanningRules.Apply(g, seat, c, now)),
+            OnlineCommandType.SetUp => One(SetUp(g, seat, c.Text, table, random, now)),
+            OnlineCommandType.Restart => One(Restart(g, seat, now)),
             OnlineCommandType.ConfirmResult => One(ConfirmResult(g, seat, c.Vp, now)),
             _ => One(Problem.Of("onlineCommand")),
         };
@@ -183,27 +185,70 @@ public static class OnlineRules
         ChooseAgenda(g, seat, OnlineAgendas[random.Next(OnlineAgendas.Count)], now) ?? SetDecks(g, seat, null, true, random, now);
 
     /// <summary>
-    /// Artifact and Ministry decks of the scenario ('Hors Bloc' panel), by P1: given, or drawn at random
-    /// (Flag); once the agenda is chosen, until the end of the cycles.
+    /// Artifact and Ministry decks of the scenario (in the game's header), by P1: given, or drawn at random
+    /// (Flag); once the agenda is chosen, until the game is set up (ministries dealt).
     /// </summary>
     public static Problem? SetDecks(OnlineGame g, int seat, IReadOnlyList<string?>? decks, bool draw, Random random, DateTimeOffset now)
     {
         if (g.Step is OnlineStep.Lobby or OnlineStep.Finished) return Problem.Of("onlineStep");
         if (g.First != seat) return Problem.Of("onlineNotFirst");
         if (g.Agenda is not { } agenda) return Problem.Of("onlineAgendaNone");
+        if (DeckRules.Started(g)) return Problem.Of("onlineDecksLocked");
         var (artifact, ministry) = draw
             ? (Decks.Artifacts[random.Next(Decks.Artifacts.Count)], Decks.Ministries[random.Next(Decks.Ministries.Count)])
             : (decks?.ElementAtOrDefault(0), decks?.ElementAtOrDefault(1));
         if (artifact is not null && !Decks.IsArtifact(artifact) || ministry is not null && !Decks.IsMinistry(ministry)) return Problem.Of("onlineDecks");
-        // Another deck: the cards dealt or drawn from the previous one start again.
-        if (g.Decks is { } d)
-        {
-            if (artifact != agenda.Artifact) g.Decks = new OnlineDecks { MinistryDeck = d.MinistryDeck, Hands = d.Hands, Fallen = d.Fallen };
-            if (ministry != agenda.Ministry) g.Decks = new OnlineDecks { ArtifactDeck = g.Decks.ArtifactDeck, Pile = g.Decks.Pile, Discard = g.Decks.Discard,
-                Drawn = g.Decks.Drawn, Mechanisms = g.Decks.Mechanisms, IndraSeat = g.Decks.IndraSeat, Indra = g.Decks.Indra };
-        }
+        // Another Artefact deck: the pile built by a Mécanisme before the setup starts again.
+        if (artifact != agenda.Artifact && g.Decks is { ArtifactDeck: not null }) g.Decks = null;
         g.Agenda = agenda with { Artifact = artifact, Ministry = ministry };
         Log(g, seat, now, "decks", artifact ?? "", ministry ?? "");
+        return null;
+    }
+
+    /// <summary>
+    /// « Placer + distribuer », by P1 once the decks are chosen: the agenda's elements on the mat (its
+    /// variant: Text; none for an agenda with nothing to place), the ministries dealt, the Artefact pile built. Then the decks can no longer change.
+    /// </summary>
+    public static Problem? SetUp(OnlineGame g, int seat, string? variant, TableManifest? manifest, Random random, DateTimeOffset now)
+    {
+        if (g.Step is OnlineStep.Lobby or OnlineStep.Finished) return Problem.Of("onlineStep");
+        if (g.First != seat) return Problem.Of("onlineNotFirst");
+        if (g.Agenda is not { Artifact: not null, Ministry: not null }) return Problem.Of("onlineDecksNone");
+        if (DeckRules.Started(g)) return Problem.Of("onlineDealt");
+        // Placing checks everything before changing anything; dealing and the pile cannot fail after it.
+        // An agenda with nothing on the mat (Visites, Sabotage…): only the cards.
+        if (AgendaSetups.Of(g.Agenda.Id) is { Variants.Count: > 0 } && AgendaSetups.Place(g, seat, variant, manifest, now) is { } p) return p;
+        DeckRules.SetUp(g, seat, random, now);
+        return null;
+    }
+
+    /// <summary>
+    /// The game started again from the lobby (a player, with a confirmation in the interface): names and
+    /// cabals kept, but neither ready; the setup, the table, the decks and the sides forgotten. Not once
+    /// a result is confirmed (it is in the statistics).
+    /// </summary>
+    public static Problem? Restart(OnlineGame g, int seat, DateTimeOffset now)
+    {
+        if (g.Step == OnlineStep.Lobby) return Problem.Of("onlineStep");
+        if (g.Result is not null) return Problem.Of("onlineRestartResult");
+        g.Step = OnlineStep.Lobby;
+        g.Cycle = 1;
+        g.First = null;
+        g.Agenda = null;
+        g.Table = null;
+        g.Planning = null;
+        g.Decks = null;
+        g.Dice = null;
+        foreach (var s in g.Seats)
+        {
+            s.Ready = false;
+            s.Initiative = null;
+            s.State = null;
+            s.StateRevision++;            // a side sent from before the restart is refused
+            s.Undo.Clear();
+            s.EndCycleReady = false;
+        }
+        Log(g, seat, now, "restart");
         return null;
     }
 

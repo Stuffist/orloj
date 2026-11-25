@@ -156,19 +156,25 @@ public class OnlineDecksTests
     }
 
     [Fact]
-    public async Task Decks_need_the_scenarios_and_start_again_when_it_changes()
+    public async Task Decks_need_the_scenarios_and_are_locked_once_the_ministries_are_dealt()
     {
         var (d, g) = await InCycle();
+        // Before the setup: another Artefact deck, the pile built by a Mécanisme starts again.
         Ok(Do(g, 0, new(OnlineCommandType.Mechanism), d));
-        Ok(Do(g, 0, new(OnlineCommandType.DealMinistries), d));
         Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["PARASITE", "DISINFORMATION"]), d));
-        Assert.Equal((null, (string?)null), (g.Decks!.ArtifactDeck, g.Decks.Drawn));
-        Assert.NotNull(g.Decks.Fallen);                                       // the ministries stay
+        Assert.Null(g.Decks);
         Ok(Do(g, 0, new(OnlineCommandType.Mechanism), d));
-        Assert.Equal("PARASITE", CardDecks.Artifact(g.Decks.Drawn)!.Deck);
+        Assert.Equal("PARASITE", CardDecks.Artifact(g.Decks!.Drawn)!.Deck);
 
         Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: [null, null]), d));
         Assert.Equal("onlineDecksNone", Key(Do(g, 0, new(OnlineCommandType.Mechanism), d)));
         Assert.Equal("onlineDecksNone", Key(Do(g, 0, new(OnlineCommandType.DealMinistries), d)));
+
+        // The ministries dealt: the game is set up, its decks no longer change.
+        Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["ROGUE", "DISINFORMATION"]), d));
+        Ok(Do(g, 0, new(OnlineCommandType.DealMinistries), d));
+        Assert.Equal("onlineDecksLocked", Key(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["PARASITE", "INDOCTRINATION"]), d)));
+        Assert.Equal("onlineDecksLocked", Key(Do(g, 1, new(OnlineCommandType.SetDecks, Flag: true), d)));
+        Assert.Equal(("ROGUE", "DISINFORMATION"), (g.Agenda!.Artifact, g.Agenda.Ministry));
     }
 }
