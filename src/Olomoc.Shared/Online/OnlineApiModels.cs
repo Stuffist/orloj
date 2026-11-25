@@ -20,15 +20,14 @@ public enum OnlineCommandType
 {
     SetName, SetCabal, SetReady,            // lobby
     RollInitiative,                          // player numbers
-    ChooseAgenda, DrawAgenda,                // agenda
+    ChooseAgenda,                            // agenda (Flag: drawn at random, its decks drawn with it)
     UpdateState, Undo, SetEndCycle,          // cycles
     SetBoard, AddPiece, MovePiece, RemovePiece, SetAuras, SetMagnet, SetLock, SetClaim,   // table (from the initiative on)
     RollDice, RerollDice, SetDiceThreshold,  // shared dice roller (from the initiative on)
-    PlaceAgenda, SetDecks,                   // "Hors Bloc": the agenda's elements on the mat, the decks of the scenario
-    DealMinistries, Mechanism, ReshuffleArtifact, IndraTake, IndraSwap,   // "Hors Bloc": the decks
-    SetPlanning, RevealPhase,                // "Hors Bloc": the planning (Decks: the 5 slots)
+    SetDecks, SetUp,                         // the decks of the scenario, then « Placer + distribuer » (P1)
+    Mechanism, ReshuffleArtifact, IndraTake, IndraSwap,   // the Artefact
+    SetPlanning, RevealPhase,                // the planning (Decks: the 5 slots)
     ConfirmResult,                           // end of the game
-    SetUp,                                   // the scenario placed, the ministries dealt, the Artefact pile built (P1; Text: variant)
     Restart,                                 // back to the lobby (names and cabals kept)
 }
 
@@ -40,7 +39,8 @@ public enum OnlineCommandType
 /// X and Y (mm), Rotation.
 /// Auras: ranges shown around a piece (inches, 1 to 9; empty: none). Vp: victory points of each seat, for the result.
 /// Dice: Text (slot "action" or "reaction"), Count (D6), Threshold (2 to 5).
-/// Agenda: Text (variant to place); Decks: [Artifact, Ministry] of the scenario (Flag: drawn at random).
+/// Agenda: Text (agenda; Flag: drawn). Decks: [Artifact, Ministry] of the scenario (Flag: drawn at
+/// random). SetUp: Text (the variant to place).
 /// </summary>
 public sealed record OnlineCommand(
     OnlineCommandType Type,

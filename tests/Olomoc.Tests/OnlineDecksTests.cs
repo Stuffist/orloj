@@ -3,43 +3,22 @@ using Olomoc.Online;
 using Olomoc.Services;
 using Olomoc.Tournaments;
 using Xunit;
+using static Olomoc.Tests.OnlineTestGame;
 
 namespace Olomoc.Tests;
 
 /// <summary>"Hors Bloc" panel, decks: the ministries dealt, the Artefact and its Mécanismes, Indra.</summary>
 public class OnlineDecksTests
 {
-    private static readonly DateTimeOffset Now = new(2026, 11, 25, 21, 0, 0, TimeSpan.Zero);
-
     // A game in its cycles, Bo (seat 1) is P1, agenda and decks chosen; Ana (seat 0) has Indra if asked.
     private static async Task<(AppData D, OnlineGame G)> InCycle(string agenda = "PROSPECTION", string artifact = "ROGUE",
         string ministry = "DISINFORMATION", bool indra = false)
     {
-        var d = await AppData.GetAsync();
-        var x = new CabalExporter(d.L);
-        CabalExport Cabal(string name, string faction, params (string Cog, string Equipment)[] slots) =>
-            x.ToModel(name, faction, slots.Select(s => (Cog?)d.Cog(s.Cog)).ToArray(), slots.Select(s => (Equipment?)d.Equipment(s.Equipment)).ToArray());
-        var g = new OnlineGame { Code = "DECKS1", Seats = { new Seat(), new Seat() } };
-        Ok(Do(g, 0, new(OnlineCommandType.SetName, "Ana"), d));
-        Ok(Do(g, 1, new(OnlineCommandType.SetName, "Bo"), d));
-        Ok(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: indra ? d.LegalCabal("URKARAS") : Cabal("A", "MAISEL", ("3R06", "E03"), ("2R08", "D01"), ("1R01", "E11"))), d));
-        Ok(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: Cabal("B", "MAISEL", ("3R06", "E03"), ("2R11", "E07"), ("1R01", "E11"))), d));
-        Ok(Do(g, 0, new(OnlineCommandType.SetReady, Flag: true), d));
-        Ok(Do(g, 1, new(OnlineCommandType.SetReady, Flag: true), d));
-        g.Step = OnlineStep.Agenda;
-        g.First = 1;
-        Ok(Do(g, 1, new(OnlineCommandType.ChooseAgenda, agenda), d));
+        var (d, g) = await OnlineTestGame.InCycle(agenda, a: indra ? (await AppData.GetAsync()).LegalCabal("URKARAS") : null);
         Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: [artifact, ministry]), d));
         if (indra) g.Seats[0].State!.Cogs[2].CogId = CardDecks.Indra;          // her card in the cabal
         return (d, g);
     }
-
-    private static OnlineResult Do(OnlineGame g, int seat, OnlineCommand c, AppData d, int seed = 1) =>
-        OnlineRules.Apply(g, seat, c, d.Catalog, new Random(seed), Now);
-
-    private static void Ok(OnlineResult r) => Assert.True(r.Ok, string.Join(", ", r.Problems.Select(p => p.Key)));
-
-    private static string Key(OnlineResult r) => Assert.Single(r.Problems).Key;
 
     [Fact]
     public void Decks_as_printed_two_ministry_decks_of_9_two_artefact_decks_of_12()
@@ -51,12 +30,14 @@ public class OnlineDecksTests
             Assert.Equal(2, cards.Count(id => CardDecks.Ministry(id)!.Axe));
             Assert.All(cards.Select(CardDecks.Ministry), m => Assert.Equal(4, m!.Rank));
             Assert.All(cards.Select(CardDecks.Ministry).Where(m => !m!.Axe), m => Assert.InRange(m!.Slot!.Value, 1, 5));
+            Assert.All(cards, id => Assert.False(string.IsNullOrWhiteSpace(CardDecks.Text(CardDecks.Ministry(id)!)), id));
         }
         foreach (var deck in Decks.Artifacts)
         {
             var cards = CardDecks.ArtifactDeck(deck);
             Assert.Equal(12, cards.Count);
             Assert.All(cards.Select(CardDecks.Artifact), a => Assert.Contains(a!.Priority, new int?[] { 1, 2 }));
+            Assert.All(cards, id => Assert.False(string.IsNullOrWhiteSpace(CardDecks.Text(CardDecks.Artifact(id)!)), id));
         }
         Assert.Equal(2, CardDecks.Artifact("rogue-2")!.Priority);
         // Every image named exists (imported from the module).
@@ -70,7 +51,7 @@ public class OnlineDecksTests
     public async Task Ministries_dealt_an_Axe_card_and_3_each_the_last_one_fallen_hands_known_to_both()
     {
         var (d, g) = await InCycle();
-        Ok(Do(g, 1, new(OnlineCommandType.DealMinistries), d));
+        Ok(Do(g, 1, new(OnlineCommandType.SetUp, "h-rise"), d));
         var decks = g.Decks!;
         Assert.All(decks.Hands, hand =>
         {
@@ -81,8 +62,6 @@ public class OnlineDecksTests
         Assert.Equal(CardDecks.MinistryDeck("DISINFORMATION").Order(), all.Order());
         Assert.False(CardDecks.Ministry(decks.Fallen)!.Axe);
         Assert.Equal("ministriesDealt", g.Log[^1].Key);
-        Assert.Equal("onlineDealt", Key(Do(g, 0, new(OnlineCommandType.DealMinistries), d)));
-        Ok(Do(g, 0, new(OnlineCommandType.DealMinistries, Flag: true), d, seed: 5));          // dealt again
 
         // Each one has their hand; both hands are known (to a spectator too).
         var ana = OnlineRules.View(g, 0, new HashSet<int>()).Decks!;
@@ -156,10 +135,9 @@ public class OnlineDecksTests
     }
 
     [Fact]
-    public async Task Decks_need_the_scenarios_and_are_locked_once_the_ministries_are_dealt()
+    public async Task Before_the_setup_another_Artefact_deck_starts_its_pile_again()
     {
         var (d, g) = await InCycle();
-        // Before the setup: another Artefact deck, the pile built by a Mécanisme starts again.
         Ok(Do(g, 0, new(OnlineCommandType.Mechanism), d));
         Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["PARASITE", "DISINFORMATION"]), d));
         Assert.Null(g.Decks);
@@ -168,13 +146,5 @@ public class OnlineDecksTests
 
         Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: [null, null]), d));
         Assert.Equal("onlineDecksNone", Key(Do(g, 0, new(OnlineCommandType.Mechanism), d)));
-        Assert.Equal("onlineDecksNone", Key(Do(g, 0, new(OnlineCommandType.DealMinistries), d)));
-
-        // The ministries dealt: the game is set up, its decks no longer change.
-        Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["ROGUE", "DISINFORMATION"]), d));
-        Ok(Do(g, 0, new(OnlineCommandType.DealMinistries), d));
-        Assert.Equal("onlineDecksLocked", Key(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["PARASITE", "INDOCTRINATION"]), d)));
-        Assert.Equal("onlineDecksLocked", Key(Do(g, 1, new(OnlineCommandType.SetDecks, Flag: true), d)));
-        Assert.Equal(("ROGUE", "DISINFORMATION"), (g.Agenda!.Artifact, g.Agenda.Ministry));
     }
 }

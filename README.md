@@ -775,7 +775,8 @@ connection.
     confirmation; not editable from the zone. No open receiving zone: nothing recorded, tried again
     at the next confirmation or at the purge;
   - **event game**: VP, P1 and end written on the event's table, only if it has no result yet (the
-    organizer's stays); it then counts through the event's archive, never twice.
+    organizer's stays); it then counts through the event's archive, never twice. Once written there,
+    the game no longer takes a correction: the organizer corrects the table.
   - A finished game nobody confirmed is recorded from the sheets when the purge deletes it (also
     the admin panel's purge by hand). An abandoned game (not over) never is.
 - **Log**: arrivals, dice, agenda, card reports, ends of cycle, terrain, result.

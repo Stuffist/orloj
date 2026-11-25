@@ -3,10 +3,11 @@ using Olomoc.Tournaments;
 namespace Olomoc.Online;
 
 /// <summary>
-/// The decks beside the Block in an online game ("Hors Bloc" panel), from the scenario's decks:
+/// The decks beside the Block in an online game, from the scenario's decks:
 /// <list type="bullet">
-/// <item>ministries (rulebook p.31): 1 Axe card to each player, the other 7 shuffled, 3 to each
-/// player (hands known to both), the last one face up: the fallen ministry;</item>
+/// <item>ministries (rulebook p.31), dealt by « Placer + distribuer »: 1 Axe card to each player,
+/// the other 7 shuffled, 3 to each player (hands known to both), the last one face up: the fallen
+/// ministry;</item>
 /// <item>the Artefact (p.27): a pile face down (secret order), built at its first Mécanisme
 /// (Visites: the 3 Rogue cards on top); "Mécanisme" draws its top card (the previous one to the
 /// discard; an empty pile: the discard shuffled again); "Remélanger": every card shuffled again;</item>
@@ -23,7 +24,6 @@ public static class DeckRules
         var decks = g.Decks ??= new OnlineDecks();
         return c.Type switch
         {
-            OnlineCommandType.DealMinistries => Deal(g, decks, seat, c.Flag == true, random, now),
             OnlineCommandType.Mechanism => Mechanism(g, decks, seat, random, now),
             OnlineCommandType.ReshuffleArtifact => Reshuffle(g, decks, seat, random, now),
             OnlineCommandType.IndraTake => IndraTake(g, decks, seat, random, now),
@@ -35,20 +35,21 @@ public static class DeckRules
     /// <summary>The game set up: its ministries dealt; its decks can no longer change.</summary>
     public static bool Started(OnlineGame g) => g.Decks?.Fallen is not null;
 
-    /// <summary>« Placer + distribuer » (OnlineRules.SetUp): the ministries dealt, the Artefact pile built (unless a Mécanisme already did); both decks chosen.</summary>
+    /// <summary>
+    /// « Placer + distribuer » (OnlineRules.SetUp, both decks chosen, not dealt yet): the ministries
+    /// dealt, the Artefact pile built (unless a Mécanisme already did).
+    /// </summary>
     internal static void SetUp(OnlineGame g, int seat, Random random, DateTimeOffset now)
     {
         var decks = g.Decks ??= new OnlineDecks();
-        Deal(g, decks, seat, false, random, now);
+        Deal(g, decks, g.Agenda!.Ministry!, seat, random, now);
         Pile(g, decks, random);
     }
 
     // ---- Ministries ----
 
-    private static Problem? Deal(OnlineGame g, OnlineDecks decks, int seat, bool again, Random random, DateTimeOffset now)
+    private static void Deal(OnlineGame g, OnlineDecks decks, string deck, int seat, Random random, DateTimeOffset now)
     {
-        if (g.Agenda?.Ministry is not { } deck) return Problem.Of("onlineDecksNone");
-        if (decks.Fallen is not null && !again) return Problem.Of("onlineDealt");
         var cards = CardDecks.MinistryDeck(deck);
         var axe = cards.First(id => CardDecks.Ministry(id)!.Axe);
         var others = Shuffle(cards.Where(id => id != axe), random);
@@ -57,7 +58,6 @@ public static class DeckRules
         decks.MinistryDeck = deck;
         decks.Played = [[], []];
         OnlineRules.Log(g, seat, now, "ministriesDealt", CardDecks.Ministry(decks.Fallen)!.Name);
-        return null;
     }
 
     // ---- Artefact ----

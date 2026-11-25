@@ -49,9 +49,14 @@ public static class PlanningRules
         _ => 1,
     };
 
-    /// <summary>Complete: as many cards as the hand allows (5 at most).</summary>
-    public static bool Complete(OnlineGame g, int seat) =>
-        g.Planning?.Slots.ElementAtOrDefault(seat) is { } slots && slots.Count(s => s is not null) == Math.Min(Slots, Hand(g, seat).Count);
+    /// <summary>Complete: as many cards as the hand allows (5 at most; one ministry only).</summary>
+    public static bool Complete(OnlineGame g, int seat)
+    {
+        if (g.Planning?.Slots.ElementAtOrDefault(seat) is not { } slots) return false;
+        var hand = Hand(g, seat);
+        var playable = hand.Count(c => !c.StartsWith("min:")) + (hand.Any(c => c.StartsWith("min:")) ? 1 : 0);
+        return slots.Count(s => s is not null) == Math.Min(Slots, playable);
+    }
 
     private static Problem? Set(OnlineGame g, OnlinePlanning planning, int seat, IReadOnlyList<string?>? slots)
     {

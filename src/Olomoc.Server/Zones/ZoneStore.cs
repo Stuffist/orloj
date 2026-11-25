@@ -177,6 +177,16 @@ public sealed class ZoneGameStore(IDbContextFactory<OlomocDb> factory)
     /// </summary>
     public async Task<IReadOnlyList<string>> SyncOnlineAsync(string code, string? zone, ZoneGame? game)
     {
+        // One at a time: two confirmations at once would both find no row and add one each.
+        await OnlineSync.WaitAsync();
+        try { return await SyncOnlineOnceAsync(code, zone, game); }
+        finally { OnlineSync.Release(); }
+    }
+
+    private static readonly SemaphoreSlim OnlineSync = new(1, 1);
+
+    private async Task<IReadOnlyList<string>> SyncOnlineOnceAsync(string code, string? zone, ZoneGame? game)
+    {
         await using var db = await factory.CreateDbContextAsync();
         await using var transaction = await db.Database.BeginTransactionAsync();
         var rows = await db.ZoneGames.Where(g => g.OnlineCode == code).ToListAsync();

@@ -514,7 +514,10 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_js is not null || _svg.Context is null) return;
+        // No table any more (the game restarted, in a detached window): its svg is gone; the gestures
+        // are attached to the next one.
+        if (View.Table is null) await DetachAsync();
+        if (_js is not null || View.Table is null || _svg.Context is null) return;
         _self ??= DotNetObjectReference.Create(this);
         _js = await JS.InvokeAsync<string>("olomocTable.attach", _svg, _self, TableManifest.BoardSize, TableRules.Margin);
     }
@@ -989,7 +992,7 @@ else
                 var step = TableManifest.MmPerInch / 2;
                 var (px, py) = (Math.Clamp(c.X + step, 0, TableManifest.BoardSize), Math.Clamp(c.Y + step, 0, TableManifest.BoardSize));
                 _copied = c with { X = px, Y = py };
-                _pasted = (c.Ref, View.Table?.Pieces.Max(p => p.Id) ?? 0);
+                _pasted = (c.Ref, View.Table?.Pieces.Select(p => p.Id).DefaultIfEmpty(0).Max() ?? 0);
                 await Send(new(OnlineCommandType.AddPiece, c.Ref, Piece: c.Kind, X: Math.Round(px, 1), Y: Math.Round(py, 1), Rotation: c.Rotation, Side: c.Side));
                 break;
             case "Delete" or "Backspace" when selected is not null && Free(selected):
@@ -1037,18 +1040,22 @@ else
     [JSInvokable]
     public Task AuraKey(int key)
     {
-        if (!CanAura || View.Table?.Pieces.FirstOrDefault(p => p.Id == _selected) is not { Kind: not PieceKind.Terrain } piece) return Task.CompletedTask;
+        if (!CanAura || View.Table?.Pieces.FirstOrDefault(p => p.Id == _selected) is not { } piece || !HasBase(piece)) return Task.CompletedTask;
         return key == 0 ? SetAurasAsync(piece, []) : ToggleAuraAsync(piece, key);
     }
 
     public async ValueTask DisposeAsync()
     {
         Side.Changed -= OnSideChanged;
-        if (_js is not null)
-        {
-            try { await JS.InvokeVoidAsync("olomocTable.detach", _js); }
-            catch (JSDisconnectedException) { }
-        }
+        await DetachAsync();
         _self?.Dispose();
+    }
+
+    private async Task DetachAsync()
+    {
+        if (_js is not { } js) return;
+        _js = null;
+        try { await JS.InvokeVoidAsync("olomocTable.detach", js); }
+        catch (JSDisconnectedException) { }
     }
 }

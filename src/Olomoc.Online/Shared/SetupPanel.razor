@@ -81,7 +81,7 @@
                         <option value="@id">@L.Ui($"agenda.{id}")</option>
                     }
                 </select>
-                <button class="btn primary" type="button" @onclick="() => Send(new(OnlineCommandType.ChooseAgenda, _agenda))">@L.Ui(_drawn ? "online.agenda.confirm" : "online.agenda.choose")</button>
+                <button class="btn primary" type="button" @onclick="() => Send(new(OnlineCommandType.ChooseAgenda, _agenda, Flag: _drawn))">@L.Ui(_drawn ? "online.agenda.confirm" : "online.agenda.choose")</button>
                 <button class="btn" type="button" @onclick="Draw">@L.Ui(_drawn ? "online.agenda.redraw" : "online.agenda.draw")</button>
             </div>
             @if (_drawn)

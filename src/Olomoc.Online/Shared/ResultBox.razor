@@ -2,7 +2,8 @@
 
 @* Result of a finished game: VP of each player (from their sheets, corrected if needed), confirmed
    by either player; then copied into the statistics (zone of the Block receiving the online games,
-   or the tournament's table). Confirming again replaces it. *@
+   or the tournament's table). Confirming again replaces it, except on a tournament table: then the
+   organizer corrects it. *@
 
 @if (View.Result is { } r)
 {
@@ -12,7 +13,7 @@
         <span class="hint">@L.Ui(r.Recorded ? (View.Tournament is null ? "online.result.recorded" : "online.result.recordedTournament") : "online.result.notRecorded")</span>
     </p>
 }
-@if (View.Me is not null)
+@if (View.Me is not null && View is not { Tournament: not null, Result.Recorded: true })
 {
     <div class="online-inline online-result-form">
         @for (var i = 0; i < View.Seats.Count; i++)

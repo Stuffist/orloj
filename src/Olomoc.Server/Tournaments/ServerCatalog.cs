@@ -17,7 +17,7 @@ public sealed class ServerCatalog
     private readonly IWebHostEnvironment _environment;
     private readonly CatalogStore _store;
     private Lazy<Task<CatalogService>> _catalog;
-    private readonly Lazy<Task<TableManifest>> _table;
+    private Lazy<Task<TableManifest>> _table;
 
     public ServerCatalog(IWebHostEnvironment environment, CatalogStore store)
     {
@@ -25,13 +25,19 @@ public sealed class ServerCatalog
         _store = store;
         _catalog = NewLoader();
         store.Changed += () => _catalog = NewLoader();
-        _table = new(() => LoadTableAsync(environment.WebRootFileProvider, store));
+        _table = NewTableLoader();
     }
 
     public Task<CatalogService> GetAsync() => _catalog.Value;
 
     /// <summary>What can be put on the table of an online game (shared static file, does not change).</summary>
-    public Task<TableManifest> GetTableAsync() => _table.Value;
+    public Task<TableManifest> GetTableAsync()
+    {
+        if (_table.Value.IsFaulted) _table = NewTableLoader();        // a failed read is tried again
+        return _table.Value;
+    }
+
+    private Lazy<Task<TableManifest>> NewTableLoader() => new(() => LoadTableAsync(_environment.WebRootFileProvider, _store));
 
     private static async Task<TableManifest> LoadTableAsync(IFileProvider files, CatalogStore store)
     {

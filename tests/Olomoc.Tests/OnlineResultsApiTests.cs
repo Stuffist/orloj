@@ -74,15 +74,6 @@ public sealed class OnlineResultsApiTests : IAsyncDisposable
         return (await response.Content.ReadFromJsonAsync<T>(TournamentJson.Options))!;
     }
 
-    private static async Task<(CabalExport A, CabalExport B)> Cabals()
-    {
-        var d = await AppData.GetAsync();
-        var x = new CabalExporter(d.L);
-        CabalExport Cabal(string name, params (string Cog, string Equipment)[] slots) =>
-            x.ToModel(name, "MAISEL", slots.Select(s => (Cog?)d.Cog(s.Cog)).ToArray(), slots.Select(s => (Equipment?)d.Equipment(s.Equipment)).ToArray());
-        return (Cabal("Ana's", ("3R06", "E03"), ("2R08", "D01"), ("1R01", "E11")),
-                Cabal("B", ("3R06", "E03"), ("2R11", "E07"), ("1R01", "E11")));
-    }
 
     /// <summary>Both players joined and ready: initiative rolled, agenda chosen, then a Bile at 3 for seat 1 (game over).</summary>
     private static async Task PlayToTheEnd(HubConnection a, HubConnection b, int vpA = 0)
@@ -109,7 +100,7 @@ public sealed class OnlineResultsApiTests : IAsyncDisposable
     /// <summary>A free game (Ana: seat 0, Bo: seat 1), played to its end.</summary>
     private async Task<(string Code, HubConnection A, HubConnection B)> FreeGame(WebApplicationFactory<Program> server, int vpA = 0)
     {
-        var (cabalA, cabalB) = await Cabals();
+        var (_, cabalA, cabalB) = await OnlineTestGame.Cabals();
         var created = await Read<OnlineCreated>(await server.CreateClient().PostAsJsonAsync("/api/online",
             new CreateOnlineRequest("Ana", cabalA), TournamentJson.Options));
         var a = await Connect(server);
@@ -211,7 +202,7 @@ public sealed class OnlineResultsApiTests : IAsyncDisposable
         var zone = await ReceivingZone(server);
         var (code, _, _) = await FreeGame(server, vpA: 5);
         // And an abandoned game (still in the lobby): never recorded.
-        var (cabalA, _) = await Cabals();
+        var (_, cabalA, _) = await OnlineTestGame.Cabals();
         var abandoned = await Read<OnlineCreated>(await http.PostAsJsonAsync("/api/online", new CreateOnlineRequest("Cy", cabalA), TournamentJson.Options));
         Assert.Empty((await Games(http, zone)).Games);
 
@@ -228,7 +219,7 @@ public sealed class OnlineResultsApiTests : IAsyncDisposable
         var server = Server();
         var http = server.CreateClient();
         await ReceivingZone(server);
-        var (cabalA, cabalB) = await Cabals();
+        var (_, cabalA, cabalB) = await OnlineTestGame.Cabals();
         var t = await Read<TournamentCreated>(await http.PostAsJsonAsync("/api/tournaments", new CreateTournamentRequest("Open", null, 3, 1), TournamentJson.Options));
         async Task<PlayerRegistered> Register(string name, CabalExport cabal) => await Read<PlayerRegistered>(await http.PostAsJsonAsync(
             $"/api/tournaments/{t.Code}/players", new RegistrationRequest(name, "MAISEL", [cabal]), TournamentJson.Options));
@@ -263,10 +254,11 @@ public sealed class OnlineResultsApiTests : IAsyncDisposable
         Assert.Equal((9, 3, GameEnd.Bile), (vpAna, vpBo, table.End));
         Assert.NotNull(table.First);
 
-        // The organizer's result stays: a new confirmation does not replace it.
+        // Then corrected by the organizer only: a new confirmation is refused.
         var round = $"/api/tournaments/{t.Code}/rounds/1/tables/1";
         Assert.Equal(HttpStatusCode.NoContent, (await http.SendAsync(Request(HttpMethod.Put, round, organizer: t.OrganizerToken, body: new ResultRequest(5, 5)))).StatusCode);
-        await Ok(b, new(OnlineCommandType.ConfirmResult, Vp: [1, 1]));
+        var refused = await b.InvokeAsync<OnlineResult>("Send", new OnlineCommand(OnlineCommandType.ConfirmResult, Vp: [1, 1]));
+        Assert.Equal("onlineResultRecorded", Assert.Single(refused.Problems).Key);
         table = (await Read<TournamentView>(await http.GetAsync($"/api/tournaments/{t.Code}"))).Rounds[0].Tables[0];
         Assert.Equal((5, 5), (table.VpA, table.VpB));
 

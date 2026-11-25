@@ -2,36 +2,16 @@ using Olomoc.Models;
 using Olomoc.Online;
 using Olomoc.Services;
 using Xunit;
+using static Olomoc.Tests.OnlineTestGame;
 
 namespace Olomoc.Tests;
 
 /// <summary>Shared dice roller of an online game: action and reaction, open to both players.</summary>
 public class OnlineDiceTests
 {
-    private static readonly DateTimeOffset Now = new(2026, 11, 20, 20, 0, 0, TimeSpan.Zero);
+    private static Task<(AppData D, OnlineGame G)> InCycle() => OnlineTestGame.Started();
 
-    private static async Task<(AppData D, OnlineGame G)> InCycle()
-    {
-        var d = await AppData.GetAsync();
-        var x = new CabalExporter(d.L);
-        CabalExport Cabal(string name, params (string Cog, string Equipment)[] slots) =>
-            x.ToModel(name, "MAISEL", slots.Select(s => (Cog?)d.Cog(s.Cog)).ToArray(), slots.Select(s => (Equipment?)d.Equipment(s.Equipment)).ToArray());
-        var g = new OnlineGame { Code = "DICE01", Seats = { new Seat(), new Seat() } };
-        Ok(Do(g, 0, new(OnlineCommandType.SetName, "Ana"), d));
-        Ok(Do(g, 1, new(OnlineCommandType.SetName, "Bo"), d));
-        Ok(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: Cabal("A", ("3R06", "E03"), ("2R08", "D01"), ("1R01", "E11"))), d));
-        Ok(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: Cabal("B", ("3R06", "E03"), ("2R11", "E07"), ("1R01", "E11"))), d));
-        Ok(Do(g, 0, new(OnlineCommandType.SetReady, Flag: true), d));
-        Ok(Do(g, 1, new(OnlineCommandType.SetReady, Flag: true), d));
-        return (d, g);
-    }
-
-    private static OnlineResult Do(OnlineGame g, int seat, OnlineCommand c, AppData d, int seed = 7) =>
-        OnlineRules.Apply(g, seat, c, d.Catalog, new Random(seed), Now);
-
-    private static void Ok(OnlineResult r) => Assert.True(r.Ok, string.Join(", ", r.Problems.Select(p => p.Key)));
-
-    private static string Key(OnlineResult r) => Assert.Single(r.Problems).Key;
+    private static OnlineResult Do(OnlineGame g, int seat, OnlineCommand c, AppData d, int seed = 7) => OnlineTestGame.Do(g, seat, c, d, seed);
 
     private static List<int> Expected(int seed, int count)
     {

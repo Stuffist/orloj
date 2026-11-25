@@ -5,6 +5,7 @@ using Olomoc.Services;
 using Olomoc.Tournaments;
 using Olomoc.Zones;
 using Xunit;
+using static Olomoc.Tests.OnlineTestGame;
 
 namespace Olomoc.Tests;
 
@@ -15,41 +16,7 @@ namespace Olomoc.Tests;
 public class OnlineTableTests
 {
     private static readonly DateTimeOffset Now = new(2026, 11, 19, 20, 0, 0, TimeSpan.Zero);
-
-    private static readonly Lazy<TableManifest> Manifest = new(() =>
-        JsonSerializer.Deserialize<TableManifest>(File.ReadAllText(Path.Combine(AppData.WwwRoot, "data", "olomoc-table.json")), TableAssets.Json)!);
-
-    private static async Task<(AppData D, OnlineGame G)> Started()
-    {
-        var d = await AppData.GetAsync();
-        var x = new CabalExporter(d.L);
-        CabalExport Cabal(string name, params (string Cog, string Equipment)[] slots) =>
-            x.ToModel(name, "MAISEL", slots.Select(s => (Cog?)d.Cog(s.Cog)).ToArray(), slots.Select(s => (Equipment?)d.Equipment(s.Equipment)).ToArray());
-        var g = new OnlineGame { Code = "TABLE1", Seats = { new Seat(), new Seat() } };
-        Ok(Do(g, 0, new(OnlineCommandType.SetName, "Ana"), d));
-        Ok(Do(g, 1, new(OnlineCommandType.SetName, "Bo"), d));
-        Ok(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: Cabal("A", ("3R06", "E03"), ("2R08", "D01"), ("1R01", "E11"))), d));
-        Ok(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: Cabal("B", ("3R06", "E03"), ("2R11", "E07"), ("1R01", "E11"))), d));
-        Ok(Do(g, 0, new(OnlineCommandType.SetReady, Flag: true), d));
-        Ok(Do(g, 1, new(OnlineCommandType.SetReady, Flag: true), d));
-        return (d, g);
-    }
-
-    private static async Task<(AppData D, OnlineGame G)> InCycle()
-    {
-        var (d, g) = await Started();
-        g.Step = OnlineStep.Agenda;
-        g.First = 1;
-        Ok(Do(g, 1, new(OnlineCommandType.ChooseAgenda, "VISITS"), d));
-        return (d, g);
-    }
-
-    private static OnlineResult Do(OnlineGame g, int seat, OnlineCommand c, AppData d) =>
-        OnlineRules.Apply(g, seat, c, d.Catalog, new Random(1), Now, Manifest.Value);
-
-    private static void Ok(OnlineResult r) => Assert.True(r.Ok, string.Join(", ", r.Problems.Select(p => p.Key)));
-
-    private static string Key(OnlineResult r) => Assert.Single(r.Problems).Key;
+    private static Task<(AppData D, OnlineGame G)> InCycle() => OnlineTestGame.InCycle();
 
     // A token of a cog of the side's cabal, put down by a player (either one).
     private static TablePiece Cog(OnlineGame g, AppData d, int side, string id, int by = 0, double x = 50, double y = 50)
@@ -236,6 +203,7 @@ public class OnlineTableTests
         var json = JsonSerializer.Serialize(g, TournamentJson.Options);
         var old = JsonSerializer.Deserialize<OnlineGame>(json.Replace("\"table\":", "\"oldTable\":"), TournamentJson.Options)!;
         Assert.Null(old.Table);
+        Assert.Empty(OnlineRules.View(old, 0, new HashSet<int>()).Table!.Pieces);       // shown empty until then
         var token = Cog(old, d, 0, old.Seats[0].State!.Cogs[0].CogId, x: 100, y: 100);
         Assert.Equal((TableRules.DefaultBoard, 1), (old.Table!.Board, old.Table.Pieces.Count));
         Assert.True(token.OnBoard);
@@ -266,6 +234,11 @@ public class OnlineTableTests
         Ok(Do(g, 1, new(OnlineCommandType.ConfirmResult, Vp: [6, 3]), d));
         Assert.Equal((6, (int?)1), (g.Result!.Vp[0], g.Result.ConfirmedBy));
         Assert.Equal(g.Result, OnlineRules.View(g, null, new HashSet<int>()).Result);
+
+        // A tournament game's result on its table: corrected there by the organizer.
+        g.Tournament = new("T1", 1, 1);
+        g.Result = g.Result with { Recorded = true };
+        Assert.Equal("onlineResultRecorded", Key(Do(g, 1, new(OnlineCommandType.ConfirmResult, Vp: [7, 3]), d)));
     }
 
     [Fact]

@@ -37,8 +37,7 @@ public static class OnlineRules
             OnlineCommandType.SetCabal => SetCabal(g, seat, c.Cabal, catalog),
             OnlineCommandType.SetReady => One(SetReady(g, seat, c.Flag == true, catalog, now)),
             OnlineCommandType.RollInitiative => One(RollInitiative(g, seat, random, now)),
-            OnlineCommandType.ChooseAgenda => One(ChooseAgenda(g, seat, c.Text, now)),
-            OnlineCommandType.DrawAgenda => One(DrawAgenda(g, seat, random, now)),
+            OnlineCommandType.ChooseAgenda => One(ChooseAgenda(g, seat, c.Text, c.Flag == true, random, now)),
             OnlineCommandType.UpdateState => One(UpdateState(g, seat, c.State, c.BasedOn, c.Note, catalog, now)),
             OnlineCommandType.Undo => One(Undo(g, seat, now)),
             OnlineCommandType.SetEndCycle => One(SetEndCycle(g, seat, c.Flag == true, now)),
@@ -48,10 +47,9 @@ public static class OnlineRules
                 => One(TableRules.Apply(g, seat, c, table, now)),
             OnlineCommandType.RollDice or OnlineCommandType.RerollDice or OnlineCommandType.SetDiceThreshold
                 => One(DiceRules.Apply(g, seat, c, random, now)),
-            OnlineCommandType.PlaceAgenda => One(AgendaSetups.Place(g, seat, c.Text, table, now)),
             OnlineCommandType.SetDecks => One(SetDecks(g, seat, c.Decks, c.Flag == true, random, now)),
-            OnlineCommandType.DealMinistries or OnlineCommandType.Mechanism or OnlineCommandType.ReshuffleArtifact
-                or OnlineCommandType.IndraTake or OnlineCommandType.IndraSwap => One(DeckRules.Apply(g, seat, c, random, now)),
+            OnlineCommandType.Mechanism or OnlineCommandType.ReshuffleArtifact or OnlineCommandType.IndraTake or OnlineCommandType.IndraSwap
+                => One(DeckRules.Apply(g, seat, c, random, now)),
             OnlineCommandType.SetPlanning or OnlineCommandType.RevealPhase => One(PlanningRules.Apply(g, seat, c, now)),
             OnlineCommandType.SetUp => One(SetUp(g, seat, c.Text, table, random, now)),
             OnlineCommandType.Restart => One(Restart(g, seat, now)),
@@ -168,8 +166,11 @@ public static class OnlineRules
 
     public static int Successes(IEnumerable<int> dice) => dice.Count(d => d >= Success);
 
-    /// <summary>Agenda of the game (rulebook p.31, step 2), chosen or drawn at random by P1.</summary>
-    public static Problem? ChooseAgenda(OnlineGame g, int seat, string? id, DateTimeOffset now)
+    /// <summary>
+    /// Agenda of the game (rulebook p.31, step 2), chosen or drawn at random by P1 (the draw is made in
+    /// the interface, to confirm or redraw): a drawn one has its decks drawn with it (P1 can still change them).
+    /// </summary>
+    public static Problem? ChooseAgenda(OnlineGame g, int seat, string? id, bool drawn, Random random, DateTimeOffset now)
     {
         if (NotAt(g, OnlineStep.Agenda) is { } p) return p;
         if (g.First != seat) return Problem.Of("onlineNotFirst");
@@ -177,12 +178,8 @@ public static class OnlineRules
         g.Agenda = new Scenario(id);
         g.Step = OnlineStep.Cycle;
         Log(g, seat, now, "agenda", id);
-        return null;
+        return drawn ? SetDecks(g, seat, null, true, random, now) : null;
     }
-
-    /// <summary>A scenario drawn at random, its decks with it (P1 can still change them).</summary>
-    public static Problem? DrawAgenda(OnlineGame g, int seat, Random random, DateTimeOffset now) =>
-        ChooseAgenda(g, seat, OnlineAgendas[random.Next(OnlineAgendas.Count)], now) ?? SetDecks(g, seat, null, true, random, now);
 
     /// <summary>
     /// Artifact and Ministry decks of the scenario (in the game's header), by P1: given, or drawn at random
@@ -373,6 +370,8 @@ public static class OnlineRules
     public static Problem? ConfirmResult(OnlineGame g, int seat, IReadOnlyList<int>? vp, DateTimeOffset now)
     {
         if (!Ended(g)) return Problem.Of("onlineNotOver");
+        // On its tournament table: corrected there by the organizer.
+        if (g is { Tournament: not null, Result.Recorded: true }) return Problem.Of("onlineResultRecorded");
         if (vp is not { Count: OnlineGame.SeatCount } || vp.Any(v => v is < 0 or > MaxVictoryPoints))
             return Problem.Of("victoryPoints", MaxVictoryPoints.ToString());
         g.Result = new OnlineGameResult(vp.ToList(), EndOf(g), seat, now);
@@ -437,7 +436,8 @@ public static class OnlineRules
         }).ToList(),
         g.Tournament,
         g.Log.Skip(Math.Max(0, g.Log.Count - logSize)).ToList(),
-        g.Table,
+        // A game stored before the table: an empty one (stored at its first table command).
+        g.Table ?? (g.Step != OnlineStep.Lobby ? TableRules.Create(g) : null),
         g.Result,
         g.Dice,
         DeckRules.View(g, me),

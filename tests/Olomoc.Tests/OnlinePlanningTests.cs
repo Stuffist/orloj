@@ -3,42 +3,21 @@ using Olomoc.Online;
 using Olomoc.Services;
 using Olomoc.Tournaments;
 using Xunit;
+using static Olomoc.Tests.OnlineTestGame;
 
 namespace Olomoc.Tests;
 
 /// <summary>"Hors Bloc" panel, planning (semi-automatic): programmed in secret, revealed phase by phase.</summary>
 public class OnlinePlanningTests
 {
-    private static readonly DateTimeOffset Now = new(2026, 11, 25, 22, 0, 0, TimeSpan.Zero);
-
     // In the cycles, ministries dealt (Disinformation deck), Bo (seat 1) is P1.
     private static async Task<(AppData D, OnlineGame G)> InCycle()
     {
-        var d = await AppData.GetAsync();
-        var x = new CabalExporter(d.L);
-        CabalExport Cabal(string name, params (string Cog, string Equipment)[] slots) =>
-            x.ToModel(name, "MAISEL", slots.Select(s => (Cog?)d.Cog(s.Cog)).ToArray(), slots.Select(s => (Equipment?)d.Equipment(s.Equipment)).ToArray());
-        var g = new OnlineGame { Code = "PLAN01", Seats = { new Seat(), new Seat() } };
-        Ok(Do(g, 0, new(OnlineCommandType.SetName, "Ana"), d));
-        Ok(Do(g, 1, new(OnlineCommandType.SetName, "Bo"), d));
-        Ok(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: Cabal("A", ("3R06", "E03"), ("2R08", "D01"), ("1R01", "E11"))), d));
-        Ok(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: Cabal("B", ("3R06", "E03"), ("2R11", "E07"), ("1R01", "E11"))), d));
-        Ok(Do(g, 0, new(OnlineCommandType.SetReady, Flag: true), d));
-        Ok(Do(g, 1, new(OnlineCommandType.SetReady, Flag: true), d));
-        g.Step = OnlineStep.Agenda;
-        g.First = 1;
-        Ok(Do(g, 1, new(OnlineCommandType.ChooseAgenda, "PROSPECTION"), d));
+        var (d, g) = await OnlineTestGame.InCycle("PROSPECTION");
         Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["ROGUE", "DISINFORMATION"]), d));
-        Ok(Do(g, 1, new(OnlineCommandType.DealMinistries), d));
+        Ok(Do(g, 1, new(OnlineCommandType.SetUp, "h-rise"), d));
         return (d, g);
     }
-
-    private static OnlineResult Do(OnlineGame g, int seat, OnlineCommand c, AppData d) =>
-        OnlineRules.Apply(g, seat, c, d.Catalog, new Random(3), Now);
-
-    private static void Ok(OnlineResult r) => Assert.True(r.Ok, string.Join(", ", r.Problems.Select(p => p.Key)));
-
-    private static string Key(OnlineResult r) => Assert.Single(r.Problems).Key;
 
     // A full planning: the 3 activations, the propaganda, a ministry of the hand on its slot (the Axe: slot 5).
     private static List<string?> Full(OnlineGame g, int seat, string? ministry = null)
@@ -93,15 +72,11 @@ public class OnlinePlanningTests
         // Incomplete: allowed, but not ready.
         Ok(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: [full[0], null, null, null, null]), d));
         Assert.False(PlanningRules.Complete(g, 0));
-    }
 
-    [Fact]
-    public void Every_artefact_and_ministry_card_has_its_text()
-    {
-        foreach (var deck in Decks.Ministries)
-            Assert.All(CardDecks.MinistryDeck(deck), id => Assert.False(string.IsNullOrWhiteSpace(CardDecks.Text(CardDecks.Ministry(id)!)), id));
-        foreach (var deck in Decks.Artifacts)
-            Assert.All(CardDecks.ArtifactDeck(deck), id => Assert.False(string.IsNullOrWhiteSpace(CardDecks.Text(CardDecks.Artifact(id)!)), id));
+        // Two cogs: 2 activations, the propaganda and a ministry are a complete planning.
+        g.Seats[0].State!.Cogs.RemoveAll(c => c.CogId == "1R01");
+        Ok(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: full.Select(c => c == "act:1R01" ? null : c).ToList()), d));
+        Assert.True(PlanningRules.Complete(g, 0));
     }
 
     [Fact]

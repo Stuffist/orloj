@@ -238,15 +238,16 @@ public static class ZoneEndpoints
     {
         var (managers, problems) = await CheckAdminAsync(body, users);
         if (problems.Count > 0) return Problems(problems, 400);
-        var name = await zones.UpdateAsync(code, z =>
+        var updated = await zones.UpdateAsync(code, z =>
         {
             ApplyAdmin(z, body, managers);
-            return (true, z.Name);
+            return (true, z);
         });
-        if (name is null) return NotFound();
-        if (body.ReceivesOnline) await OnlyReceiverAsync(zones, code.ToUpperInvariant());
+        if (updated is null) return NotFound();
+        // As stored: only an Online zone receives the online games.
+        if (updated.ReceivesOnline) await OnlyReceiverAsync(zones, code.ToUpperInvariant());
         stats.Invalidate(code.ToUpperInvariant());
-        await audit.LogAsync(AdminEndpoints.AdminName(ctx), "updateZone", code.ToUpperInvariant(), name);
+        await audit.LogAsync(AdminEndpoints.AdminName(ctx), "updateZone", code.ToUpperInvariant(), updated.Name);
         return Results.NoContent();
     }
 
