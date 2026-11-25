@@ -3,58 +3,15 @@ using Olomoc.Online;
 using Olomoc.Services;
 using Olomoc.Tournaments;
 using Xunit;
+using static Olomoc.Tests.OnlineTestGame;
 
 namespace Olomoc.Tests;
 
 /// <summary>Online game: guided steps, seats, secret cabals, tracking of the sides (real card catalog).</summary>
 public class OnlineRulesTests
 {
-    private static readonly DateTimeOffset Now = new(2026, 10, 16, 20, 0, 0, TimeSpan.Zero);
-
-    private static async Task<(AppData D, CabalExport A, CabalExport B)> Cabals()
-    {
-        var d = await AppData.GetAsync();
-        var x = new CabalExporter(d.L);
-        CabalExport Cabal(string name, params (string Cog, string Equipment)[] slots) =>
-            x.ToModel(name, "MAISEL", slots.Select(s => (Cog?)d.Cog(s.Cog)).ToArray(),
-                slots.Select(s => (Equipment?)d.Equipment(s.Equipment)).ToArray());
-        return (d,
-            Cabal("A", ("3R06", "E03" /* Phéromones */), ("2R08", "D01" /* Carapace */), ("1R01", "E11" /* Harmonium */)),
-            Cabal("B", ("3R06", "E03" /* Phéromones */), ("2R11", "E07" /* Ration */), ("1R01", "E11" /* Harmonium */)));
-    }
-
-    private static OnlineGame NewGame() => new() { Code = "ABCDEF", Seats = { new Seat(), new Seat() } };
-
-    private static OnlineResult Do(OnlineGame g, int seat, OnlineCommand c, CatalogService catalog, int seed = 1) =>
-        OnlineRules.Apply(g, seat, c, catalog, new Random(seed), Now);
-
-    private static void Ok(OnlineResult r) => Assert.True(r.Ok, string.Join(", ", r.Problems.Select(p => p.Key)));
-
-    private static string Key(OnlineResult r) => Assert.Single(r.Problems).Key;
-
-    /// <summary>Two named players, cabals chosen and ready: the game is at the initiative.</summary>
-    private static async Task<(AppData D, OnlineGame G)> Started()
-    {
-        var (d, a, b) = await Cabals();
-        var g = NewGame();
-        Ok(Do(g, 0, new(OnlineCommandType.SetName, "Ana"), d.Catalog));
-        Ok(Do(g, 1, new(OnlineCommandType.SetName, "Bo"), d.Catalog));
-        Ok(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: a), d.Catalog));
-        Ok(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: b), d.Catalog));
-        Ok(Do(g, 0, new(OnlineCommandType.SetReady, Flag: true), d.Catalog));
-        Ok(Do(g, 1, new(OnlineCommandType.SetReady, Flag: true), d.Catalog));
-        return (d, g);
-    }
-
-    /// <summary>Game started, P1 drawn, agenda chosen: first cycle.</summary>
-    private static async Task<(AppData D, OnlineGame G)> InCycle()
-    {
-        var (d, g) = await Started();
-        g.Step = OnlineStep.Agenda;
-        g.First = 0;
-        Ok(Do(g, 0, new(OnlineCommandType.ChooseAgenda, "VISITS"), d.Catalog));
-        return (d, g);
-    }
+    /// <summary>Game started, Ana P1, agenda chosen: first cycle.</summary>
+    private static Task<(AppData D, OnlineGame G)> InCycle() => OnlineTestGame.InCycle(first: 0);
 
     private static GameState Copy(GameState s) => GameSession.FromJson(GameSession.ToJson(s))!;
 
@@ -63,10 +20,10 @@ public class OnlineRulesTests
     {
         var (d, a, b) = await Cabals();
         var g = NewGame();
-        Ok(Do(g, 0, new(OnlineCommandType.SetName, "Ana"), d.Catalog));
-        Ok(Do(g, 1, new(OnlineCommandType.SetName, "Bo"), d.Catalog));
-        Ok(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: a), d.Catalog));
-        Ok(Do(g, 0, new(OnlineCommandType.SetReady, Flag: true), d.Catalog));
+        Ok(Do(g, 0, new(OnlineCommandType.SetName, "Ana"), d));
+        Ok(Do(g, 1, new(OnlineCommandType.SetName, "Bo"), d));
+        Ok(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: a), d));
+        Ok(Do(g, 0, new(OnlineCommandType.SetReady, Flag: true), d));
 
         // Bo does not see Ana's cabal (nor her faction), Ana sees her own.
         var bo = OnlineRules.View(g, 1, new HashSet<int>());
@@ -74,8 +31,8 @@ public class OnlineRulesTests
         Assert.Null(bo.Seats[0].Faction);
         Assert.NotNull(OnlineRules.View(g, 0, new HashSet<int>()).Seats[0].Cabal);
 
-        Ok(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: b), d.Catalog));
-        Ok(Do(g, 1, new(OnlineCommandType.SetReady, Flag: true), d.Catalog));
+        Ok(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: b), d));
+        Ok(Do(g, 1, new(OnlineCommandType.SetReady, Flag: true), d));
         Assert.Equal(OnlineStep.Initiative, g.Step);
         Assert.NotNull(OnlineRules.View(g, 1, new HashSet<int>()).Seats[0].Cabal);
     }
@@ -86,14 +43,14 @@ public class OnlineRulesTests
         var (d, a, b) = await Cabals();
         var g = NewGame();
         var illegal = a with { Cogs = a.Cogs.Take(1).ToList() };
-        Assert.All(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: illegal), d.Catalog).Problems, p => Assert.Equal("cabalIllegal", p.Key));
+        Assert.All(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: illegal), d).Problems, p => Assert.Equal("cabalIllegal", p.Key));
         var teams = a with { Cogs = a.Cogs.Take(2).ToList() };                                     // 2 cogs: 2 v 2 only
-        Assert.Contains(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: teams), d.Catalog).Problems, p => p.Key == "cabalCogs");
+        Assert.Contains(Do(g, 0, new(OnlineCommandType.SetCabal, Cabal: teams), d).Problems, p => p.Key == "cabalCogs");
 
         // Tournament table: only the registered cabals (same cards) are allowed.
         g.Seats[1].AllowedCabals.Add(a);
-        Assert.Equal("onlineCabalNotRegistered", Key(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: b), d.Catalog)));
-        Ok(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: a with { Name = "Renommée" }), d.Catalog));
+        Assert.Equal("onlineCabalNotRegistered", Key(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: b), d)));
+        Ok(Do(g, 1, new(OnlineCommandType.SetCabal, Cabal: a with { Name = "Renommée" }), d));
     }
 
     [Fact]
@@ -101,14 +58,14 @@ public class OnlineRulesTests
     {
         var (d, g) = await Started();
         // Forced tie: same dice on both sides (same seed) → roll again.
-        Ok(Do(g, 0, new(OnlineCommandType.RollInitiative), d.Catalog, seed: 7));
-        Ok(Do(g, 1, new(OnlineCommandType.RollInitiative), d.Catalog, seed: 7));
+        Ok(Do(g, 0, new(OnlineCommandType.RollInitiative), d, seed: 7));
+        Ok(Do(g, 1, new(OnlineCommandType.RollInitiative), d, seed: 7));
         Assert.Equal(OnlineStep.Initiative, g.Step);
 
         for (var seed = 1; g.Step == OnlineStep.Initiative; seed += 2)
         {
-            Ok(Do(g, 0, new(OnlineCommandType.RollInitiative), d.Catalog, seed));
-            Ok(Do(g, 1, new(OnlineCommandType.RollInitiative), d.Catalog, seed + 1));
+            Ok(Do(g, 0, new(OnlineCommandType.RollInitiative), d, seed));
+            Ok(Do(g, 1, new(OnlineCommandType.RollInitiative), d, seed + 1));
         }
         var winner = g.First!.Value;
         Assert.True(OnlineRules.Successes(g.Seats[winner].Initiative!) > OnlineRules.Successes(g.Seats[1 - winner].Initiative!));
@@ -122,14 +79,14 @@ public class OnlineRulesTests
         var session = new GameSession(Copy(g.Seats[0].State!));
         session.AdjustVictoryPoints(3);
 
-        Ok(Do(g, 0, new(OnlineCommandType.UpdateState, State: session.State, BasedOn: revision), d.Catalog));
+        Ok(Do(g, 0, new(OnlineCommandType.UpdateState, State: session.State, BasedOn: revision), d));
         Assert.Equal(3, g.Seats[0].State!.VictoryPoints);
-        Assert.Equal("onlineStale", Key(Do(g, 0, new(OnlineCommandType.UpdateState, State: session.State, BasedOn: revision), d.Catalog)));
+        Assert.Equal("onlineStale", Key(Do(g, 0, new(OnlineCommandType.UpdateState, State: session.State, BasedOn: revision), d)));
 
         // Undo: the previous state comes back, only once.
-        Ok(Do(g, 0, new(OnlineCommandType.Undo), d.Catalog));
+        Ok(Do(g, 0, new(OnlineCommandType.Undo), d));
         Assert.Equal(0, g.Seats[0].State!.VictoryPoints);
-        Assert.Equal("onlineNothingToUndo", Key(Do(g, 0, new(OnlineCommandType.Undo), d.Catalog)));
+        Assert.Equal("onlineNothingToUndo", Key(Do(g, 0, new(OnlineCommandType.Undo), d)));
     }
 
     [Fact]
@@ -141,7 +98,7 @@ public class OnlineRulesTests
         {
             var next = Copy(s.State!);
             change(next);
-            return Do(g, 0, new(OnlineCommandType.UpdateState, State: next, BasedOn: s.StateRevision), d.Catalog);
+            return Do(g, 0, new(OnlineCommandType.UpdateState, State: next, BasedOn: s.StateRevision), d);
         }
         Assert.Equal("onlineState", Key(Send(n => n.Cogs[0].CogId = "3R07")));
         Assert.Equal("onlineState", Key(Send(n => n.Cogs[1].Darkness = 4)));
@@ -160,11 +117,11 @@ public class OnlineRulesTests
         var next = Copy(s.State!);
         next.Cogs[0].Actions = 0;
         next.Cogs[0].Darkness = 3;      // corrupted: +1 Bile at the end of the cycle
-        Ok(Do(g, 1, new(OnlineCommandType.UpdateState, State: next, BasedOn: s.StateRevision), d.Catalog));
+        Ok(Do(g, 1, new(OnlineCommandType.UpdateState, State: next, BasedOn: s.StateRevision), d));
 
-        Ok(Do(g, 0, new(OnlineCommandType.SetEndCycle, Flag: true), d.Catalog));
+        Ok(Do(g, 0, new(OnlineCommandType.SetEndCycle, Flag: true), d));
         Assert.Equal(1, g.Cycle);
-        Ok(Do(g, 1, new(OnlineCommandType.SetEndCycle, Flag: true), d.Catalog));
+        Ok(Do(g, 1, new(OnlineCommandType.SetEndCycle, Flag: true), d));
 
         Assert.Equal(2, g.Cycle);
         Assert.Equal(GameSession.ActionsPerCycle, s.State!.Cogs[0].Actions);

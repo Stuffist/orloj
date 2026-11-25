@@ -109,6 +109,16 @@ else
                         @L.Ui("zones.field.hidden")
                     </label>
                 </div>
+                @if (_kind == ZoneKind.Online)
+                {
+                    <div class="field">
+                        <label class="check">
+                            <input type="checkbox" checked="@_receivesOnline" @onchange="e => _receivesOnline = e.Value is true" />
+                            @L.Ui("zones.manage.receivesOnline")
+                        </label>
+                        <span class="hint">@L.Ui("zones.manage.receivesOnline.help")</span>
+                    </div>
+                }
             }
             else if (_zone is { } z)
             {
@@ -147,7 +157,7 @@ else
     private string _name = "", _description = "", _managers = "", _logo = "";
     private ZoneKind _kind = ZoneKind.Club;
     private DateOnly? _start, _end;
-    private bool _closed, _hidden;
+    private bool _closed, _hidden, _receivesOnline;
     private DominanceMode _mode = DominanceMode.Wins;
 
     private bool IsNew => Code is null;
@@ -174,6 +184,7 @@ else
                 _end = z.EndDate;
                 _closed = z.Closed;
                 _hidden = z.Hidden;
+                _receivesOnline = z.ReceivesOnline;
                 _mode = z.Mode;
                 _managers = string.Join(", ", z.Managers ?? []);
             }
@@ -197,7 +208,8 @@ else
             if (IsZoneAdmin)
             {
                 var request = new ZoneAdminRequest(_name.Trim(), _description, _kind, _start, _end, _closed, _mode, _hidden,
-                    _managers.Split(',', ';', ' ').Select(n => n.Trim()).Where(n => n.Length > 0).ToList(), _logo.Trim());
+                    _managers.Split(',', ';', ' ').Select(n => n.Trim()).Where(n => n.Length > 0).ToList(), _logo.Trim(),
+                    _receivesOnline && _kind == ZoneKind.Online);
                 if (IsNew)
                 {
                     var created = await Api.CreateAsync(request);

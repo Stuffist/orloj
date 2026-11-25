@@ -101,6 +101,7 @@ builder.Services.AddHostedService(sp => new MailCheck(builder.Configuration["MAI
 // Online games: documents in the database (kind "online"), synchronized by SignalR (WebSocket).
 builder.Services.AddSingleton(sp => new OnlineStore(sp.GetRequiredService<IDbContextFactory<OlomocDb>>()));
 builder.Services.AddSingleton<OnlinePresence>();
+builder.Services.AddSingleton<OnlineResults>();         // results of the online games, into the statistics
 builder.Services.AddHostedService<OnlinePurge>();
 builder.Services.AddSignalR(o =>
 {

@@ -204,6 +204,15 @@ The card catalog is **language-neutral**; texts live in per-language packs.
   in the alpha channel) tinted in CSS, like the pictograms: logos in the text color, emblems in
   rust. Extracted from Occicat's PDFs (embedded images; rendered at 600 dpi for the vector logos
   of Dykovia and Maisel).
+- `src/Olomoc.Shared/wwwroot/data/olomoc-table.json` and `img/table/boards|terrain|markers|tokens|templates/` —
+  what can be put on the table of an online game: the 16″ game mats, the terrain (size,
+  obstructing or not, outline), the markers, the token of each cog and equipment/boon (catalog id,
+  base diameter), and the movement templates (length, width). Sizes in mm. Imported from Occicat's Vassal module, with their permission, by
+  `tools/VassalImport` (images copied as they are; in the module, 30 px = 1″; the objectives' bases (30 mm) and the push template (25 mm) are set by the tool). With a new
+  version of the module:
+  `dotnet run --project tools/VassalImport -- path/to/OLOMOC_2P_V1.x.vmod` (empties `img/table/`,
+  rewrites the manifest, lists the pieces left out: NPCs, proxies, cards without a French version). Names: matched on the French card names and titles ("« Sonar »"), with a few overrides
+  in the tool.
 
 Each file references its schema through `$schema` (validation and autocompletion in the
 editor). The `schemas/` folder also contains minimal examples (`referentiel.example.json`,
@@ -644,10 +653,16 @@ connection.
   - **agenda**: chosen or drawn at random by P1; the draw is offered, to confirm or redraw
     (nothing is sent before "Confirm");
   - **cycles**: each player tracks their side with the play mode cards (`PlayCogCard`, read-only
-    for the opponent's side; it can be hidden, or detached into a separate window for another
-    screen: `Pages/OnlineCamp.razor`, `/online/g/{code}/camp/{seat}?window=true`, followed as a
-    spectator). The end of the cycle applies to both sides once both confirmed it; the game ends
+    for the opponent's side, which can be hidden), in the **Cabales** panel under the table
+    (`Shared/CampsPanel.razor`, with undo and end of the cycle). The panel can be **detached** into its
+    own window (`Pages/OnlineCamps.razor`, `/online/g/{code}/camps?window=true`, another screen):
+    the player's side stays editable there. Every window tracks the player's side the same way
+    (`Services/MySide.cs`: changes sent from the last revision, the server's view taken back when it
+    refuses one). The end of the cycle applies to both sides once both confirmed it; the game ends
     after the 4th cycle, or as soon as a Bile (specific to each player) or the hunt reaches 3.
+  - **« Recommencer la partie »** (game's header, a player, after a confirmation; `Restart`): back
+    to the lobby, names and cabals kept but nobody ready; the initiative, the scenario, the mat, the
+    cards and the sheets are cleared. Not once a result is confirmed (it is in the statistics).
 - **Shared hunt**: a single level for both players, shown in the game's header. Each side keeps
   its share (its cogs taken out of action, counted automatically, and the tokens added by hand);
   the hunt is their sum (`OnlineRules.Hunt`), 3 at most. This way a player's undo removes their
@@ -657,7 +672,122 @@ connection.
   an outdated state (the client reloads), or an inconsistent one (other cards, a life line that
   does not follow from the cards, counters out of bounds). It enforces the shared cycle. Undo:
   the last 30 states of one's side, until the end of the cycle.
-- **Log**: arrivals, dice, agenda, card reports, ends of cycle.
+- **Table** (`Shared/TablePanel.razor`, `Online/TableRules.cs`), from the initiative on, played
+  freely as on Vassal: the server keeps and relays the positions, it does not check the movements.
+  - Created when both players are ready, empty: every cog is off the Block. Mat chosen among those of
+    the manifest (default "Bloc (Mez)").
+  - **Either player moves any piece**, as on Vassal: both sides' cogs, the equipment/boon tokens (a
+    card of either cabal, colored by its side), terrain, markers and templates; spectators watch. Only
+    checks: the piece exists, the position stays around the mat (3 cm), 80 pieces at most. The last
+    move wins, piece by piece; no log line per move (terrain put down or removed: logged).
+  - Gestures in `js/table.js` (SVG in mm): drag a piece (the server hears of the drop only), zoom
+    (wheel, buttons), pan (drag the background); from the list or the palettes, a click on the item then on the mat.
+    A cog out of action on its sheet is faded. Bases have no orientation (no rotation); the selected terrain
+    turns with its handles (one at each end, like the movement template), or by 15°.
+  - **Scenario**, in the game's header next to its code (`Shared/ScenarioBox.razor`): the agenda
+    chosen at the setup, the Artifact and Ministry decks of the game (chosen or « Tirer les decks » by
+    P1; drawn with the scenario when it is drawn), a note on its setup, and then, by P1,
+    **« Placer + distribuer »** (`SetUp`): the ministries dealt, the Artefact pile built (Indra's cards
+    taken), and its
+    elements put down on the mat (none for Visites, Sabotage, Cartographe) at the positions of the Recueil des agendas (`Online/AgendaSetups.cs`, inches
+    from the centre; a choice where the agenda leaves one: which median, which diagonal…), as
+    ordinary pieces (movable, lockable) with their name and number (doors, accumulators), the
+    batteries in their player's color, the zones de Fiel under the secrets of « Seuls dans le noir ».
+    **La Gargoule is not offered online** (`OnlineRules.OnlineAgendas`: its 7 activation cards
+    replacing the ministries are not played).
+  - **Decks** (`Online/DeckRules.cs`, `Online/CardDecks.cs`: the cards as printed, rank, planning
+    constraint, artefact number, and the effects of the ministries and the artefact cards, read on
+    the images of the module V1.9, in the hover texts): **ministries** dealt (1 Axe card each, 3
+    random ministries each, the hands known to both; the last one face up: the fallen ministry); the **Artefact**, beside the Block (see the wide layout): a pile (secret order)
+    built at its first « Mécanisme » (Visites: the 3 Rogue cards on top), « Mécanisme » draws its top
+    card (upright as in the module: its logo shows a corner or an edge of the Block; with the
+    priority its number gives; the previous one to the discard; an empty pile: the discard shuffled
+    again), « Remélanger »; the **hostiles' profile cards** (front, back: instinct; bigger when
+    hovered) of the deck (and the Gargoyle with its agenda); **Indra**: at the setup (« Placer +
+    distribuer »), each one, in either cabal, receives the pile's 3 last cards (secret; P1's first),
+    shown in her player's hand (« Planification » panel), who may swap the drawn card for one of
+    them (« Remplacer »). **Once the ministries are dealt, the decks no longer change**; before,
+    another Artefact deck starts its pile again.
+  - **"Planification" panel** (`Shared/OffBlockPanel.razor`, under the table, detachable:
+    `/online/g/{code}/offblock?window=true`; `Online/PlanningRules.cs`, semi-automatic, rulebook
+    p.33): on the left the opponent's ministries, stacked by pairs (their text and planning constraint
+    left visible; a ministry played or revealed greyed); then the player's hand (the activation cards
+    of their cogs, their propaganda cards: 1 plus 1 per cog out of action at the end of an earlier
+    cycle, its activation card replaced; a cog out of action during the cycle keeps it until then;
+    their ministries; their Indra cards, with « Remplacer »); then a row of 5 slots per player. Each
+    player drags their cards onto their slots, in secret, saved
+    as they go (one ministry, on the slot of its planning constraint; checked by the server). Once
+    both plannings are complete, « Révéler la phase » shows the next card of each (the opponent's
+    still hidden ones as card backs), with their ranks and the active player (equal: « Mécanisme,
+    puis la priorité »); the rest is up to the players. At the end of the cycle the planning starts
+    again and the ministry played is discarded. Activation and propaganda cards from the Vassal module.
+  - **Wide layout** (online games only: the page takes the whole width): above the mat, the two dice
+    rollers and the **actions of the selected piece** (ranges, padlock, objective colors, magnet,
+    rotation, removal); on the far left, **beside the Block**: the
+    Artefact (its card drawn with its priority and its effect in the hover text, « Mécanisme »
+    and « Remélanger », the discard, how many Indra cards the opponent holds, the hostiles' profiles) and the fallen ministry, once the scenario has its decks; then the **opponent on the left** of the mat, the **player on the right** with
+    the Décors / Marqueurs / Réglettes palettes under their cabal (a spectator: seat 1 left, seat 2
+    right). Above each cabal, the player's **state** (`Shared/SideStatus.razor`): presence, name,
+    P1, Fiel and VP (a line each, both frames the same height), on the player's own side the Fiel
+    tokens clickable and the VP with +/-.
+  - **Both cabals**, always listed next to the mat: a card per cog with its stats, its life line (HP as pips: standard, reinforced, tainted; marked ones crossed), action tokens,
+    Darkness and state (out of action, otherwise sane, tainted or corrupted; stunned; **off the Block**
+    when none of its tokens is on the mat), read from its side's sheet, and its cards below (a click
+    puts their token down). On the player's own cabal, a pip marks or unmarks that HP (damage by
+    hand) and a token sets the action tokens or the Darkness, as on the sheet (sent the same way).
+    A cog is put down as **tokens, as many as wanted** (a copy marks a place):
+    the card is linked to all of them. A click on the card selects them in turn (the others outlined),
+    or puts one down if there is none; "＋" puts one more. Selecting a token lights its card.
+  - **Padlock** of the terrain and the objectives (shared): locked, the piece is neither moved, turned
+    nor removed (server-side too) until unlocked; its padlock shows when it is selected.
+  - **Objectives**: the palette offers only the objective marker (yellow ring); a toggle per player
+    marks it as taken by that side (its color; both: split diagonally), to track who took what.
+  - These toggles (padlock, colors) are **on the selected piece itself**, to its right, like the
+    rotation handles, and also in the line under the mat.
+  - **Movement templates** (from the module: the ruler of a normal move, a stadium, and the push one,
+    a disc), put down, moved and turned by either player; the selected one turns with its handles (one
+    at each end, drawn above the bases so that a cog never hides them).
+    **Magnetic** (by default; option of the selected template, shared): dropped near a base (within 8 mm between
+    the edges), the template moves without turning until its closest point touches it; a base dropped
+    near a magnetic template comes to touch it at that place. Shown while dragging (`js/table.js`:
+    a template is a capsule, its contact with a round base is exact). Placement stays free otherwise.
+  - **Keyboard** (outside the text fields), on the selected piece: arrows move it by 0.1″ (Shift:
+    1″; sent once the keys stop for a moment), Ctrl+arrows turn terrain and templates by 5° (Shift:
+    15°), 1 to 9 toggle its ranges (0 removes them), Ctrl+C then Ctrl+V paste a copy half an inch
+    away (each paste further; the copy gets selected; a cog's token too), Ctrl+X or Delete remove it. Without a selected piece, the browser keeps its keys.
+  - **Ruler** (for the viewer only): distance in inches; as soon as a miniature is involved (start or
+    end), from the edge of its base (between two: edge to edge), while dragging too. **Ranges**, as on Vassal:
+    keys 1 to 9 of the top row (or the buttons) toggle a circle of that many inches around the selected
+    piece, from the edge of its base, 0 removes them; kept by the server, seen by both players and the
+    spectators (either player, any piece but terrain). 1″ grid on demand.
+  - **Dice** (`Online/DiceRules.cs`, `Shared/DicePanel.razor`, above the mat): two rollers, the **action** and under it the **reaction** that answers it (dodge, riposte),
+    open to both players. 1 to 12 D6 rolled by the server (the same for both, in the log); the
+    successes lit at the chosen threshold and counted for each one beside the dice (the frame drawn
+    before the first roll too, so nothing moves; 5+ by default, rulebook p.10;
+    4+, 3+, 2+ with support or a charge), the threshold changed by either player for both;
+    "Reroll the failures": the dice under the chosen threshold again, the successes kept (trying
+    fate; the Darkness token is added on the sheet by the player); a whole new roll is "Roll" again.
+  - **Full screen** ("⛶" in its header): the table panel alone on the screen (browser full screen,
+    Esc leaves it), the mat as large as the height allows, the cabals' list scrolling beside it.
+  - **Detachable** like the builder's equipment catalog: `/online/g/{code}/table?window=true`
+    (`Pages/OnlineTable.razor`), for another screen. Unlike the opponent's side window, it can be
+    played: it joins with the seat's token kept on the device, on its own connection.
+- **Result** (`ConfirmResult`, `Shared/ResultBox.razor`): once the game is over (4th cycle ended,
+  a Bile or the hunt at 3), either player confirms the VP of both sides (read from the sheets,
+  corrected if needed); the end is derived (Bile, otherwise PoliSec, otherwise 4th cycle). Confirming
+  again replaces it. Then (`Online/OnlineResults.cs`):
+  - **free game**: a duel (cabals without their name, VP, P1, end, agenda as the scenario; no
+    names) in the zone of the Block that **receives the online games** (kind Online, a single one,
+    chosen by the editors), so in the Block's statistics, "All", the zone's dominance and the data
+    export (`source = online`). One row per online game (`ZoneGames.OnlineCode`), updated by a new
+    confirmation; not editable from the zone. No open receiving zone: nothing recorded, tried again
+    at the next confirmation or at the purge;
+  - **event game**: VP, P1 and end written on the event's table, only if it has no result yet (the
+    organizer's stays); it then counts through the event's archive, never twice. Once written there,
+    the game no longer takes a correction: the organizer corrects the table.
+  - A finished game nobody confirmed is recorded from the sheets when the purge deletes it (also
+    the admin panel's purge by hand). An abandoned game (not over) never is.
+- **Log**: arrivals, dice, agenda, card reports, ends of cycle, terrain, result.
 - **Storage**: one document per game in the database (`Documents` table, kind `online`),
   deleted after 7 days without activity. Presence (connected seat) is kept in memory. Automatic
   reconnection: the client joins the game again and reads its view again. Leaving the game page
@@ -666,8 +796,9 @@ connection.
 - **Safeguards**: 2,000 games, messages of 32 KB at most, 20 calls per second and per
   connection, creations limited like events (`RATE_CREATE_PER_HOUR`).
 
-Planned next steps: the Block (16″ board, terrain, miniatures, measurements), then the cards
-(Ministries, Artifact, planning revealed simultaneously).
+Planned next steps: the cards (Ministries, Artifact, planning revealed simultaneously), a ruler
+and a line of sight shared with the opponent (the terrain outlines are in the manifest), dice
+linked to the cogs (characteristic, modifiers) and an opposed attack / reaction flow.
 
 ## Statistics
 
@@ -737,7 +868,8 @@ included, anonymous like the archives (no player names, no comments, no tokens):
   player of a game: faction, VP for and against, result, P1, opposing factions, rank 3 cog) and
   `cards.csv` (one row per card of a cabal played, with its result).
 
-Ids: `T-{event}-{n}` for an event's game, `Z-{id}` for a zone's. Card ids are the catalog's, with
+Ids: `T-{event}-{n}` for an event's game, `Z-{id}` for a zone's. `source`: `tournament`, `zone`, or `online`
+(a zone game recorded from an online game, its code in `copied_from`). Card ids are the catalog's, with
 their names in the reference language. An event's players are numbered (registration order);
 a zone's are not followed from one game to the next. The `counted` column marks the games counted
 in "All": a zone game copied from an archived event (`copied_from`) is counted in the event,
@@ -757,6 +889,9 @@ optional, shown in the list of games, never counted.
   when a manager closes it by hand (reversible). Managers change the settings (not the managers,
   the mode or the visibility) and moderate the games; editors and admins can do everything on
   every zone (logged in the admin panel's log).
+- **Online games**: a zone of kind Online can **receive the online games** (editors and admins;
+  one at a time: ticking it on a zone unticks it on the others; changed to another kind, it stops).
+  The results of the free online games are recorded there (see "Online games").
 - **Entering a game** ("Record a game"): **anyone, without an account**, in an open zone.
   Duel (1 v 1) or **2 v 2** (any factions, VP per team; cabals of 2 cogs in 2 v 2). Every field is
   required (marked with an asterisk) except the names (optional, never counted): the faction and the cabal played of each
@@ -975,11 +1110,13 @@ names, texts, illustrations, logos and pictograms belong to Occicat Games; the c
 does not apply to them and grants no right to reuse them. This covers:
 
 - `src/Olomoc.Shared/wwwroot/img/` — card images, faction logos, Ministry emblems, pictograms
-  and stat icons;
+  and stat icons, the table's mats, terrain, markers and tokens (from the Vassal module), the
+  ministry and artefact cards and the hostiles' profiles (`img/offblock/`, from the Vassal module);
 - `src/Olomoc.Shared/wwwroot/i18n/*/cards.json` — card names and game effects, Ministry and
   faction names;
-- `src/Olomoc.Shared/wwwroot/data/` — card catalog and faction reference;
-- the agenda names and the game vocabulary used in `i18n/*/ui.json`.
+- `src/Olomoc.Shared/wwwroot/data/` — card catalog and faction reference, table manifest;
+- the agenda names, the agendas' setups (`src/Olomoc.Shared/Online/AgendaSetups.cs`, after
+  the Recueil des agendas) and the game vocabulary used in `i18n/*/ui.json`.
 
 To reuse this content elsewhere, ask Occicat Games for permission
 ([occicat.com](https://www.occicat.com/)).

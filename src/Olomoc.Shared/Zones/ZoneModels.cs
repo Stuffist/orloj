@@ -42,6 +42,11 @@ public sealed class Zone : IStoredDocument
     /// <summary>Test zone: outside the list (reachable by its link) and the overall statistics.</summary>
     public bool Hidden { get; set; }
     /// <summary>
+    /// Receives the results of the free online games (a zone of kind <see cref="ZoneKind.Online"/>, a
+    /// single one at a time, chosen by the zone admins).
+    /// </summary>
+    public bool ReceivesOnline { get; set; }
+    /// <summary>
     /// Its hexagon on the map (index in <see cref="ZoneMapLayout.Slots"/>): given once, the most central
     /// free one, and kept whatever changes (a deleted zone frees it). Null: not given yet.
     /// </summary>

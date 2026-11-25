@@ -1,6 +1,7 @@
 using Olomoc.Models;
 using Olomoc.Services;
 using Olomoc.Tournaments;
+using Olomoc.Zones;
 
 namespace Olomoc.Online;
 
@@ -21,7 +22,14 @@ public static class OnlineRules
     public const int Success = 5;               // success threshold of the D6 (rulebook p.10)
     public const int MaxVictoryPoints = 99;
 
-    public static OnlineResult Apply(OnlineGame g, int seat, OnlineCommand c, CatalogService catalog, Random random, DateTimeOffset now)
+    /// <summary>
+    /// Agendas offered online: the official ones but La Gargoule (its 7 activation cards replacing the
+    /// ministries are not played online).
+    /// </summary>
+    public static readonly IReadOnlyList<string> OnlineAgendas = Agendas.All.Where(id => id != "GARGOYLE").ToList();
+
+    public static OnlineResult Apply(OnlineGame g, int seat, OnlineCommand c, CatalogService catalog, Random random, DateTimeOffset now,
+        TableManifest? table = null)
     {
         var problems = c.Type switch
         {
@@ -29,11 +37,23 @@ public static class OnlineRules
             OnlineCommandType.SetCabal => SetCabal(g, seat, c.Cabal, catalog),
             OnlineCommandType.SetReady => One(SetReady(g, seat, c.Flag == true, catalog, now)),
             OnlineCommandType.RollInitiative => One(RollInitiative(g, seat, random, now)),
-            OnlineCommandType.ChooseAgenda => One(ChooseAgenda(g, seat, c.Text, now)),
-            OnlineCommandType.DrawAgenda => One(ChooseAgenda(g, seat, Agendas.All[random.Next(Agendas.All.Count)], now)),
+            OnlineCommandType.ChooseAgenda => One(ChooseAgenda(g, seat, c.Text, c.Flag == true, random, now)),
             OnlineCommandType.UpdateState => One(UpdateState(g, seat, c.State, c.BasedOn, c.Note, catalog, now)),
             OnlineCommandType.Undo => One(Undo(g, seat, now)),
             OnlineCommandType.SetEndCycle => One(SetEndCycle(g, seat, c.Flag == true, now)),
+            OnlineCommandType.SetBoard or OnlineCommandType.AddPiece or OnlineCommandType.MovePiece or OnlineCommandType.RemovePiece
+                or OnlineCommandType.SetAuras or OnlineCommandType.SetMagnet
+                or OnlineCommandType.SetLock or OnlineCommandType.SetClaim
+                => One(TableRules.Apply(g, seat, c, table, now)),
+            OnlineCommandType.RollDice or OnlineCommandType.RerollDice or OnlineCommandType.SetDiceThreshold
+                => One(DiceRules.Apply(g, seat, c, random, now)),
+            OnlineCommandType.SetDecks => One(SetDecks(g, seat, c.Decks, c.Flag == true, random, now)),
+            OnlineCommandType.Mechanism or OnlineCommandType.ReshuffleArtifact or OnlineCommandType.IndraSwap
+                => One(DeckRules.Apply(g, seat, c, random, now)),
+            OnlineCommandType.SetPlanning or OnlineCommandType.RevealPhase => One(PlanningRules.Apply(g, seat, c, now)),
+            OnlineCommandType.SetUp => One(SetUp(g, seat, c.Text, table, random, now)),
+            OnlineCommandType.Restart => One(Restart(g, seat, now)),
+            OnlineCommandType.ConfirmResult => One(ConfirmResult(g, seat, c.Vp, now)),
             _ => One(Problem.Of("onlineCommand")),
         };
         if (problems.Count > 0) return new(problems);
@@ -113,6 +133,7 @@ public static class OnlineRules
             s.StateRevision++;
         }
         g.Step = OnlineStep.Initiative;
+        g.Table = TableRules.Create(g);
         Log(g, null, now, "start");
     }
 
@@ -147,15 +168,86 @@ public static class OnlineRules
 
     public static int Successes(IEnumerable<int> dice) => dice.Count(d => d >= Success);
 
-    /// <summary>Agenda of the game (rulebook p.31, step 2), chosen or drawn at random by P1.</summary>
-    public static Problem? ChooseAgenda(OnlineGame g, int seat, string? id, DateTimeOffset now)
+    /// <summary>
+    /// Agenda of the game (rulebook p.31, step 2), chosen or drawn at random by P1 (the draw is made in
+    /// the interface, to confirm or redraw): a drawn one has its decks drawn with it (P1 can still change them).
+    /// </summary>
+    public static Problem? ChooseAgenda(OnlineGame g, int seat, string? id, bool drawn, Random random, DateTimeOffset now)
     {
         if (NotAt(g, OnlineStep.Agenda) is { } p) return p;
         if (g.First != seat) return Problem.Of("onlineNotFirst");
-        if (id is null || !Agendas.All.Contains(id)) return Problem.Of("scenario");
+        if (id is null || !OnlineAgendas.Contains(id)) return Problem.Of("scenario");
         g.Agenda = new Scenario(id);
         g.Step = OnlineStep.Cycle;
         Log(g, seat, now, "agenda", id);
+        return drawn ? SetDecks(g, seat, null, true, random, now) : null;
+    }
+
+    /// <summary>
+    /// Artifact and Ministry decks of the scenario (in the game's header), by P1: given, or drawn at random
+    /// (Flag); once the agenda is chosen, until the game is set up (ministries dealt).
+    /// </summary>
+    public static Problem? SetDecks(OnlineGame g, int seat, IReadOnlyList<string?>? decks, bool draw, Random random, DateTimeOffset now)
+    {
+        if (g.Step is OnlineStep.Lobby or OnlineStep.Finished) return Problem.Of("onlineStep");
+        if (g.First != seat) return Problem.Of("onlineNotFirst");
+        if (g.Agenda is not { } agenda) return Problem.Of("onlineAgendaNone");
+        if (DeckRules.Started(g)) return Problem.Of("onlineDecksLocked");
+        var (artifact, ministry) = draw
+            ? (Decks.Artifacts[random.Next(Decks.Artifacts.Count)], Decks.Ministries[random.Next(Decks.Ministries.Count)])
+            : (decks?.ElementAtOrDefault(0), decks?.ElementAtOrDefault(1));
+        if (artifact is not null && !Decks.IsArtifact(artifact) || ministry is not null && !Decks.IsMinistry(ministry)) return Problem.Of("onlineDecks");
+        // Another Artefact deck: the pile built by a Mécanisme before the setup starts again.
+        if (artifact != agenda.Artifact && g.Decks is { ArtifactDeck: not null }) g.Decks = null;
+        g.Agenda = agenda with { Artifact = artifact, Ministry = ministry };
+        Log(g, seat, now, "decks", artifact ?? "", ministry ?? "");
+        return null;
+    }
+
+    /// <summary>
+    /// « Placer + distribuer », by P1 once the decks are chosen: the agenda's elements on the mat (its
+    /// variant: Text; none for an agenda with nothing to place), the ministries dealt, the Artefact pile built. Then the decks can no longer change.
+    /// </summary>
+    public static Problem? SetUp(OnlineGame g, int seat, string? variant, TableManifest? manifest, Random random, DateTimeOffset now)
+    {
+        if (g.Step is OnlineStep.Lobby or OnlineStep.Finished) return Problem.Of("onlineStep");
+        if (g.First != seat) return Problem.Of("onlineNotFirst");
+        if (g.Agenda is not { Artifact: not null, Ministry: not null }) return Problem.Of("onlineDecksNone");
+        if (DeckRules.Started(g)) return Problem.Of("onlineDealt");
+        // Placing checks everything before changing anything; dealing and the pile cannot fail after it.
+        // An agenda with nothing on the mat (Visites, Sabotage…): only the cards.
+        if (AgendaSetups.Of(g.Agenda.Id) is { Variants.Count: > 0 } && AgendaSetups.Place(g, seat, variant, manifest, now) is { } p) return p;
+        DeckRules.SetUp(g, seat, random, now);
+        return null;
+    }
+
+    /// <summary>
+    /// The game started again from the lobby (a player, with a confirmation in the interface): names and
+    /// cabals kept, but neither ready; the setup, the table, the decks and the sides forgotten. Not once
+    /// a result is confirmed (it is in the statistics).
+    /// </summary>
+    public static Problem? Restart(OnlineGame g, int seat, DateTimeOffset now)
+    {
+        if (g.Step == OnlineStep.Lobby) return Problem.Of("onlineStep");
+        if (g.Result is not null) return Problem.Of("onlineRestartResult");
+        g.Step = OnlineStep.Lobby;
+        g.Cycle = 1;
+        g.First = null;
+        g.Agenda = null;
+        g.Table = null;
+        g.Planning = null;
+        g.Decks = null;
+        g.Dice = null;
+        foreach (var s in g.Seats)
+        {
+            s.Ready = false;
+            s.Initiative = null;
+            s.State = null;
+            s.StateRevision++;            // a side sent from before the restart is refused
+            s.Undo.Clear();
+            s.EndCycleReady = false;
+        }
+        Log(g, seat, now, "restart");
         return null;
     }
 
@@ -249,6 +341,7 @@ public static class OnlineRules
             if (bile > 0) Log(g, g.Seats.IndexOf(s), now, "bile", bile.ToString());
         }
         Log(g, null, now, "endCycle", g.Cycle.ToString());
+        PlanningRules.EndCycle(g);                // a new planning; the ministry played discarded
         g.Cycle++;
         if (g.Cycle > GameSession.Cycles) g.Step = OnlineStep.Finished;
         return null;
@@ -267,13 +360,54 @@ public static class OnlineRules
     /// <summary>Game stopped before the end of the 4th cycle: a Bile at 3, or the hunt at 3.</summary>
     public static bool IsOver(OnlineGame g) => g.Seats.Any(IsOver) || Hunt(g) >= GameSession.MaxHunt;
 
+    /// <summary>Cause of the end: a Bile at 3, otherwise the hunt at 3, otherwise the end of the 4th cycle.</summary>
+    public static GameEnd EndOf(OnlineGame g) =>
+        g.Seats.Any(IsOver) ? GameEnd.Bile : Hunt(g) >= GameSession.MaxHunt ? GameEnd.PoliSec : GameEnd.FourthCycle;
+
+    /// <summary>
+    /// Result of the game, once it is over (4th cycle ended, a Bile or the hunt at 3): VP of each seat
+    /// (read from the sheets, corrected if needed). One player is enough; confirming again replaces it
+    /// (the statistics follow).
+    /// </summary>
+    public static Problem? ConfirmResult(OnlineGame g, int seat, IReadOnlyList<int>? vp, DateTimeOffset now)
+    {
+        if (!Ended(g)) return Problem.Of("onlineNotOver");
+        // On its tournament table: corrected there by the organizer.
+        if (g is { Tournament: not null, Result.Recorded: true }) return Problem.Of("onlineResultRecorded");
+        if (vp is not { Count: OnlineGame.SeatCount } || vp.Any(v => v is < 0 or > MaxVictoryPoints))
+            return Problem.Of("victoryPoints", MaxVictoryPoints.ToString());
+        g.Result = new OnlineGameResult(vp.ToList(), EndOf(g), seat, now);
+        g.Step = OnlineStep.Finished;
+        Log(g, seat, now, "result", vp[0].ToString(), vp[1].ToString());
+        return null;
+    }
+
     private static void Remember(Seat s)
     {
         s.Undo.Add(GameSession.ToJson(s.State!));
         if (s.Undo.Count > UndoDepth) s.Undo.RemoveAt(0);
     }
 
-    private static void Log(OnlineGame g, int? seat, DateTimeOffset now, string key, params string[] args)
+    /// <summary>Over: the 4th cycle ended, or a Bile or the hunt at 3 (whether the result is confirmed or not).</summary>
+    public static bool Ended(OnlineGame g) => g.Step == OnlineStep.Finished || g.Step == OnlineStep.Cycle && IsOver(g);
+
+    /// <summary>Result taken from the sheets (VP counters), when nobody confirmed it.</summary>
+    public static OnlineGameResult ResultFromSheets(OnlineGame g, DateTimeOffset now) =>
+        new(g.Seats.Select(s => s.State?.VictoryPoints ?? 0).ToList(), EndOf(g), null, now);
+
+    /// <summary>
+    /// The game as a duel of the Block (seat 0: side A): cabals played (without their name), VP, P1, end,
+    /// agenda; no player names, like a tournament copy. Null if a cabal is missing.
+    /// </summary>
+    public static ZoneGame? ZoneGameOf(OnlineGame g, OnlineGameResult result)
+    {
+        if (g.Seats.Count != OnlineGame.SeatCount || g.Seats.Any(s => s.Cabal?.Faction?.Code is null)) return null;
+        ZoneSide Side(int i) => new([new ZonePlayer(g.Seats[i].Cabal!.Faction!.Code, null, g.Seats[i].Cabal! with { Name = null })], result.Vp[i]);
+        return new ZoneGame(GameFormat.Duel, DateOnly.FromDateTime(result.ConfirmedAt.UtcDateTime), Side(0), Side(1),
+            g.First switch { 0 => TableSide.A, 1 => TableSide.B, _ => null }, result.End, g.Agenda);
+    }
+
+    internal static void Log(OnlineGame g, int? seat, DateTimeOffset now, string key, params string[] args)
     {
         g.Log.Add(new OnlineLogEntry(now, seat, key, args.Length == 0 ? null : args));
         if (g.Log.Count > MaxLog) g.Log.RemoveRange(0, g.Log.Count - MaxLog);
@@ -303,5 +437,11 @@ public static class OnlineRules
                 IsOver(s));
         }).ToList(),
         g.Tournament,
-        g.Log.Skip(Math.Max(0, g.Log.Count - logSize)).ToList());
+        g.Log.Skip(Math.Max(0, g.Log.Count - logSize)).ToList(),
+        // A game stored before the table: an empty one (stored at its first table command).
+        g.Table ?? (g.Step != OnlineStep.Lobby ? TableRules.Create(g) : null),
+        g.Result,
+        g.Dice,
+        DeckRules.View(g, me),
+        PlanningRules.View(g, me));
 }

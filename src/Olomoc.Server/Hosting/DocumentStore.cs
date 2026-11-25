@@ -149,12 +149,17 @@ public class DocumentStore<T> where T : class, IStoredDocument, new()
     /// Deletes the documents unchanged since <paramref name="maxAge"/> that
     /// <paramref name="removable"/> accepts; returns their number.
     /// </summary>
-    public async Task<int> PurgeAsync(TimeSpan maxAge, Func<T, bool> removable)
+    /// <summary>Codes of the documents unchanged for <paramref name="maxAge"/> (candidates for a purge).</summary>
+    public async Task<List<string>> StaleAsync(TimeSpan maxAge)
     {
         var limit = DateTime.UtcNow - maxAge;
-        List<string> candidates;
-        await using (var db = await _db.CreateDbContextAsync())
-            candidates = await db.Documents.Where(d => d.Kind == _kind && d.UpdatedAt < limit).Select(d => d.Code).ToListAsync();
+        await using var db = await _db.CreateDbContextAsync();
+        return await db.Documents.Where(d => d.Kind == _kind && d.UpdatedAt < limit).Select(d => d.Code).ToListAsync();
+    }
+
+    public async Task<int> PurgeAsync(TimeSpan maxAge, Func<T, bool> removable)
+    {
+        var candidates = await StaleAsync(maxAge);
         var removed = 0;
         foreach (var code in candidates)
         {

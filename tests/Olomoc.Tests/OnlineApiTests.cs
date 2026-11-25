@@ -63,17 +63,6 @@ public sealed class OnlineApiTests : IAsyncDisposable
         Assert.True(r.Ok, string.Join(", ", r.Problems.Select(p => p.Key)));
     }
 
-    private static async Task<(CabalExport A, CabalExport B)> MaiselCabals()
-    {
-        var d = await AppData.GetAsync();
-        var x = new CabalExporter(d.L);
-        CabalExport Cabal(string name, params (string Cog, string Equipment)[] slots) =>
-            x.ToModel(name, "MAISEL", slots.Select(s => (Cog?)d.Cog(s.Cog)).ToArray(),
-                slots.Select(s => (Equipment?)d.Equipment(s.Equipment)).ToArray());
-        return (Cabal("A", ("3R06", "E03" /* Phéromones */), ("2R08", "D01" /* Carapace */), ("1R01", "E11" /* Harmonium */)),
-                Cabal("B", ("3R06", "E03" /* Phéromones */), ("2R11", "E07" /* Ration */), ("1R01", "E11" /* Harmonium */)));
-    }
-
     private static async Task<T> Read<T>(HttpResponseMessage response) =>
         (await response.Content.ReadFromJsonAsync<T>(TournamentJson.Options))!;
 
@@ -81,7 +70,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
     public async Task Free_game_end_to_end()
     {
         var server = Server();
-        var (cabalA, cabalB) = await MaiselCabals();
+        var (_, cabalA, cabalB) = await OnlineTestGame.Cabals();
         var response = await server.CreateClient().PostAsJsonAsync("/api/online", new CreateOnlineRequest("Ana"), TournamentJson.Options);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var created = await Read<OnlineCreated>(response);
@@ -111,7 +100,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
             await Ok(b, new(OnlineCommandType.RollInitiative));
         }
         var first = (await View(a))!.First!.Value;
-        await Ok(first == 0 ? a : b, new(OnlineCommandType.DrawAgenda));
+        await Ok(first == 0 ? a : b, new(OnlineCommandType.ChooseAgenda, "VISITS"));
         Assert.Equal(OnlineStep.Cycle, (await View(a))!.Step);
 
         // A wounds one of their cogs: B and the spectator see it.
@@ -132,7 +121,7 @@ public sealed class OnlineApiTests : IAsyncDisposable
     {
         var server = Server();
         var http = server.CreateClient();
-        var (cabalA, cabalB) = await MaiselCabals();
+        var (_, cabalA, cabalB) = await OnlineTestGame.Cabals();
         var t = await Read<TournamentCreated>(await http.PostAsJsonAsync("/api/tournaments",
             new CreateTournamentRequest("Open", null, 3, 2), TournamentJson.Options));
         async Task<PlayerRegistered> Register(string name) => await Read<PlayerRegistered>(await http.PostAsJsonAsync(

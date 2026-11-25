@@ -14,6 +14,7 @@ builder.Services.AddScoped<LocalizationService>();
 builder.Services.AddScoped<AccountService>();           // session (cookie)
 builder.Services.AddScoped<ICabalCloud>(sp => sp.GetRequiredService<AccountService>());   // account cabals
 builder.Services.AddScoped<CatalogService>();
+builder.Services.AddScoped<TableAssets>();             // online games: boards, terrain, tokens
 builder.Services.AddScoped<CabalExporter>();
 builder.Services.AddScoped<CabalLibrary>();             // "My cabals"
 builder.Services.AddScoped<GameStore>();                // game in progress (menu, play mode)
@@ -36,6 +37,7 @@ builder.Services.AddScoped<AccountDirectory>();          // account names and pu
 // Online games.
 builder.Services.AddScoped<OnlineApi>();
 builder.Services.AddScoped<OnlineConnection>();         // SignalR hub, opened on a game's page
+builder.Services.AddScoped<MySide>();                   // the player's side of the online game (each window its own)
 builder.Services.AddScoped<MyGames>();
 builder.Services.AddScoped<OnlineLauncher>();          // lobby opened, which became the current game
 

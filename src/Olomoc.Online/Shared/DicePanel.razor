@@ -1,0 +1,100 @@
+@inject LocalizationService L
+
+@* Shared dice roller (DiceRules): the action, and under it the reaction that answers it (dodge,
+   riposte). Rolled by the server, the same for both players, open to both. Successes lit at the
+   chosen threshold, and counted for each threshold (2+ to 5+: the base 5+, lowered by support or a
+   charge). "Reroll the failures": the dice under the threshold again (trying fate; the Darkness token
+   stays on the sheet); a whole new roll: "Roll" again. *@
+
+<section class="tb-dice" aria-label="@L.Ui("online.dice.title")">
+    @foreach (var slot in DiceRules.Slots)
+    {
+        var s = slot;
+        var roll = View.Dice?.GetValueOrDefault(slot);
+        <div class="tb-dice-box @slot">
+            <div class="tb-dice-head">
+                <strong>@L.Ui($"online.dice.{slot}")</strong>
+                @if (CanRoll)
+                {
+                    <span class="tb-dice-count">
+                        <button class="step" type="button" disabled="@(Count(s) <= 1)" @onclick="() => Change(s, -1)" aria-label="−">−</button>
+                        <span>@L.Ui("online.dice.d6", Count(s))</span>
+                        <button class="step" type="button" disabled="@(Count(s) >= DiceRules.MaxDice)" @onclick="() => Change(s, 1)" aria-label="+">+</button>
+                    </span>
+                    <button class="btn small primary" type="button" @onclick="() => RollAsync(s)">🎲 @L.Ui("online.dice.roll")</button>
+                }
+            </div>
+            @* The dice and, beside them, the successes per threshold; before the first roll, the same frame
+               (empty dice, thresholds without a count), so that nothing moves when it comes. *@
+            <div class="tb-dice-result">
+                <div class="tb-dice-faces">
+                    @if (roll is not null)
+                    {
+                        @foreach (var face in roll.Faces)
+                        {
+                            <Die Face="face" Hit="@(face >= roll.Threshold)" />
+                        }
+                    }
+                    else
+                    {
+                        @for (var k = 0; k < Count(s); k++)
+                        {
+                            <span class="online-die tb-die-empty"></span>
+                        }
+                    }
+                </div>
+                <div class="tb-dice-thresholds" role="group" aria-label="@L.Ui("online.dice.threshold")">
+                    @for (var t = DiceRules.MinThreshold; t <= DiceRules.MaxThreshold; t++)
+                    {
+                        var threshold = t;
+                        <button class="tb-threshold @(t == roll?.Threshold ? "on" : null)" type="button" disabled="@(!CanRoll || roll is null)"
+                                aria-pressed="@(t == roll?.Threshold)" title="@L.Ui("online.dice.threshold.title", t)"
+                                @onclick="() => Send(new(OnlineCommandType.SetDiceThreshold, s, Threshold: threshold))">
+                            <span>@L.Ui("online.dice.at", t)</span>
+                            <strong>@(roll is null ? "–" : DiceRules.Successes(roll.Faces, t).ToString())</strong>
+                        </button>
+                    }
+                </div>
+            </div>
+            @if (roll is null)
+            {
+                <div class="tb-dice-foot"><span class="hint">@L.Ui("online.dice.none")</span></div>
+            }
+            else
+            {
+                <div class="tb-dice-foot">
+                    <span class="hint">
+                        @L.Ui("online.dice.by", View.Seats.ElementAtOrDefault(roll.Seat)?.Name ?? "")
+                        @if (roll.Rerolls > 0)
+                        {
+                            <span> · @L.Ui("online.dice.rerolled", roll.Rerolls)</span>
+                        }
+                    </span>
+                    @if (CanRoll)
+                    {
+                        <button class="btn small" type="button" title="@L.Ui("online.dice.reroll.title")" disabled="@(roll.Faces.All(face => face >= roll.Threshold))"
+                                @onclick="() => Send(new(OnlineCommandType.RerollDice, s))">↻ @L.Ui("online.dice.reroll")</button>
+                    }
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public OnlineView View { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<OnlineCommand, Task> Send { get; set; } = default!;
+
+    private const int DefaultCount = 3;
+
+    // Number of dice of the next roll, per slot: the last roll's at first.
+    private readonly Dictionary<string, int> _count = new();
+
+    private bool CanRoll => View.Me is not null && View.Step is OnlineStep.Initiative or OnlineStep.Agenda or OnlineStep.Cycle;
+
+    private int Count(string slot) => _count.TryGetValue(slot, out var n) ? n : View.Dice?.GetValueOrDefault(slot)?.Faces.Count ?? DefaultCount;
+
+    private void Change(string slot, int delta) => _count[slot] = Math.Clamp(Count(slot) + delta, 1, DiceRules.MaxDice);
+
+    private Task RollAsync(string slot) => Send(new(OnlineCommandType.RollDice, slot, Count: Count(slot)));
+}

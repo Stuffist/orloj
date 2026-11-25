@@ -1,0 +1,1037 @@
+@implements IAsyncDisposable
+@inject LocalizationService L
+@inject CatalogService Catalog
+@inject TableAssets Files
+@inject IJSRuntime JS
+@inject MySide Side
+
+@* Table of the game (40 cm mat), played freely as on Vassal: each player moves their cogs and
+   equipment tokens, both move the terrain and markers; the server keeps and relays the positions.
+   SVG in millimetres; gestures in js/table.js (drag, zoom, pan, ruler), placing from the tray: a
+   click on the item, then on the board. In the game page, and alone in a detached window. *@
+
+@if (!Files.Loaded || View.Table is not { } table)
+{
+    <section class="panel"><p class="loading">@L.Ui("app.loading")</p></section>
+}
+else
+{
+    var board = Files.Manifest.Board(table.Board) ?? Files.Manifest.Boards.FirstOrDefault();
+    <section class="panel tb-panel" @ref="_panel">
+        <div class="tb-head">
+            <h2>@L.Ui("online.table.title")</h2>
+            <div class="tb-tools">
+                @if (Playing && View.Me is not null)
+                {
+                    <select aria-label="@L.Ui("online.table.board")" value="@table.Board" @onchange="SetBoardAsync">
+                        @foreach (var b in Files.Manifest.Boards)
+                        {
+                            <option value="@b.Id">@L.Ui($"online.table.board.{b.Id}")</option>
+                        }
+                    </select>
+                }
+                <button class="btn small @(_ruler ? "primary" : null)" type="button" aria-pressed="@_ruler" title="@L.Ui("online.table.ruler.title")"
+                        @onclick="ToggleRulerAsync">📏 @L.Ui("online.table.ruler")</button>
+                <button class="btn small @(_grid ? "primary" : null)" type="button" aria-pressed="@_grid"
+                        @onclick="() => _grid = !_grid">@L.Ui("online.table.grid")</button>
+                <button class="btn small" type="button" title="@L.Ui("online.table.zoomIn")" @onclick="() => ZoomAsync(0.8)">+</button>
+                <button class="btn small" type="button" title="@L.Ui("online.table.zoomOut")" @onclick="() => ZoomAsync(1.25)">−</button>
+                <button class="btn small" type="button" title="@L.Ui("online.table.fit")" @onclick="() => ZoomAsync(0)">⤢</button>
+                <button class="btn small" type="button" title="@L.Ui("online.table.fullscreen.title")" @onclick="FullscreenAsync">⛶ @L.Ui("online.table.fullscreen")</button>
+                @HeadContent
+            </div>
+        </div>
+
+        @* Above the mat: the dice, and the actions of the selected piece. *@
+        <div class="tb-top">
+            <DicePanel View="View" Send="Send" />
+            <div class="tb-selection">
+                @if (SelectedPiece(table) is { } s)
+                {
+                    <strong>@Name(s)</strong>
+                    @if (CanAura && HasBase(s))
+                    {
+                        <span class="tb-aura-keys" title="@L.Ui("online.table.auras.title")">
+                            @for (var n = 1; n <= TableRules.MaxAura; n++)
+                            {
+                                var inches = n;
+                                var on = AurasOf(s).Contains(n);
+                                <button class="btn small @(on ? "primary" : null)" type="button" aria-pressed="@on" @onclick="() => ToggleAuraAsync(s, inches)">@n</button>
+                            }
+                            <button class="btn small" type="button" title="@L.Ui("online.table.auras.clear")" disabled="@(AurasOf(s).Count == 0)"
+                                    @onclick="() => SetAurasAsync(s, [])">0</button>
+                        </span>
+                    }
+                    @if (Movable(s))
+                    {
+                        @if (s.Kind == PieceKind.Marker)
+                        {
+                            @for (var i = 0; i < View.Seats.Count; i++)
+                            {
+                                var claimSide = i;
+                                var claimed = s.Claims.Contains(i);
+                                <button class="btn small tb-claim-toggle @SeatClass(i) @(claimed ? "on" : null)" type="button" aria-pressed="@claimed"
+                                        title="@L.Ui("online.table.claim.title", View.Seats[i].Name)"
+                                        @onclick="() => Send(new(OnlineCommandType.SetClaim, PieceId: s.Id, Side: claimSide, Flag: !claimed))">● @View.Seats[i].Name</button>
+                            }
+                        }
+                        @if (Lockable(s))
+                        {
+                            <button class="btn small @(s.Locked ? "primary" : null)" type="button" aria-pressed="@s.Locked"
+                                    title="@L.Ui(s.Locked ? "online.table.unlock" : "online.table.lock")"
+                                    @onclick="() => Send(new(OnlineCommandType.SetLock, PieceId: s.Id, Flag: !s.Locked))">@(s.Locked ? "🔒" : "🔓")</button>
+                        }
+                        @if (s.Kind == PieceKind.Template)
+                        {
+                            <button class="btn small @(s.Magnet ? "primary" : null)" type="button" aria-pressed="@s.Magnet" title="@L.Ui("online.table.magnet.title")"
+                                    @onclick="() => Send(new(OnlineCommandType.SetMagnet, PieceId: s.Id, Flag: !s.Magnet))">🧲 @L.Ui("online.table.magnet")</button>
+                        }
+                        @if (Free(s))
+                        {
+                            @if (!HasBase(s))
+                            {
+                                <button class="btn small" type="button" title="@L.Ui("online.table.rotateLeft")" @onclick="() => RotateAsync(s, -15)">⟲</button>
+                                <button class="btn small" type="button" title="@L.Ui("online.table.rotateRight")" @onclick="() => RotateAsync(s, 15)">⟳</button>
+                            }
+                            <button class="btn small" type="button" @onclick="() => RemoveAsync(s)">@L.Ui("online.table.remove")</button>
+                        }
+                    }
+                }
+                else
+                {
+                    <p class="hint">@L.Ui(Playing && View.Me is not null ? "online.table.selection.none" : "online.table.help.watch")</p>
+                }
+            </div>
+        </div>
+
+        @* The opponent on the left, the player on the right with the palettes (a spectator: seat 1 on the
+           left, seat 2 on the right). Each side: its state (Fiel, VP), then its cabal with the stats. *@
+        <div class="tb-main @(Beside ? "with-beside" : null)">
+            @* Beside the Block, on the far left: the Artefact (p.27) — the card drawn by the last Mécanisme
+               (upright as in the module, its effect in the hover text, the priority it gives), « Mécanisme »
+               and « Remélanger », its discard, how many Indra cards the opponent holds, the hostiles' profiles (bigger
+               when hovered, turned over on a click: instinct) — and the fallen ministry. *@
+            @if (Beside)
+            {
+                var decks = View.Decks;
+                var drawn = CardDecks.Artifact(decks?.Drawn);
+                var canAct = View.Me is not null && View.Step is OnlineStep.Initiative or OnlineStep.Agenda or OnlineStep.Cycle;
+                <aside class="tb-side tb-beside">
+                    @if (View.Agenda?.Artifact is { } artifactDeck)
+                    {
+                        <h4>@L.Ui("online.offblock.artifactTitle")</h4>
+                        <span class="hint">@L.Ui("online.offblock.pile", decks?.ArtifactDeck is null ? CardDecks.ArtifactDeck(artifactDeck).Count : decks.PileSize, decks?.Discard.Count ?? 0)</span>
+                        @if (drawn is not null)
+                        {
+                            <figure class="tb-beside-card" title="@CardDecks.Title(drawn)">
+                                @if (drawn.Source is not null)
+                                {
+                                    <img src="@Src(CardDecks.Image(drawn.Id))" alt="@drawn.Name" />
+                                }
+                                <figcaption>
+                                    @drawn.Name · @(drawn.Number ?? "?")
+                                    <strong>@(drawn.Priority is { } p ? L.Ui("online.offblock.priority", PriorityName(p)) : L.Ui("online.offblock.priority.unknown"))</strong>
+                                </figcaption>
+                            </figure>
+                        }
+                        @if (canAct)
+                        {
+                            <div class="tb-beside-tools">
+                                <button class="btn small primary" type="button" title="@L.Ui("online.offblock.mechanism.title")"
+                                        @onclick="() => Send(new(OnlineCommandType.Mechanism))">@L.Ui("online.offblock.mechanism")</button>
+                                <button class="btn small" type="button" title="@L.Ui("online.offblock.reshuffle.title")"
+                                        @onclick="() => Send(new(OnlineCommandType.ReshuffleArtifact))">@L.Ui("online.offblock.reshuffle")</button>
+                            </div>
+                        }
+                        @if (decks is { Discard.Count: > 0 })
+                        {
+                            <details class="tb-beside-list">
+                                <summary>@L.Ui("online.offblock.discard", decks.Discard.Count)</summary>
+                                <ul>
+                                    @foreach (var id in decks.Discard)
+                                    {
+                                        if (CardDecks.Artifact(id) is { } card) { <li title="@CardDecks.Title(card)">@card.Name · @card.Number</li> }
+                                    }
+                                </ul>
+                            </details>
+                        }
+                        @* Indra: how many cards the opponent's holds (the player's own: in their hand, Planification panel). *@
+                        @for (var holder = 0; holder < (decks?.IndraCounts.Count ?? 0); holder++)
+                        {
+                            if (holder == View.Me || decks!.IndraCounts[holder] == 0) continue;
+                            <p class="hint">@L.Ui("online.offblock.indra.other", View.Seats[holder].Name, decks.IndraCounts[holder])</p>
+                        }
+                        @foreach (var hostile in CardDecks.HostilesOf(artifactDeck, View.Agenda.Id))
+                        {
+                            var h = hostile;
+                            var back = _hostileBacks.Contains(h.Id);
+                            <h4>@L.Ui("online.offblock.hostile", h.Name)</h4>
+                            <button class="tb-hostile" type="button" title="@L.Ui("online.offblock.hostile.flip")" @onclick="() => FlipHostile(h.Id)">
+                                <img src="@Src(back ? CardDecks.Back(h) : CardDecks.Front(h))" alt="@h.Name" />
+                            </button>
+                        }
+                    }
+                    @if (CardDecks.Ministry(decks?.Fallen) is { } fallen)
+                    {
+                        <h4>@L.Ui("online.offblock.fallen")</h4>
+                        <figure class="tb-beside-card" title="@($"{fallen.Name} — {CardDecks.Text(fallen)}")">
+                            <img src="@Src(CardDecks.Image(fallen.Id))" alt="@fallen.Name" />
+                            <figcaption>@fallen.Name (@(fallen.Slot is { } slot ? slot.ToString() : $"1-{PlanningRules.Slots}"))</figcaption>
+                        </figure>
+                    }
+                </aside>
+            }
+            <aside class="tb-side">
+                <SideStatus View="View" Seat="LeftSeat" />
+                @Roster(table, LeftSeat)
+            </aside>
+
+            <div class="tb-stage">
+                <svg @ref="_svg" class="tb-board @(_placing is not null || _ruler ? "tb-aim" : null)" viewBox="0 0 @Board @Board"
+                     xmlns="http://www.w3.org/2000/svg" role="img" aria-label="@L.Ui("online.table.title")">
+                    <defs>
+                        <clipPath id="tb-round" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5" /></clipPath>
+                        <pattern id="tb-inch" width="@Num(Inch)" height="@Num(Inch)" patternUnits="userSpaceOnUse">
+                            <path d="M @Num(Inch) 0 L 0 0 0 @Num(Inch)" fill="none" stroke="rgba(255,255,255,.25)" stroke-width=".4" />
+                        </pattern>
+                    </defs>
+                    <rect x="@Num(-TableRules.Margin)" y="@Num(-TableRules.Margin)" width="@Num(Span)" height="@Num(Span)" class="tb-outside" />
+                    @if (board is not null)
+                    {
+                        <image href="@Src(board.Image)" x="0" y="0" width="@Board" height="@Board" preserveAspectRatio="none" />
+                    }
+                    <rect x="0" y="0" width="@Board" height="@Board" class="tb-edge" />
+                    @if (_grid)
+                    {
+                        <rect x="0" y="0" width="@Board" height="@Board" fill="url(#tb-inch)" pointer-events="none" />
+                    }
+
+                    @foreach (var p in OnBoard(table).Where(p => p.Kind == PieceKind.Terrain))
+                    {
+                        if (Files.Manifest.TerrainOf(p.Ref) is not { } t) continue;
+                        var (x, y, r) = At(p);
+                        <g class="tb-piece @(p.Id == _selected ? "selected" : null) @(p.Locked ? "locked" : null)" data-piece="@p.Id" data-movable="@(Free(p) ? "" : null)"
+                           data-at="@Num(x) @Num(y)" data-rotate="@r" transform="translate(@Num(x) @Num(y)) rotate(@r)">
+                            <title>@Name(p)</title>
+                            <image href="@Src(t.Image)" x="@Num(-t.Width / 2)" y="@Num(-t.Height / 2)" width="@Num(t.Width)" height="@Num(t.Height)" preserveAspectRatio="none" />
+                            @if (p.Id == _selected)
+                            {
+                                <rect class="tb-select" x="@Num(-t.Width / 2 + Inset)" y="@Num(-t.Height / 2 + Inset)" width="@Num(t.Width - 2 * Inset)" height="@Num(t.Height - 2 * Inset)" />
+                            }
+                        </g>
+                    }
+
+                    @* Movement templates: under the bases; the selected one has a handle to turn it. *@
+                    @foreach (var p in OnBoard(table).Where(p => p.Kind == PieceKind.Template))
+                    {
+                        if (Files.Manifest.Template(p.Ref) is not { } t) continue;
+                        var (x, y, r) = At(p);
+                        var (w, l) = (t.Width, t.Length);
+                        <g class="tb-piece tb-template @(p.Magnet ? "magnet" : null) @(p.Id == _selected ? "selected" : null)" data-piece="@p.Id"
+                           data-movable="@(Free(p) ? "" : null)" data-at="@Num(x) @Num(y)" data-rotate="@r" data-capsule="@Num(l) @Num(w)"
+                           data-magnet="@(p.Magnet ? "" : null)" transform="translate(@Num(x) @Num(y)) rotate(@r)">
+                            <title>@Name(p)</title>
+                            <image href="@Src(t.Image)" x="@Num(-w / 2)" y="@Num(-l / 2)" width="@Num(w)" height="@Num(l)" preserveAspectRatio="none" />
+                            @if (p.Magnet)
+                            {
+                                <rect class="tb-magnet" x="@Num(-w / 2 + Inset)" y="@Num(-l / 2 + Inset)" width="@Num(w - 2 * Inset)" height="@Num(l - 2 * Inset)" rx="@Num(w / 2 - Inset)" />
+                            }
+                            @if (p.Id == _selected)
+                            {
+                                <rect class="tb-select" x="@Num(-w / 2 + Inset)" y="@Num(-l / 2 + Inset)" width="@Num(w - 2 * Inset)" height="@Num(l - 2 * Inset)" rx="@Num(w / 2 - Inset)" />
+                            }
+                        </g>
+                    }
+
+                    @foreach (var p in OnBoard(table).Where(HasBase).OrderBy(p => p.Kind == PieceKind.Cog))
+                    {
+                        var (x, y, r) = At(p);
+                        var radius = Radius(p);
+                        <g class="tb-piece tb-token @SeatClass(p) @(Out(p) ? "tb-out" : null) @(p.Id == _selected ? "selected" : null) @(Sibling(p) ? "linked" : null)"
+                           data-piece="@p.Id" data-movable="@(Free(p) ? "" : null)" data-at="@Num(x) @Num(y)" data-rotate="@r" data-radius="@Num(radius)"
+                           transform="translate(@Num(x) @Num(y)) rotate(@r)">
+                            <title>@Name(p)</title>
+                            <circle r="@Num(radius)" class="tb-base" />
+                            @if (Image(p) is { } src)
+                            {
+                                <image href="@src" x="@Num(-radius)" y="@Num(-radius)" width="@Num(radius * 2)" height="@Num(radius * 2)" clip-path="url(#tb-round)" />
+                            }
+                            else
+                            {
+                                <g><text class="tb-initials" text-anchor="middle" dominant-baseline="central">@Initials(Name(p))</text></g>
+                            }
+                            @if (p.Kind == PieceKind.Marker && p.Claims.Count > 0)
+                            {
+                                @* Taken by a side: its color; by both: split diagonally. *@
+                                var a = radius / Math.Sqrt(2);
+                                <g class="tb-claims" pointer-events="none">
+                                    @if (p.Claims.Count == 1)
+                                    {
+                                        <circle r="@Num(radius)" class="tb-claim @SeatClass(p.Claims[0])" />
+                                    }
+                                    else
+                                    {
+                                        <path d="M @Num(-a) @Num(a) A @Num(radius) @Num(radius) 0 0 1 @Num(a) @Num(-a) Z" class="tb-claim @SeatClass(p.Claims[0])" />
+                                        <path d="M @Num(a) @Num(-a) A @Num(radius) @Num(radius) 0 0 1 @Num(-a) @Num(a) Z" class="tb-claim @SeatClass(p.Claims[1])" />
+                                    }
+                                </g>
+                            }
+                            @if (p.Number is { } number)
+                            {
+                                <g><text class="tb-number" text-anchor="middle" dominant-baseline="central">@number</text></g>
+                            }
+                            @if (p.Kind != PieceKind.Marker)
+                            {
+                                <circle r="@Num(radius - RingInset)" class="tb-ring" />
+                            }
+                            @if (p.Id == _selected)
+                            {
+                                <circle r="@Num(radius - Inset)" class="tb-select" />
+                            }
+                            else if (Sibling(p))
+                            {
+                                <circle r="@Num(radius - Inset)" class="tb-linked" />
+                            }
+                        </g>
+                    }
+
+                    @* Handles of the selected movement template or terrain, one at each end: above the bases,
+                       which never hide them (js/table.js turns the piece and them together). *@
+                    @if (SelectedPiece(table) is { } turned && Shown(turned) && Free(turned) && HalfLength(turned) is { } end)
+                    {
+                        var (x, y, r) = At(turned);
+                        <g class="tb-handles" data-handles-for="@turned.Id" transform="translate(@Num(x) @Num(y)) rotate(@r)">
+                            @foreach (var (side, sign) in new[] { ("front", -1), ("back", 1) })
+                            {
+                                <g>
+                                    <line class="tb-handle-arm" x1="0" y1="@Num(sign * end)" x2="0" y2="@Num(sign * (end + 7))" />
+                                    <circle class="tb-handle" data-handle="@side" cx="0" cy="@Num(sign * (end + 7))" r="3.5"><title>@L.Ui("online.table.turn")</title></circle>
+                                </g>
+                            }
+                        </g>
+                    }
+
+                    @* Controls on the piece itself, to its right (upright whatever its rotation): padlock of the
+                       terrain and objectives, colors of the objectives. On the selected piece only (a locked piece
+                       shows nothing more until selected). js/table.js leaves [data-control] to these clicks. *@
+                    @foreach (var p in OnBoard(table).Where(p => p.Id == _selected && Movable(p) && ControlsAt(p) is not null))
+                    {
+                        var (x, y, _) = At(p);
+                        var controls = Controls(p);
+                        <g class="tb-controls" transform="translate(@Num(x + ControlsAt(p)!.Value) @Num(y - (controls.Count - 1) * 4.5))">
+                            @for (var i = 0; i < controls.Count; i++)
+                            {
+                                var control = controls[i];
+                                var on = control.Seat is { } cs ? p.Claims.Contains(cs) : p.Locked;
+                                <g class="tb-control @(control.Seat is { } seatOf ? SeatClass(seatOf) : "lock") @(on ? "on" : null)" data-control="@control.Kind"
+                                   transform="translate(0 @Num(i * 9))" @onclick="() => ControlAsync(p, control)" @onclick:stopPropagation>
+                                    <title>@(control.Seat is { } ts ? L.Ui("online.table.claim.title", View.Seats[ts].Name) : L.Ui(p.Locked ? "online.table.unlock" : "online.table.lock"))</title>
+                                    <circle r="3.6" />
+                                    @if (control.Seat is null)
+                                    {
+                                        <g><text text-anchor="middle" dominant-baseline="central">@(p.Locked ? "🔒" : "🔓")</text></g>
+                                    }
+                                </g>
+                            }
+                        </g>
+                    }
+
+                    @* Ranges (keys 1 to 9 on the selected piece, 0: none), seen by both players. *@
+                    @foreach (var p in OnBoard(table).Where(p => HasBase(p) && AurasOf(p).Count > 0))
+                    {
+                        var (x, y, _) = At(p);
+                        var radius = Radius(p);
+                        <g class="tb-auras @SeatClass(p)" pointer-events="none">
+                            @foreach (var n in AurasOf(p))
+                            {
+                                <g>
+                                    <circle cx="@Num(x)" cy="@Num(y)" r="@Num(radius + n * Inch)" />
+                                    <text x="@Num(x)" y="@Num(y - radius - n * Inch + 3.5)" text-anchor="middle">@(n)″</text>
+                                </g>
+                            }
+                        </g>
+                    }
+
+                    @if (_measure is { } m)
+                    {
+                        <g class="tb-ruler" pointer-events="none">
+                            <line x1="@Num(m.X1)" y1="@Num(m.Y1)" x2="@Num(m.X2)" y2="@Num(m.Y2)" />
+                            <text x="@Num((m.X1 + m.X2) / 2)" y="@Num((m.Y1 + m.Y2) / 2 - 4)" text-anchor="middle">@m.Label</text>
+                        </g>
+                    }
+                    <g class="tb-ruler tb-ruler-live" style="display:none" pointer-events="none">
+                        <line /><text text-anchor="middle"></text>
+                    </g>
+                </svg>
+                <p class="hint tb-status">
+                    @if (_placing is { } placing)
+                    {
+                        @L.Ui("online.table.placing", placing.Label)
+                        <button class="btn small" type="button" @onclick="() => _placing = null">@L.Ui("online.table.cancel")</button>
+                    }
+                    else if (_ruler)
+                    {
+                        @L.Ui("online.table.ruler.help")
+                    }
+                    else
+                    {
+                        @L.Ui(Playing && View.Me is not null ? "online.table.help" : "online.table.help.watch")
+                    }
+                </p>
+                @if (_notice is { } notice)
+                {
+                    <p class="hint tb-notice">@L.Ui(notice)</p>
+                }
+            </div>
+
+            <aside class="tb-side">
+                <SideStatus View="View" Seat="RightSeat" />
+                @Roster(table, RightSeat)
+                @if (Playing && View.Me is not null)
+                {
+                    <details class="tb-palette" open="@(table.Pieces.All(p => p.Kind != PieceKind.Terrain))">
+                        <summary>@L.Ui("online.table.terrain")</summary>
+                        <div class="tb-items tb-thumbs">
+                            @foreach (var t in Files.Manifest.Terrain)
+                            {
+                                var (tid, tlabel) = (t.Id, TerrainName(t));
+                                <button class="tb-item @(_placing?.Ref == t.Id ? "on" : null)" type="button" title="@TerrainTitle(t)"
+                                        @onclick="() => StartPlacing(new(PieceKind.Terrain, tid, null, tlabel))">
+                                    <img src="@Src(t.Image)" alt="" />
+                                    <span>@tlabel</span>
+                                </button>
+                            }
+                        </div>
+                    </details>
+                    <details class="tb-palette">
+                        <summary>@L.Ui("online.table.markers")</summary>
+                        <div class="tb-items tb-thumbs">
+                            @foreach (var mk in Files.Manifest.Markers.Where(m => m.Id == ObjectiveMarker))
+                            {
+                                var (mid, mlabel) = (mk.Id, L.Ui($"online.table.marker.{mk.Id}"));
+                                <button class="tb-item @(_placing?.Ref == mk.Id ? "on" : null)" type="button"
+                                        @onclick="() => StartPlacing(new(PieceKind.Marker, mid, null, mlabel))">
+                                    <img src="@Src(mk.Image)" alt="" />
+                                    <span>@mlabel</span>
+                                </button>
+                            }
+                        </div>
+                    </details>
+                    <details class="tb-palette" open>
+                        <summary>@L.Ui("online.table.templates")</summary>
+                        <div class="tb-items tb-thumbs">
+                            @foreach (var tp in Files.Manifest.Templates ?? [])
+                            {
+                                var (tid, tlabel) = (tp.Id, L.Ui($"online.table.template.{tp.Id}"));
+                                <button class="tb-item @(_placing?.Ref == tp.Id ? "on" : null)" type="button"
+                                        @onclick="() => StartPlacing(new(PieceKind.Template, tid, null, tlabel))">
+                                    <img src="@Src(tp.Image)" alt="" />
+                                    <span>@tlabel</span>
+                                </button>
+                            }
+                        </div>
+                    </details>
+                }
+            </aside>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public OnlineView View { get; set; } = default!;
+    /// <summary>Sends a command (the page shows the problems and reads the view again).</summary>
+    [Parameter, EditorRequired] public Func<OnlineCommand, Task> Send { get; set; } = default!;
+    /// <summary>More buttons in the header (detach, bring back).</summary>
+    [Parameter] public RenderFragment? HeadContent { get; set; }
+
+    private const double Inch = TableManifest.MmPerInch;
+    // Numbers of the SVG: invariant (a French browser would write "406,4", refused).
+    private static readonly string Board = Num(TableManifest.BoardSize);
+    // Outlines drawn inside the pieces (half their stroke), never beyond: contacts stay exact.
+    private const double Inset = 0.6, RingInset = 0.8;
+    // The mat and the margin around it (where pieces may stick out): seen by zooming out; the view starts on the mat alone.
+    private const double Span = TableManifest.BoardSize + 2 * TableRules.Margin;
+
+    private ElementReference _svg, _panel;
+    private DotNetObjectReference<TablePanel>? _self;
+    private string? _js;
+    private bool _ruler, _grid;
+    private int? _selected;
+    private Placing? _placing;
+    private Measure? _measure;
+    // Positions shown before the server confirms them (drop, placing), until the next view.
+    private readonly Dictionary<int, (double? X, double? Y, int R)> _local = new();
+    private readonly Dictionary<int, IReadOnlyList<int>> _localAuras = new();
+    private int _revision = -1;
+
+    private sealed record Placing(PieceKind Kind, string Ref, int? PieceId, string Label, int? Side = null);
+    private sealed record Measure(double X1, double Y1, double X2, double Y2, string Label);
+
+    // From the initiative to the end of the game: pieces can be moved.
+    private bool Playing => View.Step is OnlineStep.Initiative or OnlineStep.Agenda or OnlineStep.Cycle;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Side.Changed += OnSideChanged;
+        await Files.EnsureLoadedAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (View.Revision == _revision) return;
+        _revision = View.Revision;
+        // Positions being nudged with the keyboard stay until they are sent.
+        foreach (var key in _local.Keys.Where(k => !_nudged.Contains(k)).ToList()) _local.Remove(key);
+        _localAuras.Clear();
+        if (_selected is { } id && View.Table?.Pieces.Any(p => p.Id == id) != true) _selected = null;
+        if (_pasted is { } pasted && View.Table?.Pieces.LastOrDefault(p => p.Id > pasted.After && p.Ref == pasted.Ref) is { } copy)
+        {
+            _selected = copy.Id;
+            _pasted = null;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // No table any more (the game restarted, in a detached window): its svg is gone; the gestures
+        // are attached to the next one.
+        if (View.Table is null) await DetachAsync();
+        if (_js is not null || View.Table is null || _svg.Context is null) return;
+        _self ??= DotNetObjectReference.Create(this);
+        _js = await JS.InvokeAsync<string>("olomocTable.attach", _svg, _self, TableManifest.BoardSize, TableRules.Margin);
+    }
+
+    // ---- Sides of the mat ----
+
+    // The player on the right, the opponent on the left; a spectator: seats 1 and 2.
+    private int RightSeat => View.Me ?? 1;
+    private int LeftSeat => 1 - RightSeat;
+
+    // A cabal next to the mat: each cog with its stats and what its sheet says (HP left, action
+    // tokens, Darkness, state), its cards below; a click shows its tokens on the mat, or puts one down.
+    private RenderFragment Roster(OnlineTable table, int seat) => __builder =>
+    {
+        // The player's own cabal: from their side as tracked here (up to date during an upload), editable.
+        var editable = seat == View.Me && View.Step == OnlineStep.Cycle && Side.Session is not null;
+                <ul class="tb-roster">
+                    @foreach (var cog in ((seat == View.Me ? Side.Session?.State.Cogs : null) ?? View.Seats[seat].State?.Cogs ?? []).OrderByDescending(c => c.Rank))
+                    {
+                        var (side, cogId) = (seat, cog.CogId);
+                        var tokens = Tokens(table, seat, cog.CogId);
+                        var placed = tokens.Count > 0;
+                        var linked = Linked(seat, cog.CogId);
+                        var name = CogName(cog.CogId);
+                        <li class="tb-cog @SeatClass(seat) @(cog.OutOfAction ? "ooa" : null) @(linked || _placing is { Kind: PieceKind.Cog } pl && pl.Ref == cog.CogId && pl.Side == seat ? "on" : null)">
+                            <div class="tb-cog-head">
+                                <button class="tb-cog-main" type="button" disabled="@(!placed && !CanPlace)"
+                                        title="@L.Ui(placed ? "online.table.cog.select" : "online.table.cog.place")" @onclick="() => CogClicked(side, cogId)">
+                                    @if (TokenImage(cog.CogId) is { } src)
+                                    {
+                                        <img src="@src" alt="" />
+                                    }
+                                    else
+                                    {
+                                        <span class="tb-cog-initials">@Initials(name)</span>
+                                    }
+                                    <span class="tb-cog-name">@name</span>
+                                    <span class="tb-cog-rank">@(new string('★', cog.Rank))@(tokens.Count > 1 ? $" ×{tokens.Count}" : "")</span>
+                                </button>
+                                @if (placed && CanPlace)
+                                {
+                                    <button class="tb-cog-add" type="button" title="@L.Ui("online.table.cog.another")"
+                                            @onclick="() => StartPlacing(new(PieceKind.Cog, cogId, null, name, side))">＋</button>
+                                }
+                            </div>
+                            @if (Catalog.CogById(cog.CogId) is { } card)
+                            {
+                                <StatLine Stats="card.Stats" Compact="true" />
+                            }
+                            <div class="tb-cog-stats">
+                                @* Life line: its HP (standard, reinforced, tainted) as pips, the marked ones crossed. On the
+                                   player's own cabal, a pip marks or unmarks that HP (damage by hand), a token sets the
+                                   action tokens or the Darkness, as on the sheet. *@
+                                <span class="life-line tb-life" title="@L.Ui("online.table.hp") : @cog.Remaining / @cog.LifeLine.Count">
+                                    @for (var i = 0; i < cog.LifeLine.Count; i++)
+                                    {
+                                        var (index, point) = (i, cog.PointAt(i));
+                                        var pip = $"pip {point.ToString().ToLower()} {(cog.IsChecked(i) ? "marked" : "")} {(point != cog.LifeLine[i] ? "fortified" : "")}";
+                                        @if (editable)
+                                        {
+                                            <button class="@pip" type="button" title="@L.Ui($"hp.{point}") · @L.Ui("play.hp.toggle")" aria-pressed="@cog.IsChecked(i)"
+                                                    @onclick="() => TogglePointAsync(cogId, index)"></button>
+                                        }
+                                        else
+                                        {
+                                            <span class="@pip" title="@L.Ui($"hp.{point}")"></span>
+                                        }
+                                    }
+                                </span>
+                                @Tokens(editable, "action", cog.Actions, GameSession.ActionsPerCycle, L.Ui("play.actions"), n => SetCounterAsync(cogId, Counter.Actions, n))
+                                @Tokens(editable, "darkness", cog.Darkness, GameSession.MaxDarkness, L.Ui("play.darkness"), n => SetCounterAsync(cogId, Counter.Darkness, n))
+                            </div>
+                            <div class="tb-cog-badges">
+                                @foreach (var (key, css) in States(cog, placed))
+                                {
+                                    <span class="status-badge @css">@L.Ui(key)</span>
+                                }
+                            </div>
+                            @foreach (var id in new[] { cog.EquipmentId, cog.ExtraEquipmentId }.OfType<string>())
+                            {
+                                var (eid, elabel) = (id, EquipmentName(id));
+                                <button class="tb-cog-gear @(_placing?.Kind == PieceKind.Equipment && _placing.Ref == id && _placing.Side == seat ? "on" : null)" type="button"
+                                        disabled="@(!CanPlace)" title="@(CanPlace ? L.Ui("online.table.equipment.place", elabel) : elabel)"
+                                        @onclick="() => StartPlacing(new(PieceKind.Equipment, eid, null, elabel, side))">
+                                    @if (Files.Manifest.Token(id) is { } tok)
+                                    {
+                                        <img src="@Src(tok.Image)" alt="" />
+                                    }
+                                    <span>@elabel</span>
+                                </button>
+                            }
+                        </li>
+                    }
+                </ul>
+    };
+
+
+    // ---- The player's cogs, changed from their card next to the mat (as on the sheet) ----
+
+    private enum Counter { Actions, Darkness }
+
+    private void OnSideChanged() => InvokeAsync(StateHasChanged);
+
+    private int SlotOf(string cogId) => Side.Session?.State.Cogs.FindIndex(c => c.CogId == cogId) ?? -1;
+
+    // An HP marked or unmarked by hand (Darkness for a tainted one, out of action, hunt: the session's rules).
+    private Task TogglePointAsync(string cogId, int index) =>
+        SlotOf(cogId) is var slot and >= 0 ? Side.ChangeAsync(s => s.TogglePoint(slot, index)) : Task.CompletedTask;
+
+    // A click on the n-th token: n tokens; on the last one lit: one fewer.
+    private Task SetCounterAsync(string cogId, Counter counter, int n)
+    {
+        if (SlotOf(cogId) is not (var slot and >= 0) || Side.Session is not { } session) return Task.CompletedTask;
+        var cog = session.State.Cogs[slot];
+        var current = counter == Counter.Actions ? cog.Actions : cog.Darkness;
+        var delta = (n == current ? n - 1 : n) - current;
+        return delta == 0 ? Task.CompletedTask : Side.ChangeAsync(s =>
+        {
+            if (counter == Counter.Actions) s.AdjustActions(slot, delta);
+            else s.AdjustDarkness(slot, delta);
+        });
+    }
+
+    // Action or Darkness tokens: lit up to the count; buttons on the player's own cabal.
+    private RenderFragment Tokens(bool editable, string token, int count, int max, string label, Func<int, Task> set) => __builder =>
+    {
+        <span class="token-track tb-tokens" title="@label" role="@(editable ? "group" : "img")" aria-label="@label @count / @max">
+            @for (var k = 1; k <= max; k++)
+            {
+                var n = k;
+                var image = $"{Olomoc.Assets.Base}img/icons/{token}.png";
+                @if (editable)
+                {
+                    <button class="tb-token-btn" type="button" aria-label="@label @n" @onclick="() => set(n)">
+                        <img class="token @(n <= count ? "on" : "off")" src="@image" alt="" />
+                    </button>
+                }
+                else
+                {
+                    <img class="token @(n <= count ? "on" : "off")" src="@image" alt="" />
+                }
+            }
+        </span>
+    };
+
+    // ---- Pieces ----
+
+    private IEnumerable<TablePiece> OnBoard(OnlineTable table) => table.Pieces.Where(Shown);
+
+    private bool Shown(TablePiece p) => _local.TryGetValue(p.Id, out var l) ? l.X is not null : p.OnBoard;
+
+    private (double X, double Y, int R) At(TablePiece p) =>
+        _local.TryGetValue(p.Id, out var l) ? (l.X ?? 0, l.Y ?? 0, l.R) : (p.X ?? 0, p.Y ?? 0, p.Rotation);
+
+    private TablePiece? SelectedPiece(OnlineTable table) => table.Pieces.FirstOrDefault(p => p.Id == _selected);
+
+    // Half the length of a piece that turns with handles (terrain, the movement template), along its
+    // axis; null: no handles (bases, the round push template).
+    private double? HalfLength(TablePiece p) => p.Kind switch
+    {
+        PieceKind.Terrain => Files.Manifest.TerrainOf(p.Ref)?.Height / 2,
+        PieceKind.Template => Files.Manifest.Template(p.Ref) is { } t && t.Length > t.Width ? t.Length / 2 : null,
+        _ => null,
+    };
+
+    // A piece with a round base: cogs, equipment tokens, markers (ranges, measures, magnets).
+    private static bool HasBase(TablePiece p) => p.Kind is PieceKind.Cog or PieceKind.Equipment or PieceKind.Marker;
+
+    // Either player moves any piece (as on Vassal); a spectator none.
+    private bool Movable(TablePiece p) => Playing && View.Me is not null;
+
+    // Movable and not locked (terrain locked by its padlock: neither moved nor removed).
+    private bool Free(TablePiece p) => Movable(p) && !p.Locked;
+
+    // ---- Controls on the piece (padlock, colors of an objective) ----
+
+    private sealed record Control(string Kind, int? Seat);
+
+    private static bool Lockable(TablePiece p) => p.Kind is PieceKind.Terrain or PieceKind.Marker;
+
+    // Where the controls start, to the right of the centre (mm); null: none for this piece.
+    private double? ControlsAt(TablePiece p) => p.Kind switch
+    {
+        PieceKind.Terrain => Files.Manifest.TerrainOf(p.Ref) is { } t ? Math.Sqrt(t.Width * t.Width + t.Height * t.Height) / 2 + 5 : null,
+        PieceKind.Marker => Radius(p) + 5,
+        _ => null,
+    };
+
+    private List<Control> Controls(TablePiece p) =>
+        [new("lock", null), .. p.Kind == PieceKind.Marker ? View.Seats.Select((_, i) => new Control("claim", i)) : []];
+
+    private Task ControlAsync(TablePiece p, Control control) => control.Seat is { } seat
+        ? Send(new(OnlineCommandType.SetClaim, PieceId: p.Id, Side: seat, Flag: !p.Claims.Contains(seat)))
+        : Movable(p) ? Send(new(OnlineCommandType.SetLock, PieceId: p.Id, Flag: !p.Locked)) : Task.CompletedTask;
+
+    /// <summary>The only marker offered: the objective (taken by a side: its color).</summary>
+    private const string ObjectiveMarker = "objective";
+
+    private double Radius(TablePiece p) => p.Kind switch
+    {
+        PieceKind.Marker => (Files.Manifest.Marker(p.Ref)?.Size ?? 20) / 2,
+        PieceKind.Cog => (Catalog.CogById(p.Ref)?.BaseSize ?? Files.Manifest.Token(p.Ref)?.Base ?? TableManifest.DefaultBase) / 2.0,
+        _ => (Files.Manifest.Token(p.Ref)?.Base ?? TableManifest.DefaultBase) / 2.0,
+    };
+
+    private string? Image(TablePiece p) => p.Kind switch
+    {
+        PieceKind.Marker => Files.Manifest.Marker(p.Ref) is { } m ? Src(m.Image) : null,
+        _ => Files.Manifest.Token(p.Ref) is { } t ? Src(t.Image) : null,
+    };
+
+    // A cog out of action on its side's sheet: faded.
+    private bool Out(TablePiece p) => p.Kind == PieceKind.Cog && p.Seat is { } seat
+        && View.Seats.ElementAtOrDefault(seat)?.State?.Cogs.FirstOrDefault(c => c.CogId == p.Ref)?.OutOfAction == true;
+
+    private string Name(TablePiece p) => p.Kind switch
+    {
+        PieceKind.Cog => Catalog.CogById(p.Ref) is { } c ? L.CogName(c).Text : p.Ref,
+        PieceKind.Equipment => Catalog.EquipmentById(p.Ref) is { } e ? L.EquipmentName(e).Text : p.Ref,
+        PieceKind.Terrain => Files.Manifest.TerrainOf(p.Ref) is { } t ? TerrainName(t) : p.Ref,
+        PieceKind.Template => L.Ui($"online.table.template.{p.Ref}"),
+        // An agenda's element: its kind and number ("Porte 3"); otherwise the marker's name.
+        _ => p.Label is { } kind ? L.Ui($"online.agenda.element.{kind}") + (p.Number is { } n ? $" {n}" : "") : L.Ui($"online.table.marker.{p.Ref}"),
+    } + (p.Seat is { } s && View.Seats.ElementAtOrDefault(s) is { } seat ? $" ({seat.Name})" : "");
+
+    private string TerrainName(TableTerrain t) => L.Ui($"online.table.terrain.{t.Type}") + (t.Number is { } n ? $" {n}" : "");
+
+    private string TerrainTitle(TableTerrain t) =>
+        $"{TerrainName(t)} · {Num(t.Width / Inch, 1)}″ × {Num(t.Height / Inch, 1)}″ · {L.Ui(t.Obstructing ? "online.table.obstructing" : "online.table.notObstructing")}";
+
+    private string CogName(TablePiece p) => Catalog.CogById(p.Ref) is { } c ? L.CogName(c).Text : p.Ref;
+
+    private string EquipmentName(string id) => Catalog.EquipmentById(id) is { } e ? L.EquipmentName(e).Text : id;
+
+    // State badges of a cog: out of action, otherwise stunned and its Darkness (sane, tainted, corrupted), and off the mat.
+    private static IEnumerable<(string Key, string Css)> States(CogState? cog, bool placed)
+    {
+        if (cog?.OutOfAction == true)
+        {
+            yield return ("play.status.outOfAction", "outOfAction");
+            yield break;
+        }
+        if (cog?.Stunned == true) yield return ("play.stunned", "stunned");
+        if (cog?.Status == DarknessStatus.Sane) yield return ("play.status.sane", "sane");
+        if (cog?.Status == DarknessStatus.Tainted) yield return ("play.status.tainted", "tainted");
+        if (cog?.Status == DarknessStatus.Corrupted) yield return ("play.status.corrupted", "corrupted");
+        if (!placed) yield return ("online.table.offBoard", "offboard");
+    }
+
+    // ---- A cog of the cabals and its tokens on the mat (as many as wanted; none: off the Block) ----
+
+    private bool CanPlace => Playing && View.Me is not null;
+
+    private List<TablePiece> Tokens(OnlineTable table, int seat, string cog) =>
+        OnBoard(table).Where(p => p.Kind == PieceKind.Cog && p.Seat == seat && p.Ref == cog).OrderBy(p => p.Id).ToList();
+
+    // The selected piece is one of the tokens of this cog: its card is lit, and its other tokens.
+    private bool Linked(int seat, string cog) =>
+        View.Table?.Pieces.FirstOrDefault(p => p.Id == _selected) is { Kind: PieceKind.Cog } s && s.Seat == seat && s.Ref == cog;
+
+    private bool Sibling(TablePiece p) => p.Kind == PieceKind.Cog && p.Id != _selected && p.Seat is { } seat && Linked(seat, p.Ref);
+
+    // A card of the list: selects its tokens in turn on the mat, or puts one down if there is none.
+    private void CogClicked(int seat, string cog)
+    {
+        _placing = null;
+        if (View.Table is not { } table) return;
+        var tokens = Tokens(table, seat, cog);
+        if (tokens.Count == 0)
+        {
+            if (CanPlace) StartPlacing(new(PieceKind.Cog, cog, null, CogName(cog), seat));
+            return;
+        }
+        var current = tokens.FindIndex(p => p.Id == _selected);
+        _selected = tokens[(current + 1) % tokens.Count].Id;
+    }
+
+    private string CogName(string id) => Catalog.CogById(id) is { } c ? L.CogName(c).Text : id;
+
+    private string? TokenImage(string id) => Files.Manifest.Token(id) is { } t ? Src(t.Image) : null;
+
+    private IEnumerable<int> SeatOrder() => View.Me is { } me ? [me, 1 - me] : [0, 1];
+
+    private static string SeatClass(TablePiece p) => p.Seat is { } s ? SeatClass(s) : "tb-neutral";
+    private static string SeatClass(int seat) => $"tb-seat-{seat}";
+
+    private static string Initials(string name) =>
+        string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 0 && char.IsLetter(w[0])).Take(2).Select(w => char.ToUpperInvariant(w[0])));
+
+    private static string Src(string image) => Olomoc.Assets.Base + image;
+
+    private readonly HashSet<string> _hostileBacks = new();     // hostile profiles shown from the back (instinct)
+
+    private void FlipHostile(string id) { if (!_hostileBacks.Remove(id)) _hostileBacks.Add(id); }
+
+    // The column beside the Block: once the scenario has its Artefact, or the ministries are dealt.
+    private bool Beside => View.Agenda?.Artifact is not null || View.Decks?.Fallen is not null;
+
+    // Player 1 or 2 (the priority of an artefact card): their name, by the initiative.
+    private string PriorityName(int player) => View.First is { } first && View.Seats.ElementAtOrDefault(player == 1 ? first : 1 - first) is { } s
+        ? s.Name : L.Ui("online.offblock.player", player);
+
+    private static string Num(double v, int decimals = 2) => Math.Round(v, decimals).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    // ---- Gestures (js/table.js) ----
+
+    [JSInvokable]
+    public async Task Dropped(int id, double x, double y, int? rotation)
+    {
+        if (View.Table?.Pieces.FirstOrDefault(p => p.Id == id) is not { } p) return;
+        _selected = id;
+        _local[id] = (x, y, rotation ?? At(p).R);
+        StateHasChanged();
+        await Send(new(OnlineCommandType.MovePiece, PieceId: id, X: x, Y: y, Rotation: rotation));
+    }
+
+    [JSInvokable]
+    public Task Selected(int id)
+    {
+        _selected = _selected == id ? null : id;
+        _measure = null;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public async Task Clicked(double x, double y)
+    {
+        if (_placing is not { } placing)
+        {
+            _selected = null;
+            _measure = null;
+            StateHasChanged();
+            return;
+        }
+        _placing = null;
+        if (placing.PieceId is { } id)
+        {
+            _local[id] = (x, y, 0);
+            _selected = id;
+            StateHasChanged();
+            await Send(new(OnlineCommandType.MovePiece, PieceId: id, X: x, Y: y));
+        }
+        else
+        {
+            StateHasChanged();
+            await Send(new(OnlineCommandType.AddPiece, placing.Ref, Piece: placing.Kind, X: x, Y: y, Side: placing.Side));
+        }
+    }
+
+    /// <summary>
+    /// Ruler released: the distance in inches; between two pieces with a base, only base edge to base edge
+    /// (the distance of the rules); from or to one of them, from the edge of its base.
+    /// </summary>
+    [JSInvokable]
+    public Task Measured(int? from, int? to, double x1, double y1, double x2, double y2)
+    {
+        var a = View.Table?.Pieces.FirstOrDefault(p => p.Id == from && HasBase(p));
+        var b = View.Table?.Pieces.FirstOrDefault(p => p.Id == to && HasBase(p) && p.Id != from);
+        if (a is not null) (x1, y1, _) = At(a);
+        if (b is not null) (x2, y2, _) = At(b);
+        var centre = Math.Sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+        var label = $"{Num(centre / Inch, 1)}″";
+        if (a is not null && b is not null)
+            label = L.Ui("online.table.ruler.edges", Num(Math.Max(0, centre - Radius(a) - Radius(b)) / Inch, 1));
+        else if (a is not null || b is not null)
+            label = L.Ui("online.table.ruler.edge", Num(Math.Max(0, centre - Radius((a ?? b)!)) / Inch, 1));
+        _measure = new Measure(x1, y1, x2, y2, label);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void StartPlacing(Placing placing)
+    {
+        _placing = _placing == placing ? null : placing;
+        _ruler = false;
+        _ = SetRulerAsync();
+    }
+
+    private async Task ToggleRulerAsync()
+    {
+        _ruler = !_ruler;
+        _placing = null;
+        _measure = null;
+        await SetRulerAsync();
+    }
+
+    private async Task SetRulerAsync()
+    {
+        if (_js is not null) await JS.InvokeVoidAsync("olomocTable.setRuler", _js, _ruler);
+    }
+
+    // The mat and the cabals' list alone on the screen (browser full screen; Esc leaves it).
+    private async Task FullscreenAsync()
+    {
+        await JS.InvokeVoidAsync("olomocTable.fullscreen", _panel);
+        await ZoomAsync(0);
+    }
+
+    private async Task ZoomAsync(double factor)
+    {
+        if (_js is not null) await JS.InvokeVoidAsync("olomocTable.zoom", _js, factor);
+    }
+
+    // ---- Commands ----
+
+    private Task SetBoardAsync(ChangeEventArgs e) => Send(new(OnlineCommandType.SetBoard, e.Value?.ToString()));
+
+    private Task RotateAsync(TablePiece p, int degrees)
+    {
+        var (x, y, r) = At(p);
+        _local[p.Id] = (x, y, ((r + degrees) % 360 + 360) % 360);
+        return Send(new(OnlineCommandType.MovePiece, PieceId: p.Id, Rotation: _local[p.Id].R));
+    }
+
+    private Task RemoveAsync(TablePiece p)
+    {
+        _selected = null;
+        return Send(new(OnlineCommandType.RemovePiece, PieceId: p.Id));
+    }
+
+    // ---- Ranges (as on Vassal: keys 1 to 9 toggle a range around the selected piece, 0 removes them) ----
+
+    private bool CanAura => Playing && View.Me is not null;
+
+    private IReadOnlyList<int> AurasOf(TablePiece p) => _localAuras.TryGetValue(p.Id, out var a) ? a : p.Auras;
+
+    private Task ToggleAuraAsync(TablePiece p, int inches)
+    {
+        var auras = AurasOf(p);
+        return SetAurasAsync(p, auras.Contains(inches) ? auras.Where(a => a != inches).ToList() : [.. auras, inches]);
+    }
+
+    private Task SetAurasAsync(TablePiece p, IReadOnlyList<int> auras)
+    {
+        _localAuras[p.Id] = auras.Order().ToList();
+        StateHasChanged();
+        return Send(new(OnlineCommandType.SetAuras, PieceId: p.Id, Auras: _localAuras[p.Id]));
+    }
+
+    // ---- Keyboard (js/table.js, outside the text fields) ----
+    // Ctrl+C / Ctrl+V: copy and paste the selected piece next to it (a cog too: a copy of its token);
+    // Ctrl+X: cut; Delete or Backspace: remove (a cog of the cabal: off the mat); arrows: move by 0.1″ (Shift: 1″);
+    // Ctrl+arrows: turn by 5° (Shift: 15°), terrain and templates.
+
+    private sealed record Copied(PieceKind Kind, string Ref, int Rotation, double X, double Y, int? Side);
+
+    private Copied? _copied;
+    private (string Ref, int After)? _pasted;      // the pasted piece gets selected when it arrives
+    private string? _notice;                    // key "online.table.*" shown in the status line
+    private readonly HashSet<int> _nudged = new();
+    private CancellationTokenSource? _nudge;
+
+    [JSInvokable]
+    public async Task Key(string key, bool ctrl, bool shift)
+    {
+        _notice = null;
+        var selected = View.Table?.Pieces.FirstOrDefault(p => p.Id == _selected);
+        switch (key)
+        {
+            case "c" or "x" when ctrl && selected is not null:
+                var (x, y, r) = At(selected);
+                _copied = new Copied(selected.Kind, selected.Ref, r, x, y, selected.Seat);
+                _notice = "online.table.copied";
+                if (key == "x" && Free(selected)) await RemoveAsync(selected);
+                break;
+            case "v" when ctrl && _copied is { } c && Playing && View.Me is not null:
+                // Next to the copied piece (each paste a step further), inside the mat.
+                var step = TableManifest.MmPerInch / 2;
+                var (px, py) = (Math.Clamp(c.X + step, 0, TableManifest.BoardSize), Math.Clamp(c.Y + step, 0, TableManifest.BoardSize));
+                _copied = c with { X = px, Y = py };
+                _pasted = (c.Ref, View.Table?.Pieces.Select(p => p.Id).DefaultIfEmpty(0).Max() ?? 0);
+                await Send(new(OnlineCommandType.AddPiece, c.Ref, Piece: c.Kind, X: Math.Round(px, 1), Y: Math.Round(py, 1), Rotation: c.Rotation, Side: c.Side));
+                break;
+            case "Delete" or "Backspace" when selected is not null && Free(selected):
+                await RemoveAsync(selected);
+                break;
+            case "ArrowLeft" or "ArrowRight" or "ArrowUp" or "ArrowDown" when selected is not null && Free(selected) && Shown(selected):
+                var (sx, sy, sr) = At(selected);
+                if (ctrl)
+                {
+                    if (HasBase(selected) || key is "ArrowUp" or "ArrowDown") break;
+                    var degrees = (shift ? 15 : 5) * (key == "ArrowLeft" ? -1 : 1);
+                    Nudge(selected, sx, sy, ((sr + degrees) % 360 + 360) % 360);
+                    break;
+                }
+                var move = shift ? TableManifest.MmPerInch : TableManifest.MmPerInch / 10;
+                var (dx, dy) = key switch { "ArrowLeft" => (-move, 0.0), "ArrowRight" => (move, 0.0), "ArrowUp" => (0.0, -move), _ => (0.0, move) };
+                var limit = (Min: -TableRules.Margin, Max: TableManifest.BoardSize + TableRules.Margin);
+                Nudge(selected, Math.Clamp(sx + dx, limit.Min, limit.Max), Math.Clamp(sy + dy, limit.Min, limit.Max), sr);
+                break;
+        }
+        StateHasChanged();
+    }
+
+    // Shown at once; sent once the keys stop for a moment (a key held repeats faster than the server
+    // accepts calls).
+    private void Nudge(TablePiece p, double x, double y, int rotation)
+    {
+        _local[p.Id] = (Math.Round(x, 1), Math.Round(y, 1), rotation);
+        _nudged.Add(p.Id);
+        _nudge?.Cancel();
+        var cancel = _nudge = new CancellationTokenSource();
+        _ = Task.Delay(250, cancel.Token).ContinueWith(async _ =>
+        {
+            var pending = _nudged.Where(_local.ContainsKey).Select(id => (Id: id, At: _local[id])).ToList();
+            _nudged.Clear();
+            await InvokeAsync(async () =>
+            {
+                foreach (var (id, at) in pending)
+                    await Send(new(OnlineCommandType.MovePiece, PieceId: id, X: at.X, Y: at.Y, Rotation: at.R));
+            });
+        }, cancel.Token, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
+    }
+
+    /// <summary>Key 0 to 9 of the top row (js/table.js), outside the text fields: on the selected piece.</summary>
+    [JSInvokable]
+    public Task AuraKey(int key)
+    {
+        if (!CanAura || View.Table?.Pieces.FirstOrDefault(p => p.Id == _selected) is not { } piece || !HasBase(piece)) return Task.CompletedTask;
+        return key == 0 ? SetAurasAsync(piece, []) : ToggleAuraAsync(piece, key);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Side.Changed -= OnSideChanged;
+        await DetachAsync();
+        _self?.Dispose();
+    }
+
+    private async Task DetachAsync()
+    {
+        if (_js is not { } js) return;
+        _js = null;
+        try { await JS.InvokeVoidAsync("olomocTable.detach", js); }
+        catch (JSDisconnectedException) { }
+    }
+}

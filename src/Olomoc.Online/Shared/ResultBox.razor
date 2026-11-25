@@ -1,0 +1,52 @@
+@inject LocalizationService L
+
+@* Result of a finished game: VP of each player (from their sheets, corrected if needed), confirmed
+   by either player; then copied into the statistics (zone of the Block receiving the online games,
+   or the tournament's table). Confirming again replaces it, except on a tournament table: then the
+   organizer corrects it. *@
+
+@if (View.Result is { } r)
+{
+    <p class="online-result">
+        @L.Ui(r.ConfirmedBy is { } by ? "online.result.confirmed" : "online.result.auto",
+              r.ConfirmedBy is { } b ? View.Seats[b].Name : "", r.Vp[0], r.Vp[1], L.Ui($"pairings.end.{r.End}"))
+        <span class="hint">@L.Ui(r.Recorded ? (View.Tournament is null ? "online.result.recorded" : "online.result.recordedTournament") : "online.result.notRecorded")</span>
+    </p>
+}
+@if (View.Me is not null && View is not { Tournament: not null, Result.Recorded: true })
+{
+    <div class="online-inline online-result-form">
+        @for (var i = 0; i < View.Seats.Count; i++)
+        {
+            var seat = i;
+            <label class="online-result-vp">
+                <span>@L.Ui("online.result.vp", View.Seats[seat].Name)</span>
+                <input type="number" min="0" max="@OnlineRules.MaxVictoryPoints" value="@_vp[seat]"
+                       @onchange="e => _vp[seat] = int.TryParse(e.Value?.ToString(), out var n) ? n : 0" />
+            </label>
+        }
+        <button class="btn @(View.Result is null ? "primary" : null)" type="button" @onclick="ConfirmAsync">
+            @L.Ui(View.Result is null ? "online.result.confirm" : "online.result.correct")
+        </button>
+    </div>
+    <p class="hint">@L.Ui("online.result.help")</p>
+}
+
+@code {
+    [Parameter, EditorRequired] public OnlineView View { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<OnlineCommand, Task> Send { get; set; } = default!;
+
+    private readonly int[] _vp = new int[OnlineGame.SeatCount];
+    private int _revision = -1;
+
+    // VP shown: the confirmed result, otherwise the sheets; taken again when the game changes.
+    protected override void OnParametersSet()
+    {
+        if (View.Revision == _revision) return;
+        _revision = View.Revision;
+        for (var i = 0; i < _vp.Length && i < View.Seats.Count; i++)
+            _vp[i] = View.Result?.Vp.ElementAtOrDefault(i) ?? View.Seats[i].State?.VictoryPoints ?? 0;
+    }
+
+    private Task ConfirmAsync() => Send(new(OnlineCommandType.ConfirmResult, Vp: _vp.ToList()));
+}

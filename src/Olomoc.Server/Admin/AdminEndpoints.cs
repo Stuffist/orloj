@@ -200,12 +200,13 @@ public static class AdminEndpoints
     }
 
     /// <summary>Purge now, with the background tasks' rules.</summary>
-    private static async Task<IResult> Purge(PurgeRequest body, HttpContext ctx, TournamentStore tournaments, OnlineStore online, AdminAudit audit)
+    private static async Task<IResult> Purge(PurgeRequest body, HttpContext ctx, TournamentStore tournaments, OnlineStore online,
+        OnlineResults results, AdminAudit audit)
     {
         var removed = body.Kind switch
         {
             PurgeKind.Tournaments => await tournaments.PurgeAsync(TournamentPurge.MaxAge, DateOnly.FromDateTime(DateTime.UtcNow)),
-            PurgeKind.Online => await online.PurgeAsync(OnlinePurge.MaxAge, _ => true),
+            PurgeKind.Online => await OnlinePurge.PurgeAsync(online, results),
             _ => -1,
         };
         if (removed < 0) return Problems("kind", 400);

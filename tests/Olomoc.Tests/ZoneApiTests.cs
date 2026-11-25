@@ -312,6 +312,28 @@ public sealed class ZoneApiTests : IDisposable
         Assert.Equal(2, (await All()).Games);
     }
 
+    [Fact]
+    public async Task A_single_Online_zone_receives_the_online_games()
+    {
+        var (_, root, _, _, _) = await StartAsync();
+        var online = Settings("En ligne") with { Kind = ZoneKind.Online, ReceivesOnline = true };
+        var first = await CreateZone(root, online);
+        Assert.True((await Zone(root, first)).ReceivesOnline);
+
+        // A second one receives them: the first stops. A club never does.
+        var second = await CreateZone(root, online with { Name = "En ligne 2" });
+        Assert.False((await Zone(root, first)).ReceivesOnline);
+        Assert.True((await Zone(root, second)).ReceivesOnline);
+        var club = await CreateZone(root, Settings() with { ReceivesOnline = true });
+        Assert.False((await Zone(root, club)).ReceivesOnline);
+        Assert.True((await Zone(root, second)).ReceivesOnline);
+
+        // Changed into a club by its managers: no longer.
+        Assert.Equal(HttpStatusCode.NoContent, (await Send(root, HttpMethod.Put, $"/api/zones/{second}",
+            new ZoneSettingsRequest("En ligne 2", "", ZoneKind.Club, null, null, false))).StatusCode);
+        Assert.False((await Zone(root, second)).ReceivesOnline);
+    }
+
     // ---- Data export ----
 
     [Fact]

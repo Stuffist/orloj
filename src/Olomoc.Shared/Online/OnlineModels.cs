@@ -33,6 +33,16 @@ public sealed class OnlineGame : IStoredDocument
     public List<Seat> Seats { get; set; } = new();
     /// <summary>Tournament table the game was opened from.</summary>
     public OnlineTournamentRef? Tournament { get; set; }
+    /// <summary>Board and pieces (null: lobby, or a game stored before the table).</summary>
+    public OnlineTable? Table { get; set; }
+    /// <summary>Planning of the current cycle (null: none yet).</summary>
+    public OnlinePlanning? Planning { get; set; }
+    /// <summary>Decks beside the Block (null: not used yet).</summary>
+    public OnlineDecks? Decks { get; set; }
+    /// <summary>Shared dice roller: the last roll of each slot ("action", "reaction"); null: none yet.</summary>
+    public Dictionary<string, OnlineDiceRoll>? Dice { get; set; }
+    /// <summary>Result confirmed at the end of the game.</summary>
+    public OnlineGameResult? Result { get; set; }
     public List<OnlineLogEntry> Log { get; set; } = new();
 }
 
@@ -57,6 +67,103 @@ public sealed class Seat
     public List<string> Undo { get; set; } = new();
     public bool EndCycleReady { get; set; }
 }
+
+/// <summary>Kind of a piece of the table: a cog, an equipment/boon token, terrain, a marker, a movement template.</summary>
+public enum PieceKind { Cog, Equipment, Terrain, Marker, Template }
+
+/// <summary>
+/// A piece of the table. Ref: cog or equipment id (card catalog), terrain or marker id
+/// (<see cref="TableManifest"/>), template id. Seat: the side a cog's or an equipment token belongs to
+/// (null: terrain, markers, templates). X and Y: centre, in mm from the top-left corner of the board
+/// (both null: a cog put aside in a game stored before the tokens, never shown). Rotation: degrees, clockwise. Auras: ranges shown around it.
+/// </summary>
+public sealed class TablePiece
+{
+    public int Id { get; set; }
+    public PieceKind Kind { get; set; }
+    public string Ref { get; set; } = "";
+    public int? Seat { get; set; }
+    public double? X { get; set; }
+    public double? Y { get; set; }
+    public int Rotation { get; set; }
+    /// <summary>Ranges shown around the piece, in inches from the edge of its base (1 to 9), seen by everyone.</summary>
+    public List<int> Auras { get; set; } = new();
+    /// <summary>
+    /// A magnetic movement template: put down near a base, it comes to touch it; a base dropped near it
+    /// comes to touch it too (the gestures do it, in the browser).
+    /// </summary>
+    public bool Magnet { get; set; }
+    /// <summary>Terrain or a marker locked in place (padlock): neither moved nor removed until unlocked.</summary>
+    public bool Locked { get; set; }
+    /// <summary>An agenda's element: its kind ("secret", "door"…: its name) and its number shown on it ("2"); null: none.</summary>
+    public string? Label { get; set; }
+    public string? Number { get; set; }
+    /// <summary>An objective marker taken by these sides (its colors: one, or split diagonally for both).</summary>
+    public List<int> Claims { get; set; } = new();
+
+    public bool OnBoard => X is not null && Y is not null;
+}
+
+/// <summary>The table: board (game mat), pieces. Created when both players are ready (cabals known).</summary>
+public sealed class OnlineTable
+{
+    public string Board { get; set; } = "";
+    public List<TablePiece> Pieces { get; set; } = new();
+    public int NextId { get; set; } = 1;
+}
+
+/// <summary>
+/// A roll of the shared dice roller: the faces (D6), the threshold they are read at (2+ to 5+, the
+/// same for both players), who rolled, how many times it was rerolled (whole roll).
+/// </summary>
+public sealed class OnlineDiceRoll
+{
+    public List<int> Faces { get; set; } = new();
+    public int Threshold { get; set; } = 5;
+    public int Seat { get; set; }
+    public int Rerolls { get; set; }
+    public DateTimeOffset At { get; set; }
+}
+
+/// <summary>
+/// The decks beside the Block (DeckRules): the decks used, each seat's ministry hand (secret), the
+/// fallen ministry, the Artefact pile (secret order), its discard, the card drawn by the last
+/// Mécanisme, the Indra cards (their player only).
+/// </summary>
+public sealed class OnlineDecks
+{
+    public string? MinistryDeck { get; set; }
+    public string? ArtifactDeck { get; set; }
+    public List<List<string>> Hands { get; set; } = [[], []];
+    /// <summary>Ministries played (discarded at the end of their cycle), per seat.</summary>
+    public List<List<string>> Played { get; set; } = [[], []];
+    public string? Fallen { get; set; }
+    public List<string> Pile { get; set; } = new();
+    public List<string> Discard { get; set; } = new();
+    public string? Drawn { get; set; }
+    public int Mechanisms { get; set; }
+    /// <summary>Each seat's Indra cards (the 3 last of the pile at the setup, per Indra in its cabal; secret).</summary>
+    public List<List<string>> IndraHands { get; set; } = [[], []];
+}
+
+/// <summary>
+/// The planning of the cycle (PlanningRules): each seat's 5 slots (secret until revealed), the phases
+/// revealed; each seat's cogs whose activation card became a propaganda (out of action at the end of
+/// an earlier cycle), kept from one cycle to the next.
+/// </summary>
+public sealed class OnlinePlanning
+{
+    public List<List<string?>> Slots { get; set; } = [[null, null, null, null, null], [null, null, null, null, null]];
+    public int Revealed { get; set; }
+    public List<List<string>> Lost { get; set; } = [[], []];
+}
+
+/// <summary>
+/// Result of the game: VP of each seat, cause of the end; confirmed by a player (ConfirmedBy: their seat),
+/// or taken from the sheets when a finished game nobody confirmed is purged (null). Recorded: copied
+/// into the statistics (zone of the Block receiving online games, or the tournament table).
+/// </summary>
+public sealed record OnlineGameResult(IReadOnlyList<int> Vp, GameEnd End, int? ConfirmedBy, DateTimeOffset ConfirmedAt, bool Recorded = false);
 
 public sealed record OnlineTournamentRef(string Code, int Round, int Table);
 

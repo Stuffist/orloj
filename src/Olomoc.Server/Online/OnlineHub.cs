@@ -12,7 +12,8 @@ namespace Olomoc.Server.Online;
 /// receives "Changed" and each client re-reads its own view (GetView): nothing secret goes to a
 /// connection other than the one entitled to it.
 /// </summary>
-public sealed class OnlineHub(OnlineStore store, TournamentStore tournaments, ServerCatalog catalog, OnlinePresence presence) : Hub
+public sealed class OnlineHub(OnlineStore store, TournamentStore tournaments, ServerCatalog catalog, OnlinePresence presence,
+    OnlineResults results) : Hub
 {
     public const string Path = "/hubs/online";
     public const string Changed = "Changed";
@@ -44,12 +45,13 @@ public sealed class OnlineHub(OnlineStore store, TournamentStore tournaments, Se
     {
         if (Code is not { } code || MySeat is not { } seat) return new(new[] { Problem.Of("forbidden") });
         var cat = await catalog.GetAsync();
+        var table = await catalog.GetTableAsync();
         OnlineGame? updated = null;
         var wasLobby = false;
         var result = await store.UpdateAsync(code, g =>
         {
             wasLobby = g.Step == OnlineStep.Lobby;
-            var r = OnlineRules.Apply(g, seat, command, cat, Random.Shared, DateTimeOffset.UtcNow);
+            var r = OnlineRules.Apply(g, seat, command, cat, Random.Shared, DateTimeOffset.UtcNow, table);
             updated = g;
             return (r.Ok, r);
         });
@@ -57,6 +59,8 @@ public sealed class OnlineHub(OnlineStore store, TournamentStore tournaments, Se
         if (result.Ok)
         {
             if (wasLobby && updated!.Step != OnlineStep.Lobby) await RecordCabals(updated);
+            // Result confirmed: into the statistics (zone of the Block, or tournament table).
+            if (command.Type == OnlineCommandType.ConfirmResult) await results.RecordAsync(code);
             await Clients.Group(code).SendAsync(Changed, updated!.Revision);
         }
         return result;

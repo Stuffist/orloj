@@ -144,6 +144,11 @@ else
                                     }
                                 </span>
                             }
+                            @if (game.Online)
+                            {
+                                @* Recorded from an online game: corrected from the game only. *@
+                                <span class="tn-role">@L.Ui("zones.game.online")</span>
+                            }
                             @if (game.Game.Scenario is { } scenario)
                             {
                                 <ScenarioTag Scenario="scenario" />

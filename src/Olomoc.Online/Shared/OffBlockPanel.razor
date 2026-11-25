@@ -1,0 +1,347 @@
+@inject LocalizationService L
+@inject CatalogService Catalog
+
+@* Planning (rulebook p.33), semi-automatic, with the ministries (p.31): on the left the opponent's
+   ministries (the hands are known to both; stacked, a ministry played or revealed greyed), then the
+   player's hand (activations, propaganda, their ministries), then a row of 5 slots per player, the
+   opponent's first. Each player drags their cards onto their slots, in secret (a ministry on the
+   slot of its constraint), saved as they go; then revealed phase by phase for both, with the active
+   player from the ranks (equal: a Mécanisme). In the game page, and alone in its detached window. *@
+
+<section class="panel offblock-panel">
+    <div class="online-camps-head">
+        <h2>@L.Ui("online.offblock.title")</h2>
+        @HeadContent
+    </div>
+
+    @{
+        var planning = View.Step == OnlineStep.Cycle ? View.Planning : null;
+        var editing = planning is not null && View.Me is not null && planning.Phase == 0;
+        var draft = planning is not null && View.Me is not null ? Draft(planning) : [];
+        var moving = _dragged ?? _picked;
+    }
+    <div class="offblock-plan">
+        <div class="offblock-plan-ministries">
+            @if (View.Agenda?.Ministry is null)
+            {
+                <p class="hint">@L.Ui("online.offblock.chooseDecks")</p>
+            }
+            else if (View.Decks is not { Fallen: not null } decks)
+            {
+                <p class="hint">@L.Ui("online.offblock.deal.help")</p>
+            }
+            else
+            {
+                @foreach (var seat in SeatsMeFirst.Where(s => s != View.Me))
+                {
+                    var s = seat;
+                    var cards = (decks.Hands.ElementAtOrDefault(s) ?? []).Concat(decks.Played.ElementAtOrDefault(s) ?? []).ToList();
+                    <div class="offblock-group">
+                        <span class="online-label">@L.Ui("online.offblock.ministriesOf", View.Seats[s].Name)</span>
+                        <div class="offblock-stack">
+                            @foreach (var id in cards)
+                            {
+                                @Ministry(id, Spent(s, id))
+                            }
+                        </div>
+                        <ul class="offblock-stack-names">
+                            @foreach (var id in cards)
+                            {
+                                <li class="@(Spent(s, id) ? "spent" : null)" title="@MinistryText(id)">@CardName($"min:{id}")</li>
+                            }
+                        </ul>
+                    </div>
+                }
+            }
+        </div>
+
+        @if (planning is null)
+        {
+            <p class="hint">@L.Ui("online.offblock.planning.later")</p>
+        }
+        else
+        {
+            <div class="offblock-plan-hand">
+                @if (View.Me is not null)
+                {
+                    <div class="offblock-group offblock-hand" @ondragover:preventDefault @ondrop="DropOnHandAsync">
+                        <span class="online-label">@L.Ui("online.offblock.myHand")</span>
+                        @foreach (var row in new[] { planning.MyHand.Where(c => !c.StartsWith("min:")), planning.MyHand.Where(c => c.StartsWith("min:")) })
+                        {
+                            <div class="offblock-row">
+                                @foreach (var card in row)
+                                {
+                                    var c = card;
+                                    var placed = draft.Contains(c);
+                                    @if (editing && !placed)
+                                    {
+                                        <div class="offblock-drag @(_picked == c ? "picked" : null)" draggable="true" data-card="@c"
+                                             @ondragstart="() => (_dragged, _dragFrom) = (c, null)" @ondragend="EndDrag"
+                                             @onclick="() => _picked = _picked == c ? null : c">@PlannedCard(c)</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="offblock-held @(placed ? "placed" : null)">@PlannedCard(c)</div>
+                                    }
+                                }
+                            </div>
+                        }
+                        @* Indra's cards (the pile's 3 last, taken at the setup): one replaces the card drawn by a Mécanisme. *@
+                        @if (View.Decks is { MyIndra.Count: > 0 } indraDecks)
+                        {
+                            <div class="offblock-row">
+                                @foreach (var id in indraDecks.MyIndra)
+                                {
+                                    if (CardDecks.Artifact(id) is not { } artifact) continue;
+                                    var cid = id;
+                                    <figure class="offblock-card planned" title="@CardDecks.Title(artifact)">
+                                        <img src="@Src(CardDecks.Image(artifact.Id))" alt="" loading="lazy" draggable="false" />
+                                        <figcaption>@L.Ui("online.offblock.indra") · @artifact.Name</figcaption>
+                                        @if (CanAct)
+                                        {
+                                            <button class="btn small" type="button" disabled="@(indraDecks.Drawn is null)" title="@L.Ui("online.offblock.indra.swap.title")"
+                                                    @onclick="() => Send(new(OnlineCommandType.IndraSwap, cid))">@L.Ui("online.offblock.indra.swap")</button>
+                                        }
+                                    </figure>
+                                }
+                            </div>
+                        }
+                        @if (editing)
+                        {
+                            <p class="hint">@L.Ui("online.offblock.planning.help")</p>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="offblock-board">
+                @foreach (var (seat, index) in SeatsOpponentFirst.Select((s, i) => (s, i)))
+                {
+                    var mine = seat == View.Me;
+                    <span class="offblock-board-name">
+                        @View.Seats[seat].Name
+                        @if (planning.Complete.ElementAtOrDefault(seat)) { <span class="hint">✓</span> }
+                    </span>
+                    @if (index == 0)
+                    {
+                        @for (var p = 0; p < PlanningRules.Slots; p++)
+                        {
+                            <span class="offblock-board-head">@L.Ui("online.offblock.phaseN", p + 1)</span>
+                        }
+                    }
+                    @for (var i = 0; i < PlanningRules.Slots; i++)
+                    {
+                        var slot = i;
+                        var card = mine ? draft[slot] : planning.Revealed.ElementAtOrDefault(seat)?.ElementAtOrDefault(slot);
+                        if (editing && mine)
+                        {
+                            <div class="offblock-drop @(moving is not null ? (Allowed(moving, slot) ? "allowed" : "refused") : null)"
+                                 @ondragover:preventDefault @ondrop="() => DropAsync(slot)" @onclick="() => SlotClickAsync(slot)"
+                                 title="@(card is null ? L.Ui("online.offblock.slotN", slot + 1) : L.Ui("online.offblock.takeBack"))">
+                                @if (card is not null)
+                                {
+                                    <div class="offblock-drag" draggable="true" data-card="@card"
+                                         @ondragstart="() => (_dragged, _dragFrom) = (card, slot)" @ondragend="EndDrag">@PlannedCard(card)</div>
+                                }
+                                else
+                                {
+                                    <span class="offblock-slot-number">@(slot + 1)</span>
+                                }
+                            </div>
+                        }
+                        else if (card is not null)
+                        {
+                            <div class="offblock-drop @(mine && slot >= planning.Phase ? "unrevealed" : null)">@PlannedCard(card)</div>
+                        }
+                        else
+                        {
+                            <div class="offblock-drop">
+                                @if (planning.Complete.ElementAtOrDefault(seat))
+                                {
+                                    <span class="offblock-back" title="@L.Ui("online.offblock.hidden")">?</span>
+                                }
+                            </div>
+                        }
+                    }
+                }
+                @if (planning.Phase > 0)
+                {
+                    @for (var p = 0; p < PlanningRules.Slots; p++)
+                    {
+                        <span class="offblock-verdict">@Verdict(planning, p)</span>
+                    }
+                }
+            </div>
+        }
+    </div>
+
+    @if (planning is not null)
+    {
+        <div class="online-inline">
+            @if (CanAct && planning.Phase < PlanningRules.Slots)
+            {
+                <button class="btn small primary" type="button" disabled="@(!planning.Complete.All(c => c))"
+                        title="@L.Ui("online.offblock.reveal.title")" @onclick="() => Send(new(OnlineCommandType.RevealPhase))">
+                    👁 @L.Ui("online.offblock.reveal", planning.Phase + 1)
+                </button>
+            }
+            <span class="hint">@Readiness(planning)</span>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public OnlineView View { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<OnlineCommand, Task> Send { get; set; } = default!;
+    /// <summary>More buttons in the header (detach, bring back).</summary>
+    [Parameter] public RenderFragment? HeadContent { get; set; }
+
+    // From the initiative to the end of the game, for the players.
+    private bool CanAct => View.Me is not null && View.Step is OnlineStep.Initiative or OnlineStep.Agenda or OnlineStep.Cycle;
+
+    // ---- Planning ----
+
+    private string?[]? _draft;
+    private string? _draftSource;
+
+    // The player's planning being written: taken back from the server when it changes there (saved, new cycle).
+    private string?[] Draft(OnlinePlanningView planning)
+    {
+        var source = $"{View.Cycle}#{string.Join("|", planning.MySlots)}";
+        if (_draft is null || source != _draftSource)
+        {
+            _draft = planning.MySlots.Count == PlanningRules.Slots ? planning.MySlots.ToArray() : new string?[PlanningRules.Slots];
+            _draftSource = source;
+        }
+        return _draft;
+    }
+
+    // Drag & drop of the hand's cards onto the slots (or a click on a card, then on a slot).
+    private string? _dragged;
+    private int? _dragFrom;              // the slot the dragged card leaves (null: from the hand)
+    private string? _picked;
+
+    // A ministry goes on the slot of its constraint only (the Axe: any).
+    private static bool Allowed(string card, int slot) =>
+        !card.StartsWith("min:") || CardDecks.Ministry(card[4..]) is not { Slot: { } s } || s == slot + 1;
+
+    private void EndDrag() => (_dragged, _dragFrom) = (null, null);
+
+    private Task DropAsync(int slot)
+    {
+        var (card, from) = (_dragged, _dragFrom);
+        EndDrag();
+        return card is null ? Task.CompletedTask : PlaceAsync(card, slot, from);
+    }
+
+    // A click on a slot: the card picked in the hand goes there; else the card there goes back to the hand.
+    private Task SlotClickAsync(int slot)
+    {
+        var draft = Draft(View.Planning!);
+        if (_picked is { } card) { _picked = null; return PlaceAsync(card, slot, null); }
+        if (draft[slot] is null) return Task.CompletedTask;
+        draft[slot] = null;
+        return SendDraftAsync();
+    }
+
+    private Task DropOnHandAsync()
+    {
+        var from = _dragFrom;
+        EndDrag();
+        if (from is not { } slot) return Task.CompletedTask;
+        Draft(View.Planning!)[slot] = null;
+        return SendDraftAsync();
+    }
+
+    // The card on the slot; the one there before goes where the card came from (if it may), else back to
+    // the hand; another ministry already planned goes back to the hand (one per planning).
+    private Task PlaceAsync(string card, int slot, int? from)
+    {
+        if (!Allowed(card, slot)) return Task.CompletedTask;
+        var draft = Draft(View.Planning!);
+        var before = draft[slot];
+        for (var i = 0; i < draft.Length; i++)
+            if (draft[i] == card || card.StartsWith("min:") && draft[i]?.StartsWith("min:") == true) draft[i] = null;
+        draft[slot] = card;
+        if (before is not null && before != card && from is { } f && draft[f] is null && Allowed(before, f)
+            && !(before.StartsWith("min:") && card.StartsWith("min:"))) draft[f] = before;
+        return SendDraftAsync();
+    }
+
+    // Saved as it goes (an incomplete planning is allowed; complete, it is ready).
+    private Task SendDraftAsync() => Send(new(OnlineCommandType.SetPlanning, Decks: Draft(View.Planning!).ToList()));
+
+    private string Verdict(OnlinePlanningView planning, int phase)
+    {
+        if (phase >= planning.Phase) return "";
+        var (a, b) = (planning.Ranks[0].ElementAtOrDefault(phase), planning.Ranks[1].ElementAtOrDefault(phase));
+        return a == b ? L.Ui("online.offblock.tie") : L.Ui("online.offblock.active", View.Seats[a > b ? 0 : 1].Name);
+    }
+
+    // The player's seat first (the ministries), or last (the planning, as on the table: the opponent in front).
+    private IEnumerable<int> SeatsMeFirst => View.Me is 1 ? [1, 0] : [0, 1];
+    private IEnumerable<int> SeatsOpponentFirst => View.Me is 0 ? [1, 0] : [0, 1];
+
+    // What a ministry does (its card's text), for the hover texts.
+    private static string? MinistryText(string id) => CardDecks.Ministry(id) is { } m ? CardDecks.Text(m) : null;
+
+    // Hover text of a card: its name, and what it does for a ministry.
+    private string CardTitle(string card) =>
+        card.StartsWith("min:") && MinistryText(card[4..]) is { } text ? $"{CardName(card)} — {text}" : CardName(card);
+
+    // A ministry played in a previous cycle, or revealed in this one.
+    private bool Spent(int seat, string id) =>
+        View.Decks?.Played.ElementAtOrDefault(seat)?.Contains(id) == true
+        || View.Planning?.Revealed.ElementAtOrDefault(seat)?.Contains($"min:{id}") == true;
+
+    private string Readiness(OnlinePlanningView planning) =>
+        string.Join(" · ", View.Seats.Select((s, i) => L.Ui(planning.Complete.ElementAtOrDefault(i) ? "online.offblock.planned" : "online.offblock.planning.pending", s.Name)));
+
+    private string CardName(string card) => card.Split(':', 2) switch
+    {
+        ["act", var cog] => Catalog.CogById(cog) is { } c ? L.CogName(c).Text : cog,
+        ["min", var id] => CardDecks.Ministry(id) is { } m ? MinistryName(m) : id,
+        ["prop", var n] => L.Ui("online.offblock.propaganda", n),
+        _ => card,
+    };
+
+    private readonly HashSet<string> _missing = new();     // card images not found: the name alone
+
+    // A planned card: its image (activation, propaganda, ministry), its name.
+    private RenderFragment PlannedCard(string card) => __builder =>
+    {
+        var parts = card.Split(':', 2);
+        var image = parts switch
+        {
+            ["act", var cog] => CardDecks.Activation(cog),
+            ["min", var id] => CardDecks.Image(id),
+            ["prop", var n] => CardDecks.Propaganda((int.Parse(n) - 1) % CardDecks.PropagandaImages + 1),
+            _ => null,
+        };
+        <figure class="offblock-card planned" title="@CardTitle(card)">
+            @if (image is not null && !_missing.Contains(image))
+            {
+                <img src="@Src(image)" alt="" loading="lazy" draggable="false" @onerror="() => _missing.Add(image)" />
+            }
+            <figcaption>@CardName(card)</figcaption>
+        </figure>
+    };
+
+    // ---- Cards ----
+
+    private static string Src(string image) => Olomoc.Assets.Base + image;
+
+    // "Virus (4)": its planning constraint; "Animosité (1-5)": any slot.
+    private static string MinistryName(MinistryCard card) => $"{card.Name} ({(card.Slot is { } s ? s.ToString() : $"1-{PlanningRules.Slots}")})";
+
+    // A ministry card; spent: played or revealed (greyed).
+    private RenderFragment Ministry(string id, bool spent) => __builder =>
+    {
+        if (CardDecks.Ministry(id) is not { } card) return;
+        var title = $"{MinistryName(card)}{(spent ? $" · {L.Ui("online.offblock.spent")}" : "")} — {CardDecks.Text(card)}";
+        <figure class="offblock-card ministry @(spent ? "spent" : null)" title="@title">
+            <img src="@Src(CardDecks.Image(card.Id))" alt="@card.Name" loading="lazy" />
+        </figure>
+    };
+
+}

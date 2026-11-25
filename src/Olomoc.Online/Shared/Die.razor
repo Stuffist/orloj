@@ -1,0 +1,31 @@
+@* A D6 drawn with its pips (initiative, dice roller); Hit: a success, lit. *@
+
+<span class="online-die @(Hit ? "hit" : null)" role="img" aria-label="@Face">
+    <svg viewBox="0 0 30 30" aria-hidden="true">
+        @foreach (var (x, y) in Pips(Face))
+        {
+            <circle cx="@x" cy="@y" r="3" />
+        }
+    </svg>
+</span>
+
+@code {
+    [Parameter, EditorRequired] public int Face { get; set; }
+    [Parameter] public bool Hit { get; set; }
+
+    // Pips of each face, as on a real die (left, middle, right × top, middle, bottom).
+    private static IEnumerable<(int X, int Y)> Pips(int face)
+    {
+        const int l = 8, m = 15, r = 22;
+        return face switch
+        {
+            1 => [(m, m)],
+            2 => [(l, l), (r, r)],
+            3 => [(l, l), (m, m), (r, r)],
+            4 => [(l, l), (r, l), (l, r), (r, r)],
+            5 => [(l, l), (r, l), (m, m), (l, r), (r, r)],
+            6 => [(l, l), (r, l), (l, m), (r, m), (l, r), (r, r)],
+            _ => [],
+        };
+    }
+}

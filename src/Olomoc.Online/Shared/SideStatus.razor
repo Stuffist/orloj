@@ -1,0 +1,81 @@
+@implements IDisposable
+@inject LocalizationService L
+@inject MySide Side
+
+@* A player's state next to the mat, above their cabal: presence, name, P1, Fiel and victory points.
+   The player's own side has its Fiel tokens clickable and its VP +/- (MySide: sent like a change of their sheet); the other is
+   shown as the server knows it. *@
+
+@if (View.Seats.ElementAtOrDefault(Seat) is { } seat)
+{
+    var state = Mine ? Side.Session?.State : seat.State;
+    <div class="tb-status-side @SeatClass">
+        <div class="tb-status-name">
+            <span class="online-presence @(seat.Connected ? "on" : null)" title="@L.Ui(seat.Connected ? "online.connected" : "online.disconnected")"></span>
+            <strong>@seat.Name</strong>
+            @if (Mine)
+            {
+                <span class="online-badge">@L.Ui("online.table.you")</span>
+            }
+            @if (View.First == Seat)
+            {
+                <span class="tn-first-mark" title="@L.Ui("pairings.result.first.played")">@L.Ui("pairings.result.first")</span>
+            }
+        </div>
+        @if (state is not null)
+        {
+            <div class="tb-status-counters">
+                <span class="counter bile @(state.Bile >= GameSession.MaxBile ? "lost" : null)" title="@L.Ui("play.bile")">
+                    <span class="counter-label">@L.Ui("play.bile")</span>
+                    @if (Editable)
+                    {
+                        <span class="token-track tb-tokens" role="group" aria-label="@L.Ui("play.bile") @state.Bile / @GameSession.MaxBile">
+                            @for (var k = 1; k <= GameSession.MaxBile; k++)
+                            {
+                                var n = k;
+                                <button class="tb-token-btn" type="button" aria-label="@L.Ui("play.bile") @n" @onclick="() => SetBileAsync(n)">
+                                    <img class="token @(n <= state.Bile ? "on" : "off")" src="@(Olomoc.Assets.Base)img/icons/darkness.png" alt="" />
+                                </button>
+                            }
+                        </span>
+                    }
+                    else
+                    {
+                        <TokenTrack Token="darkness" Count="state.Bile" Max="GameSession.MaxBile" />
+                    }
+                </span>
+                <span class="counter vp" title="@L.Ui("play.vp.title")">
+                    <span class="counter-label">@L.Ui("play.vp")</span>
+                    @if (Editable)
+                    {
+                        <button class="step" type="button" disabled="@(state.VictoryPoints == 0)" @onclick="() => Side.ChangeAsync(s => s.AdjustVictoryPoints(-1))" aria-label="@L.Ui("play.vp") −">−</button>
+                    }
+                    <span class="counter-value vp-value">@state.VictoryPoints</span>
+                    @if (Editable)
+                    {
+                        <button class="step" type="button" disabled="@(state.VictoryPoints >= OnlineRules.MaxVictoryPoints)" @onclick="() => Side.ChangeAsync(s => s.AdjustVictoryPoints(1))" aria-label="@L.Ui("play.vp") +">+</button>
+                    }
+                </span>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public OnlineView View { get; set; } = default!;
+    [Parameter] public int Seat { get; set; }
+
+    private bool Mine => View.Me == Seat;
+    // As on the sheet: the player's own side, during the cycles.
+    private bool Editable => Mine && View.Step == OnlineStep.Cycle && Side.Session is not null;
+    private string SeatClass => $"tb-seat-{Seat}";
+
+    // A click on the n-th Fiel token: n tokens (on the last one lit: one less), like the cogs' tokens.
+    private Task SetBileAsync(int n) => Side.ChangeAsync(s => s.AdjustBile((n == s.State.Bile ? n - 1 : n) - s.State.Bile));
+
+    protected override void OnInitialized() => Side.Changed += OnSideChanged;
+
+    private void OnSideChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Side.Changed -= OnSideChanged;
+}

@@ -18,7 +18,7 @@
                         <span class="online-dice">
                             @foreach (var d in dice)
                             {
-                                <span class="online-die @(d >= OnlineRules.Success ? "hit" : null)">@d</span>
+                                <Die Face="d" Hit="@(d >= OnlineRules.Success)" />
                             }
                         </span>
                         <span class="online-successes">@L.Ui("online.initiative.successes", OnlineRules.Successes(dice))</span>
@@ -49,7 +49,7 @@
                         <span class="online-dice">
                             @foreach (var d in dice)
                             {
-                                <span class="online-die @(d >= OnlineRules.Success ? "hit" : null)">@d</span>
+                                <Die Face="d" Hit="@(d >= OnlineRules.Success)" />
                             }
                         </span>
                         <span class="online-successes">@L.Ui("online.initiative.successes", OnlineRules.Successes(dice))</span>
@@ -75,13 +75,13 @@
             <div class="online-inline">
                 @* Random draw: suggests an agenda in the list, to confirm or redraw (nothing is sent
                    before "Confirm"). *@
-                <select aria-label="@L.Ui("online.agenda.title")" value="@_agenda" @onchange="e => (_agenda, _drawn) = (e.Value?.ToString() ?? Agendas.All[0], false)">
-                    @foreach (var id in Agendas.All)
+                <select aria-label="@L.Ui("online.agenda.title")" value="@_agenda" @onchange="e => (_agenda, _drawn) = (e.Value?.ToString() ?? OnlineRules.OnlineAgendas[0], false)">
+                    @foreach (var id in OnlineRules.OnlineAgendas)
                     {
                         <option value="@id">@L.Ui($"agenda.{id}")</option>
                     }
                 </select>
-                <button class="btn primary" type="button" @onclick="() => Send(new(OnlineCommandType.ChooseAgenda, _agenda))">@L.Ui(_drawn ? "online.agenda.confirm" : "online.agenda.choose")</button>
+                <button class="btn primary" type="button" @onclick="() => Send(new(OnlineCommandType.ChooseAgenda, _agenda, Flag: _drawn))">@L.Ui(_drawn ? "online.agenda.confirm" : "online.agenda.choose")</button>
                 <button class="btn" type="button" @onclick="Draw">@L.Ui(_drawn ? "online.agenda.redraw" : "online.agenda.draw")</button>
             </div>
             @if (_drawn)
@@ -100,13 +100,13 @@
     [Parameter, EditorRequired] public OnlineView View { get; set; } = default!;
     [Parameter, EditorRequired] public Func<OnlineCommand, Task> Send { get; set; } = default!;
 
-    private string _agenda = Agendas.All[0];
+    private string _agenda = OnlineRules.OnlineAgendas[0];
     private bool _drawn;
 
     // Random agenda from the official collection, other than the one suggested: to confirm or redraw.
     private void Draw()
     {
-        var others = Agendas.All.Where(id => id != _agenda).ToList();
+        var others = OnlineRules.OnlineAgendas.Where(id => id != _agenda).ToList();
         (_agenda, _drawn) = (others[Random.Shared.Next(others.Count)], true);
     }
 
