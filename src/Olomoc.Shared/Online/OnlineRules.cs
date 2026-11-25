@@ -38,7 +38,7 @@ public static class OnlineRules
             OnlineCommandType.SetReady => One(SetReady(g, seat, c.Flag == true, catalog, now)),
             OnlineCommandType.RollInitiative => One(RollInitiative(g, seat, random, now)),
             OnlineCommandType.ChooseAgenda => One(ChooseAgenda(g, seat, c.Text, now)),
-            OnlineCommandType.DrawAgenda => One(ChooseAgenda(g, seat, OnlineAgendas[random.Next(OnlineAgendas.Count)], now)),
+            OnlineCommandType.DrawAgenda => One(DrawAgenda(g, seat, random, now)),
             OnlineCommandType.UpdateState => One(UpdateState(g, seat, c.State, c.BasedOn, c.Note, catalog, now)),
             OnlineCommandType.Undo => One(Undo(g, seat, now)),
             OnlineCommandType.SetEndCycle => One(SetEndCycle(g, seat, c.Flag == true, now)),
@@ -178,13 +178,18 @@ public static class OnlineRules
         return null;
     }
 
+    /// <summary>A scenario drawn at random, its decks with it (P1 can still change them).</summary>
+    public static Problem? DrawAgenda(OnlineGame g, int seat, Random random, DateTimeOffset now) =>
+        ChooseAgenda(g, seat, OnlineAgendas[random.Next(OnlineAgendas.Count)], now) ?? SetDecks(g, seat, null, true, random, now);
+
     /// <summary>
-    /// Artifact and Ministry decks of the scenario ('Hors Bloc' panel): given, or drawn at random
-    /// (Flag); either player, once the agenda is chosen, until the end of the cycles.
+    /// Artifact and Ministry decks of the scenario ('Hors Bloc' panel), by P1: given, or drawn at random
+    /// (Flag); once the agenda is chosen, until the end of the cycles.
     /// </summary>
     public static Problem? SetDecks(OnlineGame g, int seat, IReadOnlyList<string?>? decks, bool draw, Random random, DateTimeOffset now)
     {
         if (g.Step is OnlineStep.Lobby or OnlineStep.Finished) return Problem.Of("onlineStep");
+        if (g.First != seat) return Problem.Of("onlineNotFirst");
         if (g.Agenda is not { } agenda) return Problem.Of("onlineAgendaNone");
         var (artifact, ministry) = draw
             ? (Decks.Artifacts[random.Next(Decks.Artifacts.Count)], Decks.Ministries[random.Next(Decks.Ministries.Count)])

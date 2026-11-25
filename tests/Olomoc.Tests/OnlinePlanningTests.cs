@@ -1,6 +1,7 @@
 using Olomoc.Models;
 using Olomoc.Online;
 using Olomoc.Services;
+using Olomoc.Tournaments;
 using Xunit;
 
 namespace Olomoc.Tests;
@@ -92,6 +93,13 @@ public class OnlinePlanningTests
         // Incomplete: allowed, but not ready.
         Ok(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: [full[0], null, null, null, null]), d));
         Assert.False(PlanningRules.Complete(g, 0));
+    }
+
+    [Fact]
+    public void Every_artefact_card_has_its_text()
+    {
+        foreach (var deck in Decks.Artifacts)
+            Assert.All(CardDecks.ArtifactDeck(deck), id => Assert.False(string.IsNullOrWhiteSpace(CardDecks.Text(CardDecks.Artifact(id)!)), id));
     }
 
     [Fact]

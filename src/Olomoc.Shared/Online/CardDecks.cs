@@ -90,6 +90,26 @@ public static class CardDecks
     public static ArtifactCard? Artifact(string? id) => Artifacts.FirstOrDefault(c => c.Id == id);
     public static HostileCard? Hostile(string? id) => Hostiles.FirstOrDefault(c => c.Id == id);
 
+    /// <summary>Effect printed on an artefact card (French, as on the card), by its name.</summary>
+    public static string? Text(ArtifactCard card) => ArtifactTexts.GetValueOrDefault(card.Name);
+
+    private static readonly Dictionary<string, string> ArtifactTexts = new()
+    {
+        ["Rogue"] = "Placez un rouage hostile Rogue sur le Bloc au plus proche du coin ou du bord indiqué par l’emplacement du logo sur cette carte Artefact.",
+        ["Contraction temporelle"] = "Tous les rouages perdent 1 pion d’action.",
+        ["Pluie de Fiel"] = "Attribuez un pion de Noirceur à tous les rouages.",
+        ["Faisceau lumineux"] = "Retirez un pion de Noirceur de tous les rouages puis activez tous les rouages hostiles présents sur le Bloc.",
+        ["Directive suprême"] = "Appliquez immédiatement la capacité du Ministère déchu.",
+        ["Faille quantique −"] = "Chaque joueur désigne le rouage adverse de son choix avec le plus petit rang présent sur le Bloc puis le place à 2\".",
+        ["Faille quantique +"] = "Chaque joueur désigne le rouage adverse de son choix avec le plus haut rang présent sur le Bloc puis le place à 2\".",
+        ["Parasite"] = "Placez un rouage hostile Parasite sur le Bloc au plus proche du coin ou du bord indiqué par l’emplacement du logo sur cette carte s’il n’y en a pas déjà deux sur le Bloc. Puis activez tous les Parasites présents sur le Bloc.",
+        ["Signal"] = "Jusqu’à la fin du cycle, les rouages dont la carte d’activation est sur l’emplacement correspondant à la contrainte de planification du Ministère déchu sont considérés comme ayant le plus haut rang par les rouages hostiles.",
+        ["Feux étranges"] = "À la fin de cette phase de planification, tous les rouages sur le Bloc qui n’auraient pas réalisé de mouvement durant cette phase subissent 1D3 blessures qui ignorent la protection. Appliquez les blessures à tous les rouages si cette carte est révélée lors du Mécanisme de début de cycle.",
+        ["Le souffle"] = "Placez à 4\" directement à l’opposé du centre du Bloc tous les rouages qui ne sont pas à couvert. Puis attribuez-leur un pion sonné.",
+        ["Reconfiguration"] = "Jusqu’à la fin de cette phase de planification, diminuez de 2 les valeurs de toutes les caractéristiques de tous les rouages non hostiles.",
+        ["Décharge"] = "Attribuez un pion sonné à tous les rouages à couvert.",
+    };
+
     /// <summary>The deck's 9 ministry cards: its Axe card twice, its 7 ministries.</summary>
     public static IReadOnlyList<string> MinistryDeck(string deck)
     {

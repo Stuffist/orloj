@@ -1297,7 +1297,6 @@
   "online.offblock.deal.help": "1 Axe card to each player, then 3 random ministries each; the last one is the fallen ministry (rules p.31).",
   "online.offblock.myHand": "My hand",
   "online.offblock.fallen": "Fallen ministry",
-  "online.offblock.handOf": "{0}: {1} card(s)",
   "online.offblock.dealAgain": "Deal again",
   "online.offblock.artifactTitle": "Artifact",
   "online.offblock.pile": "Pile: {0} card(s) · discard: {1}",
@@ -1333,7 +1332,6 @@
   "online.offblock.planning": "Planning",
   "online.offblock.planning.later": "The planning is done during the cycles.",
   "online.offblock.slotN": "Slot {0}",
-  "online.offblock.planning.save": "Confirm my planning",
   "online.offblock.planned": "{0}: planning complete",
   "online.offblock.planning.pending": "{0}: planning to complete",
   "online.offblock.phaseN": "Phase {0}",
@@ -1348,5 +1346,12 @@
   "pairings.problem.onlinePlanningSlot": "The ministry card “{0}” goes on slot {1}.",
   "pairings.problem.onlinePlanningRevealed": "This cycle’s planning has started: it no longer changes.",
   "pairings.problem.onlinePlanningIncomplete": "Both plannings must be complete.",
-  "pairings.problem.onlinePlanningDone": "The 5 phases are revealed."
+  "pairings.problem.onlinePlanningDone": "The 5 phases are revealed.",
+  "online.offblock.myMinistries": "My ministries",
+  "online.offblock.ministriesOf": "{0}’s ministries",
+  "online.offblock.spent": "played",
+  "online.offblock.hidden": "Planned card, hidden until its phase",
+  "online.offblock.takeBack": "Click to take the card back",
+  "online.offblock.planning.help": "Drag your cards onto your slots (or click a card, then a slot); click a placed card to take it back. A ministry only goes on its slot. Saved as you go.",
+  "online.offblock.decks.first": "The first player chooses the decks."
 }

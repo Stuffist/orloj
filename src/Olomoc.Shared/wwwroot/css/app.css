@@ -1090,38 +1090,59 @@ body {
 .tb-status-counters .step { width: 1.4rem; height: 1.4rem; padding: 0; }
 .tb-status-counters .vp-value { min-width: 1.4rem; text-align: center; font-weight: 700; }
 .tb-cog .stat-line.compact { margin: 0; }
+/* "Hors Bloc": scenario, ministries and artefact side by side; the planning under them */
+.offblock-top { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem 1.2rem; align-items: start; }
+.offblock-top > .offblock-section + .offblock-section { padding-left: 1.2rem; border-left: 1px solid var(--line); }
+.offblock-planning { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--line); }
 .offblock-section h3 { margin: .2rem 0 .4rem; font-size: .95rem; }
 .offblock-agenda { margin: 0 0 .5rem; }
-.offblock-decks { margin-bottom: .4rem; }
-.offblock-decks label { display: flex; flex-direction: column; gap: .15rem; font-size: .75rem; color: var(--muted); }
+.offblock-decks { margin-bottom: .4rem; align-items: flex-end; }
+.offblock-decks label { display: flex; flex-direction: column; gap: .15rem; font-size: .75rem; color: var(--muted); flex: 1 1 8rem; min-width: 0; }
+.offblock-decks label select { flex: none; }
 .offblock-place { margin: .3rem 0; }
-.offblock-section + .offblock-section { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--line); }
 .offblock-cards { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; margin: .4rem 0; }
-.offblock-group { display: flex; flex-direction: column; gap: .3rem; }
+.offblock-group { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .5rem; }
 .offblock-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-start; }
 .offblock-card { margin: 0; display: flex; flex-direction: column; gap: .2rem; font-size: .72rem; color: var(--muted); text-align: center; }
-.offblock-card.ministry img { width: 7rem; border-radius: 6px; display: block; }
-/* An artefact card: a landscape card stored upright, turned (its box: the image's height × width) */
-.offblock-turn { width: 7.1rem; height: 5rem; display: grid; place-items: center; overflow: hidden; border-radius: 6px; }
-.offblock-turn img { width: 5rem; transform: rotate(90deg); display: block; }
-.offblock-card.large .offblock-turn { width: 14.2rem; height: 10rem; }
-.offblock-card.large .offblock-turn img { width: 10rem; }
-.offblock-noimage { width: 7.1rem; height: 5rem; display: grid; place-items: center; background: var(--panel-2); border: 1px dashed var(--line); border-radius: 6px; color: var(--ink); }
-.offblock-card.large .offblock-noimage { width: 14.2rem; height: 10rem; }
+.offblock-card img { border-radius: 6px; display: block; }
+.offblock-card.ministry img, .offblock-card.planned img { width: 4.6rem; }
+.offblock-card.ministry figcaption, .offblock-card.planned figcaption { max-width: 6rem; overflow-wrap: anywhere; }
+.offblock-card.spent { opacity: .35; filter: grayscale(1); }
+/* An artefact card, upright as in the module (its logo shows a corner or an edge of the Block) */
+.offblock-card.artifact img, .offblock-noimage { width: 6rem; }
+.offblock-card.artifact.large img, .offblock-card.large .offblock-noimage { width: 10rem; }
+.offblock-noimage { aspect-ratio: 197 / 278; display: grid; place-items: center; background: var(--panel-2); border: 1px dashed var(--line); border-radius: 6px; color: var(--ink); }
+.offblock-text { margin: .2rem 0 0; max-width: 15rem; font-size: .8rem; line-height: 1.35; color: var(--ink); text-align: left; }
 .offblock-priority { font-weight: 700; color: var(--ink); font-size: .85rem; }
 .offblock-hostile { background: none; border: 0; padding: 0; cursor: pointer; }
-.offblock-hostile img { width: 16rem; max-width: 100%; border-radius: 6px; display: block; }
+.offblock-hostile img { width: 15rem; max-width: 100%; border-radius: 6px; display: block; }
 .offblock-discard summary { cursor: pointer; font-size: .85rem; }
 .offblock-indra { margin-top: .6rem; }
 .offblock-indra-card { display: flex; flex-direction: column; gap: .25rem; align-items: center; }
-.offblock-slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .5rem; margin-bottom: .5rem; }
-.offblock-slot { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
-.offblock-slot select { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: .3rem; font-size: .8rem; min-width: 0; }
-.offblock-card.planned img { width: 5.5rem; border-radius: 5px; display: block; margin: 0 auto; }
-.offblock-phases { border-collapse: collapse; margin: .5rem 0; }
-.offblock-phases th, .offblock-phases td { padding: .3rem .5rem; border-bottom: 1px solid var(--line); vertical-align: middle; font-size: .8rem; }
-.offblock-verdict { font-weight: 700; color: var(--ink); }
-@media (max-width: 760px) { .offblock-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* The planning: a row of 5 slots per player (the opponent's hidden until revealed); the hand under it */
+.offblock-board { display: grid; grid-template-columns: minmax(5rem, auto) repeat(5, minmax(0, 7rem)); gap: .4rem; align-items: center; margin: .4rem 0 .6rem; }
+.offblock-board-head { font-size: .75rem; color: var(--muted); text-align: center; }
+.offblock-board-name { font-weight: 700; font-size: .85rem; overflow-wrap: anywhere; }
+.offblock-drop { min-height: 8.6rem; border: 1px dashed var(--line); border-radius: 8px; display: grid; place-items: center; padding: .25rem; }
+.offblock-drop.allowed { border: 1px solid var(--rust-soft); background: rgba(214, 110, 60, .1); }
+.offblock-drop.refused { opacity: .4; }
+.offblock-drop.unrevealed .offblock-card { opacity: .6; }
+.offblock-slot-number { font-size: 1.4rem; color: var(--muted); }
+.offblock-back { width: 4.6rem; aspect-ratio: 150 / 212; border-radius: 6px; display: grid; place-items: center; font-weight: 700; color: var(--muted);
+    background: repeating-linear-gradient(45deg, #2b3640 0 6px, #232c34 6px 12px); border: 1px solid var(--line); }
+.offblock-verdict { font-weight: 700; color: var(--ink); font-size: .78rem; text-align: center; }
+.offblock-drag { cursor: grab; border-radius: 6px; }
+.offblock-drag.picked { outline: 2px solid #f5d76e; outline-offset: 2px; }
+.offblock-held.placed { opacity: .3; }
+@media (max-width: 1100px) {
+    .offblock-top { grid-template-columns: minmax(0, 1fr); }
+    .offblock-top > .offblock-section + .offblock-section { padding-left: 0; border-left: 0; padding-top: .8rem; border-top: 1px solid var(--line); }
+}
+@media (max-width: 760px) {
+    .offblock-board { grid-template-columns: 3.5rem repeat(5, minmax(0, 1fr)); gap: .25rem; }
+    .offblock-card.planned img, .offblock-back { width: 100%; }
+    .offblock-drop { min-height: 5rem; }
+}
 .online-camps-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .6rem; }
 .online-camps-head h2 { margin: 0 auto 0 0; }
 .tb-board {

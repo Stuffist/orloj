@@ -131,19 +131,27 @@ public class OnlineAgendaTests
     }
 
     [Fact]
-    public async Task Decks_of_the_scenario_chosen_or_drawn_by_either_player()
+    public async Task Decks_of_the_scenario_chosen_or_drawn_by_P1_and_drawn_with_a_drawn_scenario()
     {
         var (d, g) = await InCycle("PROSPECTION");
-        Ok(Do(g, 0, new(OnlineCommandType.SetDecks, Decks: ["PARASITE", "INDOCTRINATION"]), d));
+        Assert.Equal("onlineNotFirst", Key(Do(g, 0, new(OnlineCommandType.SetDecks, Decks: ["PARASITE", "INDOCTRINATION"]), d)));
+        Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["PARASITE", "INDOCTRINATION"]), d));
         Assert.Equal(("PROSPECTION", "PARASITE", "INDOCTRINATION"), (g.Agenda!.Id, g.Agenda.Artifact, g.Agenda.Ministry));
         Assert.Equal("decks", g.Log[^1].Key);
         Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: [null, "DISINFORMATION"]), d));
         Assert.Equal((null, "DISINFORMATION"), (g.Agenda!.Artifact, g.Agenda.Ministry));
-        Assert.Equal("onlineDecks", Key(Do(g, 0, new(OnlineCommandType.SetDecks, Decks: ["DISINFORMATION", null]), d)));
+        Assert.Equal("onlineDecks", Key(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["DISINFORMATION", null]), d)));
 
         Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Flag: true), d));
         Assert.Contains(g.Agenda!.Artifact, Decks.Artifacts);
         Assert.Contains(g.Agenda.Ministry, Decks.Ministries);
         Assert.Equal(g.Agenda, OnlineRules.View(g, null, new HashSet<int>()).Agenda);
+
+        // A scenario drawn: its decks drawn with it.
+        var (d2, drawn) = await InCycle("PROSPECTION");
+        drawn.Step = OnlineStep.Agenda;
+        Ok(Do(drawn, 1, new(OnlineCommandType.DrawAgenda), d2, seed: 7));
+        Assert.Contains(drawn.Agenda!.Artifact, Decks.Artifacts);
+        Assert.Contains(drawn.Agenda.Ministry, Decks.Ministries);
     }
 }

@@ -6,7 +6,7 @@ namespace Olomoc.Online;
 /// The decks beside the Block in an online game ("Hors Bloc" panel), from the scenario's decks:
 /// <list type="bullet">
 /// <item>ministries (rulebook p.31): 1 Axe card to each player, the other 7 shuffled, 3 to each
-/// player (a secret hand), the last one face up: the fallen ministry;</item>
+/// player (hands known to both), the last one face up: the fallen ministry;</item>
 /// <item>the Artefact (p.27): a pile face down (secret order), built at its first Mécanisme
 /// (Visites: the 3 Rogue cards on top); "Mécanisme" draws its top card (the previous one to the
 /// discard; an empty pile: the discard shuffled again); "Remélanger": every card shuffled again;</item>
@@ -146,5 +146,6 @@ public static class DeckRules
         me is { } i && i < d.Hands.Count ? d.Hands[i] : [],
         d.Hands.Select(h => h.Count).ToList(),
         d.Fallen, d.Pile.Count, d.Discard, d.Drawn, d.Mechanisms,
-        d.IndraSeat, d.IndraSeat == me ? d.Indra : [], d.Indra.Count);
+        d.IndraSeat, d.IndraSeat == me ? d.Indra : [], d.Indra.Count,
+        d.Hands.Select(h => (IReadOnlyList<string>)h.ToList()).ToList(), d.Played.Select(h => (IReadOnlyList<string>)h.ToList()).ToList());
 }

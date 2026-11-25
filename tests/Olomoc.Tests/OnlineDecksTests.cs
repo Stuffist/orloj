@@ -29,7 +29,7 @@ public class OnlineDecksTests
         g.Step = OnlineStep.Agenda;
         g.First = 1;
         Ok(Do(g, 1, new(OnlineCommandType.ChooseAgenda, agenda), d));
-        Ok(Do(g, 0, new(OnlineCommandType.SetDecks, Decks: [artifact, ministry]), d));
+        Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: [artifact, ministry]), d));
         if (indra) g.Seats[0].State!.Cogs[2].CogId = CardDecks.Indra;          // her card in the cabal
         return (d, g);
     }
@@ -67,7 +67,7 @@ public class OnlineDecksTests
     }
 
     [Fact]
-    public async Task Ministries_dealt_an_Axe_card_and_3_each_the_last_one_fallen_each_hand_secret()
+    public async Task Ministries_dealt_an_Axe_card_and_3_each_the_last_one_fallen_hands_known_to_both()
     {
         var (d, g) = await InCycle();
         Ok(Do(g, 1, new(OnlineCommandType.DealMinistries), d));
@@ -84,12 +84,16 @@ public class OnlineDecksTests
         Assert.Equal("onlineDealt", Key(Do(g, 0, new(OnlineCommandType.DealMinistries), d)));
         Ok(Do(g, 0, new(OnlineCommandType.DealMinistries, Flag: true), d, seed: 5));          // dealt again
 
-        // Each one sees their own hand only; a spectator none.
+        // Each one has their hand; both hands are known (to a spectator too).
         var ana = OnlineRules.View(g, 0, new HashSet<int>()).Decks!;
         Assert.Equal(g.Decks!.Hands[0], ana.MyHand);
         Assert.Equal([4, 4], ana.HandSizes);
         Assert.Equal(g.Decks.Fallen, ana.Fallen);
-        Assert.Empty(OnlineRules.View(g, null, new HashSet<int>()).Decks!.MyHand);
+        Assert.Equal(g.Decks.Hands[1], ana.Hands[1]);
+        var spectator = OnlineRules.View(g, null, new HashSet<int>()).Decks!;
+        Assert.Empty(spectator.MyHand);
+        Assert.Equal(g.Decks.Hands[0], spectator.Hands[0]);
+        Assert.All(spectator.Played, p => Assert.Empty(p));
     }
 
     [Fact]

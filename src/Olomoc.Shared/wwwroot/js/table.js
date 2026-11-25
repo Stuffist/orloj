@@ -294,3 +294,12 @@ window.olomocTable = {
         g.style.display = "";
     },
 };
+
+// Planning cards of the "Hors Bloc" panel ([data-card], drag & drop handled by Blazor): Firefox starts
+// a drag only once some data is set.
+document.addEventListener("dragstart", e => {
+    const card = e.target instanceof Element ? e.target.closest("[data-card]") : null;
+    if (card && e.dataTransfer) {
+        try { e.dataTransfer.setData("text/plain", card.dataset.card); e.dataTransfer.effectAllowed = "move"; } catch { }
+    }
+});

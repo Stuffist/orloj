@@ -1297,7 +1297,6 @@
   "online.offblock.deal.help": "1 carte de l’Axe à chaque joueur, puis 3 ministères au hasard chacun ; le dernier est le ministère déchu (règles p.31).",
   "online.offblock.myHand": "Ma main",
   "online.offblock.fallen": "Ministère déchu",
-  "online.offblock.handOf": "{0} : {1} carte(s)",
   "online.offblock.dealAgain": "Redistribuer",
   "online.offblock.artifactTitle": "Artefact",
   "online.offblock.pile": "Pile : {0} carte(s) · défausse : {1}",
@@ -1333,7 +1332,6 @@
   "online.offblock.planning": "Planification",
   "online.offblock.planning.later": "La planification se fait pendant les cycles.",
   "online.offblock.slotN": "Emplacement {0}",
-  "online.offblock.planning.save": "Valider ma planification",
   "online.offblock.planned": "{0} : planification complète",
   "online.offblock.planning.pending": "{0} : planification à compléter",
   "online.offblock.phaseN": "Phase {0}",
@@ -1348,5 +1346,12 @@
   "pairings.problem.onlinePlanningSlot": "La carte ministère « {0} » se place à l’emplacement {1}.",
   "pairings.problem.onlinePlanningRevealed": "La planification de ce cycle a commencé : elle ne change plus.",
   "pairings.problem.onlinePlanningIncomplete": "Les deux planifications doivent être complètes.",
-  "pairings.problem.onlinePlanningDone": "Les 5 phases sont révélées."
+  "pairings.problem.onlinePlanningDone": "Les 5 phases sont révélées.",
+  "online.offblock.myMinistries": "Mes ministères",
+  "online.offblock.ministriesOf": "Ministères de {0}",
+  "online.offblock.spent": "joué",
+  "online.offblock.hidden": "Carte planifiée, cachée jusqu’à sa phase",
+  "online.offblock.takeBack": "Cliquer pour reprendre la carte",
+  "online.offblock.planning.help": "Glissez vos cartes sur vos emplacements (ou cliquez une carte, puis un emplacement) ; cliquez une carte posée pour la reprendre. Un ministère ne va que sur son emplacement. Enregistré au fur et à mesure.",
+  "online.offblock.decks.first": "Le premier joueur choisit les paquets."
 }

@@ -99,10 +99,12 @@ public sealed record OnlineView(
 /// <summary>
 /// The decks as a connection sees them (DeckRules.View): its ministry hand, each seat's hand size, the
 /// fallen ministry, the Artefact pile's size, its discard, the card drawn; Indra's cards for her player.
+/// The ministry hands are public (each seat's, and the ministries it played).
 /// </summary>
 public sealed record OnlineDecksView(string? MinistryDeck, string? ArtifactDeck, IReadOnlyList<string> MyHand, IReadOnlyList<int> HandSizes,
     string? Fallen, int PileSize, IReadOnlyList<string> Discard, string? Drawn, int Mechanisms, int? IndraSeat,
-    IReadOnlyList<string> MyIndra, int IndraCount);
+    IReadOnlyList<string> MyIndra, int IndraCount,
+    IReadOnlyList<IReadOnlyList<string>> Hands, IReadOnlyList<IReadOnlyList<string>> Played);
 
 /// <summary>
 /// The planning as a connection sees it (PlanningRules.View): its hand and its own slots; of each seat, the

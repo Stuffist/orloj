@@ -679,9 +679,9 @@ connection.
     A cog out of action on its sheet is faded. Bases have no orientation (no rotation); the selected terrain
     turns with its handles (one at each end, like the movement template), or by 15°.
   - **"Hors Bloc" panel** (`Shared/OffBlockPanel.razor`, under the table, detachable:
-    `/online/g/{code}/offblock?window=true`): what a game puts beside the Block. **Scenario**: the
-    agenda chosen at the setup, the Artifact and Ministry decks of the game (chosen or drawn by either
-    player), a note on its setup, and **« Placer »**: its elements put down on the mat at the positions
+    `/online/g/{code}/offblock?window=true`): what a game puts beside the Block: scenario, ministries and artefact side by side, the
+    planning under them. **Scenario**: the agenda chosen at the setup, the Artifact and Ministry decks
+    of the game (chosen or drawn by P1; drawn with the scenario when it is drawn), a note on its setup, and **« Placer »**: its elements put down on the mat at the positions
     of the Recueil des agendas (`Online/AgendaSetups.cs`, inches from the centre; a choice where the
     agenda leaves one: which median, which diagonal…), as ordinary pieces (movable, lockable) with
     their name and number (doors, accumulators), the batteries in their player's color, the zones de
@@ -689,17 +689,19 @@ connection.
     (`OnlineRules.OnlineAgendas`: its 7 activation cards replacing the ministries are not played).
     **Decks** (`Online/DeckRules.cs`, `Online/CardDecks.cs`: the cards as printed, rank, planning
     constraint, artefact number read on the images of the module V1.9): **ministries** dealt (1 Axe card each,
-    3 random ministries each, a secret hand; the last one face up: the fallen ministry; dealt again
+    3 random ministries each, the hands known to both, a ministry played or revealed greyed; the last one face up: the fallen ministry; dealt again
     on demand); the **Artefact**: a pile (secret order) built at its first « Mécanisme » (Visites: the 3
-    Rogue cards on top), « Mécanisme » draws its top card (with the priority its number gives; the
+    Rogue cards on top), « Mécanisme » draws its top card (upright as in the module: its logo shows a corner or an edge of
+    the Block; its effect under it and in the hover text; with the priority its number gives; the
     previous one to the discard; an empty pile: the discard shuffled again), « Remélanger »; the
     **hostiles' profile cards** (front, back: instinct) of the deck (and the Gargoyle with its agenda);
     **Indra**: her player takes the pile's 3 last cards (secret) and may swap the drawn card for one
     of them. Changing a deck in the scenario starts its cards again.
-    **Planning** (`Online/PlanningRules.cs`, semi-automatic, rulebook p.33): each player programs 5
-    cards in secret (the activation cards of their cogs in play, their propaganda cards: 1 plus 1 per
+    **Planning** (`Online/PlanningRules.cs`, semi-automatic, rulebook p.33): each player drags 5
+    cards of their hand onto their slots, in secret, saved as they go (the activation cards of their cogs in play, their propaganda cards: 1 plus 1 per
     cog out of action, one of their ministries, on the slot of its planning constraint; checked by
-    the server). Once both plannings are complete, « Révéler la phase » shows the next card of each,
+    the server). Once both plannings are complete, « Révéler la phase » shows the next card of each
+    (the opponent's still hidden ones as card backs),
     with their ranks and the active player (equal: « Mécanisme, puis la priorité »); the rest is up to
     the players. At the end of the cycle the planning starts again and the ministry played is
     discarded. Activation and propaganda cards from the Vassal module.
