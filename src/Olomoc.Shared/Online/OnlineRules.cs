@@ -42,6 +42,8 @@ public static class OnlineRules
                 => One(TableRules.Apply(g, seat, c, table, now)),
             OnlineCommandType.RollDice or OnlineCommandType.RerollDice or OnlineCommandType.SetDiceThreshold
                 => One(DiceRules.Apply(g, seat, c, random, now)),
+            OnlineCommandType.PlaceAgenda => One(AgendaSetups.Place(g, seat, c.Text, table, now)),
+            OnlineCommandType.SetDecks => One(SetDecks(g, seat, c.Decks, c.Flag == true, random, now)),
             OnlineCommandType.ConfirmResult => One(ConfirmResult(g, seat, c.Vp, now)),
             _ => One(Problem.Of("onlineCommand")),
         };
@@ -164,6 +166,23 @@ public static class OnlineRules
         g.Agenda = new Scenario(id);
         g.Step = OnlineStep.Cycle;
         Log(g, seat, now, "agenda", id);
+        return null;
+    }
+
+    /// <summary>
+    /// Artifact and Ministry decks of the scenario ('Hors Bloc' panel): given, or drawn at random
+    /// (Flag); either player, once the agenda is chosen, until the end of the cycles.
+    /// </summary>
+    public static Problem? SetDecks(OnlineGame g, int seat, IReadOnlyList<string?>? decks, bool draw, Random random, DateTimeOffset now)
+    {
+        if (g.Step is OnlineStep.Lobby or OnlineStep.Finished) return Problem.Of("onlineStep");
+        if (g.Agenda is not { } agenda) return Problem.Of("onlineAgendaNone");
+        var (artifact, ministry) = draw
+            ? (Decks.Artifacts[random.Next(Decks.Artifacts.Count)], Decks.Ministries[random.Next(Decks.Ministries.Count)])
+            : (decks?.ElementAtOrDefault(0), decks?.ElementAtOrDefault(1));
+        if (artifact is not null && !Decks.IsArtifact(artifact) || ministry is not null && !Decks.IsMinistry(ministry)) return Problem.Of("onlineDecks");
+        g.Agenda = agenda with { Artifact = artifact, Ministry = ministry };
+        Log(g, seat, now, "decks", artifact ?? "", ministry ?? "");
         return null;
     }
 

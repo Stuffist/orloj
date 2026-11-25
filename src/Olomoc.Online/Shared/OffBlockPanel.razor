@@ -1,0 +1,102 @@
+@inject LocalizationService L
+
+@* "Hors Bloc": what a game puts beside the Block. Scenario: the agenda chosen at the setup (P1),
+   the Artifact and Ministry decks of the game, and its elements put on the mat with "Placer"
+   (AgendaSetups: positions of the Recueil des agendas; a choice where the agenda leaves one). In
+   the game page, and alone in its detached window. *@
+
+<section class="panel offblock-panel">
+    <div class="online-camps-head">
+        <h2>@L.Ui("online.offblock.title")</h2>
+        @HeadContent
+    </div>
+
+    <div class="offblock-section">
+        <h3>@L.Ui("online.offblock.scenario")</h3>
+        @if (View.Agenda is not { } agenda)
+        {
+            <p class="hint">@L.Ui("online.offblock.noAgenda")</p>
+        }
+        else
+        {
+            var setup = AgendaSetups.Of(agenda.Id);
+            <p class="offblock-agenda"><ScenarioTag Scenario="agenda" /></p>
+
+            <div class="online-inline offblock-decks">
+                <label>
+                    <span>@L.Ui("online.offblock.artifact")</span>
+                    <select disabled="@(!CanAct)" value="@(agenda.Artifact ?? "")" @onchange="e => SetDecksAsync(e.Value?.ToString(), agenda.Ministry)">
+                        <option value="">—</option>
+                        @foreach (var id in Decks.Artifacts)
+                        {
+                            <option value="@id">@L.Ui($"deck.artifact.{id}")</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    <span>@L.Ui("online.offblock.ministry")</span>
+                    <select disabled="@(!CanAct)" value="@(agenda.Ministry ?? "")" @onchange="e => SetDecksAsync(agenda.Artifact, e.Value?.ToString())">
+                        <option value="">—</option>
+                        @foreach (var id in Decks.Ministries)
+                        {
+                            <option value="@id">@L.Ui($"deck.ministry.{id}")</option>
+                        }
+                    </select>
+                </label>
+                @if (CanAct)
+                {
+                    <button class="btn small" type="button" @onclick="DrawDecksAsync">🎲 @L.Ui("online.offblock.drawDecks")</button>
+                }
+            </div>
+
+            <p class="hint">@L.Ui($"online.agenda.note.{agenda.Id}")</p>
+
+            @if (setup is { Variants.Count: > 0 })
+            {
+                var variant = Variant(setup);
+                <div class="online-inline offblock-place">
+                    @if (setup.Variants.Count > 1)
+                    {
+                        <select aria-label="@L.Ui("online.offblock.variant")" value="@variant.Id" @onchange="e => _variant = e.Value?.ToString()">
+                            @foreach (var v in setup.Variants)
+                            {
+                                <option value="@v.Id">@L.Ui($"online.agenda.variant.{v.Id}")</option>
+                            }
+                        </select>
+                    }
+                    @if (CanAct)
+                    {
+                        <button class="btn small primary" type="button" title="@L.Ui("online.offblock.place.title")"
+                                @onclick="() => Send(new(OnlineCommandType.PlaceAgenda, variant.Id))">📍 @L.Ui("online.offblock.place")</button>
+                    }
+                </div>
+                <p class="hint">@Elements(variant)</p>
+            }
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public OnlineView View { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<OnlineCommand, Task> Send { get; set; } = default!;
+    /// <summary>More buttons in the header (detach, bring back).</summary>
+    [Parameter] public RenderFragment? HeadContent { get; set; }
+
+    private string? _variant;
+
+    // From the initiative to the end of the game, for the players.
+    private bool CanAct => View.Me is not null && View.Step is OnlineStep.Initiative or OnlineStep.Agenda or OnlineStep.Cycle;
+
+    private AgendaVariant Variant(AgendaSetup setup) => setup.Variants.FirstOrDefault(v => v.Id == _variant) ?? setup.Variants[0];
+
+    // "3 × Secret, 4 × Zone de Fiel": what "Placer" puts down.
+    private string Elements(AgendaVariant variant) => string.Join(", ", variant.Elements
+        .GroupBy(e => e.Kind).Select(g => $"{g.Count()} × {L.Ui($"online.agenda.element.{g.Key}")}"));
+
+    private Task SetDecksAsync(string? artifact, string? ministry) =>
+        Send(new(OnlineCommandType.SetDecks, Decks: [Empty(artifact), Empty(ministry)]));
+
+    private Task DrawDecksAsync() => Send(new(OnlineCommandType.SetDecks, Flag: true));
+
+    private static string? Empty(string? id) => string.IsNullOrEmpty(id) ? null : id;
+}

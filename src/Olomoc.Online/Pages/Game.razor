@@ -95,6 +95,7 @@ else
         case OnlineStep.Initiative or OnlineStep.Agenda:
             <SetupPanel View="v" Send="SendAsync" />
             @Table(v)
+            @OffBlock(v)
             break;
         default:
             @if (v.Over)
@@ -116,6 +117,7 @@ else
                 </section>
             }
             @Table(v)
+            @OffBlock(v)
             @Camps(v)
             break;
     }
@@ -169,6 +171,34 @@ else
     // The device's current game: "Leave the game" removes it from the Play tab (it stays on the
     // server, and in "My online games" to resume it).
     private bool IsCurrent => string.Equals(Current.OnlineCode, Code, StringComparison.OrdinalIgnoreCase);
+
+    // "Hors Bloc" (scenario…): in the page, or detached into its own window (another screen).
+    private bool _offBlockDetached;
+
+    private async Task DetachOffBlockAsync()
+    {
+        if (await JS.InvokeAsync<bool>("olomoc.openWindow", $"online/g/{Code}/offblock?window=true", $"olomoc-offblock-{Code}", 900, 900))
+            _offBlockDetached = true;
+    }
+
+    private RenderFragment OffBlock(OnlineView v) => __builder =>
+    {
+        if (_offBlockDetached)
+        {
+            <section class="panel tb-detached">
+                <span>@L.Ui("online.offblock.detached")</span>
+                <button class="btn small" type="button" @onclick="() => _offBlockDetached = false">@L.Ui("online.table.bringBack")</button>
+            </section>
+        }
+        else
+        {
+            <OffBlockPanel View="v" Send="SendAsync">
+                <HeadContent>
+                    <button class="btn small" type="button" title="@L.Ui("online.offblock.detach.title")" @onclick="DetachOffBlockAsync">@L.Ui("equipment.detach")</button>
+                </HeadContent>
+            </OffBlockPanel>
+        }
+    };
 
     // Both sides under the table: in the page, or detached into their own window (another screen),
     // where the player's side stays editable. Window blocked by the browser: they stay in the page.

@@ -202,6 +202,10 @@ else
                                     }
                                 </g>
                             }
+                            @if (p.Number is { } number)
+                            {
+                                <g><text class="tb-number" text-anchor="middle" dominant-baseline="central">@number</text></g>
+                            }
                             @if (p.Kind != PieceKind.Marker)
                             {
                                 <circle r="@Num(radius - RingInset)" class="tb-ring" />
@@ -636,7 +640,8 @@ else
         PieceKind.Equipment => Catalog.EquipmentById(p.Ref) is { } e ? L.EquipmentName(e).Text : p.Ref,
         PieceKind.Terrain => Files.Manifest.TerrainOf(p.Ref) is { } t ? TerrainName(t) : p.Ref,
         PieceKind.Template => L.Ui($"online.table.template.{p.Ref}"),
-        _ => L.Ui($"online.table.marker.{p.Ref}"),
+        // An agenda's element: its kind and number ("Porte 3"); otherwise the marker's name.
+        _ => p.Label is { } kind ? L.Ui($"online.agenda.element.{kind}") + (p.Number is { } n ? $" {n}" : "") : L.Ui($"online.table.marker.{p.Ref}"),
     } + (p.Seat is { } s && View.Seats.ElementAtOrDefault(s) is { } seat ? $" ({seat.Name})" : "");
 
     private string TerrainName(TableTerrain t) => L.Ui($"online.table.terrain.{t.Type}") + (t.Number is { } n ? $" {n}" : "");

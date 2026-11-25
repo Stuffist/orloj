@@ -24,6 +24,7 @@ public enum OnlineCommandType
     UpdateState, Undo, SetEndCycle,          // cycles
     SetBoard, AddPiece, MovePiece, RemovePiece, SetAuras, SetMagnet, SetLock, SetClaim,   // table (from the initiative on)
     RollDice, RerollDice, SetDiceThreshold,  // shared dice roller (from the initiative on)
+    PlaceAgenda, SetDecks,                   // "Hors Bloc": the agenda's elements on the mat, the decks of the scenario
     ConfirmResult,                           // end of the game
 }
 
@@ -35,6 +36,7 @@ public enum OnlineCommandType
 /// X and Y (mm), Rotation.
 /// Auras: ranges shown around a piece (inches, 1 to 9; empty: none). Vp: victory points of each seat, for the result.
 /// Dice: Text (slot "action" or "reaction"), Count (D6), Threshold (2 to 5).
+/// Agenda: Text (variant to place); Decks: [Artifact, Ministry] of the scenario (Flag: drawn at random).
 /// </summary>
 public sealed record OnlineCommand(
     OnlineCommandType Type,
@@ -53,7 +55,8 @@ public sealed record OnlineCommand(
     IReadOnlyList<int>? Auras = null,
     int? Side = null,
     int? Count = null,
-    int? Threshold = null);
+    int? Threshold = null,
+    IReadOnlyList<string?>? Decks = null);
 
 /// <summary>Answer to Join (hub): the game's view, or the problem that prevents joining it (notFound, forbidden).</summary>
 public sealed record OnlineJoin(OnlineView? View, string? Error = null);

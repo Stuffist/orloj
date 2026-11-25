@@ -1090,6 +1090,11 @@ body {
 .tb-status-counters .step { width: 1.4rem; height: 1.4rem; padding: 0; }
 .tb-status-counters .vp-value { min-width: 1.4rem; text-align: center; font-weight: 700; }
 .tb-cog .stat-line.compact { margin: 0; }
+.offblock-section h3 { margin: .2rem 0 .4rem; font-size: .95rem; }
+.offblock-agenda { margin: 0 0 .5rem; }
+.offblock-decks { margin-bottom: .4rem; }
+.offblock-decks label { display: flex; flex-direction: column; gap: .15rem; font-size: .75rem; color: var(--muted); }
+.offblock-place { margin: .3rem 0; }
 .online-camps-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .6rem; }
 .online-camps-head h2 { margin: 0 auto 0 0; }
 .tb-board {
@@ -1106,6 +1111,7 @@ body {
 .tb-seat-0 .tb-ring { stroke: var(--rust-soft); }
 .tb-seat-1 .tb-ring { stroke: #4f9fd6; }
 .tb-initials { fill: var(--ink); font-size: 9px; font-weight: 700; pointer-events: none; }
+.tb-number { fill: #fff; font-size: 12px; font-weight: 800; paint-order: stroke; stroke: #0d1013; stroke-width: 2.5px; pointer-events: none; }
 .tb-out { opacity: .35; filter: grayscale(1); }
 .tb-magnet { fill: none; stroke: #7fd4ff; stroke-width: 1.2; pointer-events: none; }
 .tb-handle-arm { stroke: #f5d76e; stroke-width: .6; pointer-events: none; }

@@ -91,6 +91,9 @@ public sealed class TablePiece
     public bool Magnet { get; set; }
     /// <summary>Terrain or a marker locked in place (padlock): neither moved nor removed until unlocked.</summary>
     public bool Locked { get; set; }
+    /// <summary>An agenda's element: its kind ("secret", "door"…: its name) and its number shown on it ("2"); null: none.</summary>
+    public string? Label { get; set; }
+    public string? Number { get; set; }
     /// <summary>An objective marker taken by these sides (its colors: one, or split diagonally for both).</summary>
     public List<int> Claims { get; set; } = new();
 

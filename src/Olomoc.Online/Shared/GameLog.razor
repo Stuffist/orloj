@@ -22,6 +22,8 @@
 
     private string Who(int? seat) => seat is { } i && i < View.Seats.Count ? View.Seats[i].Name : "";
 
+    private string Deck(string kind, string? id) => string.IsNullOrEmpty(id) ? "—" : L.Ui($"deck.{kind}.{id}");
+
     private string Terrain(string? id) => Files.Manifest.TerrainOf(id) is { } t
         ? L.Ui($"online.table.terrain.{t.Type}") + (t.Number is { } n ? $" {n}" : "")
         : id ?? "";
@@ -34,6 +36,8 @@
             "agenda" => new object[] { Who(e.Seat), L.Ui($"agenda.{args.ElementAtOrDefault(0)}") },
             "tableBoard" => new object[] { Who(e.Seat), L.Ui($"online.table.board.{args.ElementAtOrDefault(0)}") },
             "tableAdd" or "tableRemove" => new object[] { Who(e.Seat), Terrain(args.ElementAtOrDefault(0)) },
+            "agendaPlaced" => new object[] { Who(e.Seat), L.Ui($"agenda.{args.ElementAtOrDefault(0)}"), L.Ui($"online.agenda.variant.{args.ElementAtOrDefault(1)}") },
+            "decks" => new object[] { Who(e.Seat), Deck("artifact", args.ElementAtOrDefault(0)), Deck("ministry", args.ElementAtOrDefault(1)) },
             "dice" or "diceReroll" => new object[] { Who(e.Seat), L.Ui($"online.dice.{args.ElementAtOrDefault(0)}") }.Concat(args.Skip(1)).ToArray(),
             _ => new object[] { Who(e.Seat) }.Concat(args).ToArray(),
         };

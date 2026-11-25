@@ -678,6 +678,15 @@ connection.
     (wheel, buttons), pan (drag the background); from the list or the palettes, a click on the item then on the mat.
     A cog out of action on its sheet is faded. Bases have no orientation (no rotation); the selected terrain
     turns with its handles (one at each end, like the movement template), or by 15°.
+  - **"Hors Bloc" panel** (`Shared/OffBlockPanel.razor`, under the table, detachable:
+    `/online/g/{code}/offblock?window=true`): what a game puts beside the Block. **Scenario**: the
+    agenda chosen at the setup, the Artifact and Ministry decks of the game (chosen or drawn by either
+    player), a note on its setup, and **« Placer »**: its elements put down on the mat at the positions
+    of the Recueil des agendas (`Online/AgendaSetups.cs`, inches from the centre; a choice where the
+    agenda leaves one: which median, which diagonal…), as ordinary pieces (movable, lockable) with
+    their name and number (doors, accumulators), the batteries in their player's color, the zones de
+    Fiel under the secrets of « Seuls dans le noir », the Gargoyle (50 mm). Planned next: the decks
+    (ministries dealt, Artefact and its Mécanismes, Indra, hostile profiles), then the planning.
   - **Wide layout** (online games only: the page takes the whole width): above the mat, the two dice
     rollers and the **actions of the selected piece** (ranges, padlock, objective colors, magnet,
     rotation, removal); the **opponent on the left** of the mat, the **player on the right** with
@@ -1066,7 +1075,8 @@ does not apply to them and grants no right to reuse them. This covers:
 - `src/Olomoc.Shared/wwwroot/i18n/*/cards.json` — card names and game effects, Ministry and
   faction names;
 - `src/Olomoc.Shared/wwwroot/data/` — card catalog and faction reference, table manifest;
-- the agenda names and the game vocabulary used in `i18n/*/ui.json`.
+- the agenda names, the agendas' setups (`src/Olomoc.Shared/Online/AgendaSetups.cs`, after
+  the Recueil des agendas) and the game vocabulary used in `i18n/*/ui.json`.
 
 To reuse this content elsewhere, ask Occicat Games for permission
 ([occicat.com](https://www.occicat.com/)).
