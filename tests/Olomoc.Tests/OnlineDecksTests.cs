@@ -111,27 +111,35 @@ public class OnlineDecksTests
     }
 
     [Fact]
-    public async Task Indra_takes_the_three_last_cards_and_swaps_the_drawn_card_her_player_only()
+    public async Task Each_Indra_receives_the_three_last_cards_at_the_setup_and_swaps_the_drawn_card()
     {
         var (d, g) = await InCycle(indra: true);
-        Assert.Equal(0, DeckRules.IndraSeat(g));
-        Assert.Equal("onlineIndra", Key(Do(g, 1, new(OnlineCommandType.IndraTake), d)));
-        Ok(Do(g, 0, new(OnlineCommandType.IndraTake), d));
-        var indra = g.Decks!.Indra.ToList();
-        Assert.Equal((3, 9), (indra.Count, g.Decks.Pile.Count));
-        Assert.Equal("onlineIndraTaken", Key(Do(g, 0, new(OnlineCommandType.IndraTake), d)));
-        Assert.Equal(indra, OnlineRules.View(g, 0, new HashSet<int>()).Decks!.MyIndra);
+        Ok(Do(g, 0, new(OnlineCommandType.Mechanism), d));
+        var pile = g.Decks!.Pile.ToList();
+        Ok(Do(g, 1, new(OnlineCommandType.SetUp, "h-rise"), d));
+        Assert.Equal(pile.TakeLast(3), g.Decks.IndraHands[0]);
+        Assert.Equal((0, 8), (g.Decks.IndraHands[1].Count, g.Decks.Pile.Count));
+        Assert.Equal(g.Decks.IndraHands[0], OnlineRules.View(g, 0, new HashSet<int>()).Decks!.MyIndra);
         var other = OnlineRules.View(g, 1, new HashSet<int>()).Decks!;
         Assert.Empty(other.MyIndra);
-        Assert.Equal((0, 3), (other.IndraSeat, other.IndraCount));
+        Assert.Equal([3, 0], other.IndraCounts);
 
-        Assert.Equal("onlineNoMechanism", Key(Do(g, 0, new(OnlineCommandType.IndraSwap, indra[0]), d)));
-        Ok(Do(g, 1, new(OnlineCommandType.Mechanism), d));
+        // Her player swaps the card drawn by a Mécanisme for one of hers.
+        var indra = g.Decks.IndraHands[0].ToList();
         var drawn = g.Decks.Drawn!;
         Assert.Equal("onlineIndra", Key(Do(g, 1, new(OnlineCommandType.IndraSwap, indra[0]), d)));
         Ok(Do(g, 0, new(OnlineCommandType.IndraSwap, indra[0]), d));
         Assert.Equal((indra[0], drawn), (g.Decks.Drawn, g.Decks.Discard[^1]));
-        Assert.Equal(2, g.Decks.Indra.Count);
+        Assert.Equal(2, g.Decks.IndraHands[0].Count);
+
+        // Indra in both cabals: P1's (Bo) takes the 3 last cards, then Ana's the 3 before.
+        var (d2, mirror) = await InCycle(indra: true);
+        mirror.Seats[1].State!.Cogs[2].CogId = CardDecks.Indra;
+        Ok(Do(mirror, 0, new(OnlineCommandType.Mechanism), d2));
+        pile = mirror.Decks!.Pile.ToList();
+        Ok(Do(mirror, 1, new(OnlineCommandType.SetUp, "h-rise"), d2));
+        Assert.Equal(pile.TakeLast(3), mirror.Decks.IndraHands[1]);
+        Assert.Equal(pile.SkipLast(3).TakeLast(3), mirror.Decks.IndraHands[0]);
     }
 
     [Fact]

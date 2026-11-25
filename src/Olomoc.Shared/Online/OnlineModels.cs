@@ -128,7 +128,7 @@ public sealed class OnlineDiceRoll
 /// <summary>
 /// The decks beside the Block (DeckRules): the decks used, each seat's ministry hand (secret), the
 /// fallen ministry, the Artefact pile (secret order), its discard, the card drawn by the last
-/// Mécanisme, Indra's cards (her player only).
+/// Mécanisme, the Indra cards (their player only).
 /// </summary>
 public sealed class OnlineDecks
 {
@@ -142,8 +142,8 @@ public sealed class OnlineDecks
     public List<string> Discard { get; set; } = new();
     public string? Drawn { get; set; }
     public int Mechanisms { get; set; }
-    public int? IndraSeat { get; set; }
-    public List<string> Indra { get; set; } = new();
+    /// <summary>Each seat's Indra cards (the 3 last of the pile at the setup, per Indra in its cabal; secret).</summary>
+    public List<List<string>> IndraHands { get; set; } = [[], []];
 }
 
 /// <summary>

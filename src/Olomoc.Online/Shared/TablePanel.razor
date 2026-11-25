@@ -155,32 +155,30 @@ else
                                 </ul>
                             </details>
                         }
-                        @if (canAct && View.Mine?.State?.Cogs.Any(c => c.CogId == CardDecks.Indra) == true)
+                        @* Indra: her cards, taken at the setup (« Placer + distribuer »), for her player; how
+                           many the other one holds. *@
+                        @if (decks is { MyIndra.Count: > 0 })
                         {
                             <h4>@L.Ui("online.offblock.indra")</h4>
-                            @if (decks?.IndraSeat is null)
+                            @foreach (var id in decks.MyIndra)
                             {
-                                <button class="btn small" type="button" title="@L.Ui("online.offblock.indra.take.title")"
-                                        @onclick="() => Send(new(OnlineCommandType.IndraTake))">@L.Ui("online.offblock.indra.take")</button>
-                            }
-                            else
-                            {
-                                @foreach (var id in decks.MyIndra)
-                                {
-                                    if (CardDecks.Artifact(id) is not { } card) continue;
-                                    var cid = id;
-                                    <figure class="tb-beside-card small" title="@ArtifactTitle(card)">
-                                        <img src="@Src(CardDecks.Image(card.Id))" alt="@card.Name" />
-                                        <figcaption>@card.Name · @card.Number</figcaption>
+                                if (CardDecks.Artifact(id) is not { } card) continue;
+                                var cid = id;
+                                <figure class="tb-beside-card small" title="@ArtifactTitle(card)">
+                                    <img src="@Src(CardDecks.Image(card.Id))" alt="@card.Name" />
+                                    <figcaption>@card.Name · @card.Number</figcaption>
+                                    @if (canAct)
+                                    {
                                         <button class="btn small" type="button" disabled="@(decks.Drawn is null)" title="@L.Ui("online.offblock.indra.swap.title")"
                                                 @onclick="() => Send(new(OnlineCommandType.IndraSwap, cid))">@L.Ui("online.offblock.indra.swap")</button>
-                                    </figure>
-                                }
+                                    }
+                                </figure>
                             }
                         }
-                        else if (decks?.IndraSeat is { } indra)
+                        @for (var holder = 0; holder < (decks?.IndraCounts.Count ?? 0); holder++)
                         {
-                            <p class="hint">@L.Ui("online.offblock.indra.other", View.Seats[indra].Name, decks.IndraCount)</p>
+                            if (holder == View.Me || decks!.IndraCounts[holder] == 0) continue;
+                            <p class="hint">@L.Ui("online.offblock.indra.other", View.Seats[holder].Name, decks.IndraCounts[holder])</p>
                         }
                         @foreach (var hostile in CardDecks.HostilesOf(artifactDeck, View.Agenda.Id))
                         {

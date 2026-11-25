@@ -25,7 +25,7 @@ public enum OnlineCommandType
     SetBoard, AddPiece, MovePiece, RemovePiece, SetAuras, SetMagnet, SetLock, SetClaim,   // table (from the initiative on)
     RollDice, RerollDice, SetDiceThreshold,  // shared dice roller (from the initiative on)
     SetDecks, SetUp,                         // the decks of the scenario, then « Placer + distribuer » (P1)
-    Mechanism, ReshuffleArtifact, IndraTake, IndraSwap,   // the Artefact
+    Mechanism, ReshuffleArtifact, IndraSwap, // the Artefact (Indra: her cards taken at the setup)
     SetPlanning, RevealPhase,                // the planning (Decks: the 5 slots)
     ConfirmResult,                           // end of the game
     Restart,                                 // back to the lobby (names and cabals kept)
@@ -100,12 +100,13 @@ public sealed record OnlineView(
 
 /// <summary>
 /// The decks as a connection sees them (DeckRules.View): its ministry hand, each seat's hand size, the
-/// fallen ministry, the Artefact pile's size, its discard, the card drawn; Indra's cards for her player.
+/// fallen ministry, the Artefact pile's size, its discard, the card drawn; its Indra cards, and how
+/// many each seat holds.
 /// The ministry hands are public (each seat's, and the ministries it played).
 /// </summary>
 public sealed record OnlineDecksView(string? MinistryDeck, string? ArtifactDeck, IReadOnlyList<string> MyHand, IReadOnlyList<int> HandSizes,
-    string? Fallen, int PileSize, IReadOnlyList<string> Discard, string? Drawn, int Mechanisms, int? IndraSeat,
-    IReadOnlyList<string> MyIndra, int IndraCount,
+    string? Fallen, int PileSize, IReadOnlyList<string> Discard, string? Drawn, int Mechanisms,
+    IReadOnlyList<string> MyIndra, IReadOnlyList<int> IndraCounts,
     IReadOnlyList<IReadOnlyList<string>> Hands, IReadOnlyList<IReadOnlyList<string>> Played);
 
 /// <summary>

@@ -11,8 +11,8 @@ namespace Olomoc.Online;
 /// <item>the Artefact (p.27): a pile face down (secret order), built at its first Mécanisme
 /// (Visites: the 3 Rogue cards on top); "Mécanisme" draws its top card (the previous one to the
 /// discard; an empty pile: the discard shuffled again); "Remélanger": every card shuffled again;</item>
-/// <item>Indra: her player takes the pile's 3 last cards (secret) and may swap the card drawn by a
-/// Mécanisme for one of them.</item>
+/// <item>Indra: at the setup, each one (in either cabal) takes the pile's 3 last cards (secret); her
+/// player may swap the card drawn by a Mécanisme for one of them.</item>
 /// </list>
 /// Either player (a spectator never), from the initiative to the end of the cycles.
 /// </summary>
@@ -26,7 +26,6 @@ public static class DeckRules
         {
             OnlineCommandType.Mechanism => Mechanism(g, decks, seat, random, now),
             OnlineCommandType.ReshuffleArtifact => Reshuffle(g, decks, seat, random, now),
-            OnlineCommandType.IndraTake => IndraTake(g, decks, seat, random, now),
             OnlineCommandType.IndraSwap => IndraSwap(g, decks, seat, c.Text, now),
             _ => Problem.Of("onlineCommand"),
         };
@@ -37,13 +36,14 @@ public static class DeckRules
 
     /// <summary>
     /// « Placer + distribuer » (OnlineRules.SetUp, both decks chosen, not dealt yet): the ministries
-    /// dealt, the Artefact pile built (unless a Mécanisme already did).
+    /// dealt, the Artefact pile built (unless a Mécanisme already did), each Indra's cards taken.
     /// </summary>
     internal static void SetUp(OnlineGame g, int seat, Random random, DateTimeOffset now)
     {
         var decks = g.Decks ??= new OnlineDecks();
         Deal(g, decks, g.Agenda!.Ministry!, seat, random, now);
         Pile(g, decks, random);
+        Indra(g, decks, now);
     }
 
     // ---- Ministries ----
@@ -110,29 +110,27 @@ public static class DeckRules
 
     // ---- Indra ----
 
-    /// <summary>The seat whose cabal has Indra (null: none).</summary>
-    public static int? IndraSeat(OnlineGame g) =>
-        g.Seats.FindIndex(s => s.State?.Cogs.Any(c => c.CogId == CardDecks.Indra) == true) is var i and >= 0 ? i : null;
+    public const int IndraCards = 3;
 
-    private static Problem? IndraTake(OnlineGame g, OnlineDecks decks, int seat, Random random, DateTimeOffset now)
+    // At the setup, each Indra (one per cabal that has her; P1's first) takes the pile's 3 last cards, in secret.
+    private static void Indra(OnlineGame g, OnlineDecks decks, DateTimeOffset now)
     {
-        if (IndraSeat(g) != seat) return Problem.Of("onlineIndra");
-        if (decks.IndraSeat is not null) return Problem.Of("onlineIndraTaken");
-        if (Pile(g, decks, random) is { } problem) return problem;
-        var take = Math.Min(3, decks.Pile.Count);
-        decks.Indra = decks.Pile.Skip(decks.Pile.Count - take).ToList();
-        decks.Pile.RemoveRange(decks.Pile.Count - take, take);
-        decks.IndraSeat = seat;
-        OnlineRules.Log(g, seat, now, "indraTake", take.ToString());
-        return null;
+        var seats = Enumerable.Range(0, g.Seats.Count).OrderBy(s => s == g.First ? 0 : 1);
+        foreach (var seat in seats.Where(s => g.Seats[s].State?.Cogs.Any(c => c.CogId == CardDecks.Indra) == true))
+        {
+            var take = Math.Min(IndraCards, decks.Pile.Count);
+            decks.IndraHands[seat] = decks.Pile.GetRange(decks.Pile.Count - take, take);
+            decks.Pile.RemoveRange(decks.Pile.Count - take, take);
+            OnlineRules.Log(g, seat, now, "indraTake", take.ToString());
+        }
     }
 
     private static Problem? IndraSwap(OnlineGame g, OnlineDecks decks, int seat, string? card, DateTimeOffset now)
     {
-        if (decks.IndraSeat != seat || card is null || !decks.Indra.Contains(card)) return Problem.Of("onlineIndra");
+        if (card is null || decks.IndraHands.ElementAtOrDefault(seat)?.Contains(card) != true) return Problem.Of("onlineIndra");
         if (decks.Drawn is not { } drawn) return Problem.Of("onlineNoMechanism");
         decks.Discard.Add(drawn);
-        decks.Indra.Remove(card);
+        decks.IndraHands[seat].Remove(card);
         decks.Drawn = card;
         var chosen = CardDecks.Artifact(card)!;
         OnlineRules.Log(g, seat, now, "indraSwap", CardDecks.Artifact(drawn)!.Name, chosen.Name, chosen.Number ?? "?", chosen.Priority?.ToString() ?? "?");
@@ -157,6 +155,6 @@ public static class DeckRules
         me is { } i && i < d.Hands.Count ? d.Hands[i] : [],
         d.Hands.Select(h => h.Count).ToList(),
         d.Fallen, d.Pile.Count, d.Discard, d.Drawn, d.Mechanisms,
-        d.IndraSeat, d.IndraSeat == me ? d.Indra : [], d.Indra.Count,
+        me is { } k && k < d.IndraHands.Count ? d.IndraHands[k] : [], d.IndraHands.Select(h => h.Count).ToList(),
         d.Hands.Select(h => (IReadOnlyList<string>)h.ToList()).ToList(), d.Played.Select(h => (IReadOnlyList<string>)h.ToList()).ToList());
 }

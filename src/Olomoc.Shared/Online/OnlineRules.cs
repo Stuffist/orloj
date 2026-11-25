@@ -48,7 +48,7 @@ public static class OnlineRules
             OnlineCommandType.RollDice or OnlineCommandType.RerollDice or OnlineCommandType.SetDiceThreshold
                 => One(DiceRules.Apply(g, seat, c, random, now)),
             OnlineCommandType.SetDecks => One(SetDecks(g, seat, c.Decks, c.Flag == true, random, now)),
-            OnlineCommandType.Mechanism or OnlineCommandType.ReshuffleArtifact or OnlineCommandType.IndraTake or OnlineCommandType.IndraSwap
+            OnlineCommandType.Mechanism or OnlineCommandType.ReshuffleArtifact or OnlineCommandType.IndraSwap
                 => One(DeckRules.Apply(g, seat, c, random, now)),
             OnlineCommandType.SetPlanning or OnlineCommandType.RevealPhase => One(PlanningRules.Apply(g, seat, c, now)),
             OnlineCommandType.SetUp => One(SetUp(g, seat, c.Text, table, random, now)),

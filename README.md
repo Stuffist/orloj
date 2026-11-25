@@ -684,7 +684,8 @@ connection.
   - **Scenario**, in the game's header next to its code (`Shared/ScenarioBox.razor`): the agenda
     chosen at the setup, the Artifact and Ministry decks of the game (chosen or « Tirer les decks » by
     P1; drawn with the scenario when it is drawn), a note on its setup, and then, by P1,
-    **« Placer + distribuer »** (`SetUp`): the ministries dealt, the Artefact pile built, and its
+    **« Placer + distribuer »** (`SetUp`): the ministries dealt, the Artefact pile built (Indra's cards
+    taken), and its
     elements put down on the mat (none for Visites, Sabotage, Cartographe) at the positions of the Recueil des agendas (`Online/AgendaSetups.cs`, inches
     from the centre; a choice where the agenda leaves one: which median, which diagonal…), as
     ordinary pieces (movable, lockable) with their name and number (doors, accumulators), the
@@ -699,8 +700,9 @@ connection.
     card (upright as in the module: its logo shows a corner or an edge of the Block; with the
     priority its number gives; the previous one to the discard; an empty pile: the discard shuffled
     again), « Remélanger »; the **hostiles' profile cards** (front, back: instinct; bigger when
-    hovered) of the deck (and the Gargoyle with its agenda); **Indra**: her player takes the pile's 3
-    last cards (secret) and may swap the drawn card for one of them. **Once the ministries are dealt,
+    hovered) of the deck (and the Gargoyle with its agenda); **Indra**: at the setup (« Placer +
+    distribuer »), each one, in either cabal, receives the pile's 3 last cards (secret; P1's first),
+    and her player may swap the drawn card for one of them. **Once the ministries are dealt,
     the decks no longer change**; before, another Artefact deck starts its pile again.
   - **"Planification" panel** (`Shared/OffBlockPanel.razor`, under the table, detachable:
     `/online/g/{code}/offblock?window=true`; `Online/PlanningRules.cs`, semi-automatic, rulebook
