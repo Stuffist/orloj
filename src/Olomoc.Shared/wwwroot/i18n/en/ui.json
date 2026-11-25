@@ -1243,7 +1243,7 @@
   "online.camps.showOther": "Show the opponent",
   "online.camps.detach.title": "Open the cabals in a separate window (another screen): your sheet stays editable there",
   "online.camps.detached": "Cabals in a separate window.",
-  "online.offblock.title": "Off the Block",
+  "online.offblock.title": "Planning",
   "online.offblock.detach.title": "Open “Off the Block” in a separate window (another screen)",
   "online.offblock.detached": "“Off the Block” in a separate window.",
   "online.offblock.scenario": "Scenario",
@@ -1351,5 +1351,6 @@
   "online.offblock.takeBack": "Click to take the card back",
   "online.offblock.planning.help": "Drag your cards onto your slots (or click a card, then a slot); click a placed card to take it back. A ministry only goes on its slot. Saved as you go.",
   "online.offblock.decks.first": "The first player chooses the decks.",
-  "online.dice.none": "Not rolled yet."
+  "online.dice.none": "Not rolled yet.",
+  "online.offblock.reshuffle.title": "Put all the Artifact’s cards back in the pile and shuffle it (but Indra’s)"
 }

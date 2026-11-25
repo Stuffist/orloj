@@ -90,6 +90,28 @@ public static class CardDecks
     public static ArtifactCard? Artifact(string? id) => Artifacts.FirstOrDefault(c => c.Id == id);
     public static HostileCard? Hostile(string? id) => Hostiles.FirstOrDefault(c => c.Id == id);
 
+    /// <summary>Effect printed on a ministry card (French, as on the card).</summary>
+    public static string? Text(MinistryCard card) => MinistryTexts.GetValueOrDefault(card.Name);
+
+    private static readonly Dictionary<string, string> MinistryTexts = new()
+    {
+        ["Communion"] = "Réalisez un Mécanisme.",
+        ["Désinformation"] = "Chaque joueur, en commençant par celui qui a la priorité, échange face cachée l’emplacement de deux cartes non révélées dans la planification de son adversaire.",
+        ["Stérilisation"] = "Tous les rouages subissent 1 blessure qui ignore la protection pour chaque pion de Noirceur qu’ils possèdent.",
+        ["Mise sous tension"] = "Attribuez un pion sonné à tous les rouages.",
+        ["Panne"] = "Jusqu’à la fin du cycle, les Ministères (dont celui-ci) ne bloquent pas les activations des rouages.",
+        ["Cadence"] = "Les rouages ne peuvent plus participer à une coordination jusqu’à la fin du cycle.",
+        ["Couvre-feu"] = "Diminuez de 1 la fréquence des capacités d’attaque de tous les rouages jusqu’à la fin du cycle.",
+        ["Animosité"] = "Activez tous les rouages hostiles présents sur le Bloc.",
+        ["Contemplation"] = "Tous les rouages perdent X pions d’action. X est le premier chiffre du numéro de la carte Artefact révélée.",
+        ["Endoctrinement"] = "Jusqu’à la fin du cycle, la première carte propagande révélée de chaque joueur ne permet plus d’activer un rouage (mais permet toujours d’attribuer 2 pions d’action).",
+        ["Virus"] = "Tous les rouages qui possèdent des pions d’action subissent 2 blessures qui ignorent la protection.",
+        ["Trame noire"] = "Jusqu’à la fin du cycle, les rouages non hostiles ne peuvent plus réaliser de charge ou d’attaque à distance.",
+        ["Obsolescence"] = "Jusqu’à la fin du cycle, les capacités des équipements n’ont plus d’effet.",
+        ["Rendement"] = "Augmentez de 1 la fréquence des capacités de marche de tous les rouages jusqu’à la fin du cycle.",
+        ["Surveillance"] = "Lors du prochain cycle, chaque joueur devra placer, sur l’emplacement le plus à droite possible de sa planification, la carte d’activation de son rouage avec le plus petit rang.",
+    };
+
     /// <summary>Effect printed on an artefact card (French, as on the card), by its name.</summary>
     public static string? Text(ArtifactCard card) => ArtifactTexts.GetValueOrDefault(card.Name);
 

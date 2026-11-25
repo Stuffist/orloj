@@ -1114,8 +1114,8 @@ body {
 .offblock-card { margin: 0; display: flex; flex-direction: column; gap: .2rem; font-size: .72rem; color: var(--muted); text-align: center; }
 .offblock-card img { border-radius: 6px; display: block; }
 .offblock-card.ministry img { width: 6rem; }
-.offblock-card.planned img { width: 5rem; }
-.offblock-card.planned figcaption { max-width: 6.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.offblock-card.planned img { width: 7.5rem; }
+.offblock-card.planned figcaption { max-width: 8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .offblock-card.spent img { filter: grayscale(1) brightness(.45); }
 /* The opponent's ministries, stacked by pairs as in a hand: the 2nd card higher and to the right,
    leaving the 1st one's text (bottom) and planning constraint (top left) visible; hovered: in front */
@@ -1140,19 +1140,19 @@ body {
 .offblock-indra { margin-top: .6rem; }
 .offblock-indra-card { display: flex; flex-direction: column; gap: .25rem; align-items: center; }
 /* The planning: the hand on the left; a row of 5 slots per player on the right (the opponent's hidden until revealed) */
-.offblock-plan { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 1.5rem; align-items: start; margin-bottom: .6rem; }
+.offblock-plan { display: grid; grid-template-columns: minmax(12rem, auto) minmax(0, 1fr) minmax(0, 1.6fr); gap: 1.5rem; align-items: start; margin-bottom: .6rem; }
 .offblock-plan-hand h3 { margin-top: 0; }
 .offblock-hand .offblock-row + .offblock-row { margin-top: .5rem; }
 .offblock-board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .4rem; align-items: start; }
 .offblock-board-head { font-size: .75rem; color: var(--muted); text-align: center; }
 .offblock-board-name { grid-column: 1 / -1; font-weight: 700; font-size: .9rem; margin-top: .3rem; }
-.offblock-drop { min-height: 9.2rem; border: 1px dashed var(--line); border-radius: 8px; display: grid; place-items: start center; padding: .3rem .25rem; }
+.offblock-drop { min-height: 12.6rem; border: 1px dashed var(--line); border-radius: 8px; display: grid; place-items: start center; padding: .3rem .25rem; }
 .offblock-drop > .offblock-slot-number { align-self: center; }
 .offblock-drop.allowed { border: 1px solid var(--rust-soft); background: rgba(214, 110, 60, .1); }
 .offblock-drop.refused { opacity: .4; }
 .offblock-drop.unrevealed .offblock-card { opacity: .6; }
 .offblock-slot-number { font-size: 1.4rem; color: var(--muted); }
-.offblock-back { width: 5rem; aspect-ratio: 150 / 212; border-radius: 6px; display: grid; place-items: center; font-weight: 700; color: var(--muted);
+.offblock-back { width: 7.5rem; aspect-ratio: 150 / 212; border-radius: 6px; display: grid; place-items: center; font-weight: 700; color: var(--muted);
     background: repeating-linear-gradient(45deg, #2b3640 0 6px, #232c34 6px 12px); border: 1px solid var(--line); }
 .offblock-verdict { font-weight: 700; color: var(--ink); font-size: .78rem; text-align: center; }
 .offblock-drag { cursor: grab; border-radius: 6px; }
@@ -1511,3 +1511,15 @@ body {
     --fill: linear-gradient(180deg, rgba(238, 225, 190, .76), rgba(210, 192, 146, .76));
 }
 .zn-hex-cell.none { --edge: #8a8a8a; --fill: linear-gradient(180deg, rgba(112, 112, 112, .64), rgba(80, 80, 80, .64)); }
+/* The scenario in the game's header; the Artefact's tools and the hostiles beside the Block */
+.online-scenario { flex: 1 1 26rem; min-width: 0; max-width: 48rem; }
+.online-scenario .hint { margin: .2rem 0; }
+.tb-beside-tools { display: flex; flex-wrap: wrap; gap: .2rem; justify-content: center; }
+.tb-beside-tools .btn { font-size: .66rem; padding: .25rem .35rem; }
+.tb-beside-card.small img { max-width: 6rem; }
+.tb-beside-list { align-self: stretch; text-align: left; font-size: .75rem; }
+.tb-beside-list summary { cursor: pointer; }
+.tb-beside-list ul { margin: .2rem 0 0; padding-left: 1rem; }
+.tb-hostile { background: none; border: 0; padding: 0; cursor: pointer; position: relative; }
+.tb-hostile img { width: 100%; max-width: 9rem; border-radius: 6px; display: block; transition: transform .15s; transform-origin: top left; }
+.tb-hostile:hover img { transform: scale(2.6); z-index: 20; position: relative; box-shadow: 0 6px 24px rgba(0, 0, 0, .6); }
