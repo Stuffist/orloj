@@ -685,9 +685,10 @@ connection.
     of the Recueil des agendas (`Online/AgendaSetups.cs`, inches from the centre; a choice where the
     agenda leaves one: which median, which diagonal…), as ordinary pieces (movable, lockable) with
     their name and number (doors, accumulators), the batteries in their player's color, the zones de
-    Fiel under the secrets of « Seuls dans le noir », the Gargoyle (50 mm).
+    Fiel under the secrets of « Seuls dans le noir ». **La Gargoule is not offered online**
+    (`OnlineRules.OnlineAgendas`: its 7 activation cards replacing the ministries are not played).
     **Decks** (`Online/DeckRules.cs`, `Online/CardDecks.cs`: the cards as printed, rank, planning
-    constraint, artefact number read on the module's images): **ministries** dealt (1 Axe card each,
+    constraint, artefact number read on the images of the module V1.9): **ministries** dealt (1 Axe card each,
     3 random ministries each, a secret hand; the last one face up: the fallen ministry; dealt again
     on demand); the **Artefact**: a pile (secret order) built at its first « Mécanisme » (Visites: the 3
     Rogue cards on top), « Mécanisme » draws its top card (with the priority its number gives; the

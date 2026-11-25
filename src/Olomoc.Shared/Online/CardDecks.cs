@@ -1,7 +1,7 @@
 namespace Olomoc.Online;
 
 // The Ministry and Artefact decks of Olomòc (two of each: Decks.Ministries / Decks.Artifacts) and
-// the hostiles' profile cards, as printed on the cards of Occicat's Vassal module (rank, planning
+// the hostiles' profile cards, as printed on the cards of Occicat's Vassal module (V1.9; rank, planning
 // constraint, artefact number read on the images). Images copied by tools/VassalImport into
 // img/offblock/{id}.jpg (Source: the module's file). Names as printed (French).
 
@@ -37,9 +37,9 @@ public static class CardDecks
         new("desinformation", "DISINFORMATION", "Désinformation", 4, 1, false, "M02.jpg"),
         new("sterilisation", "DISINFORMATION", "Stérilisation", 4, 2, false, "M03.jpg"),
         new("mise-sous-tension", "DISINFORMATION", "Mise sous tension", 4, 5, false, "M04.jpg"),
-        new("panne", "DISINFORMATION", "Panne", 4, 1, false, "M05-V2.jpg"),
-        new("cadence", "DISINFORMATION", "Cadence", 4, 2, false, "M06-V2.jpg"),
-        new("couvre-feu", "DISINFORMATION", "Couvre-feu", 4, 3, false, "M07-V2.jpg"),
+        new("panne", "DISINFORMATION", "Panne", 4, 1, false, "M05.jpg"),
+        new("cadence", "DISINFORMATION", "Cadence", 4, 2, false, "M06.jpg"),
+        new("couvre-feu", "DISINFORMATION", "Couvre-feu", 4, 3, false, "M07.jpg"),
         new("animosite", "DISINFORMATION", "Animosité", 4, null, true, "M08.jpg"),
         new("contemplation", "INDOCTRINATION", "Contemplation", 4, 3, false, "M09.jpg"),
         new("endoctrinement", "INDOCTRINATION", "Endoctrinement", 4, 1, false, "M10.jpg"),
@@ -53,19 +53,19 @@ public static class CardDecks
 
     public static readonly IReadOnlyList<ArtifactCard> Artifacts =
     [
-        new("rogue-1", "ROGUE", "Rogue", "1.470", "ROGUE", "A01-4.jpg"),
-        new("rogue-2", "ROGUE", "Rogue", "2.527", "ROGUE", "A02-4.jpg"),
-        new("rogue-3", "ROGUE", "Rogue", "2.847", "ROGUE", "A03-4.jpg"),
-        new("contraction-temporelle", "ROGUE", "Contraction temporelle", "2.000", null, "A04-2.jpg"),
-        new("pluie-de-fiel-2", "ROGUE", "Pluie de Fiel", "1.997", null, "A05-2.jpg"),
-        new("pluie-de-fiel-3", "ROGUE", "Pluie de Fiel", "1.656", null, "A06-2.jpg"),
-        new("pluie-de-fiel-1", "ROGUE", "Pluie de Fiel", "2.336", null, "A07-2.jpg"),
-        new("faisceau-lumineux", "ROGUE", "Faisceau lumineux", "1.778", null, "A08-2.jpg"),
-        new("directive-supreme-1", "ROGUE", "Directive suprême", "2.286", null, "A09-2.jpg"),
-        new("directive-supreme-2", "ROGUE", "Directive suprême", "1.070", null, "A10-2.jpg"),
-        new("faille-quantique-moins", "ROGUE", "Faille quantique −", "2.222", null, "A11-2.jpg"),
-        new("faille-quantique-plus", "ROGUE", "Faille quantique +", "1.111", null, "A12-2.jpg"),
-        new("parasite-1", "PARASITE", "Parasite", "2.527", "PARASITE", "A13-2.jpg"),
+        new("rogue-1", "ROGUE", "Rogue", "1.470", "ROGUE", "A01B.jpg"),
+        new("rogue-2", "ROGUE", "Rogue", "2.527", "ROGUE", "A02.jpg"),
+        new("rogue-3", "ROGUE", "Rogue", "2.847", "ROGUE", "A03.jpg"),
+        new("contraction-temporelle", "ROGUE", "Contraction temporelle", "2.000", null, "A04.jpg"),
+        new("pluie-de-fiel-2", "ROGUE", "Pluie de Fiel", "1.997", null, "A05.jpg"),
+        new("pluie-de-fiel-3", "ROGUE", "Pluie de Fiel", "1.656", null, "A06.jpg"),
+        new("pluie-de-fiel-1", "ROGUE", "Pluie de Fiel", "2.336", null, "A07.jpg"),
+        new("faisceau-lumineux", "ROGUE", "Faisceau lumineux", "1.778", null, "A08.jpg"),
+        new("directive-supreme-1", "ROGUE", "Directive suprême", "2.286", null, "A09.jpg"),
+        new("directive-supreme-2", "ROGUE", "Directive suprême", "1.070", null, "A10.jpg"),
+        new("faille-quantique-moins", "ROGUE", "Faille quantique −", "2.222", null, "A11.jpg"),
+        new("faille-quantique-plus", "ROGUE", "Faille quantique +", "1.111", null, "A12.jpg"),
+        new("parasite-1", "PARASITE", "Parasite", "2.527", "PARASITE", "A13.jpg"),
         new("parasite-2", "PARASITE", "Parasite", "1.656", "PARASITE", "A14.jpg"),
         new("parasite-3", "PARASITE", "Parasite", "2.997", "PARASITE", "A15.jpg"),
         new("parasite-4", "PARASITE", "Parasite", "1.847", "PARASITE", "A16.jpg"),
@@ -76,8 +76,7 @@ public static class CardDecks
         new("feux-etranges", "PARASITE", "Feux étranges", "1.470", null, "A21.jpg"),
         new("le-souffle", "PARASITE", "Le souffle", "2.286", null, "A22.jpg"),
         new("reconfiguration", "PARASITE", "Reconfiguration", "2.222", null, "A23.jpg"),
-        // Its image is not in the module (it points to an activation card's): number to complete.
-        new("decharge", "PARASITE", "Décharge", null, null, null),
+        new("decharge", "PARASITE", "Décharge", "1.111", null, "A24.jpg"),
     ];
 
     public static readonly IReadOnlyList<HostileCard> Hostiles =

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "source": "Occicat Games, Vassal module 1.8",
+  "source": "Occicat Games, Vassal module 1.9",
   "boards": [
     {
       "id": "mez",
@@ -4208,6 +4208,11 @@
     {
       "id": "3R27",
       "image": "img/table/tokens/3R27.png",
+      "base": 30
+    },
+    {
+      "id": "3R30",
+      "image": "img/table/tokens/3R30.png",
       "base": 30
     },
     {

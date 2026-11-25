@@ -56,7 +56,7 @@ public class OnlineDecksTests
         {
             var cards = CardDecks.ArtifactDeck(deck);
             Assert.Equal(12, cards.Count);
-            Assert.All(cards.Select(CardDecks.Artifact).Where(a => a!.Number is not null), a => Assert.Contains(a!.Priority, new int?[] { 1, 2 }));
+            Assert.All(cards.Select(CardDecks.Artifact), a => Assert.Contains(a!.Priority, new int?[] { 1, 2 }));
         }
         Assert.Equal(2, CardDecks.Artifact("rogue-2")!.Priority);
         // Every image named exists (imported from the module).

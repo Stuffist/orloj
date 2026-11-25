@@ -115,6 +115,22 @@ public class OnlineAgendaTests
     }
 
     [Fact]
+    public async Task La_Gargoule_is_not_offered_online()
+    {
+        Assert.DoesNotContain("GARGOYLE", OnlineRules.OnlineAgendas);
+        Assert.Equal(Agendas.All.Count - 1, OnlineRules.OnlineAgendas.Count);
+        var (d, g) = await InCycle("PROSPECTION");
+        g.Step = OnlineStep.Agenda;
+        Assert.Equal("scenario", Key(Do(g, 1, new(OnlineCommandType.ChooseAgenda, "GARGOYLE"), d)));
+        for (var seed = 0; seed < 40; seed++)
+        {
+            g.Step = OnlineStep.Agenda;
+            Ok(Do(g, 1, new(OnlineCommandType.DrawAgenda), d, seed));
+            Assert.NotEqual("GARGOYLE", g.Agenda!.Id);
+        }
+    }
+
+    [Fact]
     public async Task Decks_of_the_scenario_chosen_or_drawn_by_either_player()
     {
         var (d, g) = await InCycle("PROSPECTION");

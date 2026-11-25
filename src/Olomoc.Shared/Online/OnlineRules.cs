@@ -22,6 +22,12 @@ public static class OnlineRules
     public const int Success = 5;               // success threshold of the D6 (rulebook p.10)
     public const int MaxVictoryPoints = 99;
 
+    /// <summary>
+    /// Agendas offered online: the official ones but La Gargoule (its 7 activation cards replacing the
+    /// ministries are not played online).
+    /// </summary>
+    public static readonly IReadOnlyList<string> OnlineAgendas = Agendas.All.Where(id => id != "GARGOYLE").ToList();
+
     public static OnlineResult Apply(OnlineGame g, int seat, OnlineCommand c, CatalogService catalog, Random random, DateTimeOffset now,
         TableManifest? table = null)
     {
@@ -32,7 +38,7 @@ public static class OnlineRules
             OnlineCommandType.SetReady => One(SetReady(g, seat, c.Flag == true, catalog, now)),
             OnlineCommandType.RollInitiative => One(RollInitiative(g, seat, random, now)),
             OnlineCommandType.ChooseAgenda => One(ChooseAgenda(g, seat, c.Text, now)),
-            OnlineCommandType.DrawAgenda => One(ChooseAgenda(g, seat, Agendas.All[random.Next(Agendas.All.Count)], now)),
+            OnlineCommandType.DrawAgenda => One(ChooseAgenda(g, seat, OnlineAgendas[random.Next(OnlineAgendas.Count)], now)),
             OnlineCommandType.UpdateState => One(UpdateState(g, seat, c.State, c.BasedOn, c.Note, catalog, now)),
             OnlineCommandType.Undo => One(Undo(g, seat, now)),
             OnlineCommandType.SetEndCycle => One(SetEndCycle(g, seat, c.Flag == true, now)),
@@ -165,7 +171,7 @@ public static class OnlineRules
     {
         if (NotAt(g, OnlineStep.Agenda) is { } p) return p;
         if (g.First != seat) return Problem.Of("onlineNotFirst");
-        if (id is null || !Agendas.All.Contains(id)) return Problem.Of("scenario");
+        if (id is null || !OnlineAgendas.Contains(id)) return Problem.Of("scenario");
         g.Agenda = new Scenario(id);
         g.Step = OnlineStep.Cycle;
         Log(g, seat, now, "agenda", id);
