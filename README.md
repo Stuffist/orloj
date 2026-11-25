@@ -694,7 +694,14 @@ connection.
     previous one to the discard; an empty pile: the discard shuffled again), « Remélanger »; the
     **hostiles' profile cards** (front, back: instinct) of the deck (and the Gargoyle with its agenda);
     **Indra**: her player takes the pile's 3 last cards (secret) and may swap the drawn card for one
-    of them. Changing a deck in the scenario starts its cards again. Planned next: the planning.
+    of them. Changing a deck in the scenario starts its cards again.
+    **Planning** (`Online/PlanningRules.cs`, semi-automatic, rulebook p.33): each player programs 5
+    cards in secret (the activation cards of their cogs in play, their propaganda cards: 1 plus 1 per
+    cog out of action, one of their ministries, on the slot of its planning constraint; checked by
+    the server). Once both plannings are complete, « Révéler la phase » shows the next card of each,
+    with their ranks and the active player (equal: « Mécanisme, puis la priorité »); the rest is up to
+    the players. At the end of the cycle the planning starts again and the ministry played is
+    discarded. Activation and propaganda cards from the Vassal module.
   - **Wide layout** (online games only: the page takes the whole width): above the mat, the two dice
     rollers and the **actions of the selected piece** (ranges, padlock, objective colors, magnet,
     rotation, removal); the **opponent on the left** of the mat, the **player on the right** with

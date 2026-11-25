@@ -38,6 +38,7 @@
             "tableAdd" or "tableRemove" => new object[] { Who(e.Seat), Terrain(args.ElementAtOrDefault(0)) },
             "agendaPlaced" => new object[] { Who(e.Seat), L.Ui($"agenda.{args.ElementAtOrDefault(0)}"), L.Ui($"online.agenda.variant.{args.ElementAtOrDefault(1)}") },
             "decks" => new object[] { Who(e.Seat), Deck("artifact", args.ElementAtOrDefault(0)), Deck("ministry", args.ElementAtOrDefault(1)) },
+            "phaseRevealed" => new object[] { Who(e.Seat), args.ElementAtOrDefault(0) ?? "" },
             "dice" or "diceReroll" => new object[] { Who(e.Seat), L.Ui($"online.dice.{args.ElementAtOrDefault(0)}") }.Concat(args.Skip(1)).ToArray(),
             _ => new object[] { Who(e.Seat) }.Concat(args).ToArray(),
         };

@@ -137,6 +137,19 @@ foreach (var h in CardDecks.Hostiles)
     CopyCard(h.Front, CardDecks.Front(h));
     CopyCard(h.Back, CardDecks.Back(h));
 }
+// Activation cards (one per cog, by its name) and propaganda cards: their image is the card number
+// (CardNo) in the "AllTheCards" prototype's list of images.
+var cardImages = prototypes.TryGetValue("AllTheCards", out var allCards)
+    ? Regex.Matches(allCards, @"emb2;[^\t]*?;((?:[^;,\t]+\.(?:jpg|png),?)+);").Select(m => m.Groups[1].Value.Split(',')).FirstOrDefault() ?? []
+    : [];
+foreach (var (name, definition) in slots.Where(s => s.Definition.Contains("prototype;Card-Base3")))
+{
+    if (Regex.Match(definition, @"piece;;;[^;]*;[^\t]*\t(\d+)") is not { Success: true } no) continue;
+    var index = int.Parse(no.Groups[1].Value) - 1;
+    if (index < 0 || index >= cardImages.Length) continue;
+    if (Regex.Match(name, @"^Propagande (\d)$") is { Success: true } propaganda) CopyCard(cardImages[index], CardDecks.Propaganda(int.Parse(propaganda.Groups[1].Value)));
+    else if (Match(name) is { } cog && !cog.StartsWith('E') && !cog.StartsWith('D')) CopyCard(cardImages[index], CardDecks.Activation(cog));
+}
 
 var manifest = new TableManifest(TableManifest.CurrentVersion, $"Occicat Games, Vassal module {version}",
     boards, terrain, markers, tokens.OrderBy(t => t.Id).ToList(), templates);
@@ -281,6 +294,7 @@ partial class Program
     private static readonly Dictionary<string, string?> Overrides = new()
     {
         ["Kadlec_Libus"] = "1R23",
+        ["Bodhan Gross"] = "3R06",          // the activation card's name, misspelt in the module
         ["Robert Kadlec"] = null,          // Ligue de Maisel's Kadlec (R13): English card only
         ["Munitions"] = "E09",             // Munitions à haute vélocité
     };

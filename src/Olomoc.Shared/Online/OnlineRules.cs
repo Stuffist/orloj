@@ -46,6 +46,7 @@ public static class OnlineRules
             OnlineCommandType.SetDecks => One(SetDecks(g, seat, c.Decks, c.Flag == true, random, now)),
             OnlineCommandType.DealMinistries or OnlineCommandType.Mechanism or OnlineCommandType.ReshuffleArtifact
                 or OnlineCommandType.IndraTake or OnlineCommandType.IndraSwap => One(DeckRules.Apply(g, seat, c, random, now)),
+            OnlineCommandType.SetPlanning or OnlineCommandType.RevealPhase => One(PlanningRules.Apply(g, seat, c, now)),
             OnlineCommandType.ConfirmResult => One(ConfirmResult(g, seat, c.Vp, now)),
             _ => One(Problem.Of("onlineCommand")),
         };
@@ -285,6 +286,7 @@ public static class OnlineRules
             if (bile > 0) Log(g, g.Seats.IndexOf(s), now, "bile", bile.ToString());
         }
         Log(g, null, now, "endCycle", g.Cycle.ToString());
+        PlanningRules.EndCycle(g);                // a new planning; the ministry played discarded
         g.Cycle++;
         if (g.Cycle > GameSession.Cycles) g.Step = OnlineStep.Finished;
         return null;
@@ -382,5 +384,6 @@ public static class OnlineRules
         g.Table,
         g.Result,
         g.Dice,
-        DeckRules.View(g, me));
+        DeckRules.View(g, me),
+        PlanningRules.View(g, me));
 }

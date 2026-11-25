@@ -106,6 +106,10 @@ public static class CardDecks
         Hostiles.Where(h => Artifacts.Any(a => a.Deck == artifactDeck && a.Hostile == h.Id) || h.Id == "GARGOYLE" && agenda == "GARGOYLE");
 
     public static string Image(string id) => $"{Images}{id}.jpg";
+    public static string Activation(string cogId) => $"{Images}activation-{cogId}.jpg";
+    public static string Propaganda(int n) => $"{Images}propaganda-{n}.jpg";
+    /// <summary>Propaganda cards printed (their images: 1 to this).</summary>
+    public const int PropagandaImages = 4;
     public static string Front(HostileCard h) => $"{Images}hostile-{h.Id.ToLowerInvariant()}-front.jpg";
     public static string Back(HostileCard h) => $"{Images}hostile-{h.Id.ToLowerInvariant()}-back.jpg";
 }

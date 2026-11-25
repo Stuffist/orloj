@@ -1,4 +1,5 @@
 @inject LocalizationService L
+@inject CatalogService Catalog
 
 @* "Hors Bloc": what a game puts beside the Block. Scenario: the agenda chosen at the setup (P1),
    the Artifact and Ministry decks of the game, and its elements put on the mat with "Placer"
@@ -206,6 +207,81 @@
             }
         }
     </div>
+
+    @* Planning (rulebook p.33), semi-automatic: 5 cards programmed in secret (a ministry on the slot
+       of its constraint), then revealed phase by phase for both; the active player shown from the
+       ranks (equal: a Mécanisme). *@
+    <div class="offblock-section">
+        <h3>@L.Ui("online.offblock.planning")</h3>
+        @if (View.Planning is not { } planning || View.Step != OnlineStep.Cycle)
+        {
+            <p class="hint">@L.Ui("online.offblock.planning.later")</p>
+        }
+        else
+        {
+            @if (View.Me is not null && planning.Phase == 0)
+            {
+                var draft = Draft(planning);
+                <div class="offblock-slots">
+                    @for (var i = 0; i < PlanningRules.Slots; i++)
+                    {
+                        var slot = i;
+                        <div class="offblock-slot">
+                            <span class="online-label">@L.Ui("online.offblock.slotN", slot + 1)</span>
+                            <select value="@(draft[slot] ?? "")" @onchange="e => SetDraft(slot, e.Value?.ToString())">
+                                <option value="">—</option>
+                                @foreach (var card in Choices(planning, draft, slot))
+                                {
+                                    <option value="@card">@CardName(card)</option>
+                                }
+                            </select>
+                            @if (draft[slot] is { } chosen)
+                            {
+                                @PlannedCard(chosen)
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="online-inline">
+                    <button class="btn small primary" type="button" @onclick="SavePlanningAsync">@L.Ui("online.offblock.planning.save")</button>
+                    <span class="hint">@Readiness(planning)</span>
+                </div>
+            }
+            else if (planning.Phase == 0)
+            {
+                <p class="hint">@Readiness(planning)</p>
+            }
+
+            @if (planning.Phase > 0)
+            {
+                <table class="offblock-phases">
+                    <thead>
+                        <tr><th></th><th>@View.Seats[0].Name</th><th>@View.Seats[1].Name</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @for (var p = 0; p < planning.Phase; p++)
+                        {
+                            var (a, b) = (planning.Revealed[0].ElementAtOrDefault(p), planning.Revealed[1].ElementAtOrDefault(p));
+                            var (ra, rb) = (planning.Ranks[0].ElementAtOrDefault(p), planning.Ranks[1].ElementAtOrDefault(p));
+                            <tr>
+                                <th>@L.Ui("online.offblock.phaseN", p + 1)</th>
+                                <td>@if (a is not null) { @PlannedCard(a) }</td>
+                                <td>@if (b is not null) { @PlannedCard(b) }</td>
+                                <td class="offblock-verdict">@(ra == rb ? L.Ui("online.offblock.tie") : L.Ui("online.offblock.active", View.Seats[ra > rb ? 0 : 1].Name))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            @if (CanAct && planning.Phase < PlanningRules.Slots)
+            {
+                <button class="btn small primary" type="button" disabled="@(!planning.Complete.All(c => c))"
+                        title="@L.Ui("online.offblock.reveal.title")" @onclick="() => Send(new(OnlineCommandType.RevealPhase))">
+                    👁 @L.Ui("online.offblock.reveal", planning.Phase + 1)
+                </button>
+            }
+        }
+    </div>
 </section>
 
 @code {
@@ -231,6 +307,63 @@
     private Task DrawDecksAsync() => Send(new(OnlineCommandType.SetDecks, Flag: true));
 
     private static string? Empty(string? id) => string.IsNullOrEmpty(id) ? null : id;
+
+    // ---- Planning ----
+
+    private string?[]? _draft;
+    private string? _draftSource;
+
+    // The player's planning being written: taken back from the server when it changes there (saved, new cycle).
+    private string?[] Draft(OnlinePlanningView planning)
+    {
+        var source = $"{View.Cycle}#{string.Join("|", planning.MySlots)}";
+        if (_draft is null || source != _draftSource)
+        {
+            _draft = planning.MySlots.Count == PlanningRules.Slots ? planning.MySlots.ToArray() : new string?[PlanningRules.Slots];
+            _draftSource = source;
+        }
+        return _draft;
+    }
+
+    private void SetDraft(int slot, string? card) => Draft(View.Planning!)[slot] = string.IsNullOrEmpty(card) ? null : card;
+
+    // The cards offered on a slot: the hand, without those on other slots; a ministry on its constraint's slot only.
+    private IEnumerable<string> Choices(OnlinePlanningView planning, string?[] draft, int slot) => planning.MyHand
+        .Where(c => draft[slot] == c || !draft.Contains(c))
+        .Where(c => !c.StartsWith("min:") || CardDecks.Ministry(c[4..]) is not { Slot: { } s } || s == slot + 1);
+
+    private Task SavePlanningAsync() => Send(new(OnlineCommandType.SetPlanning, Decks: Draft(View.Planning!).ToList()));
+
+    private string Readiness(OnlinePlanningView planning) =>
+        string.Join(" · ", View.Seats.Select((s, i) => L.Ui(planning.Complete.ElementAtOrDefault(i) ? "online.offblock.planned" : "online.offblock.planning.pending", s.Name)));
+
+    private string CardName(string card) => card.Split(':', 2) switch
+    {
+        ["act", var cog] => Catalog.CogById(cog) is { } c ? L.CogName(c).Text : cog,
+        ["min", var id] => CardDecks.Ministry(id) is { } m ? $"{m.Name} ({(m.Slot is { } s ? L.Ui("online.offblock.slot", s) : L.Ui("online.offblock.anySlot"))})" : id,
+        ["prop", var n] => L.Ui("online.offblock.propaganda", n),
+        _ => card,
+    };
+
+    // A planned card: its image (activation, propaganda, ministry), its name.
+    private RenderFragment PlannedCard(string card) => __builder =>
+    {
+        var parts = card.Split(':', 2);
+        var image = parts switch
+        {
+            ["act", var cog] => CardDecks.Activation(cog),
+            ["min", var id] => CardDecks.Image(id),
+            ["prop", var n] => CardDecks.Propaganda((int.Parse(n) - 1) % CardDecks.PropagandaImages + 1),
+            _ => null,
+        };
+        <figure class="offblock-card planned" title="@CardName(card)">
+            @if (image is not null)
+            {
+                <img src="@Src(image)" alt="" loading="lazy" onerror="this.style.display='none'" />
+            }
+            <figcaption>@CardName(card)</figcaption>
+        </figure>
+    };
 
     // ---- Decks ----
 

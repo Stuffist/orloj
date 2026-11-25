@@ -26,6 +26,7 @@ public enum OnlineCommandType
     RollDice, RerollDice, SetDiceThreshold,  // shared dice roller (from the initiative on)
     PlaceAgenda, SetDecks,                   // "Hors Bloc": the agenda's elements on the mat, the decks of the scenario
     DealMinistries, Mechanism, ReshuffleArtifact, IndraTake, IndraSwap,   // "Hors Bloc": the decks
+    SetPlanning, RevealPhase,                // "Hors Bloc": the planning (Decks: the 5 slots)
     ConfirmResult,                           // end of the game
 }
 
@@ -87,7 +88,8 @@ public sealed record OnlineView(
     OnlineTable? Table = null,           // nothing secret on a table: the same for everyone
     OnlineGameResult? Result = null,
     IReadOnlyDictionary<string, OnlineDiceRoll>? Dice = null,
-    OnlineDecksView? Decks = null)
+    OnlineDecksView? Decks = null,
+    OnlinePlanningView? Planning = null)
 {
     public SeatView? Mine => Me is { } i ? Seats[i] : null;
     public SeatView? Other => Me is { } i ? Seats[1 - i] : null;
@@ -101,6 +103,13 @@ public sealed record OnlineView(
 public sealed record OnlineDecksView(string? MinistryDeck, string? ArtifactDeck, IReadOnlyList<string> MyHand, IReadOnlyList<int> HandSizes,
     string? Fallen, int PileSize, IReadOnlyList<string> Discard, string? Drawn, int Mechanisms, int? IndraSeat,
     IReadOnlyList<string> MyIndra, int IndraCount);
+
+/// <summary>
+/// The planning as a connection sees it (PlanningRules.View): its hand and its own slots; of each seat, the
+/// cards revealed and their ranks, the phases revealed, whose planning is complete.
+/// </summary>
+public sealed record OnlinePlanningView(IReadOnlyList<string> MyHand, IReadOnlyList<string?> MySlots,
+    IReadOnlyList<IReadOnlyList<string?>> Revealed, int Phase, IReadOnlyList<bool> Complete, IReadOnlyList<IReadOnlyList<int>> Ranks);
 
 /// <summary>A seat as seen by the connection. Cabal and State: null while still secret (or missing).</summary>
 public sealed record SeatView(

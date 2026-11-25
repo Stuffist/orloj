@@ -44,6 +44,7 @@ public static class DeckRules
         decks.Hands = [[axe, .. others.Take(CardDecks.MinistriesPerPlayer)], [axe, .. others.Skip(CardDecks.MinistriesPerPlayer).Take(CardDecks.MinistriesPerPlayer)]];
         decks.Fallen = others[^1];
         decks.MinistryDeck = deck;
+        decks.Played = [[], []];
         OnlineRules.Log(g, seat, now, "ministriesDealt", CardDecks.Ministry(decks.Fallen)!.Name);
         return null;
     }

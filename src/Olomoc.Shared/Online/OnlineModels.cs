@@ -35,6 +35,8 @@ public sealed class OnlineGame : IStoredDocument
     public OnlineTournamentRef? Tournament { get; set; }
     /// <summary>Board and pieces (null: lobby, or a game stored before the table).</summary>
     public OnlineTable? Table { get; set; }
+    /// <summary>Planning of the current cycle (null: none yet).</summary>
+    public OnlinePlanning? Planning { get; set; }
     /// <summary>Decks beside the Block (null: not used yet).</summary>
     public OnlineDecks? Decks { get; set; }
     /// <summary>Shared dice roller: the last roll of each slot ("action", "reaction"); null: none yet.</summary>
@@ -133,6 +135,8 @@ public sealed class OnlineDecks
     public string? MinistryDeck { get; set; }
     public string? ArtifactDeck { get; set; }
     public List<List<string>> Hands { get; set; } = [[], []];
+    /// <summary>Ministries played (discarded at the end of their cycle), per seat.</summary>
+    public List<List<string>> Played { get; set; } = [[], []];
     public string? Fallen { get; set; }
     public List<string> Pile { get; set; } = new();
     public List<string> Discard { get; set; } = new();
@@ -140,6 +144,13 @@ public sealed class OnlineDecks
     public int Mechanisms { get; set; }
     public int? IndraSeat { get; set; }
     public List<string> Indra { get; set; } = new();
+}
+
+/// <summary>The planning of the cycle (PlanningRules): each seat's 5 slots (secret until revealed), the phases revealed.</summary>
+public sealed class OnlinePlanning
+{
+    public List<List<string?>> Slots { get; set; } = [[null, null, null, null, null], [null, null, null, null, null]];
+    public int Revealed { get; set; }
 }
 
 /// <summary>
