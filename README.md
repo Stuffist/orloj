@@ -684,7 +684,7 @@ connection.
     the Décors / Marqueurs / Réglettes palettes under their cabal (a spectator: seat 1 left, seat 2
     right). Above each cabal, the player's **state** (`Shared/SideStatus.razor`): presence, name,
     P1, Fiel and VP, with their +/- for the player's own side.
-  - **Both cabals**, always listed next to the mat: a card per cog with its stats, HP left, action tokens,
+  - **Both cabals**, always listed next to the mat: a card per cog with its stats, its life line (HP as pips: standard, reinforced, tainted; marked ones crossed), action tokens,
     Darkness and state (out of action, otherwise sane, tainted or corrupted; stunned; **off the Block**
     when none of its tokens is on the mat), read from its side's sheet, and its cards below (a click
     puts their token down). A cog is put down as **tokens, as many as wanted** (a copy marks a place):

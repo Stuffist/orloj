@@ -1176,8 +1176,10 @@ body {
 .tb-cog-stats { display: flex; align-items: center; flex-wrap: wrap; gap: .2rem .55rem; font-size: .8rem; }
 .tb-cog-stats .token { width: .95rem; height: .95rem; }
 .tb-cog-stats .token-track { gap: .1rem; vertical-align: middle; }
-.tb-hp { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.tb-hp small { color: var(--muted); font-weight: 400; }
+.tb-life { flex-basis: 100%; gap: 2px; }
+.tb-life .pip { width: 11px; height: 11px; border-width: 1.5px; position: relative; }
+.tb-life .pip.marked::after { font-size: 9px; }
+.tb-life .pip.fortified { box-shadow: 0 0 0 1.5px var(--ok); }
 .tb-cog-badges { display: flex; flex-wrap: wrap; gap: .2rem; }
 .tb-cog-badges .status-badge { font-size: .6rem; padding: 0 .35rem; letter-spacing: .3px; }
 .tb-cog-badges .status-badge.sane { border-color: var(--ok); color: var(--ok); }

@@ -461,7 +461,14 @@ else
                                 <StatLine Stats="card.Stats" Compact="true" />
                             }
                             <div class="tb-cog-stats">
-                                <span class="tb-hp" title="@L.Ui("online.table.hp")">♥ @cog.Remaining<small>/@cog.LifeLine.Count</small></span>
+                                @* Life line: its HP (standard, reinforced, tainted) as pips, the marked ones crossed. *@
+                                <span class="life-line tb-life" title="@L.Ui("online.table.hp") : @cog.Remaining / @cog.LifeLine.Count">
+                                    @for (var i = 0; i < cog.LifeLine.Count; i++)
+                                    {
+                                        var point = cog.PointAt(i);
+                                        <span class="pip @point.ToString().ToLower() @(cog.IsChecked(i) ? "marked" : null) @(point != cog.LifeLine[i] ? "fortified" : null)" title="@L.Ui($"hp.{point}")"></span>
+                                    }
+                                </span>
                                 <span title="@L.Ui("play.actions")"><TokenTrack Token="action" Count="cog.Actions" Max="GameSession.ActionsPerCycle" /></span>
                                 <span title="@L.Ui("play.darkness")"><TokenTrack Token="darkness" Count="cog.Darkness" Max="GameSession.MaxDarkness" /></span>
                             </div>
