@@ -1308,7 +1308,7 @@
   "online.offblock.hostile.flip": "Retourner la carte (instinct)",
   "online.offblock.discard": "Défausse ({0})",
   "online.offblock.indra": "Indra",
-  "online.offblock.indra.swap": "Remplacer la carte piochée",
+  "online.offblock.indra.swap": "Remplacer",
   "online.offblock.indra.swap.title": "Lors d’un mécanisme : défausser la carte piochée et la remplacer par celle-ci",
   "online.offblock.indra.other": "{0} tient {1} carte(s) de l’Artefact (Indra).",
   "online.offblock.player": "J{0}",

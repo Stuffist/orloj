@@ -115,6 +115,10 @@ public static class CardDecks
     /// <summary>Effect printed on an artefact card (French, as on the card), by its name.</summary>
     public static string? Text(ArtifactCard card) => ArtifactTexts.GetValueOrDefault(card.Name);
 
+    /// <summary>Hover text of an artefact card: its name, number and effect.</summary>
+    public static string Title(ArtifactCard card) =>
+        Text(card) is { } text ? $"{card.Name} {card.Number} — {text}" : $"{card.Name} {card.Number}";
+
     private static readonly Dictionary<string, string> ArtifactTexts = new()
     {
         ["Rogue"] = "Placez un rouage hostile Rogue sur le Bloc au plus proche du coin ou du bord indiqué par l’emplacement du logo sur cette carte Artefact.",

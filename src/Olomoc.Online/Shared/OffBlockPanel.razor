@@ -86,6 +86,26 @@
                                 }
                             </div>
                         }
+                        @* Indra's cards (the pile's 3 last, taken at the setup): one replaces the card drawn by a Mécanisme. *@
+                        @if (View.Decks is { MyIndra.Count: > 0 } indraDecks)
+                        {
+                            <div class="offblock-row">
+                                @foreach (var id in indraDecks.MyIndra)
+                                {
+                                    if (CardDecks.Artifact(id) is not { } artifact) continue;
+                                    var cid = id;
+                                    <figure class="offblock-card planned" title="@CardDecks.Title(artifact)">
+                                        <img src="@Src(CardDecks.Image(artifact.Id))" alt="" loading="lazy" draggable="false" />
+                                        <figcaption>@L.Ui("online.offblock.indra") · @artifact.Name</figcaption>
+                                        @if (CanAct)
+                                        {
+                                            <button class="btn small" type="button" disabled="@(indraDecks.Drawn is null)" title="@L.Ui("online.offblock.indra.swap.title")"
+                                                    @onclick="() => Send(new(OnlineCommandType.IndraSwap, cid))">@L.Ui("online.offblock.indra.swap")</button>
+                                        }
+                                    </figure>
+                                }
+                            </div>
+                        }
                         @if (editing)
                         {
                             <p class="hint">@L.Ui("online.offblock.planning.help")</p>

@@ -1308,7 +1308,7 @@
   "online.offblock.hostile.flip": "Turn the card over (instinct)",
   "online.offblock.discard": "Discard ({0})",
   "online.offblock.indra": "Indra",
-  "online.offblock.indra.swap": "Replace the drawn card",
+  "online.offblock.indra.swap": "Replace",
   "online.offblock.indra.swap.title": "During a mechanism: discard the drawn card and replace it with this one",
   "online.offblock.indra.other": "{0} holds {1} Artifact card(s) (Indra).",
   "online.offblock.player": "P{0}",

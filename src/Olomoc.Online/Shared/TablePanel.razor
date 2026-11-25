@@ -109,7 +109,7 @@ else
         <div class="tb-main @(Beside ? "with-beside" : null)">
             @* Beside the Block, on the far left: the Artefact (p.27) — the card drawn by the last Mécanisme
                (upright as in the module, its effect in the hover text, the priority it gives), « Mécanisme »
-               and « Remélanger », its discard, Indra's cards for her player, the hostiles' profiles (bigger
+               and « Remélanger », its discard, how many Indra cards the opponent holds, the hostiles' profiles (bigger
                when hovered, turned over on a click: instinct) — and the fallen ministry. *@
             @if (Beside)
             {
@@ -123,7 +123,7 @@ else
                         <span class="hint">@L.Ui("online.offblock.pile", decks?.ArtifactDeck is null ? CardDecks.ArtifactDeck(artifactDeck).Count : decks.PileSize, decks?.Discard.Count ?? 0)</span>
                         @if (drawn is not null)
                         {
-                            <figure class="tb-beside-card" title="@ArtifactTitle(drawn)">
+                            <figure class="tb-beside-card" title="@CardDecks.Title(drawn)">
                                 @if (drawn.Source is not null)
                                 {
                                     <img src="@Src(CardDecks.Image(drawn.Id))" alt="@drawn.Name" />
@@ -150,31 +150,12 @@ else
                                 <ul>
                                     @foreach (var id in decks.Discard)
                                     {
-                                        if (CardDecks.Artifact(id) is { } card) { <li title="@ArtifactTitle(card)">@card.Name · @card.Number</li> }
+                                        if (CardDecks.Artifact(id) is { } card) { <li title="@CardDecks.Title(card)">@card.Name · @card.Number</li> }
                                     }
                                 </ul>
                             </details>
                         }
-                        @* Indra: her cards, taken at the setup (« Placer + distribuer »), for her player; how
-                           many the other one holds. *@
-                        @if (decks is { MyIndra.Count: > 0 })
-                        {
-                            <h4>@L.Ui("online.offblock.indra")</h4>
-                            @foreach (var id in decks.MyIndra)
-                            {
-                                if (CardDecks.Artifact(id) is not { } card) continue;
-                                var cid = id;
-                                <figure class="tb-beside-card small" title="@ArtifactTitle(card)">
-                                    <img src="@Src(CardDecks.Image(card.Id))" alt="@card.Name" />
-                                    <figcaption>@card.Name · @card.Number</figcaption>
-                                    @if (canAct)
-                                    {
-                                        <button class="btn small" type="button" disabled="@(decks.Drawn is null)" title="@L.Ui("online.offblock.indra.swap.title")"
-                                                @onclick="() => Send(new(OnlineCommandType.IndraSwap, cid))">@L.Ui("online.offblock.indra.swap")</button>
-                                    }
-                                </figure>
-                            }
-                        }
+                        @* Indra: how many cards the opponent's holds (the player's own: in their hand, Planification panel). *@
                         @for (var holder = 0; holder < (decks?.IndraCounts.Count ?? 0); holder++)
                         {
                             if (holder == View.Me || decks!.IndraCounts[holder] == 0) continue;
@@ -810,9 +791,6 @@ else
     private readonly HashSet<string> _hostileBacks = new();     // hostile profiles shown from the back (instinct)
 
     private void FlipHostile(string id) { if (!_hostileBacks.Remove(id)) _hostileBacks.Add(id); }
-
-    private static string ArtifactTitle(ArtifactCard card) =>
-        CardDecks.Text(card) is { } text ? $"{card.Name} {card.Number} — {text}" : $"{card.Name} {card.Number}";
 
     // The column beside the Block: once the scenario has its Artefact, or the ministries are dealt.
     private bool Beside => View.Agenda?.Artifact is not null || View.Decks?.Fallen is not null;

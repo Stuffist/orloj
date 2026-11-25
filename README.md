@@ -702,16 +702,17 @@ connection.
     again), « Remélanger »; the **hostiles' profile cards** (front, back: instinct; bigger when
     hovered) of the deck (and the Gargoyle with its agenda); **Indra**: at the setup (« Placer +
     distribuer »), each one, in either cabal, receives the pile's 3 last cards (secret; P1's first),
-    and her player may swap the drawn card for one of them. **Once the ministries are dealt,
-    the decks no longer change**; before, another Artefact deck starts its pile again.
+    shown in her player's hand (« Planification » panel), who may swap the drawn card for one of
+    them (« Remplacer »). **Once the ministries are dealt, the decks no longer change**; before,
+    another Artefact deck starts its pile again.
   - **"Planification" panel** (`Shared/OffBlockPanel.razor`, under the table, detachable:
     `/online/g/{code}/offblock?window=true`; `Online/PlanningRules.cs`, semi-automatic, rulebook
     p.33): on the left the opponent's ministries, stacked by pairs (their text and planning constraint
     left visible; a ministry played or revealed greyed); then the player's hand (the activation cards
     of their cogs, their propaganda cards: 1 plus 1 per cog out of action at the end of an earlier
     cycle, its activation card replaced; a cog out of action during the cycle keeps it until then;
-    their ministries);
-    then a row of 5 slots per player. Each player drags their cards onto their slots, in secret, saved
+    their ministries; their Indra cards, with « Remplacer »); then a row of 5 slots per player. Each
+    player drags their cards onto their slots, in secret, saved
     as they go (one ministry, on the slot of its planning constraint; checked by the server). Once
     both plannings are complete, « Révéler la phase » shows the next card of each (the opponent's
     still hidden ones as card backs), with their ranks and the active player (equal: « Mécanisme,
@@ -721,7 +722,7 @@ connection.
     rollers and the **actions of the selected piece** (ranges, padlock, objective colors, magnet,
     rotation, removal); on the far left, **beside the Block**: the
     Artefact (its card drawn with its priority and its effect in the hover text, « Mécanisme »
-    and « Remélanger », the discard, Indra, the hostiles' profiles) and the fallen ministry, once the scenario has its decks; then the **opponent on the left** of the mat, the **player on the right** with
+    and « Remélanger », the discard, how many Indra cards the opponent holds, the hostiles' profiles) and the fallen ministry, once the scenario has its decks; then the **opponent on the left** of the mat, the **player on the right** with
     the Décors / Marqueurs / Réglettes palettes under their cabal (a spectator: seat 1 left, seat 2
     right). Above each cabal, the player's **state** (`Shared/SideStatus.razor`): presence, name,
     P1, Fiel and VP (a line each, both frames the same height), on the player's own side the Fiel
