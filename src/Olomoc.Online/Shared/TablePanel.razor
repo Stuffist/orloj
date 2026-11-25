@@ -117,19 +117,19 @@ else
                      xmlns="http://www.w3.org/2000/svg" role="img" aria-label="@L.Ui("online.table.title")">
                     <defs>
                         <clipPath id="tb-round" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5" /></clipPath>
-                        <pattern id="tb-inch" width="@Inch" height="@Inch" patternUnits="userSpaceOnUse">
-                            <path d="M @Inch 0 L 0 0 0 @Inch" fill="none" stroke="rgba(255,255,255,.25)" stroke-width=".4" />
+                        <pattern id="tb-inch" width="@Num(Inch)" height="@Num(Inch)" patternUnits="userSpaceOnUse">
+                            <path d="M @Num(Inch) 0 L 0 0 0 @Num(Inch)" fill="none" stroke="rgba(255,255,255,.25)" stroke-width=".4" />
                         </pattern>
                     </defs>
                     <rect x="@Num(-TableRules.Margin)" y="@Num(-TableRules.Margin)" width="@Num(Span)" height="@Num(Span)" class="tb-outside" />
                     @if (board is not null)
                     {
-                        <image href="@Src(board.Image)" x="0" y="0" width="@TableManifest.BoardSize" height="@TableManifest.BoardSize" preserveAspectRatio="none" />
+                        <image href="@Src(board.Image)" x="0" y="0" width="@Board" height="@Board" preserveAspectRatio="none" />
                     }
-                    <rect x="0" y="0" width="@TableManifest.BoardSize" height="@TableManifest.BoardSize" class="tb-edge" />
+                    <rect x="0" y="0" width="@Board" height="@Board" class="tb-edge" />
                     @if (_grid)
                     {
-                        <rect x="0" y="0" width="@TableManifest.BoardSize" height="@TableManifest.BoardSize" fill="url(#tb-inch)" pointer-events="none" />
+                        <rect x="0" y="0" width="@Board" height="@Board" fill="url(#tb-inch)" pointer-events="none" />
                     }
 
                     @foreach (var p in OnBoard(table).Where(p => p.Kind == PieceKind.Terrain))
@@ -371,6 +371,8 @@ else
     [Parameter] public RenderFragment? HeadContent { get; set; }
 
     private const double Inch = TableManifest.MmPerInch;
+    // Numbers of the SVG: invariant (a French browser would write "406,4", refused).
+    private static readonly string Board = Num(TableManifest.BoardSize);
     // Outlines drawn inside the pieces (half their stroke), never beyond: contacts stay exact.
     private const double Inset = 0.6, RingInset = 0.8;
     // The mat and the margin around it (where pieces may stick out): the whole view.

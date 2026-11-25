@@ -448,6 +448,8 @@
         _ => card,
     };
 
+    private readonly HashSet<string> _missing = new();     // card images not found: the name alone
+
     // A planned card: its image (activation, propaganda, ministry), its name.
     private RenderFragment PlannedCard(string card) => __builder =>
     {
@@ -460,9 +462,9 @@
             _ => null,
         };
         <figure class="offblock-card planned" title="@CardName(card)">
-            @if (image is not null)
+            @if (image is not null && !_missing.Contains(image))
             {
-                <img src="@Src(image)" alt="" loading="lazy" draggable="false" onerror="this.style.display='none'" />
+                <img src="@Src(image)" alt="" loading="lazy" draggable="false" @onerror="() => _missing.Add(image)" />
             }
             <figcaption>@CardName(card)</figcaption>
         </figure>
