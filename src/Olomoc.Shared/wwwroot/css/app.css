@@ -1180,6 +1180,10 @@ body {
 .tb-life .pip { width: 11px; height: 11px; border-width: 1.5px; position: relative; }
 .tb-life .pip.marked::after { font-size: 9px; }
 .tb-life .pip.fortified { box-shadow: 0 0 0 1.5px var(--ok); }
+.tb-life button.pip { padding: 0; cursor: pointer; appearance: none; font: inherit; }
+.tb-life button.pip:hover { outline: 1px solid #f5d76e; outline-offset: 1px; }
+.tb-token-btn { background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; border-radius: 50%; }
+.tb-token-btn:hover { outline: 1px solid #f5d76e; }
 .tb-cog-badges { display: flex; flex-wrap: wrap; gap: .2rem; }
 .tb-cog-badges .status-badge { font-size: .6rem; padding: 0 .35rem; letter-spacing: .3px; }
 .tb-cog-badges .status-badge.sane { border-color: var(--ok); color: var(--ok); }

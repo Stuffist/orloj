@@ -687,7 +687,9 @@ connection.
   - **Both cabals**, always listed next to the mat: a card per cog with its stats, its life line (HP as pips: standard, reinforced, tainted; marked ones crossed), action tokens,
     Darkness and state (out of action, otherwise sane, tainted or corrupted; stunned; **off the Block**
     when none of its tokens is on the mat), read from its side's sheet, and its cards below (a click
-    puts their token down). A cog is put down as **tokens, as many as wanted** (a copy marks a place):
+    puts their token down). On the player's own cabal, a pip marks or unmarks that HP (damage by
+    hand) and a token sets the action tokens or the Darkness, as on the sheet (sent the same way).
+    A cog is put down as **tokens, as many as wanted** (a copy marks a place):
     the card is linked to all of them. A click on the card selects them in turn (the others outlined),
     or puts one down if there is none; "＋" puts one more. Selecting a token lights its card.
   - **Padlock** of the terrain and the objectives (shared): locked, the piece is neither moved, turned

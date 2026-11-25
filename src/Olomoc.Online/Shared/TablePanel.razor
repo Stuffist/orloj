@@ -3,6 +3,7 @@
 @inject CatalogService Catalog
 @inject TableAssets Files
 @inject IJSRuntime JS
+@inject MySide Side
 
 @* Table of the game (40 cm mat), played freely as on Vassal: each player moves their cogs and
    equipment tokens, both move the terrain and markers; the server keeps and relays the positions.
@@ -392,6 +393,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        Side.Changed += OnSideChanged;
         await Files.EnsureLoadedAsync();
     }
 
@@ -427,8 +429,10 @@ else
     // tokens, Darkness, state), its cards below; a click shows its tokens on the mat, or puts one down.
     private RenderFragment Roster(OnlineTable table, int seat) => __builder =>
     {
+        // The player's own cabal: from their side as tracked here (up to date during an upload), editable.
+        var editable = seat == View.Me && View.Step == OnlineStep.Cycle && Side.Session is not null;
                 <ul class="tb-roster">
-                    @foreach (var cog in (View.Seats[seat].State?.Cogs ?? []).OrderByDescending(c => c.Rank))
+                    @foreach (var cog in ((seat == View.Me ? Side.Session?.State.Cogs : null) ?? View.Seats[seat].State?.Cogs ?? []).OrderByDescending(c => c.Rank))
                     {
                         var (side, cogId) = (seat, cog.CogId);
                         var tokens = Tokens(table, seat, cog.CogId);
@@ -461,16 +465,27 @@ else
                                 <StatLine Stats="card.Stats" Compact="true" />
                             }
                             <div class="tb-cog-stats">
-                                @* Life line: its HP (standard, reinforced, tainted) as pips, the marked ones crossed. *@
+                                @* Life line: its HP (standard, reinforced, tainted) as pips, the marked ones crossed. On the
+                                   player's own cabal, a pip marks or unmarks that HP (damage by hand), a token sets the
+                                   action tokens or the Darkness, as on the sheet. *@
                                 <span class="life-line tb-life" title="@L.Ui("online.table.hp") : @cog.Remaining / @cog.LifeLine.Count">
                                     @for (var i = 0; i < cog.LifeLine.Count; i++)
                                     {
-                                        var point = cog.PointAt(i);
-                                        <span class="pip @point.ToString().ToLower() @(cog.IsChecked(i) ? "marked" : null) @(point != cog.LifeLine[i] ? "fortified" : null)" title="@L.Ui($"hp.{point}")"></span>
+                                        var (index, point) = (i, cog.PointAt(i));
+                                        var pip = $"pip {point.ToString().ToLower()} {(cog.IsChecked(i) ? "marked" : "")} {(point != cog.LifeLine[i] ? "fortified" : "")}";
+                                        @if (editable)
+                                        {
+                                            <button class="@pip" type="button" title="@L.Ui($"hp.{point}") · @L.Ui("play.hp.toggle")" aria-pressed="@cog.IsChecked(i)"
+                                                    @onclick="() => TogglePointAsync(cogId, index)"></button>
+                                        }
+                                        else
+                                        {
+                                            <span class="@pip" title="@L.Ui($"hp.{point}")"></span>
+                                        }
                                     }
                                 </span>
-                                <span title="@L.Ui("play.actions")"><TokenTrack Token="action" Count="cog.Actions" Max="GameSession.ActionsPerCycle" /></span>
-                                <span title="@L.Ui("play.darkness")"><TokenTrack Token="darkness" Count="cog.Darkness" Max="GameSession.MaxDarkness" /></span>
+                                @Tokens(editable, "action", cog.Actions, GameSession.ActionsPerCycle, L.Ui("play.actions"), n => SetCounterAsync(cogId, Counter.Actions, n))
+                                @Tokens(editable, "darkness", cog.Darkness, GameSession.MaxDarkness, L.Ui("play.darkness"), n => SetCounterAsync(cogId, Counter.Darkness, n))
                             </div>
                             <div class="tb-cog-badges">
                                 @foreach (var (key, css) in States(cog, placed))
@@ -496,6 +511,54 @@ else
                 </ul>
     };
 
+
+    // ---- The player's cogs, changed from their card next to the mat (as on the sheet) ----
+
+    private enum Counter { Actions, Darkness }
+
+    private void OnSideChanged() => InvokeAsync(StateHasChanged);
+
+    private int SlotOf(string cogId) => Side.Session?.State.Cogs.FindIndex(c => c.CogId == cogId) ?? -1;
+
+    // An HP marked or unmarked by hand (Darkness for a tainted one, out of action, hunt: the session's rules).
+    private Task TogglePointAsync(string cogId, int index) =>
+        SlotOf(cogId) is var slot and >= 0 ? Side.ChangeAsync(s => s.TogglePoint(slot, index)) : Task.CompletedTask;
+
+    // A click on the n-th token: n tokens; on the last one lit: one fewer.
+    private Task SetCounterAsync(string cogId, Counter counter, int n)
+    {
+        if (SlotOf(cogId) is not (var slot and >= 0) || Side.Session is not { } session) return Task.CompletedTask;
+        var cog = session.State.Cogs[slot];
+        var current = counter == Counter.Actions ? cog.Actions : cog.Darkness;
+        var delta = (n == current ? n - 1 : n) - current;
+        return delta == 0 ? Task.CompletedTask : Side.ChangeAsync(s =>
+        {
+            if (counter == Counter.Actions) s.AdjustActions(slot, delta);
+            else s.AdjustDarkness(slot, delta);
+        });
+    }
+
+    // Action or Darkness tokens: lit up to the count; buttons on the player's own cabal.
+    private RenderFragment Tokens(bool editable, string token, int count, int max, string label, Func<int, Task> set) => __builder =>
+    {
+        <span class="token-track tb-tokens" title="@label" role="@(editable ? "group" : "img")" aria-label="@label @count / @max">
+            @for (var k = 1; k <= max; k++)
+            {
+                var n = k;
+                var image = $"{Olomoc.Assets.Base}img/icons/{token}.png";
+                @if (editable)
+                {
+                    <button class="tb-token-btn" type="button" aria-label="@label @n" @onclick="() => set(n)">
+                        <img class="token @(n <= count ? "on" : "off")" src="@image" alt="" />
+                    </button>
+                }
+                else
+                {
+                    <img class="token @(n <= count ? "on" : "off")" src="@image" alt="" />
+                }
+            }
+        </span>
+    };
 
     // ---- Pieces ----
 
@@ -865,6 +928,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        Side.Changed -= OnSideChanged;
         if (_js is not null)
         {
             try { await JS.InvokeVoidAsync("olomocTable.detach", _js); }
