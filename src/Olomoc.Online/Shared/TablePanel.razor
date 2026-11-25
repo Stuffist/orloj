@@ -153,7 +153,7 @@ else
                         var (x, y, r) = At(p);
                         var (w, l) = (t.Width, t.Length);
                         <g class="tb-piece tb-template @(p.Magnet ? "magnet" : null) @(p.Id == _selected ? "selected" : null)" data-piece="@p.Id"
-                           data-movable="@(Movable(p) ? "" : null)" data-at="@Num(x) @Num(y)" data-rotate="@r" data-capsule="@Num(l) @Num(w)"
+                           data-movable="@(Free(p) ? "" : null)" data-at="@Num(x) @Num(y)" data-rotate="@r" data-capsule="@Num(l) @Num(w)"
                            data-magnet="@(p.Magnet ? "" : null)" transform="translate(@Num(x) @Num(y)) rotate(@r)">
                             <title>@Name(p)</title>
                             <image href="@Src(t.Image)" x="@Num(-w / 2)" y="@Num(-l / 2)" width="@Num(w)" height="@Num(l)" preserveAspectRatio="none" />
@@ -173,7 +173,7 @@ else
                         var (x, y, r) = At(p);
                         var radius = Radius(p);
                         <g class="tb-piece tb-token @SeatClass(p) @(Out(p) ? "tb-out" : null) @(p.Id == _selected ? "selected" : null) @(Sibling(p) ? "linked" : null)"
-                           data-piece="@p.Id" data-movable="@(Movable(p) ? "" : null)" data-at="@Num(x) @Num(y)" data-rotate="@r" data-radius="@Num(radius)"
+                           data-piece="@p.Id" data-movable="@(Free(p) ? "" : null)" data-at="@Num(x) @Num(y)" data-rotate="@r" data-radius="@Num(radius)"
                            transform="translate(@Num(x) @Num(y)) rotate(@r)">
                             <title>@Name(p)</title>
                             <circle r="@Num(radius)" class="tb-base" />
