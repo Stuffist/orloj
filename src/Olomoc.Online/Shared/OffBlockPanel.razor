@@ -74,6 +74,138 @@
             }
         }
     </div>
+
+    @* Ministries (rulebook p.31): dealt to both players, a secret hand each; the fallen one face up. *@
+    <div class="offblock-section">
+        <h3>@L.Ui("online.offblock.ministries")</h3>
+        @if (View.Agenda?.Ministry is null)
+        {
+            <p class="hint">@L.Ui("online.offblock.chooseDecks")</p>
+        }
+        else if (View.Decks is not { Fallen: { } fallen } decks)
+        {
+            @if (CanAct)
+            {
+                <button class="btn small primary" type="button" @onclick="() => Send(new(OnlineCommandType.DealMinistries))">🂠 @L.Ui("online.offblock.deal")</button>
+            }
+            <p class="hint">@L.Ui("online.offblock.deal.help")</p>
+        }
+        else
+        {
+            <div class="offblock-cards">
+                @if (View.Me is not null)
+                {
+                    <div class="offblock-group">
+                        <span class="online-label">@L.Ui("online.offblock.myHand")</span>
+                        <div class="offblock-row">
+                            @foreach (var id in decks.MyHand)
+                            {
+                                @Ministry(id)
+                            }
+                        </div>
+                    </div>
+                }
+                <div class="offblock-group">
+                    <span class="online-label">@L.Ui("online.offblock.fallen")</span>
+                    <div class="offblock-row">@Ministry(fallen)</div>
+                </div>
+            </div>
+            <p class="hint">
+                @string.Join(" · ", View.Seats.Select((s, i) => L.Ui("online.offblock.handOf", s.Name, decks.HandSizes.ElementAtOrDefault(i))))
+                @if (CanAct)
+                {
+                    <button class="btn small" type="button" @onclick="() => Send(new(OnlineCommandType.DealMinistries, Flag: true))">@L.Ui("online.offblock.dealAgain")</button>
+                }
+            </p>
+        }
+    </div>
+
+    @* Artefact (p.27): its pile, "Mécanisme" (its top card, the priority it gives), its discard; the
+       hostiles' profiles; Indra's cards for her player. *@
+    <div class="offblock-section">
+        <h3>@L.Ui("online.offblock.artifactTitle")</h3>
+        @if (View.Agenda?.Artifact is null)
+        {
+            <p class="hint">@L.Ui("online.offblock.chooseDecks")</p>
+        }
+        else
+        {
+            var decks = View.Decks;
+            var drawn = CardDecks.Artifact(decks?.Drawn);
+            <div class="online-inline offblock-artifact-tools">
+                <span class="hint">@L.Ui("online.offblock.pile", decks?.ArtifactDeck is null ? 12 : decks.PileSize, decks?.Discard.Count ?? 0)</span>
+                @if (CanAct)
+                {
+                    <button class="btn small primary" type="button" title="@L.Ui("online.offblock.mechanism.title")"
+                            @onclick="() => Send(new(OnlineCommandType.Mechanism))">⚙ @L.Ui("online.offblock.mechanism")</button>
+                    <button class="btn small" type="button" @onclick="() => Send(new(OnlineCommandType.ReshuffleArtifact))">⟳ @L.Ui("online.offblock.reshuffle")</button>
+                }
+            </div>
+            <div class="offblock-cards">
+                @if (drawn is not null)
+                {
+                    <div class="offblock-group">
+                        <span class="online-label">@L.Ui("online.offblock.drawn", decks!.Mechanisms)</span>
+                        @Artifact(drawn, large: true)
+                        <span class="offblock-priority">@(drawn.Priority is { } p ? L.Ui("online.offblock.priority", PlayerName(p)) : L.Ui("online.offblock.priority.unknown"))</span>
+                    </div>
+                }
+                @foreach (var hostile in CardDecks.HostilesOf(View.Agenda.Artifact, View.Agenda.Id))
+                {
+                    var h = hostile;
+                    var back = _backs.Contains(h.Id);
+                    <div class="offblock-group">
+                        <span class="online-label">@L.Ui("online.offblock.hostile", h.Name)</span>
+                        <button class="offblock-hostile" type="button" title="@L.Ui("online.offblock.hostile.flip")" @onclick="() => Flip(h.Id)">
+                            <img src="@Src(back ? CardDecks.Back(h) : CardDecks.Front(h))" alt="@h.Name" />
+                        </button>
+                    </div>
+                }
+            </div>
+            @if (decks is { Discard.Count: > 0 })
+            {
+                <details class="offblock-discard">
+                    <summary>@L.Ui("online.offblock.discard", decks.Discard.Count)</summary>
+                    <div class="offblock-row">
+                        @foreach (var id in decks.Discard)
+                        {
+                            if (CardDecks.Artifact(id) is { } card) { @Artifact(card, large: false) }
+                        }
+                    </div>
+                </details>
+            }
+            @if (IndraMine)
+            {
+                <div class="offblock-group offblock-indra">
+                    <span class="online-label">@L.Ui("online.offblock.indra")</span>
+                    @if (decks?.IndraSeat is null)
+                    {
+                        <button class="btn small" type="button" title="@L.Ui("online.offblock.indra.take.title")"
+                                @onclick="() => Send(new(OnlineCommandType.IndraTake))">@L.Ui("online.offblock.indra.take")</button>
+                    }
+                    else
+                    {
+                        <div class="offblock-row">
+                            @foreach (var id in decks.MyIndra)
+                            {
+                                if (CardDecks.Artifact(id) is not { } card) continue;
+                                var cid = id;
+                                <div class="offblock-indra-card">
+                                    @Artifact(card, large: false)
+                                    <button class="btn small" type="button" disabled="@(decks.Drawn is null)" title="@L.Ui("online.offblock.indra.swap.title")"
+                                            @onclick="() => Send(new(OnlineCommandType.IndraSwap, cid))">@L.Ui("online.offblock.indra.swap")</button>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else if (decks?.IndraSeat is { } indra)
+            {
+                <p class="hint">@L.Ui("online.offblock.indra.other", View.Seats[indra].Name, decks.IndraCount)</p>
+            }
+        }
+    </div>
 </section>
 
 @code {
@@ -99,4 +231,44 @@
     private Task DrawDecksAsync() => Send(new(OnlineCommandType.SetDecks, Flag: true));
 
     private static string? Empty(string? id) => string.IsNullOrEmpty(id) ? null : id;
+
+    // ---- Decks ----
+
+    private readonly HashSet<string> _backs = new();      // hostile profiles shown from the back (instinct)
+
+    private void Flip(string hostile) { if (!_backs.Remove(hostile)) _backs.Add(hostile); }
+
+    // The player's cabal has Indra: her ability (3 last cards of the Artefact).
+    private bool IndraMine => CanAct && View.Mine?.State?.Cogs.Any(c => c.CogId == CardDecks.Indra) == true;
+
+    // Player 1 or 2 (the priority of an artefact card): their name, by the initiative.
+    private string PlayerName(int player) => View.First is { } first && View.Seats.ElementAtOrDefault(player == 1 ? first : 1 - first) is { } s
+        ? s.Name : L.Ui("online.offblock.player", player);
+
+    private static string Src(string image) => Olomoc.Assets.Base + image;
+
+    private RenderFragment Ministry(string id) => __builder =>
+    {
+        if (CardDecks.Ministry(id) is not { } card) return;
+        <figure class="offblock-card ministry" title="@card.Name">
+            <img src="@Src(CardDecks.Image(card.Id))" alt="@card.Name" loading="lazy" />
+            <figcaption>@card.Name · @(card.Slot is { } slot ? L.Ui("online.offblock.slot", slot) : L.Ui("online.offblock.anySlot"))</figcaption>
+        </figure>
+    };
+
+    // An artefact card: its image is a landscape card stored upright, shown turned.
+    private RenderFragment Artifact(ArtifactCard card, bool large) => __builder =>
+    {
+        <figure class="offblock-card artifact @(large ? "large" : null)" title="@card.Name @card.Number">
+            @if (card.Source is not null)
+            {
+                <div class="offblock-turn"><img src="@Src(CardDecks.Image(card.Id))" alt="@card.Name" loading="lazy" /></div>
+            }
+            else
+            {
+                <div class="offblock-noimage">@card.Name</div>
+            }
+            <figcaption>@card.Name · @(card.Number ?? "?")</figcaption>
+        </figure>
+    };
 }

@@ -44,6 +44,8 @@ public static class OnlineRules
                 => One(DiceRules.Apply(g, seat, c, random, now)),
             OnlineCommandType.PlaceAgenda => One(AgendaSetups.Place(g, seat, c.Text, table, now)),
             OnlineCommandType.SetDecks => One(SetDecks(g, seat, c.Decks, c.Flag == true, random, now)),
+            OnlineCommandType.DealMinistries or OnlineCommandType.Mechanism or OnlineCommandType.ReshuffleArtifact
+                or OnlineCommandType.IndraTake or OnlineCommandType.IndraSwap => One(DeckRules.Apply(g, seat, c, random, now)),
             OnlineCommandType.ConfirmResult => One(ConfirmResult(g, seat, c.Vp, now)),
             _ => One(Problem.Of("onlineCommand")),
         };
@@ -181,6 +183,13 @@ public static class OnlineRules
             ? (Decks.Artifacts[random.Next(Decks.Artifacts.Count)], Decks.Ministries[random.Next(Decks.Ministries.Count)])
             : (decks?.ElementAtOrDefault(0), decks?.ElementAtOrDefault(1));
         if (artifact is not null && !Decks.IsArtifact(artifact) || ministry is not null && !Decks.IsMinistry(ministry)) return Problem.Of("onlineDecks");
+        // Another deck: the cards dealt or drawn from the previous one start again.
+        if (g.Decks is { } d)
+        {
+            if (artifact != agenda.Artifact) g.Decks = new OnlineDecks { MinistryDeck = d.MinistryDeck, Hands = d.Hands, Fallen = d.Fallen };
+            if (ministry != agenda.Ministry) g.Decks = new OnlineDecks { ArtifactDeck = g.Decks.ArtifactDeck, Pile = g.Decks.Pile, Discard = g.Decks.Discard,
+                Drawn = g.Decks.Drawn, Mechanisms = g.Decks.Mechanisms, IndraSeat = g.Decks.IndraSeat, Indra = g.Decks.Indra };
+        }
         g.Agenda = agenda with { Artifact = artifact, Ministry = ministry };
         Log(g, seat, now, "decks", artifact ?? "", ministry ?? "");
         return null;
@@ -372,5 +381,6 @@ public static class OnlineRules
         g.Log.Skip(Math.Max(0, g.Log.Count - logSize)).ToList(),
         g.Table,
         g.Result,
-        g.Dice);
+        g.Dice,
+        DeckRules.View(g, me));
 }

@@ -35,6 +35,8 @@ public sealed class OnlineGame : IStoredDocument
     public OnlineTournamentRef? Tournament { get; set; }
     /// <summary>Board and pieces (null: lobby, or a game stored before the table).</summary>
     public OnlineTable? Table { get; set; }
+    /// <summary>Decks beside the Block (null: not used yet).</summary>
+    public OnlineDecks? Decks { get; set; }
     /// <summary>Shared dice roller: the last roll of each slot ("action", "reaction"); null: none yet.</summary>
     public Dictionary<string, OnlineDiceRoll>? Dice { get; set; }
     /// <summary>Result confirmed at the end of the game.</summary>
@@ -119,6 +121,25 @@ public sealed class OnlineDiceRoll
     public int Seat { get; set; }
     public int Rerolls { get; set; }
     public DateTimeOffset At { get; set; }
+}
+
+/// <summary>
+/// The decks beside the Block (DeckRules): the decks used, each seat's ministry hand (secret), the
+/// fallen ministry, the Artefact pile (secret order), its discard, the card drawn by the last
+/// Mécanisme, Indra's cards (her player only).
+/// </summary>
+public sealed class OnlineDecks
+{
+    public string? MinistryDeck { get; set; }
+    public string? ArtifactDeck { get; set; }
+    public List<List<string>> Hands { get; set; } = [[], []];
+    public string? Fallen { get; set; }
+    public List<string> Pile { get; set; } = new();
+    public List<string> Discard { get; set; } = new();
+    public string? Drawn { get; set; }
+    public int Mechanisms { get; set; }
+    public int? IndraSeat { get; set; }
+    public List<string> Indra { get; set; } = new();
 }
 
 /// <summary>

@@ -25,6 +25,7 @@ public enum OnlineCommandType
     SetBoard, AddPiece, MovePiece, RemovePiece, SetAuras, SetMagnet, SetLock, SetClaim,   // table (from the initiative on)
     RollDice, RerollDice, SetDiceThreshold,  // shared dice roller (from the initiative on)
     PlaceAgenda, SetDecks,                   // "Hors Bloc": the agenda's elements on the mat, the decks of the scenario
+    DealMinistries, Mechanism, ReshuffleArtifact, IndraTake, IndraSwap,   // "Hors Bloc": the decks
     ConfirmResult,                           // end of the game
 }
 
@@ -85,12 +86,21 @@ public sealed record OnlineView(
     IReadOnlyList<OnlineLogEntry> Log,
     OnlineTable? Table = null,           // nothing secret on a table: the same for everyone
     OnlineGameResult? Result = null,
-    IReadOnlyDictionary<string, OnlineDiceRoll>? Dice = null)
+    IReadOnlyDictionary<string, OnlineDiceRoll>? Dice = null,
+    OnlineDecksView? Decks = null)
 {
     public SeatView? Mine => Me is { } i ? Seats[i] : null;
     public SeatView? Other => Me is { } i ? Seats[1 - i] : null;
     public bool Over => Step == OnlineStep.Finished || Seats.Any(s => s.Over) || Hunt >= GameSession.MaxHunt;
 }
+
+/// <summary>
+/// The decks as a connection sees them (DeckRules.View): its ministry hand, each seat's hand size, the
+/// fallen ministry, the Artefact pile's size, its discard, the card drawn; Indra's cards for her player.
+/// </summary>
+public sealed record OnlineDecksView(string? MinistryDeck, string? ArtifactDeck, IReadOnlyList<string> MyHand, IReadOnlyList<int> HandSizes,
+    string? Fallen, int PileSize, IReadOnlyList<string> Discard, string? Drawn, int Mechanisms, int? IndraSeat,
+    IReadOnlyList<string> MyIndra, int IndraCount);
 
 /// <summary>A seat as seen by the connection. Cabal and State: null while still secret (or missing).</summary>
 public sealed record SeatView(

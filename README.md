@@ -685,8 +685,16 @@ connection.
     of the Recueil des agendas (`Online/AgendaSetups.cs`, inches from the centre; a choice where the
     agenda leaves one: which median, which diagonal…), as ordinary pieces (movable, lockable) with
     their name and number (doors, accumulators), the batteries in their player's color, the zones de
-    Fiel under the secrets of « Seuls dans le noir », the Gargoyle (50 mm). Planned next: the decks
-    (ministries dealt, Artefact and its Mécanismes, Indra, hostile profiles), then the planning.
+    Fiel under the secrets of « Seuls dans le noir », the Gargoyle (50 mm).
+    **Decks** (`Online/DeckRules.cs`, `Online/CardDecks.cs`: the cards as printed, rank, planning
+    constraint, artefact number read on the module's images): **ministries** dealt (1 Axe card each,
+    3 random ministries each, a secret hand; the last one face up: the fallen ministry; dealt again
+    on demand); the **Artefact**: a pile (secret order) built at its first « Mécanisme » (Visites: the 3
+    Rogue cards on top), « Mécanisme » draws its top card (with the priority its number gives; the
+    previous one to the discard; an empty pile: the discard shuffled again), « Remélanger »; the
+    **hostiles' profile cards** (front, back: instinct) of the deck (and the Gargoyle with its agenda);
+    **Indra**: her player takes the pile's 3 last cards (secret) and may swap the drawn card for one
+    of them. Changing a deck in the scenario starts its cards again. Planned next: the planning.
   - **Wide layout** (online games only: the page takes the whole width): above the mat, the two dice
     rollers and the **actions of the selected piece** (ranges, padlock, objective colors, magnet,
     rotation, removal); the **opponent on the left** of the mat, the **player on the right** with
@@ -1071,7 +1079,8 @@ names, texts, illustrations, logos and pictograms belong to Occicat Games; the c
 does not apply to them and grants no right to reuse them. This covers:
 
 - `src/Olomoc.Shared/wwwroot/img/` — card images, faction logos, Ministry emblems, pictograms
-  and stat icons, the table's mats, terrain, markers and tokens (from the Vassal module);
+  and stat icons, the table's mats, terrain, markers and tokens (from the Vassal module), the
+  ministry and artefact cards and the hostiles' profiles (`img/offblock/`, from the Vassal module);
 - `src/Olomoc.Shared/wwwroot/i18n/*/cards.json` — card names and game effects, Ministry and
   faction names;
 - `src/Olomoc.Shared/wwwroot/data/` — card catalog and faction reference, table manifest;

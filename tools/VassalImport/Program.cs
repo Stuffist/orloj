@@ -114,12 +114,37 @@ foreach (var (key, definition) in prototypes.Where(p => p.Key.StartsWith("Player
     tokens.Add(new TableToken(id, path, int.Parse(rims.Groups[1].Value)));
 }
 
+// ---- Cards beside the Block (CardDecks): ministries, artefact, hostile profiles, into img/offblock/ ----
+var offblock = Path.Combine(web, CardDecks.Images.TrimEnd('/'));
+if (Directory.Exists(offblock)) Directory.Delete(offblock, recursive: true);
+Directory.CreateDirectory(offblock);
+var cardFiles = 0;
+void CopyCard(string? source, string target)
+{
+    if (source is null) return;
+    if (Bytes(source) is not { } bytes)
+    {
+        Console.WriteLine($"Missing image: {source}");
+        return;
+    }
+    File.WriteAllBytes(Path.Combine(web, target.Replace('/', Path.DirectorySeparatorChar)), bytes);
+    cardFiles++;
+}
+foreach (var m in CardDecks.Ministries) CopyCard(m.Source, CardDecks.Image(m.Id));
+foreach (var a in CardDecks.Artifacts) CopyCard(a.Source, CardDecks.Image(a.Id));
+foreach (var h in CardDecks.Hostiles)
+{
+    CopyCard(h.Front, CardDecks.Front(h));
+    CopyCard(h.Back, CardDecks.Back(h));
+}
+
 var manifest = new TableManifest(TableManifest.CurrentVersion, $"Occicat Games, Vassal module {version}",
     boards, terrain, markers, tokens.OrderBy(t => t.Id).ToList(), templates);
 File.WriteAllText(Path.Combine(web, TableManifest.File.Replace('/', Path.DirectorySeparatorChar)),
     JsonSerializer.Serialize(manifest, new JsonSerializerOptions(JsonSerializerDefaults.Web) { WriteIndented = true }) + "\n");
 
 Console.WriteLine($"Module {version}: {boards.Count} boards, {terrain.Count} terrain, {markers.Count} markers, {tokens.Count} tokens, {templates.Count} templates.");
+Console.WriteLine($"Cards beside the Block: {cardFiles} images.");
 if (unmatched.Count > 0) Console.WriteLine($"Not in the catalog (left out): {string.Join(", ", unmatched)}");
 return 0;
 
