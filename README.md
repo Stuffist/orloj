@@ -689,7 +689,7 @@ connection.
     (`OnlineRules.OnlineAgendas`: its 7 activation cards replacing the ministries are not played).
     **Decks** (`Online/DeckRules.cs`, `Online/CardDecks.cs`: the cards as printed, rank, planning
     constraint, artefact number read on the images of the module V1.9): **ministries** dealt (1 Axe card each,
-    3 random ministries each, the hands known to both: the opponent's staggered side by side, a ministry played or revealed greyed, one's own in the planning's hand; the last one face up: the fallen ministry; dealt again
+    3 random ministries each, the hands known to both: the opponent's stacked by pairs (their text and planning constraint left visible), a ministry played or revealed greyed, one's own in the planning's hand; the last one face up: the fallen ministry; dealt again
     on demand); the **Artefact**: a pile (secret order) built at its first « Mécanisme » (Visites: the 3
     Rogue cards on top), « Mécanisme » draws its top card (upright as in the module: its logo shows a corner or an edge of
     the Block; its effect under it and in the hover text; with the priority its number gives; the

@@ -1111,10 +1111,15 @@ body {
 .offblock-card.planned img { width: 5rem; }
 .offblock-card.planned figcaption { max-width: 6.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .offblock-card.spent img { filter: grayscale(1) brightness(.45); }
-/* The opponent's ministries, side by side, staggered (without covering each other) */
-.offblock-stack { display: flex; flex-wrap: wrap; gap: .3rem; padding-top: 1.4rem; }
-.offblock-stack .offblock-card img { width: 5.2rem; }
-.offblock-stack .offblock-card:nth-child(even) { transform: translateY(-1.4rem); }
+/* The opponent's ministries, stacked by pairs as in a hand: the 2nd card higher and to the right,
+   leaving the 1st one's text (bottom) and planning constraint (top left) visible; hovered: in front */
+.offblock-stack { display: flex; flex-wrap: wrap; align-items: flex-start; row-gap: .5rem; }
+.offblock-stack .offblock-card { position: relative; }
+.offblock-stack .offblock-card img { width: 6rem; }
+.offblock-stack .offblock-card:nth-child(odd) { margin-top: 2.9rem; }
+.offblock-stack .offblock-card:nth-child(odd):not(:first-child) { margin-left: .6rem; }
+.offblock-stack .offblock-card:nth-child(even) { margin-left: -3.5rem; }
+.offblock-stack .offblock-card:hover { z-index: 2; }
 .offblock-stack-names { list-style: none; margin: .2rem 0 0; padding: 0; font-size: .75rem; color: var(--muted); }
 .offblock-stack-names .spent { text-decoration: line-through; opacity: .6; }
 /* An artefact card, upright as in the module (its logo shows a corner or an edge of the Block) */
