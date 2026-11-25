@@ -1070,6 +1070,12 @@ body {
 .tb-selection > strong { width: 100%; font-size: .9rem; }
 .tb-selection .hint { margin: 0; }
 .tb-main { display: grid; grid-template-columns: 17rem minmax(0, 1fr) 17rem; gap: .8rem; align-items: start; }
+.tb-main.with-beside { grid-template-columns: 9rem 17rem minmax(0, 1fr) 17rem; }
+.tb-beside { align-items: center; text-align: center; }
+.tb-beside h4 { align-self: stretch; text-align: left; }
+.tb-beside-card { margin: 0; display: flex; flex-direction: column; gap: .2rem; font-size: .72rem; color: var(--muted); }
+.tb-beside-card img { width: 100%; max-width: 9rem; border-radius: 6px; display: block; margin: 0 auto; }
+.tb-beside-card strong { display: block; color: var(--ink); font-size: .78rem; }
 .tb-stage { min-width: 0; }
 .tb-stage .tb-board { width: min(100%, calc(100vh - 9rem)); margin: 0 auto; }
 .tb-side { display: flex; flex-direction: column; gap: .35rem; min-width: 0; }
@@ -1309,8 +1315,14 @@ body {
 .tb-panel:fullscreen .tb-status { align-self: stretch; }
 .tb-panel:fullscreen .tb-side { max-height: calc(100vh - 12rem); overflow-y: auto; padding-right: .2rem; }
 /* Narrower: the mat first, the two sides under it; then one column */
+@media (max-width: 1450px) {
+    .tb-main.with-beside { grid-template-columns: 7rem 15rem minmax(0, 1fr) 15rem; }
+}
 @media (max-width: 1200px) {
     .tb-main { grid-template-columns: 1fr 1fr; }
+    .tb-main.with-beside { grid-template-columns: 1fr 1fr; }
+    .tb-beside { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
+    .tb-beside-card img { width: 6rem; }
     .tb-main > .tb-stage { grid-column: 1 / -1; order: -1; }
 }
 @media (max-width: 760px) {

@@ -707,7 +707,9 @@ connection.
     discarded. Activation and propaganda cards from the Vassal module.
   - **Wide layout** (online games only: the page takes the whole width): above the mat, the two dice
     rollers and the **actions of the selected piece** (ranges, padlock, objective colors, magnet,
-    rotation, removal); the **opponent on the left** of the mat, the **player on the right** with
+    rotation, removal); on the far left, **beside the Block**: the
+    Artefact's card drawn (its priority, its effect in the hover text, « Mécanisme ») and the fallen
+    ministry, once the scenario has its decks; then the **opponent on the left** of the mat, the **player on the right** with
     the Décors / Marqueurs / Réglettes palettes under their cabal (a spectator: seat 1 left, seat 2
     right). Above each cabal, the player's **state** (`Shared/SideStatus.razor`): presence, name,
     P1, Fiel and VP (a line each, both frames the same height), on the player's own side the Fiel

@@ -106,7 +106,46 @@ else
 
         @* The opponent on the left, the player on the right with the palettes (a spectator: seat 1 on the
            left, seat 2 on the right). Each side: its state (Fiel, VP), then its cabal with the stats. *@
-        <div class="tb-main">
+        <div class="tb-main @(Beside ? "with-beside" : null)">
+            @* Beside the Block, on the far left: the Artefact's card drawn by the last Mécanisme (upright as in
+               the module, its effect in the hover text) and the fallen ministry. *@
+            @if (Beside)
+            {
+                var drawn = CardDecks.Artifact(View.Decks?.Drawn);
+                <aside class="tb-side tb-beside">
+                    @if (View.Agenda?.Artifact is not null)
+                    {
+                        <h4>@L.Ui("online.offblock.artifactTitle")</h4>
+                        @if (drawn is not null)
+                        {
+                            var text = CardDecks.Text(drawn);
+                            <figure class="tb-beside-card" title="@(text is null ? $"{drawn.Name} {drawn.Number}" : $"{drawn.Name} {drawn.Number} — {text}")">
+                                @if (drawn.Source is not null)
+                                {
+                                    <img src="@Src(CardDecks.Image(drawn.Id))" alt="@drawn.Name" />
+                                }
+                                <figcaption>
+                                    @drawn.Name · @(drawn.Number ?? "?")
+                                    <strong>@(drawn.Priority is { } p ? L.Ui("online.offblock.priority", PriorityName(p)) : L.Ui("online.offblock.priority.unknown"))</strong>
+                                </figcaption>
+                            </figure>
+                        }
+                        @if (View.Me is not null && View.Step is OnlineStep.Initiative or OnlineStep.Agenda or OnlineStep.Cycle)
+                        {
+                            <button class="btn small primary" type="button" title="@L.Ui("online.offblock.mechanism.title")"
+                                    @onclick="() => Send(new(OnlineCommandType.Mechanism))">⚙ @L.Ui("online.offblock.mechanism")</button>
+                        }
+                    }
+                    @if (CardDecks.Ministry(View.Decks?.Fallen) is { } fallen)
+                    {
+                        <h4>@L.Ui("online.offblock.fallen")</h4>
+                        <figure class="tb-beside-card" title="@fallen.Name">
+                            <img src="@Src(CardDecks.Image(fallen.Id))" alt="@fallen.Name" />
+                            <figcaption>@fallen.Name (@(fallen.Slot is { } slot ? slot.ToString() : $"1-{PlanningRules.Slots}"))</figcaption>
+                        </figure>
+                    }
+                </aside>
+            }
             <aside class="tb-side">
                 <SideStatus View="View" Seat="LeftSeat" />
                 @Roster(table, LeftSeat)
@@ -711,6 +750,13 @@ else
         string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 0 && char.IsLetter(w[0])).Take(2).Select(w => char.ToUpperInvariant(w[0])));
 
     private static string Src(string image) => Olomoc.Assets.Base + image;
+
+    // The column beside the Block: once the scenario has its Artefact, or the ministries are dealt.
+    private bool Beside => View.Agenda?.Artifact is not null || View.Decks?.Fallen is not null;
+
+    // Player 1 or 2 (the priority of an artefact card): their name, by the initiative.
+    private string PriorityName(int player) => View.First is { } first && View.Seats.ElementAtOrDefault(player == 1 ? first : 1 - first) is { } s
+        ? s.Name : L.Ui("online.offblock.player", player);
 
     private static string Num(double v, int decimals = 2) => Math.Round(v, decimals).ToString(System.Globalization.CultureInfo.InvariantCulture);
 
