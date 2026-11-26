@@ -298,7 +298,8 @@
 
     private string CardName(string card) => card.Split(':', 2) switch
     {
-        ["act", var cog] => Catalog.CogById(cog) is { } c ? L.CogName(c).Text : cog,
+        // The escorted Kadlec of « Le Cartographe » (a scenario's cog): « (escorté) », not to be confused with the other one.
+        ["act", var cog] => Catalog.CogById(cog) is { } c ? (c.Scenario ? L.Ui("online.escorted", L.CogName(c).Text) : L.CogName(c).Text) : cog,
         ["min", var id] => CardDecks.Ministry(id) is { } m ? MinistryName(m) : id,
         ["prop", var n] => L.Ui("online.offblock.propaganda", n),
         _ => card,
@@ -317,7 +318,7 @@
             ["prop", var n] => CardDecks.Propaganda((int.Parse(n) - 1) % CardDecks.PropagandaImages + 1),
             _ => null,
         };
-        <figure class="offblock-card planned" title="@CardTitle(card)">
+        <figure class="offblock-card planned @(parts is ["act", var escorted] && Catalog.CogById(escorted)?.Scenario == true ? "escort" : null)" title="@CardTitle(card)">
             @if (image is not null && !_missing.Contains(image))
             {
                 <img src="@Src(image)" alt="" loading="lazy" draggable="false" @onerror="() => _missing.Add(image)" />

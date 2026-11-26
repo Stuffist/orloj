@@ -1170,6 +1170,10 @@ body {
 .tb-ring { fill: none; stroke-width: 1.6; }
 .tb-seat-0 .tb-ring { stroke: var(--rust-soft); }
 .tb-seat-1 .tb-ring { stroke: #4f9fd6; }
+/* The escorted Kadlec of « Le Cartographe »: a dashed gold ring (token, roster), a dashed frame (planning) */
+.tb-escort { fill: none; stroke: #e2c46b; stroke-width: 1.4; stroke-dasharray: 3 2; pointer-events: none; }
+.tb-cog.escort .tb-cog-main img { outline: 2px dashed #e2c46b; outline-offset: 1px; border-radius: 50%; }
+.offblock-card.escort img { outline: 2px dashed #e2c46b; outline-offset: 2px; }
 .tb-initials { fill: var(--ink); font-size: 9px; font-weight: 700; pointer-events: none; }
 .tb-number { fill: #fff; font-size: 12px; font-weight: 800; paint-order: stroke; stroke: #0d1013; stroke-width: 2.5px; pointer-events: none; }
 .tb-out { opacity: .35; filter: grayscale(1); }

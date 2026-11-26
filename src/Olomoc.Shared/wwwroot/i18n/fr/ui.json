@@ -1188,6 +1188,7 @@
   "online.table.marker.p2": "Pion J2",
   "online.table.marker.rogue": "Rogue",
   "online.table.marker.parasite": "Parasite",
+  "online.escorted": "{0} (escorté)",
   "online.log.tableBoard": "{0} change de tapis : {1}.",
   "online.log.tableAdd": "{0} pose un décor : {1}.",
   "online.log.tableRemove": "{0} retire un décor : {1}.",

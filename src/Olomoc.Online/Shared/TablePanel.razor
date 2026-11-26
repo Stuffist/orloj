@@ -284,6 +284,10 @@ else
                             {
                                 <circle r="@Num(radius - RingInset)" class="tb-ring" />
                             }
+                            @if (p.Kind == PieceKind.Cog && Escorted(p.Ref))
+                            {
+                                <circle r="@Num(radius + 1.4)" class="tb-escort" />
+                            }
                             @if (p.Id == _selected)
                             {
                                 <circle r="@Num(radius - Inset)" class="tb-select" />
@@ -521,7 +525,7 @@ else
                         var placed = tokens.Count > 0;
                         var linked = Linked(seat, cog.CogId);
                         var name = CogName(cog.CogId);
-                        <li class="tb-cog @SeatClass(seat) @(cog.OutOfAction ? "ooa" : null) @(linked || _placing is { Kind: PieceKind.Cog } pl && pl.Ref == cog.CogId && pl.Side == seat ? "on" : null)">
+                        <li class="tb-cog @SeatClass(seat) @(cog.OutOfAction ? "ooa" : null) @(Escorted(cog.CogId) ? "escort" : null) @(linked || _placing is { Kind: PieceKind.Cog } pl && pl.Ref == cog.CogId && pl.Side == seat ? "on" : null)">
                             <div class="tb-cog-head">
                                 <button class="tb-cog-main" type="button" disabled="@(!placed && !CanPlace)"
                                         title="@L.Ui(placed ? "online.table.cog.select" : "online.table.cog.place")" @onclick="() => CogClicked(side, cogId)">
@@ -717,7 +721,7 @@ else
 
     private string Name(TablePiece p) => p.Kind switch
     {
-        PieceKind.Cog => Catalog.CogById(p.Ref) is { } c ? L.CogName(c).Text : p.Ref,
+        PieceKind.Cog => CogName(p.Ref),
         PieceKind.Equipment => Catalog.EquipmentById(p.Ref) is { } e ? L.EquipmentName(e).Text : p.Ref,
         PieceKind.Terrain => Files.Manifest.TerrainOf(p.Ref) is { } t ? TerrainName(t) : p.Ref,
         PieceKind.Template => L.Ui($"online.table.template.{p.Ref}"),
@@ -730,7 +734,7 @@ else
     private string TerrainTitle(TableTerrain t) =>
         $"{TerrainName(t)} · {Num(t.Width / Inch, 1)}″ × {Num(t.Height / Inch, 1)}″ · {L.Ui(t.Obstructing ? "online.table.obstructing" : "online.table.notObstructing")}";
 
-    private string CogName(TablePiece p) => Catalog.CogById(p.Ref) is { } c ? L.CogName(c).Text : p.Ref;
+    private string CogName(TablePiece p) => CogName(p.Ref);
 
     private string EquipmentName(string id) => Catalog.EquipmentById(id) is { } e ? L.EquipmentName(e).Text : id;
 
@@ -777,7 +781,10 @@ else
         _selected = tokens[(current + 1) % tokens.Count].Id;
     }
 
-    private string CogName(string id) => Catalog.CogById(id) is { } c ? L.CogName(c).Text : id;
+    // The escorted Kadlec of « Le Cartographe » (a scenario's cog): « (escorté) », not to be confused with the other one.
+    private string CogName(string id) => Catalog.CogById(id) is { } c ? (c.Scenario ? L.Ui("online.escorted", L.CogName(c).Text) : L.CogName(c).Text) : id;
+
+    private bool Escorted(string id) => Catalog.CogById(id)?.Scenario == true;
 
     private string? TokenImage(string id) => Files.Manifest.Token(id) is { } t ? Src(t.Image) : null;
 

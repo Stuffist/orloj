@@ -691,7 +691,9 @@ connection.
     taken; Visites: always the Rogue deck, its 3 Rogue cards on top in a random order; Le Cartographe:
     the scenario's Robert Kadlec, « Cartographe convoité » (3R13: a scenario's cog, never recruited;
     not the Loups de Libus' Kadlec, 1R23), added to P1's cabal, a 4th cog without equipment, on
-    their sheet and the mat, his activation card instead of their first propaganda), and its
+    their sheet and the mat, his activation card instead of their first propaganda; told apart from
+    the other Kadlec by « (escorté) » after his name and a dashed gold ring on his token, his roster
+    portrait and his activation card), and its
     elements put down on the mat (none for Visites, Sabotage, Cartographe) at the positions of the Recueil des agendas (`Online/AgendaSetups.cs`, inches
     from the centre; a choice where the agenda leaves one: which median, which diagonal…), as
     ordinary pieces (movable, lockable) with their name and number (doors, accumulators), the
