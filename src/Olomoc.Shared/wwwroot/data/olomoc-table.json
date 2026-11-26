@@ -11,21 +11,6 @@
       "id": "karst",
       "image": "img/table/boards/karst.png",
       "size": 406.4
-    },
-    {
-      "id": "bloc-minier-1",
-      "image": "img/table/boards/bloc-minier-1.jpg",
-      "size": 406.4
-    },
-    {
-      "id": "bloc-minier-2",
-      "image": "img/table/boards/bloc-minier-2.jpg",
-      "size": 406.4
-    },
-    {
-      "id": "plain",
-      "image": "img/table/boards/plain.png",
-      "size": 406.4
     }
   ],
   "terrain": [

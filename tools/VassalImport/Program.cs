@@ -43,10 +43,9 @@ var slots = build.Descendants().Where(e => e.Name.LocalName == "VASSAL.build.wid
 if (Directory.Exists(output)) Directory.Delete(output, recursive: true);
 var copied = new Dictionary<string, string>();          // content hash => published path (same image once)
 
-// ---- Boards: the mats of the "Tapis" piece, the mining Block ones, the plain one ----
+// ---- Boards: the two mats of the "Tapis" piece, the Block (Mez) and the Karst (the module's others left out) ----
 var boards = new List<TableBoard>();
-foreach (var (id, image) in new[] { ("mez", "Tapis-Bloc.png"), ("karst", "Tapis-Karst.png"), ("bloc-minier-1", "tapis_bloc_minier.jpg"),
-             ("bloc-minier-2", "tapis_bloc_minier_2.jpg"), ("plain", "fond_40_cm.png") })
+foreach (var (id, image) in new[] { ("mez", "Tapis-Bloc.png"), ("karst", "Tapis-Karst.png") })
 {
     if (Copy(image, "boards", id) is not { } path) continue;
     var (w, _) = Size(image);
