@@ -30,6 +30,8 @@ public sealed class OnlineGame : IStoredDocument
     /// <summary>Seat of player 1 (P1), once the initiative is rolled.</summary>
     public int? First { get; set; }
     public Scenario? Agenda { get; set; }
+    /// <summary>« Le Cartographe »: the seat escorting Robert Kadlec, added to its cabal at the setup (null: none).</summary>
+    public int? Escort { get; set; }
     public List<Seat> Seats { get; set; } = new();
     /// <summary>Tournament table the game was opened from.</summary>
     public OnlineTournamentRef? Tournament { get; set; }

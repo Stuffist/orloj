@@ -28,6 +28,9 @@ public static class OnlineRules
     /// </summary>
     public static readonly IReadOnlyList<string> OnlineAgendas = Agendas.All.Where(id => id != "GARGOYLE").ToList();
 
+    // Agendas with something of their own in the setup: the Rogue deck; Robert Kadlec escorted by P1.
+    public const string Visits = "VISITS", Cartographer = "CARTOGRAPHER";
+
     public static OnlineResult Apply(OnlineGame g, int seat, OnlineCommand c, CatalogService catalog, Random random, DateTimeOffset now,
         TableManifest? table = null)
     {
@@ -51,7 +54,7 @@ public static class OnlineRules
             OnlineCommandType.Mechanism or OnlineCommandType.ReshuffleArtifact or OnlineCommandType.IndraSwap
                 => One(DeckRules.Apply(g, seat, c, random, now)),
             OnlineCommandType.SetPlanning or OnlineCommandType.RevealPhase => One(PlanningRules.Apply(g, seat, c, now)),
-            OnlineCommandType.SetUp => One(SetUp(g, seat, c.Text, table, random, now)),
+            OnlineCommandType.SetUp => One(SetUp(g, seat, c.Text, table, catalog, random, now)),
             OnlineCommandType.Restart => One(Restart(g, seat, now)),
             OnlineCommandType.ConfirmResult => One(ConfirmResult(g, seat, c.Vp, now)),
             _ => One(Problem.Of("onlineCommand")),
@@ -177,7 +180,7 @@ public static class OnlineRules
         if (NotAt(g, OnlineStep.Agenda) is { } p) return p;
         if (g.First != seat) return Problem.Of("onlineNotFirst");
         if (id is null || !OnlineAgendas.Contains(id)) return Problem.Of("scenario");
-        g.Agenda = new Scenario(id);
+        g.Agenda = new Scenario(id, Artifact: id == Visits ? "ROGUE" : null);      // Visites: always the Rogue deck
         g.Step = OnlineStep.Cycle;
         Log(g, seat, now, "agenda", id);
         return drawn ? SetDecks(g, seat, null, true, random, now) : null;
@@ -197,6 +200,7 @@ public static class OnlineRules
             ? (Decks.Artifacts[random.Next(Decks.Artifacts.Count)], Decks.Ministries[random.Next(Decks.Ministries.Count)])
             : (decks?.ElementAtOrDefault(0), decks?.ElementAtOrDefault(1));
         if (artifact is not null && !Decks.IsArtifact(artifact) || ministry is not null && !Decks.IsMinistry(ministry)) return Problem.Of("onlineDecks");
+        if (agenda.Id == Visits) artifact = "ROGUE";                // Visites: always the Rogue deck
         // Another Artefact deck: the pile built by a Mécanisme before the setup starts again.
         if (artifact != agenda.Artifact && g.Decks is { ArtifactDeck: not null }) g.Decks = null;
         g.Agenda = agenda with { Artifact = artifact, Ministry = ministry };
@@ -206,9 +210,11 @@ public static class OnlineRules
 
     /// <summary>
     /// « Placer + distribuer », by P1 once the decks are chosen: the agenda's elements on the mat (its
-    /// variant: Text; none for an agenda with nothing to place), the ministries dealt, the Artefact pile built. Then the decks can no longer change.
+    /// variant: Text; none for an agenda with nothing to place), the ministries dealt, the Artefact pile
+    /// built, Robert Kadlec in P1's cabal for « Le Cartographe ». Then the decks can no longer change.
     /// </summary>
-    public static Problem? SetUp(OnlineGame g, int seat, string? variant, TableManifest? manifest, Random random, DateTimeOffset now)
+    public static Problem? SetUp(OnlineGame g, int seat, string? variant, TableManifest? manifest, CatalogService catalog,
+        Random random, DateTimeOffset now)
     {
         if (g.Step is OnlineStep.Lobby or OnlineStep.Finished) return Problem.Of("onlineStep");
         if (g.First != seat) return Problem.Of("onlineNotFirst");
@@ -218,7 +224,25 @@ public static class OnlineRules
         // An agenda with nothing on the mat (Visites, Sabotage…): only the cards.
         if (AgendaSetups.Of(g.Agenda.Id) is { Variants.Count: > 0 } && AgendaSetups.Place(g, seat, variant, manifest, now) is { } p) return p;
         DeckRules.SetUp(g, seat, random, now);
+        if (g.Agenda.Id == Cartographer) Escort(g, catalog, now);
         return null;
+    }
+
+    /// <summary>
+    /// « Le Cartographe »: P1 escorts Robert Kadlec, a 4th cog of their cabal (without equipment; on their
+    /// sheet, the mat, and in their hand, where his activation card replaces their first propaganda).
+    /// Nothing if their cabal already has him.
+    /// </summary>
+    private static void Escort(OnlineGame g, CatalogService catalog, DateTimeOffset now)
+    {
+        if (g.First is not { } first || g.Seats[first].State is not { } state) return;
+        if (state.Cogs.Any(c => c.CogId == CardDecks.Kadlec) || catalog.CogById(CardDecks.Kadlec) is not { } kadlec) return;
+        var cog = GameSession.NewGame(null, null, [kadlec], new Equipment?[] { null }).Cogs[0];
+        state.Cogs = [.. state.Cogs.Append(cog).OrderByDescending(c => c.Rank)];
+        g.Seats[first].StateRevision++;
+        g.Seats[first].Undo.Clear();          // the states before him would remove him
+        g.Escort = first;
+        Log(g, first, now, "kadlecJoins");
     }
 
     /// <summary>
@@ -238,6 +262,7 @@ public static class OnlineRules
         g.Planning = null;
         g.Decks = null;
         g.Dice = null;
+        g.Escort = null;
         foreach (var s in g.Seats)
         {
             s.Ready = false;

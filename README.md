@@ -688,7 +688,9 @@ connection.
     chosen at the setup, the Artifact and Ministry decks of the game (chosen or « Tirer les decks » by
     P1; drawn with the scenario when it is drawn), a note on its setup, and then, by P1,
     **« Placer + distribuer »** (`SetUp`): the ministries dealt, the Artefact pile built (Indra's cards
-    taken), and its
+    taken; Visites: always the Rogue deck, its 3 Rogue cards on top in a random order; Le Cartographe:
+    Robert Kadlec added to P1's cabal, a 4th cog without equipment, on their sheet and the mat, his
+    activation card instead of their first propaganda), and its
     elements put down on the mat (none for Visites, Sabotage, Cartographe) at the positions of the Recueil des agendas (`Online/AgendaSetups.cs`, inches
     from the centre; a choice where the agenda leaves one: which median, which diagonal…), as
     ordinary pieces (movable, lockable) with their name and number (doors, accumulators), the

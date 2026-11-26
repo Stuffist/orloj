@@ -16,7 +16,7 @@
         <div class="online-inline offblock-decks">
             <label>
                 <span>@L.Ui("online.offblock.artifact")</span>
-                <select disabled="@(!CanChooseDecks)" title="@DecksTitle" value="@(agenda.Artifact ?? "")" @onchange="e => SetDecksAsync(e.Value?.ToString(), agenda.Ministry)">
+                <select disabled="@(!CanChooseDecks || agenda.Id == OnlineRules.Visits)" title="@(agenda.Id == OnlineRules.Visits ? L.Ui("online.offblock.decks.visits") : DecksTitle)" value="@(agenda.Artifact ?? "")" @onchange="e => SetDecksAsync(e.Value?.ToString(), agenda.Ministry)">
                     <option value="">—</option>
                     @foreach (var id in Decks.Artifacts)
                     {

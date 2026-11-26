@@ -38,7 +38,8 @@ public static class PlanningRules
     {
         var cogs = g.Seats[seat].State?.Cogs ?? [];
         var lost = g.Planning?.Lost.ElementAtOrDefault(seat) ?? [];
-        var propaganda = 1 + lost.Count;
+        // The escort of « Le Cartographe »: Robert Kadlec's activation card instead of the first propaganda.
+        var propaganda = Math.Max(0, 1 + lost.Count - (g.Escort == seat ? 1 : 0));
         var ministries = g.Decks?.Hands.ElementAtOrDefault(seat) ?? [];
         return
         [
