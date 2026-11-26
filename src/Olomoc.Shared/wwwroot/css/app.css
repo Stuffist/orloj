@@ -1132,7 +1132,7 @@ body {
 .offblock-drop { min-height: 12.6rem; border: 1px dashed var(--line); border-radius: 8px; display: grid; place-items: start center; padding: .3rem .25rem; }
 .offblock-drop > .offblock-slot-number { align-self: center; }
 .offblock-drop.allowed { border: 1px solid var(--rust-soft); background: rgba(214, 110, 60, .1); }
-.offblock-drop.refused { opacity: .4; }
+.offblock-drop.revealed { border-style: solid; background: rgba(255, 255, 255, .04); }
 .offblock-drop.unrevealed .offblock-card { opacity: .6; }
 .offblock-slot-number { font-size: 1.4rem; color: var(--muted); }
 .offblock-back { width: 7.5rem; max-width: 100%; aspect-ratio: 150 / 212; border-radius: 6px; display: grid; place-items: center; font-weight: 700; color: var(--muted);

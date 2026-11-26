@@ -54,7 +54,7 @@ public class OnlinePlanningTests
     }
 
     [Fact]
-    public async Task Planning_checked_ministry_on_its_slot_cards_of_the_hand_once()
+    public async Task Planning_free_with_the_cards_of_the_hand_once()
     {
         var (d, g) = await InCycle();
         var ministry = g.Decks!.Hands[0].Select(id => $"min:{id}").First(c => !CardDecks.Ministry(c[4..])!.Axe);
@@ -62,14 +62,15 @@ public class OnlinePlanningTests
         Ok(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: full), d));
         Assert.True(PlanningRules.Complete(g, 0));
 
-        // The ministry elsewhere than its slot; two ministries; a card not in the hand; twice the same.
+        // Free: a ministry elsewhere than its slot (Manuel du Diktat), two ministries; the players apply the rules.
         var slot = CardDecks.Ministry(ministry[4..])!.Slot!.Value;
         var moved = full.ToList();
         (moved[slot - 1], moved[slot % 5]) = (moved[slot % 5], moved[slot - 1]);
-        Assert.Equal("onlinePlanningSlot", Key(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: moved), d)));
+        Ok(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: moved), d));
         var axe = $"min:{g.Decks.Hands[0].First(id => CardDecks.Ministry(id)!.Axe)}";
-        var two = full.Select(c => c == "prop:1" ? axe : c).ToList();
-        Assert.Equal("onlinePlanningMinistries", Key(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: two), d)));
+        Ok(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: full.Select(c => c == "prop:1" ? axe : c).ToList()), d));
+
+        // A card not in the hand; twice the same; not 5 slots.
         Assert.Equal("onlinePlanning", Key(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: full.Select(c => c == "prop:1" ? "prop:2" : c).ToList()), d)));
         Assert.Equal("onlinePlanning", Key(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: full.Select(c => c == "prop:1" ? full[0] : c).ToList()), d)));
         Assert.Equal("onlinePlanning", Key(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: full.Take(4).ToList()), d)));
@@ -99,7 +100,12 @@ public class OnlinePlanningTests
         Assert.Equal((1, ana[0]), (bo.Phase, bo.Revealed[0].Single()));
         Assert.Equal(PlanningRules.Rank(g, 0, ana[0]!), bo.Ranks[0][0]);
         Assert.Equal("phaseRevealed", g.Log[^1].Key);
-        Assert.Equal("onlinePlanningRevealed", Key(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: ana), d)));
+
+        // Rearranged after a reveal (Désinformation…): the revealed slot shows the card now on it.
+        var swapped = ana.ToList();
+        (swapped[0], swapped[1]) = (swapped[1], swapped[0]);
+        Ok(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: swapped), d));
+        Assert.Equal(swapped[0], OnlineRules.View(g, 1, new HashSet<int>()).Planning!.Revealed[0].Single());
         for (var i = 1; i < 5; i++) Ok(Do(g, 0, new(OnlineCommandType.RevealPhase), d));
         Assert.Equal("onlinePlanningDone", Key(Do(g, 0, new(OnlineCommandType.RevealPhase), d)));
 

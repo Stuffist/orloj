@@ -4,9 +4,10 @@
 @* Planning (rulebook p.33), semi-automatic, with the ministries (p.31): on the left the opponent's
    ministries (the hands are known to both; stacked, a ministry played or revealed greyed), then the
    player's hand (activations, propaganda, their ministries), then a row of 5 slots per player, the
-   opponent's first. Each player drags their cards onto their slots, in secret (a ministry on the
-   slot of its constraint), saved as they go; then revealed phase by phase for both, with the active
-   player from the ranks (equal: a Mécanisme). In the game page, and alone in its detached window. *@
+   opponent's first. Each player drags their cards onto their slots, in secret and freely (the players
+   apply the constraints), saved as they go, rearranged during the whole cycle; « Révéler la phase »
+   makes the next slot of each visible, with the active player from the ranks (equal: a Mécanisme).
+   In the game page, and alone in its detached window. *@
 
 <section class="panel offblock-panel">
     <div class="online-camps-head">
@@ -16,7 +17,7 @@
 
     @{
         var planning = View.Step == OnlineStep.Cycle ? View.Planning : null;
-        var editing = planning is not null && View.Me is not null && planning.Phase == 0;
+        var editing = planning is not null && View.Me is not null;
         var draft = planning is not null && View.Me is not null ? Draft(planning) : [];
         var moving = _dragged ?? _picked;
     }
@@ -135,9 +136,12 @@
                         var card = mine ? draft[slot] : planning.Revealed.ElementAtOrDefault(seat)?.ElementAtOrDefault(slot);
                         if (editing && mine)
                         {
-                            <div class="offblock-drop @(moving is not null ? (Allowed(moving, slot) ? "allowed" : "refused") : null)"
+                            var revealed = slot < planning.Phase;       // its phase revealed: seen by the opponent
+                            var title = (card is null ? L.Ui("online.offblock.slotN", slot + 1) : L.Ui("online.offblock.takeBack"))
+                                + (revealed ? $" · {L.Ui("online.offblock.visible")}" : "");
+                            <div class="offblock-drop @(moving is not null ? "allowed" : null) @(revealed ? "revealed" : null)"
                                  @ondragover:preventDefault @ondrop="() => DropAsync(slot)" @onclick="() => SlotClickAsync(slot)"
-                                 title="@(card is null ? L.Ui("online.offblock.slotN", slot + 1) : L.Ui("online.offblock.takeBack"))">
+                                 title="@title">
                                 @if (card is not null)
                                 {
                                     <div class="offblock-drag" draggable="true" data-card="@card"
@@ -221,10 +225,6 @@
     private int? _dragFrom;              // the slot the dragged card leaves (null: from the hand)
     private string? _picked;
 
-    // A ministry goes on the slot of its constraint only (the Axe: any).
-    private static bool Allowed(string card, int slot) =>
-        !card.StartsWith("min:") || CardDecks.Ministry(card[4..]) is not { Slot: { } s } || s == slot + 1;
-
     private void EndDrag() => (_dragged, _dragFrom) = (null, null);
 
     private Task DropAsync(int slot)
@@ -253,18 +253,16 @@
         return SendDraftAsync();
     }
 
-    // The card on the slot; the one there before goes where the card came from (if it may), else back to
-    // the hand; another ministry already planned goes back to the hand (one per planning).
+    // The card on the slot; the one there before goes where the card came from (two slots swapped), else
+    // back to the hand.
     private Task PlaceAsync(string card, int slot, int? from)
     {
-        if (!Allowed(card, slot)) return Task.CompletedTask;
         var draft = Draft(View.Planning!);
         var before = draft[slot];
         for (var i = 0; i < draft.Length; i++)
-            if (draft[i] == card || card.StartsWith("min:") && draft[i]?.StartsWith("min:") == true) draft[i] = null;
+            if (draft[i] == card) draft[i] = null;
         draft[slot] = card;
-        if (before is not null && before != card && from is { } f && draft[f] is null && Allowed(before, f)
-            && !(before.StartsWith("min:") && card.StartsWith("min:"))) draft[f] = before;
+        if (before is not null && before != card && from is { } f && draft[f] is null) draft[f] = before;
         return SendDraftAsync();
     }
 
