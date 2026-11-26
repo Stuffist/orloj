@@ -254,15 +254,16 @@
     }
 
     // The card on the slot; the one there before goes where the card came from (two slots swapped), else
-    // back to the hand.
+    // back to the hand; another ministry already planned goes back to the hand (one per planning).
     private Task PlaceAsync(string card, int slot, int? from)
     {
         var draft = Draft(View.Planning!);
         var before = draft[slot];
         for (var i = 0; i < draft.Length; i++)
-            if (draft[i] == card) draft[i] = null;
+            if (draft[i] == card || card.StartsWith("min:") && draft[i]?.StartsWith("min:") == true) draft[i] = null;
         draft[slot] = card;
-        if (before is not null && before != card && from is { } f && draft[f] is null) draft[f] = before;
+        if (before is not null && before != card && from is { } f && draft[f] is null && !(before.StartsWith("min:") && card.StartsWith("min:")))
+            draft[f] = before;
         return SendDraftAsync();
     }
 

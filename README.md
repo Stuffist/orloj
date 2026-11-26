@@ -715,14 +715,15 @@ connection.
     of their cogs, their propaganda cards: 1 plus 1 per cog out of action at the end of an earlier
     cycle, its activation card replaced; a cog out of action during the cycle keeps it until then;
     their ministries; their Indra cards, with « Remplacer »); then a row of 5 slots per player. Each
-    player drags their cards onto their slots, in secret, saved as they go: placed freely (the server
-    only checks that the cards come from the hand, once each; the players apply the planning
-    constraints and what changes them: Manuel du Diktat, Désinformation…), and rearranged during the
+    player drags their cards onto their slots, in secret, saved as they go: all their activations and
+    propaganda and one ministry (checked by the server: cards of the hand, once each, one ministry),
+    in any order (the players apply the slot constraints and what changes them: Manuel du Diktat,
+    Désinformation…), and rearranged during the
     whole cycle. Once both plannings are complete, « Révéler la phase » makes the next slot of each
     visible, whatever card is on it, then and after a rearrangement (the opponent's still hidden
     ones as card backs; the player's own revealed slots outlined), with their ranks and the active player (equal: « Mécanisme,
     puis la priorité »); the rest is up to the players. At the end of the cycle the planning starts
-    again and the ministries played are discarded. Activation and propaganda cards from the Vassal module.
+    again and the ministry played is discarded. Activation and propaganda cards from the Vassal module.
   - **Wide layout** (online games only: the page takes the whole width): above the mat, the two dice
     rollers and the **actions of the selected piece** (ranges, padlock, objective colors, magnet,
     rotation, removal); on the far left, **beside the Block**: the

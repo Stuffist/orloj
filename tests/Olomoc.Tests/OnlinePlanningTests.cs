@@ -54,7 +54,7 @@ public class OnlinePlanningTests
     }
 
     [Fact]
-    public async Task Planning_free_with_the_cards_of_the_hand_once()
+    public async Task Planning_in_any_order_one_ministry_the_cards_of_the_hand_once()
     {
         var (d, g) = await InCycle();
         var ministry = g.Decks!.Hands[0].Select(id => $"min:{id}").First(c => !CardDecks.Ministry(c[4..])!.Axe);
@@ -62,13 +62,13 @@ public class OnlinePlanningTests
         Ok(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: full), d));
         Assert.True(PlanningRules.Complete(g, 0));
 
-        // Free: a ministry elsewhere than its slot (Manuel du Diktat), two ministries; the players apply the rules.
+        // In any order: a ministry elsewhere than its slot (Manuel du Diktat: the players apply the constraints).
         var slot = CardDecks.Ministry(ministry[4..])!.Slot!.Value;
         var moved = full.ToList();
         (moved[slot - 1], moved[slot % 5]) = (moved[slot % 5], moved[slot - 1]);
         Ok(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: moved), d));
         var axe = $"min:{g.Decks.Hands[0].First(id => CardDecks.Ministry(id)!.Axe)}";
-        Ok(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: full.Select(c => c == "prop:1" ? axe : c).ToList()), d));
+        Assert.Equal("onlinePlanningMinistries", Key(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: full.Select(c => c == "prop:1" ? axe : c).ToList()), d)));
 
         // A card not in the hand; twice the same; not 5 slots.
         Assert.Equal("onlinePlanning", Key(Do(g, 0, new(OnlineCommandType.SetPlanning, Decks: full.Select(c => c == "prop:1" ? "prop:2" : c).ToList()), d)));

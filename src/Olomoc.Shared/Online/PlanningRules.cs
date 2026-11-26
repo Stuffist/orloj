@@ -6,12 +6,13 @@ namespace Olomoc.Online;
 /// The planning of an online game, semi-automatic (rulebook p.33): each player programs 5 cards in
 /// secret, left to right: the activation cards of their cogs, their propaganda cards (1, plus 1 per
 /// cog out of action at the end of an earlier cycle, its activation card replaced: a cog out of
-/// action during the cycle keeps it until then), their ministries. Placed freely, and rearranged at
-/// any time during the cycle: the players apply the planning constraints and what changes them (Manuel du
+/// action during the cycle keeps it until then) and one of their ministries: complete, all of them and
+/// one ministry (a cabal's hand has 4 cards besides its ministries). In any order, rearranged at any
+/// time during the cycle: the players apply the slot constraints and what changes them (Manuel du
 /// Diktat, Désinformation…). Once both plannings are complete, "Révéler la phase" makes the card on the
 /// next slot of each visible (whatever card is there, then and later); the players work out the rest
 /// (the active player: the higher rank; equal ranks: a Mécanisme). At the end of the cycle, the planning
-/// starts again and the ministries played are discarded. Cards: "act:{cog}", "prop:{n}", "min:{ministry}".
+/// starts again and the ministry played is discarded. Cards: "act:{cog}", "prop:{n}", "min:{ministry}".
 /// </summary>
 public static class PlanningRules
 {
@@ -65,6 +66,7 @@ public static class PlanningRules
         var hand = Hand(g, seat);
         var cards = slots.OfType<string>().ToList();
         if (cards.Any(c => !hand.Contains(c)) || cards.Distinct().Count() != cards.Count) return Problem.Of("onlinePlanning");
+        if (cards.Count(c => c.StartsWith("min:")) > 1) return Problem.Of("onlinePlanningMinistries");
         planning.Slots[seat] = slots.ToList();
         return null;
     }
