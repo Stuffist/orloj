@@ -406,7 +406,7 @@ else
                     <details class="tb-palette">
                         <summary>@L.Ui("online.table.markers")</summary>
                         <div class="tb-items tb-thumbs">
-                            @foreach (var mk in Files.Manifest.Markers.Where(m => m.Id == ObjectiveMarker))
+                            @foreach (var mk in PaletteMarkers.Select(Files.Manifest.Marker).OfType<TableMarker>())
                             {
                                 var (mid, mlabel) = (mk.Id, L.Ui($"online.table.marker.{mk.Id}"));
                                 <button class="tb-item @(_placing?.Ref == mk.Id ? "on" : null)" type="button"
@@ -692,8 +692,11 @@ else
         ? Send(new(OnlineCommandType.SetClaim, PieceId: p.Id, Side: seat, Flag: !p.Claims.Contains(seat)))
         : Movable(p) ? Send(new(OnlineCommandType.SetLock, PieceId: p.Id, Flag: !p.Locked)) : Task.CompletedTask;
 
-    /// <summary>The only marker offered: the objective (taken by a side: its color).</summary>
+    /// <summary>The objective marker (taken by a side: its color).</summary>
     private const string ObjectiveMarker = "objective";
+
+    /// <summary>The markers offered: the objective, the hostiles (Rogue, Parasite).</summary>
+    private static readonly string[] PaletteMarkers = [ObjectiveMarker, "rogue", "parasite"];
 
     private double Radius(TablePiece p) => p.Kind switch
     {

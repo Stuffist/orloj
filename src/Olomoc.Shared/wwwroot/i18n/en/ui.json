@@ -1186,6 +1186,8 @@
   "online.table.marker.fiel": "Bile",
   "online.table.marker.p1": "P1 token",
   "online.table.marker.p2": "P2 token",
+  "online.table.marker.rogue": "Rogue",
+  "online.table.marker.parasite": "Parasite",
   "online.log.tableBoard": "{0} changes the mat: {1}.",
   "online.log.tableAdd": "{0} puts down terrain: {1}.",
   "online.log.tableRemove": "{0} removes terrain: {1}.",

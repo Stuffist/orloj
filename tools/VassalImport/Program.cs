@@ -30,7 +30,7 @@ if (root is null)
 var web = Path.Combine(root, "src", "Olomoc.Shared", "wwwroot");
 var output = Path.Combine(web, TableManifest.Images.TrimEnd('/'));
 const double PxPerMm = 30 / TableManifest.MmPerInch;
-const double ObjectiveBase = 30, PushTemplate = 25, GargoyleBase = 50;
+const double ObjectiveBase = 30, PushTemplate = 25, HostileBase = 30, GargoyleBase = 50;
 
 using var module = ZipFile.OpenRead(args[0]);
 var build = XDocument.Parse(Read(module, "buildFile.xml"));
@@ -70,14 +70,15 @@ foreach (var (name, definition) in slots)
         int.Parse(level.Groups[1].Value), Outline(definition)));
 }
 
-// ---- Markers: objectives, PoliSec and black cubes, Fiel, player markers ----
+// ---- Markers: objectives, PoliSec and black cubes, Fiel, player markers, the hostiles (Rogue, Parasite, Gargoyle) ----
 var markers = new List<TableMarker>();
 foreach (var (id, image) in new[] { ("objective-p1", "pion_objectif_J1.png"), ("objective-p2", "pion_objectif_J2.png"), ("objective", "marqueur.png"),
-             ("polisec", "Cube_vert.png"), ("black", "Cube_noir.png"), ("fiel", "noirceur.png"), ("p1", "pions-J1.png"), ("p2", "pions-J2.png"), ("gargoyle", "Gargoule.png") })
+             ("polisec", "Cube_vert.png"), ("black", "Cube_noir.png"), ("fiel", "noirceur.png"), ("p1", "pions-J1.png"), ("p2", "pions-J2.png"),
+             ("rogue", "Rogue.png"), ("parasite", "Parasite.png"), ("gargoyle", "Gargoule.png") })
 {
     if (Copy(image, "markers", id) is not { } path) continue;
     var (w, h) = Size(image);
-    markers.Add(new TableMarker(id, path, id.StartsWith("objective") ? ObjectiveBase : id == "gargoyle" ? GargoyleBase : Mm(Math.Max(w, h))));
+    markers.Add(new TableMarker(id, path, id.StartsWith("objective") ? ObjectiveBase : id is "rogue" or "parasite" ? HostileBase : id == "gargoyle" ? GargoyleBase : Mm(Math.Max(w, h))));
 }
 
 // ---- Movement templates: the ruler of a normal move (stadium), the push one (disc) ----

@@ -746,7 +746,8 @@ connection.
     or puts one down if there is none; "＋" puts one more. Selecting a token lights its card.
   - **Padlock** of the terrain and the objectives (shared): locked, the piece is neither moved, turned
     nor removed (server-side too) until unlocked; its padlock shows when it is selected.
-  - **Objectives**: the palette offers only the objective marker (yellow ring); a toggle per player
+  - **Markers**: the palette offers the objective marker (yellow ring) and the hostiles' (Rogue,
+    Parasite: round, 30 mm). **Objectives**: a toggle per player on the objective marker
     marks it as taken by that side (its color; both: split diagonally), to track who took what.
   - These toggles (padlock, colors) are **on the selected piece itself**, to its right, like the
     rotation handles, and also in the line under the mat.
