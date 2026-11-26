@@ -6,11 +6,13 @@ namespace Olomoc.Online;
 /// The planning of an online game, semi-automatic (rulebook p.33): each player programs 5 cards in
 /// secret, left to right: the activation cards of their cogs, their propaganda cards (1, plus 1 per
 /// cog out of action at the end of an earlier cycle, its activation card replaced: a cog out of
-/// action during the cycle keeps it until then), one of their ministries, which must go on the slot
-/// of its planning constraint (the Axe: any). Once both plannings are complete, "Révéler la phase"
-/// shows the next card of each; the players work out the rest (the active player: the higher rank;
-/// equal ranks: a Mécanisme). At the end of the cycle, the planning starts again and the ministry
-/// played is discarded. Cards: "act:{cog}", "prop:{n}", "min:{ministry}".
+/// action during the cycle keeps it until then) and one of their ministries: complete, all of them and
+/// one ministry (a cabal's hand has 4 cards besides its ministries). In any order, rearranged at any
+/// time during the cycle: the players apply the slot constraints and what changes them (Manuel du
+/// Diktat, Désinformation…). Once both plannings are complete, "Révéler la phase" makes the card on the
+/// next slot of each visible (whatever card is there, then and later); the players work out the rest
+/// (the active player: the higher rank; equal ranks: a Mécanisme). At the end of the cycle, the planning
+/// starts again and the ministry played is discarded. Cards: "act:{cog}", "prop:{n}", "min:{ministry}".
 /// </summary>
 public static class PlanningRules
 {
@@ -36,7 +38,8 @@ public static class PlanningRules
     {
         var cogs = g.Seats[seat].State?.Cogs ?? [];
         var lost = g.Planning?.Lost.ElementAtOrDefault(seat) ?? [];
-        var propaganda = 1 + lost.Count;
+        // The escort of « Le Cartographe »: Robert Kadlec's activation card instead of the first propaganda.
+        var propaganda = Math.Max(0, 1 + lost.Count - (g.Escort == seat ? 1 : 0));
         var ministries = g.Decks?.Hands.ElementAtOrDefault(seat) ?? [];
         return
         [
@@ -60,15 +63,11 @@ public static class PlanningRules
 
     private static Problem? Set(OnlineGame g, OnlinePlanning planning, int seat, IReadOnlyList<string?>? slots)
     {
-        if (planning.Revealed > 0) return Problem.Of("onlinePlanningRevealed");
         if (slots is null || slots.Count != Slots) return Problem.Of("onlinePlanning");
         var hand = Hand(g, seat);
         var cards = slots.OfType<string>().ToList();
         if (cards.Any(c => !hand.Contains(c)) || cards.Distinct().Count() != cards.Count) return Problem.Of("onlinePlanning");
         if (cards.Count(c => c.StartsWith("min:")) > 1) return Problem.Of("onlinePlanningMinistries");
-        for (var i = 0; i < Slots; i++)
-            if (slots[i] is { } card && card.StartsWith("min:") && CardDecks.Ministry(card[4..]) is { Slot: { } slot } && slot != i + 1)
-                return Problem.Of("onlinePlanningSlot", CardDecks.Ministry(card[4..])!.Name, slot.ToString());
         planning.Slots[seat] = slots.ToList();
         return null;
     }

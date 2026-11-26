@@ -984,6 +984,46 @@
       "published": true
     },
     {
+      "id": "3R13",
+      "ministries": [
+        "EDIFICATION"
+      ],
+      "rank": 3,
+      "stats": {
+        "tech": 3,
+        "melee": 1,
+        "ranged": 0,
+        "dodge": 5
+      },
+      "lifeLine": [
+        "S",
+        "S",
+        "S",
+        "S",
+        "T",
+        "S",
+        "T",
+        "S",
+        "S",
+        "S",
+        "S",
+        "S"
+      ],
+      "abilities": [
+        {
+          "timing": "Permanent",
+          "actionCost": 0,
+          "darknessCost": 0
+        }
+      ],
+      "art": {
+        "front": "3R13_recto.jpg"
+      },
+      "set": "Recueil des agendas 2026",
+      "published": true,
+      "scenario": true
+    },
+    {
       "id": "3R14",
       "ministries": [
         "HARMONY"

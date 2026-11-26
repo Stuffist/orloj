@@ -4064,6 +4064,16 @@
       "size": 16.9
     },
     {
+      "id": "rogue",
+      "image": "img/table/markers/rogue.png",
+      "size": 30
+    },
+    {
+      "id": "parasite",
+      "image": "img/table/markers/parasite.png",
+      "size": 30
+    },
+    {
       "id": "gargoyle",
       "image": "img/table/markers/gargoyle.png",
       "size": 50
@@ -4183,6 +4193,11 @@
     {
       "id": "3R10",
       "image": "img/table/tokens/3R10.png",
+      "base": 30
+    },
+    {
+      "id": "3R13",
+      "image": "img/table/tokens/3R13.png",
       "base": 30
     },
     {

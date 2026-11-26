@@ -1060,7 +1060,7 @@ body {
 }
 /* Wide layout (online games only): the dice and the selected piece above; the opponent, the mat,
    the player with the palettes */
-.app-shell:has(.tb-panel) { max-width: none; }
+.app-shell:has(.tb-panel), .app-shell:has(.offblock-panel) { max-width: none; }
 .tb-top { display: grid; grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); gap: .6rem; margin-bottom: .6rem; align-items: stretch; }
 .tb-top .tb-dice { flex-direction: row; margin: 0; }
 .tb-top .tb-dice-box { flex: 1; min-width: 0; }
@@ -1129,10 +1129,10 @@ body {
 .offblock-board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .4rem; align-items: start; }
 .offblock-board-head { font-size: .75rem; color: var(--muted); text-align: center; }
 .offblock-board-name { grid-column: 1 / -1; font-weight: 700; font-size: .9rem; margin-top: .3rem; }
-.offblock-drop { min-height: 12.6rem; border: 1px dashed var(--line); border-radius: 8px; display: grid; place-items: start center; padding: .3rem .25rem; }
+.offblock-drop { min-height: 12.6rem; border: 1px dashed var(--line); border-radius: 8px; display: grid; grid-template-columns: minmax(0, 1fr); place-items: start center; padding: .3rem .25rem; }
 .offblock-drop > .offblock-slot-number { align-self: center; }
 .offblock-drop.allowed { border: 1px solid var(--rust-soft); background: rgba(214, 110, 60, .1); }
-.offblock-drop.refused { opacity: .4; }
+.offblock-drop.revealed { border-style: solid; background: rgba(255, 255, 255, .04); }
 .offblock-drop.unrevealed .offblock-card { opacity: .6; }
 .offblock-slot-number { font-size: 1.4rem; color: var(--muted); }
 .offblock-back { width: 7.5rem; max-width: 100%; aspect-ratio: 150 / 212; border-radius: 6px; display: grid; place-items: center; font-weight: 700; color: var(--muted);
@@ -1170,6 +1170,10 @@ body {
 .tb-ring { fill: none; stroke-width: 1.6; }
 .tb-seat-0 .tb-ring { stroke: var(--rust-soft); }
 .tb-seat-1 .tb-ring { stroke: #4f9fd6; }
+/* The escorted Kadlec of « Le Cartographe »: a dashed gold ring (token, roster), a dashed frame (planning) */
+.tb-escort { fill: none; stroke: #e2c46b; stroke-width: 1.4; stroke-dasharray: 3 2; pointer-events: none; }
+.tb-cog.escort .tb-cog-main img { outline: 2px dashed #e2c46b; outline-offset: 1px; border-radius: 50%; }
+.offblock-card.escort img { outline: 2px dashed #e2c46b; outline-offset: 2px; }
 .tb-initials { fill: var(--ink); font-size: 9px; font-weight: 700; pointer-events: none; }
 .tb-number { fill: #fff; font-size: 12px; font-weight: 800; paint-order: stroke; stroke: #0d1013; stroke-width: 2.5px; pointer-events: none; }
 .tb-out { opacity: .35; filter: grayscale(1); }

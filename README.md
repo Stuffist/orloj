@@ -688,7 +688,12 @@ connection.
     chosen at the setup, the Artifact and Ministry decks of the game (chosen or « Tirer les decks » by
     P1; drawn with the scenario when it is drawn), a note on its setup, and then, by P1,
     **« Placer + distribuer »** (`SetUp`): the ministries dealt, the Artefact pile built (Indra's cards
-    taken), and its
+    taken; Visites: always the Rogue deck, its 3 Rogue cards on top in a random order; Le Cartographe:
+    the scenario's Robert Kadlec, « Cartographe convoité » (3R13: a scenario's cog, never recruited;
+    not the Loups de Libus' Kadlec, 1R23), added to P1's cabal, a 4th cog without equipment, on
+    their sheet and the mat, his activation card instead of their first propaganda; told apart from
+    the other Kadlec by « (escorté) » after his name and a dashed gold ring on his token, his roster
+    portrait and his activation card), and its
     elements put down on the mat (none for Visites, Sabotage, Cartographe) at the positions of the Recueil des agendas (`Online/AgendaSetups.cs`, inches
     from the centre; a choice where the agenda leaves one: which median, which diagonal…), as
     ordinary pieces (movable, lockable) with their name and number (doors, accumulators), the
@@ -715,10 +720,13 @@ connection.
     of their cogs, their propaganda cards: 1 plus 1 per cog out of action at the end of an earlier
     cycle, its activation card replaced; a cog out of action during the cycle keeps it until then;
     their ministries; their Indra cards, with « Remplacer »); then a row of 5 slots per player. Each
-    player drags their cards onto their slots, in secret, saved
-    as they go (one ministry, on the slot of its planning constraint; checked by the server). Once
-    both plannings are complete, « Révéler la phase » shows the next card of each (the opponent's
-    still hidden ones as card backs), with their ranks and the active player (equal: « Mécanisme,
+    player drags their cards onto their slots, in secret, saved as they go: all their activations and
+    propaganda and one ministry (checked by the server: cards of the hand, once each, one ministry),
+    in any order (the players apply the slot constraints and what changes them: Manuel du Diktat,
+    Désinformation…), and rearranged during the
+    whole cycle. Once both plannings are complete, « Révéler la phase » makes the next slot of each
+    visible, whatever card is on it, then and after a rearrangement (the opponent's still hidden
+    ones as card backs; the player's own revealed slots outlined), with their ranks and the active player (equal: « Mécanisme,
     puis la priorité »); the rest is up to the players. At the end of the cycle the planning starts
     again and the ministry played is discarded. Activation and propaganda cards from the Vassal module.
   - **Wide layout** (online games only: the page takes the whole width): above the mat, the two dice
@@ -740,7 +748,8 @@ connection.
     or puts one down if there is none; "＋" puts one more. Selecting a token lights its card.
   - **Padlock** of the terrain and the objectives (shared): locked, the piece is neither moved, turned
     nor removed (server-side too) until unlocked; its padlock shows when it is selected.
-  - **Objectives**: the palette offers only the objective marker (yellow ring); a toggle per player
+  - **Markers**: the palette offers the objective marker (yellow ring) and the hostiles' (Rogue,
+    Parasite: round, 30 mm). **Objectives**: a toggle per player on the objective marker
     marks it as taken by that side (its color; both: split diagonally), to track who took what.
   - These toggles (padlock, colors) are **on the selected piece itself**, to its right, like the
     rotation handles, and also in the line under the mat.

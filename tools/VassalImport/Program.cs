@@ -30,7 +30,7 @@ if (root is null)
 var web = Path.Combine(root, "src", "Olomoc.Shared", "wwwroot");
 var output = Path.Combine(web, TableManifest.Images.TrimEnd('/'));
 const double PxPerMm = 30 / TableManifest.MmPerInch;
-const double ObjectiveBase = 30, PushTemplate = 25, GargoyleBase = 50;
+const double ObjectiveBase = 30, PushTemplate = 25, HostileBase = 30, GargoyleBase = 50;
 
 using var module = ZipFile.OpenRead(args[0]);
 var build = XDocument.Parse(Read(module, "buildFile.xml"));
@@ -70,14 +70,15 @@ foreach (var (name, definition) in slots)
         int.Parse(level.Groups[1].Value), Outline(definition)));
 }
 
-// ---- Markers: objectives, PoliSec and black cubes, Fiel, player markers ----
+// ---- Markers: objectives, PoliSec and black cubes, Fiel, player markers, the hostiles (Rogue, Parasite, Gargoyle) ----
 var markers = new List<TableMarker>();
 foreach (var (id, image) in new[] { ("objective-p1", "pion_objectif_J1.png"), ("objective-p2", "pion_objectif_J2.png"), ("objective", "marqueur.png"),
-             ("polisec", "Cube_vert.png"), ("black", "Cube_noir.png"), ("fiel", "noirceur.png"), ("p1", "pions-J1.png"), ("p2", "pions-J2.png"), ("gargoyle", "Gargoule.png") })
+             ("polisec", "Cube_vert.png"), ("black", "Cube_noir.png"), ("fiel", "noirceur.png"), ("p1", "pions-J1.png"), ("p2", "pions-J2.png"),
+             ("rogue", "Rogue.png"), ("parasite", "Parasite.png"), ("gargoyle", "Gargoule.png") })
 {
     if (Copy(image, "markers", id) is not { } path) continue;
     var (w, h) = Size(image);
-    markers.Add(new TableMarker(id, path, id.StartsWith("objective") ? ObjectiveBase : id == "gargoyle" ? GargoyleBase : Mm(Math.Max(w, h))));
+    markers.Add(new TableMarker(id, path, id.StartsWith("objective") ? ObjectiveBase : id is "rogue" or "parasite" ? HostileBase : id == "gargoyle" ? GargoyleBase : Mm(Math.Max(w, h))));
 }
 
 // ---- Movement templates: the ruler of a normal move (stadium), the push one (disc) ----
@@ -148,8 +149,8 @@ foreach (var (name, definition) in slots.Where(s => s.Definition.Contains("proto
     var index = int.Parse(no.Groups[1].Value) - 1;
     if (index < 0 || index >= cardImages.Length) continue;
     if (Regex.Match(name, @"^Propagande (\d)$") is { Success: true } propaganda) CopyCard(cardImages[index], CardDecks.Propaganda(int.Parse(propaganda.Groups[1].Value)));
-    else if ((ActivationOverrides.TryGetValue(name, out var forced) ? forced : Match(name)) is { } cog && !cog.StartsWith('E') && !cog.StartsWith('D'))
-        CopyCard(cardImages[index], CardDecks.Activation(cog));
+    else foreach (var cog in ActivationOverrides.TryGetValue(name, out var forced) ? forced : Match(name) is { } id ? new[] { id } : Array.Empty<string>())
+        if (!cog.StartsWith('E') && !cog.StartsWith('D')) CopyCard(cardImages[index], CardDecks.Activation(cog));
 }
 
 var manifest = new TableManifest(TableManifest.CurrentVersion, $"Occicat Games, Vassal module {version}",
@@ -291,16 +292,16 @@ static double Distance((double X, double Y) p, (double X, double Y) a, (double X
 
 partial class Program
 {
-    // Activation cards used for another cog: the Cartographe scenario's Robert Kadlec (rank 3) for the
-    // Loups de Libus' Robert Kadlec, who has none in the module.
-    private static readonly Dictionary<string, string> ActivationOverrides = new() { ["Robert Kadlec"] = "1R23" };
+    // Activation cards of a name used for several cogs: the Cartographe scenario's Robert Kadlec (3R13),
+    // also for the Loups de Libus' Robert Kadlec (1R23), who has none in the module.
+    private static readonly Dictionary<string, string[]> ActivationOverrides = new() { ["Robert Kadlec"] = ["3R13", "1R23"] };
 
     // Names of the module that differ from the catalog's; null: left out (no French card).
     private static readonly Dictionary<string, string?> Overrides = new()
     {
         ["Kadlec_Libus"] = "1R23",
         ["Bodhan Gross"] = "3R06",          // the activation card's name, misspelt in the module
-        ["Robert Kadlec"] = null,          // Ligue de Maisel's Kadlec (R13): English card only
+        ["Robert Kadlec"] = "3R13",        // the Cartographe scenario's Kadlec (not the Loups de Libus')
         ["Munitions"] = "E09",             // Munitions à haute vélocité
     };
 }

@@ -99,7 +99,7 @@ public static class DeckRules
         if (decks.ArtifactDeck is not null) return null;
         if (g.Agenda?.Artifact is not { } deck) return Problem.Of("onlineDecksNone");
         var cards = Shuffle(CardDecks.ArtifactDeck(deck), random);
-        if (g.Agenda.Id == "VISITS")
+        if (g.Agenda.Id == OnlineRules.Visits)
             cards = [.. cards.Where(IsRogue), .. cards.Where(id => !IsRogue(id))];
         decks.ArtifactDeck = deck;
         decks.Pile = cards;

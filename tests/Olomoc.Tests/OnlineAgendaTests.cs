@@ -129,6 +129,37 @@ public class OnlineAgendaTests
     }
 
     [Fact]
+    public async Task Le_Cartographe_Kadlec_joins_P1_his_activation_instead_of_a_propaganda()
+    {
+        var g = await SetUp("CARTOGRAPHER", null);
+        var bo = g.Seats[1].State!;                                              // Bo is P1
+        Assert.Equal((4, 3), (bo.Cogs.Count, bo.Cogs.Single(c => c.CogId == CardDecks.Kadlec).Rank));
+        Assert.Equal(1, g.Escort);
+        var hand = PlanningRules.Hand(g, 1);
+        Assert.Contains($"act:{CardDecks.Kadlec}", hand);
+        Assert.DoesNotContain(hand, c => c.StartsWith("prop:"));
+        Assert.Equal(["prop:1"], PlanningRules.Hand(g, 0).Where(c => c.StartsWith("prop:")));
+        Assert.Equal("kadlecJoins", g.Log[^1].Key);
+
+        // The scenario's Kadlec (not the Loups de Libus', 1R23): never offered nor legal in a cabal.
+        var d = await AppData.GetAsync();
+        Assert.True(d.Catalog.CogById(CardDecks.Kadlec)!.Scenario);
+        Assert.DoesNotContain(d.Catalog.AvailableCogs(3, null, null, CogQuery.Empty), c => c.Id == CardDecks.Kadlec);
+        Assert.Contains(d.Catalog.CheckLegality("OTHERS", [d.Cog(CardDecks.Kadlec), d.Cog("2R08"), d.Cog("1R09")], [null, null, null]).Issues, i => i.Key == "outsideFaction");
+    }
+
+    [Fact]
+    public async Task Visites_always_with_the_Rogue_deck()
+    {
+        var (d, g) = await InCycle("VISITS");
+        Assert.Equal("ROGUE", g.Agenda!.Artifact);
+        Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Decks: ["PARASITE", "DISINFORMATION"]), d));
+        Assert.Equal("ROGUE", g.Agenda.Artifact);
+        Ok(Do(g, 1, new(OnlineCommandType.SetDecks, Flag: true), d));
+        Assert.Equal("ROGUE", g.Agenda.Artifact);
+    }
+
+    [Fact]
     public async Task Restart_goes_back_to_the_lobby_names_and_cabals_kept()
     {
         var (d, g) = await InCycle("LOST_HYPOGEUM");
@@ -138,7 +169,7 @@ public class OnlineAgendaTests
 
         Ok(Do(g, 0, new(OnlineCommandType.Restart), d));
         Assert.Equal((OnlineStep.Lobby, 1, (int?)null, (Scenario?)null), (g.Step, g.Cycle, g.First, g.Agenda));
-        Assert.Equal((null, null, null, null), (g.Table, g.Decks, g.Planning, g.Dice));
+        Assert.Equal((null, null, null, null, (int?)null), (g.Table, g.Decks, g.Planning, g.Dice, g.Escort));
         Assert.All(g.Seats, s => Assert.Equal((false, null, null), (s.Ready, s.Initiative, s.State)));
         Assert.Equal(["Ana", "Bo"], g.Seats.Select(s => s.Name));
         Assert.All(g.Seats, s => Assert.NotNull(s.Cabal));

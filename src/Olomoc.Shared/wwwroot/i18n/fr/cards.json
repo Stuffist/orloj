@@ -284,6 +284,16 @@
         }
       ]
     },
+    "3R13": {
+      "name": "Robert Kadlec",
+      "title": "Cartographe convoité",
+      "abilities": [
+        {
+          "name": "Sous pression",
+          "gameEffect": "Au début de chaque cycle, lors de la constitution des réserves de pions d'action, attribuez 2 {action} au lieu de 4 à Robert Kadlec."
+        }
+      ]
+    },
     "3R14": {
       "name": "Maja",
       "title": "Séductrice endurcie",
