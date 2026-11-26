@@ -229,14 +229,14 @@ public static class OnlineRules
     }
 
     /// <summary>
-    /// « Le Cartographe »: P1 escorts Robert Kadlec, a 4th cog of their cabal (without equipment; on their
-    /// sheet, the mat, and in their hand, where his activation card replaces their first propaganda).
-    /// Nothing if their cabal already has him.
+    /// « Le Cartographe »: P1 escorts Robert Kadlec (the scenario's, « Cartographe convoité »), a 4th cog of
+    /// their cabal (without equipment; on their sheet, the mat, and in their hand, where his activation
+    /// card replaces their first propaganda), even beside the Loups de Libus' Robert Kadlec.
     /// </summary>
     private static void Escort(OnlineGame g, CatalogService catalog, DateTimeOffset now)
     {
         if (g.First is not { } first || g.Seats[first].State is not { } state) return;
-        if (state.Cogs.Any(c => c.CogId == CardDecks.Kadlec) || catalog.CogById(CardDecks.Kadlec) is not { } kadlec) return;
+        if (catalog.CogById(CardDecks.Kadlec) is not { } kadlec) return;
         var cog = GameSession.NewGame(null, null, [kadlec], new Equipment?[] { null }).Cogs[0];
         state.Cogs = [.. state.Cogs.Append(cog).OrderByDescending(c => c.Rank)];
         g.Seats[first].StateRevision++;

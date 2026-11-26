@@ -60,6 +60,8 @@ public sealed class Cog
     public string? Set { get; init; }
     /// <summary>true: published; missing or false: draft, visible to admins only.</summary>
     public bool Published { get; init; }
+    /// <summary>A scenario's cog (Le Cartographe's Robert Kadlec): its card and token, never recruited in a cabal.</summary>
+    public bool Scenario { get; init; }
 }
 
 /// <summary>Extra card a cog can carry from the start of the first cycle (Medic Ruzicka).</summary>

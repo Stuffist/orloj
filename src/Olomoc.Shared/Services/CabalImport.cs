@@ -36,7 +36,7 @@ public sealed class CabalImport(CatalogService catalog, LocalizationService l, C
                 : new(json, Array.Empty<ImportIssue>(), json.Faction is { } f ? new[] { f.Code } : Array.Empty<string>());
         }
 
-        var cogsByName = Index(catalog.Catalog.Cogs, c => new[] { l.CogName(c).Text, l.ReferenceName(c) });
+        var cogsByName = Index(catalog.Catalog.Cogs.Where(c => !c.Scenario), c => new[] { l.CogName(c).Text, l.ReferenceName(c) });
         var equipmentByName = Index(catalog.Catalog.Equipment, e => new[] { l.EquipmentName(e).Text, l.ReferenceName(e) });
 
         string? name = null;

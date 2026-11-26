@@ -148,8 +148,8 @@ foreach (var (name, definition) in slots.Where(s => s.Definition.Contains("proto
     var index = int.Parse(no.Groups[1].Value) - 1;
     if (index < 0 || index >= cardImages.Length) continue;
     if (Regex.Match(name, @"^Propagande (\d)$") is { Success: true } propaganda) CopyCard(cardImages[index], CardDecks.Propaganda(int.Parse(propaganda.Groups[1].Value)));
-    else if ((ActivationOverrides.TryGetValue(name, out var forced) ? forced : Match(name)) is { } cog && !cog.StartsWith('E') && !cog.StartsWith('D'))
-        CopyCard(cardImages[index], CardDecks.Activation(cog));
+    else foreach (var cog in ActivationOverrides.TryGetValue(name, out var forced) ? forced : Match(name) is { } id ? new[] { id } : Array.Empty<string>())
+        if (!cog.StartsWith('E') && !cog.StartsWith('D')) CopyCard(cardImages[index], CardDecks.Activation(cog));
 }
 
 var manifest = new TableManifest(TableManifest.CurrentVersion, $"Occicat Games, Vassal module {version}",
@@ -291,16 +291,16 @@ static double Distance((double X, double Y) p, (double X, double Y) a, (double X
 
 partial class Program
 {
-    // Activation cards used for another cog: the Cartographe scenario's Robert Kadlec (rank 3) for the
-    // Loups de Libus' Robert Kadlec, who has none in the module.
-    private static readonly Dictionary<string, string> ActivationOverrides = new() { ["Robert Kadlec"] = "1R23" };
+    // Activation cards of a name used for several cogs: the Cartographe scenario's Robert Kadlec (3R13),
+    // also for the Loups de Libus' Robert Kadlec (1R23), who has none in the module.
+    private static readonly Dictionary<string, string[]> ActivationOverrides = new() { ["Robert Kadlec"] = ["3R13", "1R23"] };
 
     // Names of the module that differ from the catalog's; null: left out (no French card).
     private static readonly Dictionary<string, string?> Overrides = new()
     {
         ["Kadlec_Libus"] = "1R23",
         ["Bodhan Gross"] = "3R06",          // the activation card's name, misspelt in the module
-        ["Robert Kadlec"] = null,          // Ligue de Maisel's Kadlec (R13): English card only
+        ["Robert Kadlec"] = "3R13",        // the Cartographe scenario's Kadlec (not the Loups de Libus')
         ["Munitions"] = "E09",             // Munitions à haute vélocité
     };
 }

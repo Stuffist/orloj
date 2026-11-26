@@ -28,8 +28,11 @@ public static class CardDecks
 {
     public const string Images = "img/offblock/";
     public const string Indra = "1R16";
-    /// <summary>Robert Kadlec, escorted by P1 in « Le Cartographe » (a 4th cog of their cabal).</summary>
-    public const string Kadlec = "1R23";
+    /// <summary>
+    /// Robert Kadlec, « Cartographe convoité », escorted by P1 in « Le Cartographe » (a 4th cog of their
+    /// cabal; a scenario's cog, not the Loups de Libus' Robert Kadlec, 1R23).
+    /// </summary>
+    public const string Kadlec = "3R13";
     /// <summary>Cards of each player: 1 of the Axe, then 3 ministries; the one left: the fallen ministry.</summary>
     public const int MinistriesPerPlayer = 3;
 

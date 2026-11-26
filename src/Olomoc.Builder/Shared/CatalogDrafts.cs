@@ -96,6 +96,8 @@ public sealed class CogDraft
     public string ExtraMinistry { get; set; } = "";
     public EquipmentKind ExtraKind { get; set; } = EquipmentKind.EQUIPMENT;
     public bool Published { get; set; }
+    /// <summary>A scenario's cog (kept as is: not edited here).</summary>
+    public bool Scenario { get; set; }
     public Dictionary<string, CogTextDraft> Texts { get; set; } = new();
     public List<AbilityDraft> Abilities { get; set; } = new();
 
@@ -119,7 +121,7 @@ public sealed class CogDraft
             LifeLine = LifeLineText.Format(cog.LifeLine), BaseSize = cog.BaseSize, Set = cog.Set ?? "",
             ArtFront = cog.Art?.Front ?? "", ArtBack = cog.Art?.Back ?? "",
             ExtraMinistry = cog.ExtraEquipment?.Ministry ?? "", ExtraKind = cog.ExtraEquipment?.Kind ?? EquipmentKind.EQUIPMENT,
-            Published = cog.Published,
+            Published = cog.Published, Scenario = cog.Scenario,
             Texts = languages.ToDictionary(l => l, l => new CogTextDraft { Name = Text(l)?.Name ?? "", Title = Text(l)?.Title ?? "", Instinct = Text(l)?.Instinct ?? "" }),
             Abilities = AbilityDraft.From(cog.Abilities, languages, (l, i) => Text(l)?.Abilities.ElementAtOrDefault(i)),
         };
@@ -136,6 +138,7 @@ public sealed class CogDraft
         Art = ArtFront.Trim().Length > 0 ? new Art { Front = ArtFront.Trim(), Back = AbilityDraft.NullIfEmpty(ArtBack) } : null,
         Set = AbilityDraft.NullIfEmpty(Set),
         Published = Published,
+        Scenario = Scenario,
     }, Texts.ToDictionary(kv => kv.Key, kv => (CogText?)new CogText
     {
         Name = AbilityDraft.NullIfEmpty(kv.Value.Name), Title = AbilityDraft.NullIfEmpty(kv.Value.Title),

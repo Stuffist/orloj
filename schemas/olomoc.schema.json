@@ -291,6 +291,10 @@
         "published": {
           "type": "boolean",
           "description": "true: published, visible to all. Missing or false: draft (admins' editor), invisible to visitors."
+        },
+        "scenario": {
+          "type": "boolean",
+          "description": "true: a scenario's cog (Le Cartographe's Robert Kadlec): its card and token, never recruited in a cabal."
         }
       }
     },

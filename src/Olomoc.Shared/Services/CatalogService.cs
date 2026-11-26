@@ -224,7 +224,7 @@ public sealed class CatalogService
             .SelectMany(j => equipment[j]!.BuildRules.Select(r => (Slot: j, Rule: r)))
             .ToList();
         return Unmatched(outsiders, grants, (i, grant) =>
-            (grant.Rule.Type != BuildRuleType.RECRUIT_WEARER || grant.Slot == i) &&
+            !cogs[i]!.Scenario && (grant.Rule.Type != BuildRuleType.RECRUIT_WEARER || grant.Slot == i) &&
             grant.Rule.CanRecruit(cogs[i]!, EffectiveMinistries(cogs[i]!, equipment[i])));
     }
 
@@ -239,7 +239,7 @@ public sealed class CatalogService
     }
 
     /// <summary>Would the card allow this out-of-faction cog into a cabal of the faction?</summary>
-    private static bool Recruits(Equipment e, Cog cog, string faction) =>
+    private static bool Recruits(Equipment e, Cog cog, string faction) => !cog.Scenario &&
         (e.Faction == faction || e.IsMinistryAffiliated || e.CogId == cog.Id) &&
         e.BuildRules.Any(r => r.CanRecruit(cog, cog.Ministries));
 
@@ -253,7 +253,7 @@ public sealed class CatalogService
     public List<Cog> AvailableCogs(int rank, string? faction, string? ministryFilter, CogQuery query,
                                    IReadOnlyCollection<string>? factions = null)
     {
-        IEnumerable<Cog> q = Catalog.Cogs.Where(c => c.Rank == rank);
+        IEnumerable<Cog> q = Catalog.Cogs.Where(c => c.Rank == rank && !c.Scenario);
 
         if (faction is not null)
             q = q.Where(c => Fits(c, faction));

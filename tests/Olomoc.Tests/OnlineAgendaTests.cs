@@ -140,6 +140,12 @@ public class OnlineAgendaTests
         Assert.DoesNotContain(hand, c => c.StartsWith("prop:"));
         Assert.Equal(["prop:1"], PlanningRules.Hand(g, 0).Where(c => c.StartsWith("prop:")));
         Assert.Equal("kadlecJoins", g.Log[^1].Key);
+
+        // The scenario's Kadlec (not the Loups de Libus', 1R23): never offered nor legal in a cabal.
+        var d = await AppData.GetAsync();
+        Assert.True(d.Catalog.CogById(CardDecks.Kadlec)!.Scenario);
+        Assert.DoesNotContain(d.Catalog.AvailableCogs(3, null, null, CogQuery.Empty), c => c.Id == CardDecks.Kadlec);
+        Assert.Contains(d.Catalog.CheckLegality("OTHERS", [d.Cog(CardDecks.Kadlec), d.Cog("2R08"), d.Cog("1R09")], [null, null, null]).Issues, i => i.Key == "outsideFaction");
     }
 
     [Fact]

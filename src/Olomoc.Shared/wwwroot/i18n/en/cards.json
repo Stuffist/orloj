@@ -264,6 +264,16 @@
         }
       ]
     },
+    "3R13": {
+      "name": "Robert Kadlec",
+      "title": "Coveted Cartographer",
+      "abilities": [
+        {
+          "name": "Under Pressure",
+          "gameEffect": "At the start of each cycle, when the action token pools are formed, give Robert Kadlec 2{action} instead of 4."
+        }
+      ]
+    },
     "3R14": {
       "name": "Maja",
       "title": "Hardened Seductress",
